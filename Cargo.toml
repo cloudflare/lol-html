@@ -3,4 +3,18 @@ name = "cool-thing"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 
+[[test]]
+harness = false
+name = "test_runner"
+
+[dev-dependencies]
+glob = "0.2.11"
+html5ever = "0.21.0"
+serde = "1.0.19"
+serde_derive = "1.0.19"
+serde_json = "1.0.5"
+
+[dev-dependencies.rustc-test]
+version = "0.2.0"
+
 [dependencies]
