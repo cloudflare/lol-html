@@ -1,0 +1,6 @@
+[package]
+name = "cool-thing"
+version = "0.1.0"
+authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
+
+[dependencies]
