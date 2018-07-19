@@ -1,5 +1,11 @@
 mod token;
 
+#[macro_use]
+mod state_machine_dsl;
+
+#[macro_use]
+mod syntax;
+
 pub use self::token::Token;
 
 #[derive(Debug)]
@@ -9,6 +15,7 @@ pub struct BufferCapacityExceededError<'c> {
 
 // 2. Implement simple states via function calls
 // 3. Define macroses and split into syntax files
+// 4. Add precommit hook
 // 4. Tag name hash
 // 5. Implement raw
 // 6. Implement streaming
@@ -16,28 +23,6 @@ pub struct BufferCapacityExceededError<'c> {
 // 8. Implement re-looper like state embedding
 // 9. Implement buffer capacity error recovery (?)
 // 10. Parse errors
-
-macro_rules! action {
-    (emit_eof ~ $t:ident) => (
-        ($t.token_handler)(&Token::Eof);
-        $t.finished = true;
-    );
-}
-
-// TODO: pub vs private
-macro_rules! states {
-    ($($name: ident { $($actions:tt)* })*) => {
-        impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
-           $(pub fn $name(&mut self, ch: Option<u8>) {
-               // NOTE: rust compiler is unhappy about `self` being passed
-               // as an identifier token, so to trick it we just declare a
-               // local variable that serves as an alias.
-               let t = self;
-               action!($($actions)* ~ t);
-           })*
-        }
-    };
-}
 
 pub struct Tokenizer<'t, H: FnMut(&Token)> {
     buffer: Box<[u8]>,
@@ -49,6 +34,8 @@ pub struct Tokenizer<'t, H: FnMut(&Token)> {
     token_handler: H,
     state: fn(&mut Tokenizer<'t, H>, Option<u8>),
 }
+
+define_state_machine!();
 
 impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
     pub fn new(buffer_capacity: usize, token_handler: H) -> Tokenizer<'t, H> {
@@ -98,28 +85,3 @@ impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
     }
 }
 
-states!(
-    data_state {
-        emit_eof
-    }
-
-    plain_text_state {
-        emit_eof
-    }
-
-    rcdata_state {
-        emit_eof
-    }
-
-    raw_text_state {
-        emit_eof
-    }
-
-    script_data_state {
-        emit_eof
-    }
-
-    cdata_section_state {
-        emit_eof
-    }
-);

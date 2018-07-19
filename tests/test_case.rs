@@ -17,9 +17,9 @@ impl InitialState {
     fn to_tokenizer_state<'t, H: FnMut(&Token)>(self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
         match self {
             InitialState::Data => Tokenizer::data_state,
-            InitialState::PlainText => Tokenizer::plain_text_state,
+            InitialState::PlainText => Tokenizer::plaintext_state,
             InitialState::RCData => Tokenizer::rcdata_state,
-            InitialState::RawText => Tokenizer::raw_text_state,
+            InitialState::RawText => Tokenizer::rawtext_state,
             InitialState::ScriptData => Tokenizer::script_data_state,
             InitialState::CDataSection => Tokenizer::cdata_section_state,
         }
