@@ -16,6 +16,9 @@ mod rcdata;
 #[macro_use]
 mod script_data;
 
+#[macro_use]
+mod end_tag;
+
 macro_rules! define_state_machine {
     () => {
         cdata_section_states_group!();
@@ -24,5 +27,6 @@ macro_rules! define_state_machine {
         rawtext_states_group!();
         rcdata_states_group!();
         script_data_states_group!();
+        end_tag_states_group!();
     };
 }

@@ -12,7 +12,7 @@ macro_rules! action {
         }
     };
 
-    ( | $me:tt |> create_char ) => {
+    ( | $me:tt |> mark_token_start ) => {
         $me.token_start = $me.pos;
     };
 }

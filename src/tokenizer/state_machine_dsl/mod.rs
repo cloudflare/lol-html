@@ -1,42 +1,78 @@
 #[macro_use]
 mod actions;
 
-macro_rules! action_list {
-    // NOTE: state transition should always be in the end of the action list
-    ( | $me:tt |> --> $state:ident) => {
+macro_rules! state_transition {
+    ( | $me:tt |> reconsume in $state:ident ) => {
+        $me.pos -= 1;
+        state_transition!(| $me |> --> $state);
+    };
+
+    ( | $me:tt |> --> $state:ident ) => {
         $me.state = Tokenizer::$state;
         $me.state_enter = true;
         return;
     };
+}
 
+macro_rules! action_list {
     ( | $me:tt |> $action:tt; $($rest:tt)* ) => {
         action!(| $me |> $action);
         action_list!(| $me |> $($rest)*);
     };
 
+    // NOTE: state transition should always be in the end of the action list
+    ( | $me:tt |> $($transition:tt)+ ) => ( state_transition!(| $me |> $($transition)+); );
+
     // NOTE: end of the action list
-    ( | $me:tt |> ) => (());
+    ( | $me:tt |> ) => ();
 }
 
 // TODO: pub vs private
 macro_rules! states {
-    ( $($name:ident { $($body:tt)* })* ) => {
+    ( $($states:tt)+ ) => {
         impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
-           $(pub fn $name(&mut self, ch: Option<u8>) {
-               state_body!(|self, ch|> $($body)*);
-           })*
+           state!($($states)+);
         }
     };
 }
 
-macro_rules! arm_pattern {
-    ($id:ident) => (arm_pattern!(@maybe_eof $id));
-    (@maybe_eof eof) => (None);
+macro_rules! enter_actions {
+    ( | $me:tt |> $($actions:tt)+) => {
+        if $me.state_enter {
+            action_list!(|$me|> $($actions)*);
+            $me.state_enter = false;
+        }
+    };
 
-    ($pattern:pat) => (Some($pattern));
+    // NOTE: don't generate any code for the empty action list
+    ( | $me:tt |> ) => ();
 }
 
-macro_rules! state_body {
+macro_rules! state {
+    ( $name:ident { $($arms:tt)* } $($rest:tt)* ) => ( state!($name <-- () { $($arms)* } $($rest)*); );
+
+    // TODO: pub vs private states
+    ( $name:ident <-- ( $($enter_actions:tt)* ) { $($arms:tt)* } $($rest:tt)* ) => {
+        pub fn $name(&mut self, ch: Option<u8>) {
+            enter_actions!(|self|> $($enter_actions)*);
+            state_arms!(|self, ch|> $($arms)*);
+        }
+
+        state!($($rest)*);
+    };
+
+    // NOTE: end of the state list
+    () => ();
+}
+
+macro_rules! arm_pattern {
+    ( $pattern:ident ) => ( arm_pattern!(@maybe_eof $pattern) );
+    ( @maybe_eof eof ) => ( None );
+
+    ( $pattern:pat ) => ( Some($pattern) );
+}
+
+macro_rules! state_arms {
     ( | $me:tt, $ch:ident |> $( $pattern:tt => ( $($actions:tt)* ) )* ) => {
         match $ch {
             $(
@@ -47,7 +83,7 @@ macro_rules! state_body {
 }
 
 macro_rules! define_state_group {
-    ($name:ident = { $($states:tt)+ }) => {
+    ( $name:ident = { $($states:tt)+ } ) => {
         macro_rules! $name {
             () => {
                 states!($($states)*);
