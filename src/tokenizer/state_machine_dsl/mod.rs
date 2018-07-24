@@ -29,45 +29,20 @@ macro_rules! states {
     };
 }
 
-macro_rules! char_handler {
-    ( | $me:tt, $ch:ident |> ( $($actions:tt)* ) ) => {
-        action_list!(|$me|> $($actions)*);
-    };
+macro_rules! arm_pattern {
+    ($id:ident) => (arm_pattern!(@maybe_eof $id));
+    (@maybe_eof eof) => (None);
 
-    ( | $me:tt, $ch:ident |> {
-        $($arm:pat => ( $($actions:tt)* ) )+
-    }) => {
-        match $ch {
-            $(
-                $arm => { action_list!(|$me|> $($actions)*); }
-            )*
-        }
-    };
+    ($pattern:pat) => (Some($pattern));
 }
 
 macro_rules! state_body {
-    ( | $me:tt, $ch_opt:ident |> --> ( $($actions:tt)+ ) $($rest:tt)+ ) => {
-        if $me.state_enter {
-            action_list!(|$me|> $($actions)*);
-            $me.state_enter = false;
+    ( | $me:tt, $ch:ident |> $( $pattern:tt => ( $($actions:tt)* ) )* ) => {
+        match $ch {
+            $(
+                arm_pattern!($pattern) => { action_list!(|$me|> $($actions)*); }
+            )*
         }
-
-        state_body!(| $me, $ch_opt |> $($rest)*);
-    };
-
-    // NOTE: with this macro we enforce that all states should
-    // handle both characters and EOF explicitly. To avoid parser
-    // ambiguity EOF always should be first, since it always has
-    // its actions enclosed in braces, whereas for character it
-    // either brace-enclosed list of actions or list of match arms.
-    ( | $me:tt, $ch_opt:ident |>
-        >eof ( $($eof_actions:tt)* )
-        >ch $($ch_handler:tt)*
-    ) => {
-        match $ch_opt {
-            Some(ch) => { char_handler!(|$me, ch|> $($ch_handler)*); }
-            None => { action_list!(|$me|> $($eof_actions)*); }
-        };
     };
 }
 
