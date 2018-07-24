@@ -29,6 +29,7 @@ pub struct Tokenizer<'t, H: FnMut(&Token)> {
     buffer_capacity: usize,
     buffer_watermark: usize,
     pos: usize,
+    token_start: usize,
     finished: bool,
     state_enter: bool,
     token_handler: H,
@@ -44,6 +45,7 @@ impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
             buffer_capacity,
             buffer_watermark: 0,
             pos: 0,
+            token_start: 0,
             finished: false,
             state_enter: true,
             token_handler,
@@ -66,8 +68,6 @@ impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
         self.buffer_watermark = new_watermark;
 
         while !self.finished {
-            self.pos += 1;
-
             let ch = if self.pos < self.buffer_watermark {
                 Some(self.buffer[self.pos])
             } else {
@@ -75,6 +75,8 @@ impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
             };
 
             (self.state)(self, ch);
+
+            self.pos += 1;
         }
 
         Ok(())

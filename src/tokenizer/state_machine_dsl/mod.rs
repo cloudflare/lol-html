@@ -29,13 +29,13 @@ macro_rules! states {
     };
 }
 
-macro_rules! character_handler {
-    ( | $me:tt, $ch:ident |> ( $($actions:tt)+ ) ) => {
+macro_rules! char_handler {
+    ( | $me:tt, $ch:ident |> ( $($actions:tt)* ) ) => {
         action_list!(|$me|> $($actions)*);
     };
 
     ( | $me:tt, $ch:ident |> {
-        $($arm:pat => ( $($actions:tt)+ ) ),+
+        $($arm:pat => ( $($actions:tt)* ) )+
     }) => {
         match $ch {
             $(
@@ -46,7 +46,7 @@ macro_rules! character_handler {
 }
 
 macro_rules! state_body {
-    ( | $me:tt, $ch_opt:ident |> on_enter ( $($actions:tt)+ ) $($rest:tt)+ ) => {
+    ( | $me:tt, $ch_opt:ident |> --> ( $($actions:tt)+ ) $($rest:tt)+ ) => {
         if $me.state_enter {
             action_list!(|$me|> $($actions)*);
             $me.state_enter = false;
@@ -61,11 +61,11 @@ macro_rules! state_body {
     // its actions enclosed in braces, whereas for character it
     // either brace-enclosed list of actions or list of match arms.
     ( | $me:tt, $ch_opt:ident |>
-        >eof ( $($eof_actions:tt)+ )
-        >ch $($ch_handler:tt)+
+        >eof ( $($eof_actions:tt)* )
+        >ch $($ch_handler:tt)*
     ) => {
         match $ch_opt {
-            Some(ch) => { character_handler!(|$me, ch|> $($ch_handler)*); }
+            Some(ch) => { char_handler!(|$me, ch|> $($ch_handler)*); }
             None => { action_list!(|$me|> $($eof_actions)*); }
         };
     };
