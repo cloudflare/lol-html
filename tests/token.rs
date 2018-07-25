@@ -13,7 +13,8 @@ enum TokenKind {
     Comment,
     StartTag,
     EndTag,
-    #[serde(rename = "DOCTYPE")] Doctype,
+    #[serde(rename = "DOCTYPE")]
+    Doctype,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -163,47 +164,48 @@ impl Unescape for TestToken {
     }
 }
 
-fn bytes_to_string(bytes: &[u8]) -> String {
-    unsafe { String::from_utf8_unchecked(bytes.to_vec()) }
-}
-
 impl<'t> From<&'t Token<'t>> for TestToken {
     fn from(token: &Token<'t>) -> Self {
         match *token {
-            Token::Character(data) => TestToken::Character(bytes_to_string(data)),
+            Token::Character(ref data) => TestToken::Character(data.as_string()),
 
-            Token::Comment(data) => TestToken::Comment(Decoder::new(data).unsafe_null().run()),
+            Token::Comment(ref data) => {
+                TestToken::Comment(Decoder::new(data.as_str()).unsafe_null().run())
+            }
 
             Token::StartTag {
-                name,
+                ref name,
                 attributes,
                 self_closing,
             } => TestToken::StartTag {
-                name: bytes_to_string(name),
+                name: name.as_string(),
 
                 attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
                     (
-                        bytes_to_string(name),
-                        Decoder::new(attr.value).unsafe_null().attr_entities().run(),
+                        name.as_string(),
+                        Decoder::new(attr.value.as_str())
+                            .unsafe_null()
+                            .attr_entities()
+                            .run(),
                     )
                 })),
 
                 self_closing,
             },
 
-            Token::EndTag { name } => TestToken::EndTag {
-                name: bytes_to_string(name),
+            Token::EndTag { ref name } => TestToken::EndTag {
+                name: name.as_string(),
             },
 
             Token::Doctype {
-                name,
-                public_id,
-                system_id,
+                ref name,
+                ref public_id,
+                ref system_id,
                 force_quirks,
             } => TestToken::Doctype {
-                name: name.map(bytes_to_string),
-                public_id: public_id.map(bytes_to_string),
-                system_id: system_id.map(bytes_to_string),
+                name: name.as_ref().map(|s| s.as_string()),
+                public_id: public_id.as_ref().map(|s| s.as_string()),
+                system_id: system_id.as_ref().map(|s| s.as_string()),
                 force_quirks,
             },
 

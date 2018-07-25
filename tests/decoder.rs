@@ -2,7 +2,6 @@ use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
 use std::str::Chars;
 use std::iter::Peekable;
-use std::str;
 
 #[derive(PartialEq, Eq)]
 enum Entities {
@@ -110,9 +109,7 @@ impl<'a> Decoder<'a> {
         self.next_if_char('\n');
     }
 
-    pub fn new(raw: &'a [u8]) -> Self {
-        let src = unsafe { str::from_utf8_unchecked(raw) };
-
+    pub fn new(src: &'a str) -> Self {
         Decoder {
             chars: src.chars().peekable(),
             result: String::with_capacity(src.len()),

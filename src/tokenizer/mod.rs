@@ -1,4 +1,5 @@
 mod token;
+mod buffer_slice;
 
 #[macro_use]
 mod state_machine_dsl;
@@ -7,6 +8,7 @@ mod state_machine_dsl;
 mod syntax;
 
 pub use self::token::Token;
+use self::buffer_slice::BufferSlice;
 
 #[derive(Debug)]
 pub struct BufferCapacityExceededError<'c> {
@@ -86,4 +88,3 @@ impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
         self.state = state;
     }
 }
-

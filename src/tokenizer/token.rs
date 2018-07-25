@@ -1,29 +1,31 @@
+use super::buffer_slice::BufferSlice;
+
 #[derive(Debug)]
 pub struct Attribute<'t> {
-    pub name: &'t [u8],
-    pub value: &'t [u8],
+    pub name: BufferSlice<'t>,
+    pub value: BufferSlice<'t>,
 }
 
 #[derive(Debug)]
 pub enum Token<'t> {
-    Character(&'t [u8]),
+    Character(BufferSlice<'t>),
 
-    Comment(&'t [u8]),
+    Comment(BufferSlice<'t>),
 
     StartTag {
-        name: &'t [u8],
+        name: BufferSlice<'t>,
         attributes: &'t [Attribute<'t>],
         self_closing: bool,
     },
 
     EndTag {
-        name: &'t [u8],
+        name: BufferSlice<'t>,
     },
 
     Doctype {
-        name: Option<&'t [u8]>,
-        public_id: Option<&'t [u8]>,
-        system_id: Option<&'t [u8]>,
+        name: Option<BufferSlice<'t>>,
+        public_id: Option<BufferSlice<'t>>,
+        system_id: Option<BufferSlice<'t>>,
         force_quirks: bool,
     },
 
