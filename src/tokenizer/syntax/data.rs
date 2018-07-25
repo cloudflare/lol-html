@@ -6,12 +6,12 @@ define_state_group!(data_states_group = {
         _    => ()
     }
 
-    // TODO: implement string in trace example
     tag_open_state {
-        b'!' => ( --> markup_declaration_open_state )
-        b'/' => ( --> end_tag_open_state )
-        eof  => ( emit_char; emit_eof; )
-        _    => ( emit_eof; )
+        b'!'        => ( --> markup_declaration_open_state )
+        b'/'        => ( --> end_tag_open_state )
+        ascii-alpha => ()
+        eof         => ( emit_char; emit_eof; )
+        _           => ( emit_eof; )
     }
 
     markup_declaration_open_state {

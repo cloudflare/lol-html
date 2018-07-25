@@ -27,7 +27,6 @@ macro_rules! action_list {
     ( | $me:tt |> ) => ();
 }
 
-// TODO: pub vs private
 macro_rules! states {
     ( $($states:tt)+ ) => {
         impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
@@ -66,17 +65,28 @@ macro_rules! state {
 }
 
 macro_rules! arm_pattern {
-    ( $pattern:ident ) => ( arm_pattern!(@maybe_eof $pattern) );
-    ( @maybe_eof eof ) => ( None );
+    ( ascii-alpha ) => ( Some(b'a'...b'z') );
+    ( eof ) => ( None );
 
-    ( $pattern:pat ) => ( Some($pattern) );
+    ( $pat:pat ) => ( Some($pat) );
+}
+
+macro_rules! arm_pattern_cont {
+    ( ascii-alpha ) => ( Some(b'A'...b'Z') );
 }
 
 macro_rules! state_arms {
-    ( | $me:tt, $ch:ident |> $( $pattern:tt => ( $($actions:tt)* ) )* ) => {
+    // HACK: to support aliases that expand to the collection of patterns
+    // (e.g. ascii-alpha should be transformed into `Some(b'a'...b'z') | Some(b'A'...b'Z')`)
+    // we use `-` symbol as a marker that pattern has continuation which should be
+    // expanded by a separate macro. Thus, we can satisfy expansion rules that doesn't
+    // recognize arm_pattern! expansion as a valid position for the `|` operator.
+    ( | $me:tt, $ch:ident |> $( $pat:tt $(-$pat_cont:tt)*  => ( $($actions:tt)* ) )* ) => {
         match $ch {
             $(
-                arm_pattern!($pattern) => { action_list!(|$me|> $($actions)*); }
+                arm_pattern!($pat $(-$pat_cont)*) $(| arm_pattern_cont!($pat-$pat_cont))* => {
+                    action_list!(|$me|> $($actions)*);
+                }
             )*
         }
     };
