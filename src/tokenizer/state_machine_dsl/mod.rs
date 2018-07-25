@@ -65,26 +65,18 @@ macro_rules! state {
 }
 
 macro_rules! arm_pattern {
-    ( ascii-alpha ) => ( Some(b'a'...b'z') );
+    ( ascii_lo ) => ( Some(b'a'...b'z') );
+    ( ascii_up ) => ( Some(b'A'...b'Z') );
     ( eof ) => ( None );
 
     ( $pat:pat ) => ( Some($pat) );
 }
 
-macro_rules! arm_pattern_cont {
-    ( ascii-alpha ) => ( Some(b'A'...b'Z') );
-}
-
 macro_rules! state_arms {
-    // HACK: to support aliases that expand to the collection of patterns
-    // (e.g. ascii-alpha should be transformed into `Some(b'a'...b'z') | Some(b'A'...b'Z')`)
-    // we use `-` symbol as a marker that pattern has continuation which should be
-    // expanded by a separate macro. Thus, we can satisfy expansion rules that doesn't
-    // recognize arm_pattern! expansion as a valid position for the `|` operator.
-    ( | $me:tt, $ch:ident |> $( $pat:tt $(-$pat_cont:tt)*  => ( $($actions:tt)* ) )* ) => {
+    ( | $me:tt, $ch:ident |> $( $pat:tt $(|$pat_cont:tt)*  => ( $($actions:tt)* ) )* ) => {
         match $ch {
             $(
-                arm_pattern!($pat $(-$pat_cont)*) $(| arm_pattern_cont!($pat-$pat_cont))* => {
+                arm_pattern!($pat) $(| arm_pattern!($pat_cont))* => {
                     action_list!(|$me|> $($actions)*);
                 }
             )*
