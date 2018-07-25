@@ -25,6 +25,6 @@ impl<'t> From<&'t [u8]> for BufferSlice<'t> {
 
 impl<'t> fmt::Debug for BufferSlice<'t> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "`{}`", self.as_string())
+        write!(f, "`{}`", self.as_str())
     }
 }
