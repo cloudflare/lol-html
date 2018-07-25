@@ -1,4 +1,5 @@
 use std::convert::From;
+use std::ops::Deref;
 use std::fmt;
 use std::str;
 
@@ -26,5 +27,13 @@ impl<'t> From<&'t [u8]> for BufferSlice<'t> {
 impl<'t> fmt::Debug for BufferSlice<'t> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "`{}`", self.as_str())
+    }
+}
+
+impl<'t> Deref for BufferSlice<'t> {
+    type Target = [u8];
+
+    fn deref(&self) -> &[u8] {
+        self.bytes
     }
 }
