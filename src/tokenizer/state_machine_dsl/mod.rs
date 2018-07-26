@@ -48,13 +48,15 @@ macro_rules! enter_actions {
 }
 
 macro_rules! state {
-    ( $name:ident { $($arms:tt)* } $($rest:tt)* ) => ( state!($name <-- () { $($arms)* } $($rest)*); );
+    ( $name:ident { $($arms:tt)* } $($rest:tt)* ) => {
+        state!($name <-- () { $($arms)* } $($rest)*);
+    };
 
     // TODO: pub vs private states
     ( $name:ident <-- ( $($enter_actions:tt)* ) { $($arms:tt)* } $($rest:tt)* ) => {
         pub fn $name(&mut self, ch: Option<u8>) {
             enter_actions!(|self|> $($enter_actions)*);
-            state_body!(|self, ch|> $($arms)*);
+            state_body!(| [self, ch] |> $($arms)*);
         }
 
         state!($($rest)*);
@@ -79,39 +81,39 @@ macro_rules! expand_arm_pattern {
 }
 
 macro_rules! state_body {
-    ( | $me:ident, $ch:ident|> $($arms:tt)+ ) => {
-        state_body!(@iter_arms | $me, $ch |> [$($arms)+], [])
+    ( | $scope_vars:tt |> $($arms:tt)+ ) => {
+        state_body!(@map_arms | $scope_vars |> [$($arms)+], [])
     };
 
     // NOTE: recursively expand each arm
-    ( @iter_arms
-        | $me:ident, $ch:ident |>
+    ( @map_arms
+        | $scope_vars:tt |>
         [ $pat:tt => ( $($actions:tt)* ) $($rest:tt)* ], [ $($expanded:tt)* ]
     ) => {
         expand_arm_pattern!(
-            | [ $me, $ch, [$($rest)*], [$($expanded)*] ]|>
+            | [ $scope_vars, [$($rest)*], [$($expanded)*] ]|>
             $pat => ( $($actions)* )
         )
     };
 
     // NOTE: end of iteration
-    ( @iter_arms
-        | $me:ident, $ch:ident |>
+    ( @map_arms
+        | $scope_vars:tt |>
         [], [$($expanded:tt)*]
     ) => {
-        state_body!(@match_block |$me, $ch|> $($expanded)*);
+        state_body!(@match_block |$scope_vars|> $($expanded)*);
     };
 
     // NOTE: callback for the expand_arm_pattern!
     ( @callback
-        | [ $me:ident, $ch:ident, [$($pending:tt)*], [$($expanded:tt)*] ] |>
+        | [ $scope_vars:tt, [$($pending:tt)*], [$($expanded:tt)*] ] |>
         $($expanded_arm:tt)*
     ) => {
-        state_body!(@iter_arms | $me, $ch |> [$($pending)*], [$($expanded)* $($expanded_arm)*])
+        state_body!(@map_arms | $scope_vars |> [$($pending)*], [$($expanded)* $($expanded_arm)*])
     };
 
     ( @match_block
-        | $me:ident, $ch:ident |>
+        | [ $me:ident, $ch:ident ] |>
         $( $pat:pat $(|$pat_cont:pat)* => ( $($actions:tt)* ) )*
     ) => {
         match $ch {
