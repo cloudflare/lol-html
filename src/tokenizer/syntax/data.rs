@@ -7,11 +7,11 @@ define_state_group!(data_states_group = {
     }
 
     tag_open_state {
-        b'!'                => ( --> markup_declaration_open_state )
-        b'/'                => ( --> end_tag_open_state )
-        ascii_lo | ascii_up => ()
-        eof                 => ( emit_char; emit_eof; )
-        _                   => ( emit_eof; )
+        b'!'  => ( --> markup_declaration_open_state )
+        b'/'  => ( --> end_tag_open_state )
+        alpha => ()
+        eof   => ( emit_char; emit_eof; )
+        _     => ( emit_eof; )
     }
 
     markup_declaration_open_state {

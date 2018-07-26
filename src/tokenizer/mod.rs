@@ -43,7 +43,7 @@ define_state_machine!();
 impl<'t, H: FnMut(&Token)> Tokenizer<'t, H> {
     pub fn new(buffer_capacity: usize, token_handler: H) -> Tokenizer<'t, H> {
         Tokenizer {
-            buffer: vec![0; buffer_capacity].into_boxed_slice(),
+            buffer: vec![0; buffer_capacity].into(),
             buffer_capacity,
             buffer_watermark: 0,
             pos: 0,

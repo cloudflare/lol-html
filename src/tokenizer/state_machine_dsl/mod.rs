@@ -54,7 +54,7 @@ macro_rules! state {
     ( $name:ident <-- ( $($enter_actions:tt)* ) { $($arms:tt)* } $($rest:tt)* ) => {
         pub fn $name(&mut self, ch: Option<u8>) {
             enter_actions!(|self|> $($enter_actions)*);
-            state_arms!(|self, ch|> $($arms)*);
+            state_body!(|self, ch|> $($arms)*);
         }
 
         state!($($rest)*);
@@ -64,21 +64,65 @@ macro_rules! state {
     () => ();
 }
 
-macro_rules! arm_pattern {
-    ( ascii_lo ) => ( Some(b'a'...b'z') );
-    ( ascii_up ) => ( Some(b'A'...b'Z') );
-    ( eof ) => ( None );
+macro_rules! expand_arm_pattern {
+    ( | $me:tt, [$($cb_args:tt)*] |> alpha => $actions:tt ) => {
+        state_body!(@callback |$me, $($cb_args)*|>
+            Some(b'a'...b'z') | Some(b'A'...b'Z') => $actions
+        );
+    };
 
-    ( $pat:pat ) => ( Some($pat) );
+    ( | $me:tt, [$($cb_args:tt)*] |> eof => $actions:tt ) => {
+        state_body!(@callback |$me, $($cb_args)*|>
+            None => $actions
+        );
+    };
+
+    ( | $me:tt, [$($cb_args:tt)*] |> $pat:pat => $actions:tt ) => {
+        state_body!(@callback |$me, $($cb_args)*|>
+            Some($pat) => $actions
+        );
+    };
 }
 
-macro_rules! state_arms {
-    ( | $me:tt, $ch:ident |> $( $pat:tt $(|$pat_cont:tt)*  => ( $($actions:tt)* ) )* ) => {
+macro_rules! state_body {
+    ( | $me:tt, $ch:ident|> $($arms:tt)+ ) => {
+        state_body!(@iter_arms | $me, $ch |> [$($arms)+], [])
+    };
+
+    // NOTE: recursively expand each arm
+    ( @iter_arms
+        | $me:tt, $ch:ident |>
+        [ $pat:tt => ( $($actions:tt)* ) $($rest:tt)* ], [ $($expanded:tt)* ]
+    ) => {
+        expand_arm_pattern!(
+            |$me, [ $ch, [$($rest)*], [$($expanded)*] ]|>
+            $pat => ( $($actions)* )
+        )
+    };
+
+    // NOTE: end of iteration
+    ( @iter_arms
+        | $me:tt, $ch:ident |>
+        [], [$($expanded:tt)*]
+    ) => {
+        state_body!(@match_block |$me, $ch|> $($expanded)*);
+    };
+
+    // NOTE: callback for the expand_arm_pattern!
+    ( @callback
+        | $me:tt, $ch:ident, [$($pending:tt)*], [$($expanded:tt)*] |>
+        $($expanded_arm:tt)*
+    ) => {
+        state_body!(@iter_arms | $me, $ch |> [$($pending)*], [$($expanded)* $($expanded_arm)*])
+    };
+
+    ( @match_block
+        | $me:tt, $ch:ident |>
+        $( $pat:pat $(|$pat_cont:pat)* => ( $($actions:tt)* ) )*
+    ) => {
         match $ch {
             $(
-                arm_pattern!($pat) $(| arm_pattern!($pat_cont))* => {
-                    action_list!(|$me|> $($actions)*);
-                }
+                $pat $(| $pat_cont)* => { action_list!(|$me|> $($actions)*); }
             )*
         }
     };
