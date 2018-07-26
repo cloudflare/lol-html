@@ -2,12 +2,12 @@
 mod actions;
 
 macro_rules! state_transition {
-    ( | $me:tt |> reconsume in $state:ident ) => {
+    ( | $me:ident |> reconsume in $state:ident ) => {
         $me.pos -= 1;
         state_transition!(| $me |> --> $state);
     };
 
-    ( | $me:tt |> --> $state:ident ) => {
+    ( | $me:ident |> --> $state:ident ) => {
         $me.state = Tokenizer::$state;
         $me.state_enter = true;
         return;
@@ -15,16 +15,16 @@ macro_rules! state_transition {
 }
 
 macro_rules! action_list {
-    ( | $me:tt |> $action:tt; $($rest:tt)* ) => {
+    ( | $me:ident |> $action:tt; $($rest:tt)* ) => {
         action!(| $me |> $action);
         action_list!(| $me |> $($rest)*);
     };
 
     // NOTE: state transition should always be in the end of the action list
-    ( | $me:tt |> $($transition:tt)+ ) => ( state_transition!(| $me |> $($transition)+); );
+    ( | $me:ident |> $($transition:tt)+ ) => ( state_transition!(| $me |> $($transition)+); );
 
     // NOTE: end of the action list
-    ( | $me:tt |> ) => ();
+    ( | $me:ident |> ) => ();
 }
 
 macro_rules! states {
@@ -36,7 +36,7 @@ macro_rules! states {
 }
 
 macro_rules! enter_actions {
-    ( | $me:tt |> $($actions:tt)+) => {
+    ( | $me:ident |> $($actions:tt)+) => {
         if $me.state_enter {
             action_list!(|$me|> $($actions)*);
             $me.state_enter = false;
@@ -44,7 +44,7 @@ macro_rules! enter_actions {
     };
 
     // NOTE: don't generate any code for the empty action list
-    ( | $me:tt |> ) => ();
+    ( | $me:ident |> ) => ();
 }
 
 macro_rules! state {
@@ -65,19 +65,19 @@ macro_rules! state {
 }
 
 macro_rules! expand_arm_pattern {
-    ( | $me:tt, [$($cb_args:tt)*] |> alpha => $actions:tt ) => {
+    ( | $me:ident, [$($cb_args:tt)*] |> alpha => $actions:tt ) => {
         state_body!(@callback |$me, $($cb_args)*|>
             Some(b'a'...b'z') | Some(b'A'...b'Z') => $actions
         );
     };
 
-    ( | $me:tt, [$($cb_args:tt)*] |> eof => $actions:tt ) => {
+    ( | $me:ident, [$($cb_args:tt)*] |> eof => $actions:tt ) => {
         state_body!(@callback |$me, $($cb_args)*|>
             None => $actions
         );
     };
 
-    ( | $me:tt, [$($cb_args:tt)*] |> $pat:pat => $actions:tt ) => {
+    ( | $me:ident, [$($cb_args:tt)*] |> $pat:pat => $actions:tt ) => {
         state_body!(@callback |$me, $($cb_args)*|>
             Some($pat) => $actions
         );
@@ -85,13 +85,13 @@ macro_rules! expand_arm_pattern {
 }
 
 macro_rules! state_body {
-    ( | $me:tt, $ch:ident|> $($arms:tt)+ ) => {
+    ( | $me:ident, $ch:ident|> $($arms:tt)+ ) => {
         state_body!(@iter_arms | $me, $ch |> [$($arms)+], [])
     };
 
     // NOTE: recursively expand each arm
     ( @iter_arms
-        | $me:tt, $ch:ident |>
+        | $me:ident, $ch:ident |>
         [ $pat:tt => ( $($actions:tt)* ) $($rest:tt)* ], [ $($expanded:tt)* ]
     ) => {
         expand_arm_pattern!(
@@ -102,7 +102,7 @@ macro_rules! state_body {
 
     // NOTE: end of iteration
     ( @iter_arms
-        | $me:tt, $ch:ident |>
+        | $me:ident, $ch:ident |>
         [], [$($expanded:tt)*]
     ) => {
         state_body!(@match_block |$me, $ch|> $($expanded)*);
@@ -110,14 +110,14 @@ macro_rules! state_body {
 
     // NOTE: callback for the expand_arm_pattern!
     ( @callback
-        | $me:tt, $ch:ident, [$($pending:tt)*], [$($expanded:tt)*] |>
+        | $me:ident, $ch:ident, [$($pending:tt)*], [$($expanded:tt)*] |>
         $($expanded_arm:tt)*
     ) => {
         state_body!(@iter_arms | $me, $ch |> [$($pending)*], [$($expanded)* $($expanded_arm)*])
     };
 
     ( @match_block
-        | $me:tt, $ch:ident |>
+        | $me:ident, $ch:ident |>
         $( $pat:pat $(|$pat_cont:pat)* => ( $($actions:tt)* ) )*
     ) => {
         match $ch {
