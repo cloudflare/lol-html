@@ -65,22 +65,16 @@ macro_rules! state {
 }
 
 macro_rules! expand_arm_pattern {
-    ( | $me:ident, [$($cb_args:tt)*] |> alpha => $actions:tt ) => {
-        state_body!(@callback |$me, $($cb_args)*|>
-            Some(b'a'...b'z') | Some(b'A'...b'Z') => $actions
-        );
+    ( | $cb_args:tt |> alpha => $actions:tt ) => {
+        state_body!(@callback | $cb_args |> Some(b'a'...b'z') | Some(b'A'...b'Z') => $actions);
     };
 
-    ( | $me:ident, [$($cb_args:tt)*] |> eof => $actions:tt ) => {
-        state_body!(@callback |$me, $($cb_args)*|>
-            None => $actions
-        );
+    ( | $cb_args:tt |> eof => $actions:tt ) => {
+        state_body!(@callback | $cb_args |> None => $actions);
     };
 
-    ( | $me:ident, [$($cb_args:tt)*] |> $pat:pat => $actions:tt ) => {
-        state_body!(@callback |$me, $($cb_args)*|>
-            Some($pat) => $actions
-        );
+    ( | $cb_args:tt |> $pat:pat => $actions:tt ) => {
+        state_body!(@callback | $cb_args |> Some($pat) => $actions);
     };
 }
 
@@ -95,7 +89,7 @@ macro_rules! state_body {
         [ $pat:tt => ( $($actions:tt)* ) $($rest:tt)* ], [ $($expanded:tt)* ]
     ) => {
         expand_arm_pattern!(
-            |$me, [ $ch, [$($rest)*], [$($expanded)*] ]|>
+            | [ $me, $ch, [$($rest)*], [$($expanded)*] ]|>
             $pat => ( $($actions)* )
         )
     };
@@ -110,7 +104,7 @@ macro_rules! state_body {
 
     // NOTE: callback for the expand_arm_pattern!
     ( @callback
-        | $me:ident, $ch:ident, [$($pending:tt)*], [$($expanded:tt)*] |>
+        | [ $me:ident, $ch:ident, [$($pending:tt)*], [$($expanded:tt)*] ] |>
         $($expanded_arm:tt)*
     ) => {
         state_body!(@iter_arms | $me, $ch |> [$($pending)*], [$($expanded)* $($expanded_arm)*])
