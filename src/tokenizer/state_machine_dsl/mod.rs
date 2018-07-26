@@ -48,13 +48,16 @@ macro_rules! enter_actions {
 }
 
 macro_rules! state {
-    ( $name:ident { $($arms:tt)* } $($rest:tt)* ) => {
-        state!($name <-- () { $($arms)* } $($rest)*);
+    // NOTE: wrap optional visibility modifier in `[]` to avoid
+    // local ambiguity with the state name.
+    ( pub $($rest:tt)* ) => ( state!([pub] $($rest)*); );
+
+    ( $([ $vis:ident ])* $name:ident { $($arms:tt)* } $($rest:tt)* ) => {
+        state!($([$vis])* $name <-- () { $($arms)* } $($rest)*);
     };
 
-    // TODO: pub vs private states
-    ( $name:ident <-- ( $($enter_actions:tt)* ) { $($arms:tt)* } $($rest:tt)* ) => {
-        pub fn $name(&mut self, ch: Option<u8>) {
+    ( $([ $vis:ident ])* $name:ident <-- ( $($enter_actions:tt)* ) { $($arms:tt)* } $($rest:tt)* ) => {
+        $($vis)* fn $name(&mut self, ch: Option<u8>) {
             enter_actions!(|self|> $($enter_actions)*);
             state_body!(| [self, ch] |> $($arms)*);
         }
