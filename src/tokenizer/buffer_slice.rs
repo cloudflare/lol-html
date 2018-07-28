@@ -4,6 +4,7 @@ use std::fmt;
 use std::str;
 
 // NOTE: thin wrapper around byte slice that allows us pretty print tokens
+#[derive(Default)]
 pub struct BufferSlice<'t> {
     bytes: &'t [u8],
 }

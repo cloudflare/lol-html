@@ -1,21 +1,24 @@
 macro_rules! action {
     ( | $me:ident |> emit_eof ) => {
-        ($me.token_handler)(&Token::Eof);
+        ($me.token_handler)(Token::Eof);
         $me.finished = true;
     };
 
-    ( | $me:ident |> emit_char ) => {
-        if $me.pos > $me.token_start {
-            let chars = BufferSlice::from(&$me.buffer[$me.token_start..$me.pos]);
+    ( | $me:ident |> emit_chars ) => {
+        if $me.pos > $me.slice_start {
+            let chars = BufferSlice::from(&$me.buffer[$me.slice_start..$me.pos]);
 
-            ($me.token_handler)(&Token::Character(chars));
+            ($me.token_handler)(Token::Character(chars));
         }
     };
 
-    ( | $me:ident |> mark_token_start ) => {
-        $me.token_start = $me.pos;
+    ( | $me:ident |> start_slice ) => {
+        $me.slice_start = $me.pos;
     };
 
+    ( | $me:ident |> create_start_tag ) => {
+        // TODO
+    };
 
     // State transition actions
     //--------------------------------------------------------------------

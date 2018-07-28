@@ -14,7 +14,7 @@ pub enum InitialState {
 }
 
 impl InitialState {
-    fn to_tokenizer_state<'t, H: FnMut(&Token)>(self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
+    fn to_tokenizer_state<'t, H: FnMut(Token)>(self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
         match self {
             InitialState::Data => Tokenizer::data_state,
             InitialState::PlainText => Tokenizer::plaintext_state,
@@ -73,8 +73,8 @@ impl TestCase {
             let mut actual_tokens = Vec::new();
 
             {
-                let mut tokenizer = Tokenizer::new(2048, |token: &Token| {
-                    let test_token = TestToken::from(token);
+                let mut tokenizer = Tokenizer::new(2048, |token: Token| {
+                    let test_token = TestToken::from(&token);
                     let mut is_consequent_char = false;
 
                     if let (
