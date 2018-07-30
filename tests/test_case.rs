@@ -5,16 +5,24 @@ use cool_thing::{Token, Tokenizer};
 
 #[derive(Clone, Copy, Deserialize, Debug)]
 pub enum InitialState {
-    #[serde(rename = "Data state")] Data,
-    #[serde(rename = "PLAINTEXT state")] PlainText,
-    #[serde(rename = "RCDATA state")] RCData,
-    #[serde(rename = "RAWTEXT state")] RawText,
-    #[serde(rename = "Script data state")] ScriptData,
-    #[serde(rename = "CDATA section state")] CDataSection,
+    #[serde(rename = "Data state")]
+    Data,
+    #[serde(rename = "PLAINTEXT state")]
+    PlainText,
+    #[serde(rename = "RCDATA state")]
+    RCData,
+    #[serde(rename = "RAWTEXT state")]
+    RawText,
+    #[serde(rename = "Script data state")]
+    ScriptData,
+    #[serde(rename = "CDATA section state")]
+    CDataSection,
 }
 
 impl InitialState {
-    fn to_tokenizer_state<'t, H: FnMut(Token)>(self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
+    fn to_tokenizer_state<'t, H: FnMut(Token, Option<&[u8]>)>(
+        self,
+    ) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
         match self {
             InitialState::Data => Tokenizer::data_state,
             InitialState::PlainText => Tokenizer::plaintext_state,
@@ -36,15 +44,20 @@ pub struct TestCase {
     pub description: String,
     pub input: String,
 
-    #[serde(rename = "output")] pub expected_tokens: Vec<TestToken>,
+    #[serde(rename = "output")]
+    pub expected_tokens: Vec<TestToken>,
 
-    #[serde(skip)] pub ignored: bool,
+    #[serde(skip)]
+    pub ignored: bool,
 
-    #[serde(default = "default_initial_states")] pub initial_states: Vec<InitialState>,
+    #[serde(default = "default_initial_states")]
+    pub initial_states: Vec<InitialState>,
 
-    #[serde(default)] pub double_escaped: bool,
+    #[serde(default)]
+    pub double_escaped: bool,
 
-    #[serde(default)] pub last_start_tag: String,
+    #[serde(default)]
+    pub last_start_tag: String,
 }
 
 impl Unescape for TestCase {
@@ -73,8 +86,8 @@ impl TestCase {
             let mut actual_tokens = Vec::new();
 
             {
-                let mut tokenizer = Tokenizer::new(2048, |token: Token| {
-                    let test_token = TestToken::from(&token);
+                let mut tokenizer = Tokenizer::new(2048, |token: Token, raw: Option<&[u8]>| {
+                    let test_token = TestToken::from((&token, raw));
                     let mut is_consequent_char = false;
 
                     if let (

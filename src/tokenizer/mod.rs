@@ -1,5 +1,4 @@
 mod token;
-mod buffer_slice;
 
 #[macro_use]
 mod state_machine_dsl;
@@ -7,8 +6,7 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
-pub use self::token::{Attribute, Token};
-use self::buffer_slice::BufferSlice;
+pub use self::token::{Attribute, Token, RawSubslice};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
@@ -28,30 +26,30 @@ pub struct BufferCapacityExceededError<'c> {
 // 9. Implement buffer capacity error recovery (?)
 // 10. Parse errors
 
-pub struct Tokenizer<'t, H: FnMut(Token)> {
+pub struct Tokenizer<'t, H: FnMut(Token, Option<&[u8]>)> {
     buffer: Box<[u8]>,
     buffer_capacity: usize,
     buffer_watermark: usize,
     pos: usize,
-    slice_start: usize,
+    raw_start: usize,
     finished: bool,
     state_enter: bool,
     token_handler: H,
     state: fn(&mut Tokenizer<'t, H>, Option<u8>),
     current_token: Token<'t>,
-    attr_buffer: Vec<Attribute<'t>>,
+    attr_buffer: Vec<Attribute>,
 }
 
 define_state_machine!();
 
-impl<'t, H: FnMut(Token)> Tokenizer<'t, H> {
+impl<'t, H: FnMut(Token, Option<&[u8]>)> Tokenizer<'t, H> {
     pub fn new(buffer_capacity: usize, token_handler: H) -> Tokenizer<'t, H> {
         Tokenizer {
             buffer: vec![0; buffer_capacity].into(),
             buffer_capacity,
             buffer_watermark: 0,
             pos: 0,
-            slice_start: 0,
+            raw_start: 0,
             finished: false,
             state_enter: true,
             token_handler,

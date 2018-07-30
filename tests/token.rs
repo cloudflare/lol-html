@@ -6,6 +6,7 @@ use serde_json::error::Error;
 use super::unescape::Unescape;
 use cool_thing::Token;
 use super::decoder::Decoder;
+use std::str;
 
 #[derive(Clone, Copy, Deserialize)]
 enum TokenKind {
@@ -164,52 +165,67 @@ impl Unescape for TestToken {
     }
 }
 
-impl<'t> From<&'t Token<'t>> for TestToken {
-    fn from(token: &Token<'t>) -> Self {
-        match *token {
-            Token::Character(ref data) => TestToken::Character(data.as_string()),
+fn bytes_to_str(bytes: &[u8]) -> &str {
+    unsafe { str::from_utf8_unchecked(bytes) }
+}
 
-            Token::Comment(ref data) => {
-                TestToken::Comment(Decoder::new(data.as_str()).unsafe_null().run())
+fn bytes_to_string(bytes: &[u8]) -> String {
+    unsafe { String::from_utf8_unchecked(bytes.to_vec()) }
+}
+
+impl<'t> From<(&'t Token<'t>, Option<&'t [u8]>)> for TestToken {
+    fn from(lex_res: (&Token<'t>, Option<&'t [u8]>)) -> Self {
+        match lex_res {
+            (Token::Character, Some(raw)) => TestToken::Character(bytes_to_string(raw)),
+
+            (Token::Comment, Some(raw)) => {
+                TestToken::Comment(Decoder::new(bytes_to_str(raw)).unsafe_null().run())
             }
 
-            Token::StartTag {
-                ref name,
-                attributes,
-                self_closing,
-            } => TestToken::StartTag {
-                name: name.as_string(),
+            (
+                Token::StartTag {
+                    name,
+                    attributes,
+                    self_closing,
+                },
+                Some(raw),
+            ) => TestToken::StartTag {
+                name: name.as_string(raw),
 
                 attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
                     (
-                        name.as_string(),
-                        Decoder::new(attr.value.as_str())
+                        name.as_string(raw),
+                        Decoder::new(attr.value.as_str(raw))
                             .unsafe_null()
                             .attr_entities()
                             .run(),
                     )
                 })),
 
-                self_closing,
+                self_closing: *self_closing,
             },
 
-            Token::EndTag { ref name } => TestToken::EndTag {
-                name: name.as_string(),
+            (Token::EndTag { name }, Some(raw)) => TestToken::EndTag {
+                name: name.as_string(raw),
             },
 
-            Token::Doctype {
-                ref name,
-                ref public_id,
-                ref system_id,
-                force_quirks,
-            } => TestToken::Doctype {
-                name: name.as_ref().map(|s| s.as_string()),
-                public_id: public_id.as_ref().map(|s| s.as_string()),
-                system_id: system_id.as_ref().map(|s| s.as_string()),
-                force_quirks,
+            (
+                Token::Doctype {
+                    name,
+                    public_id,
+                    system_id,
+                    force_quirks,
+                },
+                Some(raw),
+            ) => TestToken::Doctype {
+                name: name.as_ref().map(|s| s.as_string(raw)),
+                public_id: public_id.as_ref().map(|s| s.as_string(raw)),
+                system_id: system_id.as_ref().map(|s| s.as_string(raw)),
+                force_quirks: *force_quirks,
             },
 
-            Token::Eof => TestToken::Eof,
+            (Token::Eof, None) => TestToken::Eof,
+            _ => unreachable!(),
         }
     }
 }

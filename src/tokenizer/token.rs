@@ -1,31 +1,48 @@
-use super::buffer_slice::BufferSlice;
+use std::str;
 
-#[derive(Debug)]
-pub struct Attribute<'t> {
-    pub name: BufferSlice<'t>,
-    pub value: BufferSlice<'t>,
+pub struct RawSubslice {
+    start: usize,
+    end: usize,
 }
 
-#[derive(Debug)]
-pub enum Token<'t> {
-    Character(BufferSlice<'t>),
+impl RawSubslice {
+    pub fn as_bytes<'r>(&self, raw: &'r [u8]) -> &'r [u8] {
+        &raw[self.start..self.end]
+    }
 
-    Comment(BufferSlice<'t>),
+    pub fn as_str<'t>(&self, raw: &'t [u8]) -> &'t str {
+        unsafe { str::from_utf8_unchecked(self.as_bytes(raw)) }
+    }
+
+    pub fn as_string(&self, raw: &[u8]) -> String {
+        unsafe { String::from_utf8_unchecked(self.as_bytes(raw).to_vec()) }
+    }
+}
+
+pub struct Attribute {
+    pub name: RawSubslice,
+    pub value: RawSubslice,
+}
+
+pub enum Token<'t> {
+    Character,
+
+    Comment,
 
     StartTag {
-        name: BufferSlice<'t>,
-        attributes: &'t [Attribute<'t>],
+        name: RawSubslice,
+        attributes: &'t [Attribute],
         self_closing: bool,
     },
 
     EndTag {
-        name: BufferSlice<'t>,
+        name: RawSubslice,
     },
 
     Doctype {
-        name: Option<BufferSlice<'t>>,
-        public_id: Option<BufferSlice<'t>>,
-        system_id: Option<BufferSlice<'t>>,
+        name: Option<RawSubslice>,
+        public_id: Option<RawSubslice>,
+        system_id: Option<RawSubslice>,
         force_quirks: bool,
     },
 
