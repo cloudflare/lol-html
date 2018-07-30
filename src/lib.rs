@@ -1,3 +1,3 @@
 mod tokenizer;
 
-pub use tokenizer::{Token, Tokenizer};
+pub use tokenizer::{LexResult, Token, TokenDescriptor, Tokenizer};

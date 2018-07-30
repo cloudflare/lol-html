@@ -9,7 +9,7 @@ mod state_body;
 
 macro_rules! state_group {
     ( $($states:tt)+ ) => {
-        impl<'t, H: FnMut(Token, Option<&[u8]>)> Tokenizer<'t, H> {
+        impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
            state!($($states)+);
         }
     };

@@ -1,4 +1,4 @@
-mod token;
+mod lex_result;
 
 #[macro_use]
 mod state_machine_dsl;
@@ -6,13 +6,14 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
-pub use self::token::{Attribute, Token, RawSubslice};
+
+pub use self::lex_result::*;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 #[derive(Debug)]
-pub struct BufferCapacityExceededError<'c> {
-    unprocessed_buffer: &'c [u8],
+pub struct BufferCapacityExceededError<'t> {
+    unprocessed_buffer: &'t [u8],
 }
 
 // 2. Implement simple states via function calls
@@ -26,7 +27,7 @@ pub struct BufferCapacityExceededError<'c> {
 // 9. Implement buffer capacity error recovery (?)
 // 10. Parse errors
 
-pub struct Tokenizer<'t, H: FnMut(Token, Option<&[u8]>)> {
+pub struct Tokenizer<'t, H: FnMut(LexResult)> {
     buffer: Box<[u8]>,
     buffer_capacity: usize,
     buffer_watermark: usize,
@@ -36,13 +37,13 @@ pub struct Tokenizer<'t, H: FnMut(Token, Option<&[u8]>)> {
     state_enter: bool,
     token_handler: H,
     state: fn(&mut Tokenizer<'t, H>, Option<u8>),
-    current_token: Token<'t>,
-    attr_buffer: Vec<Attribute>,
+    current_token: Option<TokenDescriptor<'t>>,
+    attr_buffer: Vec<AttributeDescriptor>,
 }
 
 define_state_machine!();
 
-impl<'t, H: FnMut(Token, Option<&[u8]>)> Tokenizer<'t, H> {
+impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
     pub fn new(buffer_capacity: usize, token_handler: H) -> Tokenizer<'t, H> {
         Tokenizer {
             buffer: vec![0; buffer_capacity].into(),
@@ -54,7 +55,7 @@ impl<'t, H: FnMut(Token, Option<&[u8]>)> Tokenizer<'t, H> {
             state_enter: true,
             token_handler,
             state: Tokenizer::data_state,
-            current_token: Token::Eof,
+            current_token: None,
             attr_buffer: Vec::with_capacity(DEFAULT_ATTR_BUFFER_CAPACITY)
         }
     }

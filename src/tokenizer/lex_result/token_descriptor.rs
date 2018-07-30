@@ -1,4 +1,5 @@
 use std::str;
+use super::bytes_to_string;
 
 pub struct RawSubslice {
     start: usize,
@@ -15,23 +16,23 @@ impl RawSubslice {
     }
 
     pub fn as_string(&self, raw: &[u8]) -> String {
-        unsafe { String::from_utf8_unchecked(self.as_bytes(raw).to_vec()) }
+        bytes_to_string(self.as_bytes(raw))
     }
 }
 
-pub struct Attribute {
+pub struct AttributeDescriptor {
     pub name: RawSubslice,
     pub value: RawSubslice,
 }
 
-pub enum Token<'t> {
+pub enum TokenDescriptor<'t> {
     Character,
 
     Comment,
 
     StartTag {
         name: RawSubslice,
-        attributes: &'t [Attribute],
+        attributes: &'t [AttributeDescriptor],
         self_closing: bool,
     },
 

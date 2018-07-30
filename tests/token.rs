@@ -4,7 +4,7 @@ use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
 use serde_json::error::Error;
 use super::unescape::Unescape;
-use cool_thing::Token;
+use cool_thing::{LexResult, TokenDescriptor};
 use super::decoder::Decoder;
 use std::str;
 
@@ -173,17 +173,17 @@ fn bytes_to_string(bytes: &[u8]) -> String {
     unsafe { String::from_utf8_unchecked(bytes.to_vec()) }
 }
 
-impl<'t> From<(&'t Token<'t>, Option<&'t [u8]>)> for TestToken {
-    fn from(lex_res: (&Token<'t>, Option<&'t [u8]>)) -> Self {
-        match lex_res {
-            (Token::Character, Some(raw)) => TestToken::Character(bytes_to_string(raw)),
+impl<'r, 't> From<LexResult<'r, 't>> for TestToken {
+    fn from(lex_res: LexResult<'r, 't>) -> Self {
+        match (lex_res.token_descr, lex_res.raw) {
+            (TokenDescriptor::Character, Some(raw)) => TestToken::Character(bytes_to_string(raw)),
 
-            (Token::Comment, Some(raw)) => {
+            (TokenDescriptor::Comment, Some(raw)) => {
                 TestToken::Comment(Decoder::new(bytes_to_str(raw)).unsafe_null().run())
             }
 
             (
-                Token::StartTag {
+                TokenDescriptor::StartTag {
                     name,
                     attributes,
                     self_closing,
@@ -202,15 +202,15 @@ impl<'t> From<(&'t Token<'t>, Option<&'t [u8]>)> for TestToken {
                     )
                 })),
 
-                self_closing: *self_closing,
+                self_closing,
             },
 
-            (Token::EndTag { name }, Some(raw)) => TestToken::EndTag {
+            (TokenDescriptor::EndTag { name }, Some(raw)) => TestToken::EndTag {
                 name: name.as_string(raw),
             },
 
             (
-                Token::Doctype {
+                TokenDescriptor::Doctype {
                     name,
                     public_id,
                     system_id,
@@ -221,10 +221,10 @@ impl<'t> From<(&'t Token<'t>, Option<&'t [u8]>)> for TestToken {
                 name: name.as_ref().map(|s| s.as_string(raw)),
                 public_id: public_id.as_ref().map(|s| s.as_string(raw)),
                 system_id: system_id.as_ref().map(|s| s.as_string(raw)),
-                force_quirks: *force_quirks,
+                force_quirks,
             },
 
-            (Token::Eof, None) => TestToken::Eof,
+            (TokenDescriptor::Eof, None) => TestToken::Eof,
             _ => unreachable!(),
         }
     }

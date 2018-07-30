@@ -1,7 +1,7 @@
 use serde_json;
 use super::unescape::Unescape;
 use super::token::TestToken;
-use cool_thing::{Token, Tokenizer};
+use cool_thing::{LexResult, Tokenizer};
 
 #[derive(Clone, Copy, Deserialize, Debug)]
 pub enum InitialState {
@@ -20,9 +20,7 @@ pub enum InitialState {
 }
 
 impl InitialState {
-    fn to_tokenizer_state<'t, H: FnMut(Token, Option<&[u8]>)>(
-        self,
-    ) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
+    fn to_tokenizer_state<'t, H: FnMut(LexResult)>(self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
         match self {
             InitialState::Data => Tokenizer::data_state,
             InitialState::PlainText => Tokenizer::plaintext_state,
@@ -86,8 +84,8 @@ impl TestCase {
             let mut actual_tokens = Vec::new();
 
             {
-                let mut tokenizer = Tokenizer::new(2048, |token: Token, raw: Option<&[u8]>| {
-                    let test_token = TestToken::from((&token, raw));
+                let mut tokenizer = Tokenizer::new(2048, |lex_res: LexResult| {
+                    let test_token = TestToken::from(lex_res);
                     let mut is_consequent_char = false;
 
                     if let (

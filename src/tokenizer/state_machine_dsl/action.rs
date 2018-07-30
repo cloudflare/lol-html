@@ -1,14 +1,22 @@
 macro_rules! action {
     ( | $me:ident |> emit_eof ) => {
-        ($me.token_handler)(Token::Eof, None);
+        let res = LexResult {
+            token_descr: TokenDescriptor::Eof,
+            raw: None,
+        };
+
+        ($me.token_handler)(res);
         $me.finished = true;
     };
 
     ( | $me:ident |> emit_chars ) => {
         if $me.pos > $me.raw_start {
-            let raw = Some(&$me.buffer[$me.raw_start..$me.pos]);
+            let res = LexResult {
+                token_descr: TokenDescriptor::Character,
+                raw: Some(&$me.buffer[$me.raw_start..$me.pos]),
+            };
 
-            ($me.token_handler)(Token::Character, raw);
+            ($me.token_handler)(res);
         }
     };
 
