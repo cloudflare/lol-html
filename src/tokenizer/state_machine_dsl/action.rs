@@ -25,7 +25,13 @@ macro_rules! action {
     };
 
     (| $me:ident | > create_start_tag) => {
-        // TODO
+        $me.attr_buffer.borrow_mut().clear();
+
+        $me.current_token = Some(ShallowToken::StartTag {
+            name: SliceRange::default(),
+            attributes: Rc::clone(&$me.attr_buffer),
+            self_closing: false,
+        });
     };
 
     // State transition actions

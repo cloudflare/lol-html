@@ -3,20 +3,20 @@ mod shallow_token;
 mod token;
 
 use self::raw_subslice::RawSubslice;
-use self::shallow_token::SliceRange;
-pub use self::shallow_token::{ShallowAttribute, ShallowToken};
+pub use self::shallow_token::{ShallowAttribute, ShallowToken, SliceRange};
 pub use self::token::{Attribute, Token};
 
+#[inline]
 fn as_opt_subslice(raw: &[u8], range: Option<SliceRange>) -> Option<RawSubslice> {
     range.map(|range| RawSubslice::from((raw, range)))
 }
 
-pub struct LexResult<'r, 't: 'r> {
-    pub shallow_token: ShallowToken<'t>,
+pub struct LexResult<'r> {
+    pub shallow_token: ShallowToken,
     pub raw: Option<&'r [u8]>,
 }
 
-impl<'r, 't> LexResult<'r, 't> {
+impl<'r> LexResult<'r> {
     pub fn as_token(&self) -> Token<'r> {
         match (&self.shallow_token, self.raw) {
             (&ShallowToken::Character, Some(raw)) => Token::Character(RawSubslice::from(raw)),
@@ -25,7 +25,7 @@ impl<'r, 't> LexResult<'r, 't> {
             (
                 &ShallowToken::StartTag {
                     name,
-                    attributes,
+                    ref attributes,
                     self_closing,
                 },
                 Some(raw),
@@ -33,8 +33,8 @@ impl<'r, 't> LexResult<'r, 't> {
                 name: RawSubslice::from((raw, name)),
 
                 attributes: attributes
+                    .borrow()
                     .iter()
-                    .rev()
                     .map(|&ShallowAttribute { name, value }| Attribute {
                         name: RawSubslice::from((raw, name)),
                         value: RawSubslice::from((raw, value)),

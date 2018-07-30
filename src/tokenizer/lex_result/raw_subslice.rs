@@ -28,7 +28,7 @@ impl<'t> From<&'t [u8]> for RawSubslice<'t> {
 
 impl<'t> From<(&'t [u8], SliceRange)> for RawSubslice<'t> {
     fn from((raw, range): (&'t [u8], SliceRange)) -> Self {
-        RawSubslice::from(&raw[range.start..range.end])
+        (&raw[range.start..range.end]).into()
     }
 }
 
