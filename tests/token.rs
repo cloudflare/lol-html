@@ -4,7 +4,7 @@ use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
 use serde_json::error::Error;
 use super::unescape::Unescape;
-use cool_thing::{LexResult, TokenDescriptor, Token};
+use cool_thing::{LexResult, TokenInfo, Token};
 use super::decoder::Decoder;
 use std::str;
 

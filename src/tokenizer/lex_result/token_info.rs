@@ -20,19 +20,19 @@ impl RawSubslice {
     }
 }
 
-pub struct AttributeDescriptor {
+pub struct AttributeInfo {
     pub name: RawSubslice,
     pub value: RawSubslice,
 }
 
-pub enum TokenDescriptor<'t> {
+pub enum TokenInfo<'t> {
     Character,
 
     Comment,
 
     StartTag {
         name: RawSubslice,
-        attributes: &'t [AttributeDescriptor],
+        attributes: &'t [AttributeInfo],
         self_closing: bool,
     },
 

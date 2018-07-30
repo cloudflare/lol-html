@@ -1,7 +1,7 @@
 macro_rules! action {
     ( | $me:ident |> emit_eof ) => {
         let res = LexResult {
-            token_descr: TokenDescriptor::Eof,
+            token_info: TokenInfo::Eof,
             raw: None,
         };
 
@@ -12,7 +12,7 @@ macro_rules! action {
     ( | $me:ident |> emit_chars ) => {
         if $me.pos > $me.raw_start {
             let res = LexResult {
-                token_descr: TokenDescriptor::Character,
+                token_info: TokenInfo::Character,
                 raw: Some(&$me.buffer[$me.raw_start..$me.pos]),
             };
 

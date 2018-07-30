@@ -1,7 +1,7 @@
-mod token_descriptor;
+mod token_info;
 mod token;
 
-pub use self::token_descriptor::{AttributeDescriptor, TokenDescriptor};
+pub use self::token_info::{AttributeInfo, TokenInfo};
 pub use self::token::Token;
 use std::collections::HashMap;
 use std::iter::FromIterator;
@@ -11,18 +11,18 @@ fn bytes_to_string(bytes: &[u8]) -> String {
 }
 
 pub struct LexResult<'r, 't: 'r> {
-    pub token_descr: TokenDescriptor<'t>,
+    pub token_info: TokenInfo<'t>,
     pub raw: Option<&'r [u8]>,
 }
 
 impl<'r, 't> Into<Token> for LexResult<'r, 't> {
     fn into(self) -> Token {
-        match (self.token_descr, self.raw) {
-            (TokenDescriptor::Character, Some(raw)) => Token::Character(bytes_to_string(raw)),
-            (TokenDescriptor::Comment, Some(raw)) => Token::Comment(bytes_to_string(raw)),
+        match (self.token_info, self.raw) {
+            (TokenInfo::Character, Some(raw)) => Token::Character(bytes_to_string(raw)),
+            (TokenInfo::Comment, Some(raw)) => Token::Comment(bytes_to_string(raw)),
 
             (
-                TokenDescriptor::StartTag {
+                TokenInfo::StartTag {
                     name,
                     attributes,
                     self_closing,
@@ -41,12 +41,12 @@ impl<'r, 't> Into<Token> for LexResult<'r, 't> {
                 self_closing,
             },
 
-            (TokenDescriptor::EndTag { name }, Some(raw)) => Token::EndTag {
+            (TokenInfo::EndTag { name }, Some(raw)) => Token::EndTag {
                 name: name.as_string(raw),
             },
 
             (
-                TokenDescriptor::Doctype {
+                TokenInfo::Doctype {
                     name,
                     public_id,
                     system_id,
@@ -60,7 +60,7 @@ impl<'r, 't> Into<Token> for LexResult<'r, 't> {
                 force_quirks,
             },
 
-            (TokenDescriptor::Eof, None) => Token::Eof,
+            (TokenInfo::Eof, None) => Token::Eof,
             _ => unreachable!(),
         }
     }

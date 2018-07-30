@@ -37,8 +37,8 @@ pub struct Tokenizer<'t, H: FnMut(LexResult)> {
     state_enter: bool,
     token_handler: H,
     state: fn(&mut Tokenizer<'t, H>, Option<u8>),
-    current_token: Option<TokenDescriptor<'t>>,
-    attr_buffer: Vec<AttributeDescriptor>,
+    current_token: Option<TokenInfo<'t>>,
+    attr_buffer: Vec<AttributeInfo>,
 }
 
 define_state_machine!();
