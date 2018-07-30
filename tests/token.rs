@@ -1,12 +1,11 @@
-use std::collections::HashMap;
+use super::decoder::Decoder;
+use super::unescape::Unescape;
+use cool_thing::Token;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
+use serde_json::error::Error;
+use std::collections::HashMap;
 use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
-use serde_json::error::Error;
-use super::unescape::Unescape;
-use cool_thing::{LexResult, TokenInfo, Token};
-use super::decoder::Decoder;
-use std::str;
 
 #[derive(Clone, Copy, Deserialize)]
 enum TokenKind {
@@ -18,9 +17,8 @@ enum TokenKind {
     Doctype,
 }
 
-#[derive(Deserialize)]
-#[serde(remote = "Token")]
-pub enum TokenDef {
+#[derive(Debug, PartialEq, Eq)]
+pub enum TestToken {
     Character(String),
 
     Comment(String),
@@ -45,7 +43,7 @@ pub enum TokenDef {
     Eof,
 }
 
-impl<'de> Deserialize<'de> for TokenDef {
+impl<'de> Deserialize<'de> for TestToken {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -53,7 +51,7 @@ impl<'de> Deserialize<'de> for TokenDef {
         struct Visitor;
 
         impl<'de> ::serde::de::Visitor<'de> for Visitor {
-            type Value = TokenDef;
+            type Value = TestToken;
 
             fn expecting(&self, f: &mut Formatter) -> fmt::Result {
                 f.write_str("['TokenKind', ...]")
@@ -66,27 +64,29 @@ impl<'de> Deserialize<'de> for TokenDef {
                 let mut actual_length = 0;
 
                 macro_rules! next {
-                    ($error_msg: expr) => (match seq.next_element()? {
-                        Some(value) => {
-                            #[allow(unused_assignments)] {
-                                actual_length += 1;
-                            }
+                    ($error_msg:expr) => {
+                        match seq.next_element()? {
+                            Some(value) => {
+                                #[allow(unused_assignments)]
+                                {
+                                    actual_length += 1;
+                                }
 
-                            value
-                        },
-                        None => return Err(DeError::invalid_length(
-                            actual_length,
-                            &$error_msg
-                        ))
-                    })
+                                value
+                            }
+                            None => {
+                                return Err(DeError::invalid_length(actual_length, &$error_msg))
+                            }
+                        }
+                    };
                 }
 
                 let kind = next!("2 or more");
 
                 Ok(match kind {
-                    TokenKind::Character => TokenDef::Character(next!("2")),
-                    TokenKind::Comment => TokenDef::Comment(next!("2")),
-                    TokenKind::StartTag => TokenDef::StartTag {
+                    TokenKind::Character => TestToken::Character(next!("2")),
+                    TokenKind::Comment => TestToken::Comment(next!("2")),
+                    TokenKind::StartTag => TestToken::StartTag {
                         name: {
                             let mut value: String = next!("3 or 4");
                             value.make_ascii_lowercase();
@@ -101,14 +101,14 @@ impl<'de> Deserialize<'de> for TokenDef {
                         },
                         self_closing: seq.next_element()?.unwrap_or(false),
                     },
-                    TokenKind::EndTag => TokenDef::EndTag {
+                    TokenKind::EndTag => TestToken::EndTag {
                         name: {
                             let mut value: String = next!("2");
                             value.make_ascii_lowercase();
                             value
                         },
                     },
-                    TokenKind::Doctype => TokenDef::Doctype {
+                    TokenKind::Doctype => TestToken::Doctype {
                         name: {
                             let mut value: Option<String> = next!("5");
                             if let Some(ref mut value) = value {
@@ -128,18 +128,18 @@ impl<'de> Deserialize<'de> for TokenDef {
     }
 }
 
-impl Unescape for Token {
+impl Unescape for TestToken {
     fn unescape(&mut self) -> Result<(), Error> {
         match *self {
-            Token::Character(ref mut s) | Token::Comment(ref mut s) => {
+            TestToken::Character(ref mut s) | TestToken::Comment(ref mut s) => {
                 s.unescape()?;
             }
 
-            Token::EndTag { ref mut name } => {
+            TestToken::EndTag { ref mut name } => {
                 name.unescape()?;
             }
 
-            Token::StartTag {
+            TestToken::StartTag {
                 ref mut name,
                 ref mut attributes,
                 ..
@@ -150,7 +150,7 @@ impl Unescape for Token {
                 }
             }
 
-            Token::Doctype {
+            TestToken::Doctype {
                 ref mut name,
                 ref mut public_id,
                 ref mut system_id,
@@ -160,8 +160,58 @@ impl Unescape for Token {
                 public_id.unescape()?;
                 system_id.unescape()?;
             }
-            Token::Eof => (),
+            TestToken::Eof => (),
         }
         Ok(())
+    }
+}
+
+impl<'t> From<&'t Token<'t>> for TestToken {
+    fn from(token: &Token<'t>) -> Self {
+        match *token {
+            Token::Character(ref data) => TestToken::Character(data.as_string()),
+
+            Token::Comment(ref data) => {
+                TestToken::Comment(Decoder::new(data.as_str()).unsafe_null().run())
+            }
+
+            Token::StartTag {
+                ref name,
+                ref attributes,
+                self_closing,
+            } => TestToken::StartTag {
+                name: name.as_string(),
+
+                attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
+                    (
+                        name.as_string(),
+                        Decoder::new(attr.value.as_str())
+                            .unsafe_null()
+                            .attr_entities()
+                            .run(),
+                    )
+                })),
+
+                self_closing,
+            },
+
+            Token::EndTag { ref name } => TestToken::EndTag {
+                name: name.as_string(),
+            },
+
+            Token::Doctype {
+                ref name,
+                ref public_id,
+                ref system_id,
+                force_quirks,
+            } => TestToken::Doctype {
+                name: name.as_ref().map(|s| s.as_string()),
+                public_id: public_id.as_ref().map(|s| s.as_string()),
+                system_id: system_id.as_ref().map(|s| s.as_string()),
+                force_quirks,
+            },
+
+            Token::Eof => TestToken::Eof,
+        }
     }
 }

@@ -1,5 +1,5 @@
-use serde_json::error::Error;
 use serde_json::de::from_str as parse_json;
+use serde_json::error::Error;
 
 pub trait Unescape {
     fn unescape(&mut self) -> Result<(), Error>;

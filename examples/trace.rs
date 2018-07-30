@@ -7,7 +7,7 @@ fn main() {
     let html = args().nth(1).expect("HTML is not provided.");
 
     let mut tokenizer = Tokenizer::new(2048, |lex_result| {
-        let token: Token = lex_result.into();
+        let token: Token = lex_result.as_token();
 
         println!("{:#?}", token);
     });

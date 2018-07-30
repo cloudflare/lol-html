@@ -13,10 +13,10 @@ extern crate test;
 extern crate serde_derive;
 
 mod decoder;
+mod suite;
+mod test_case;
 mod token;
 mod unescape;
-mod test_case;
-mod suite;
 
 use suite::get_tests;
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};

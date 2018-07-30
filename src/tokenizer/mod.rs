@@ -6,7 +6,6 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
-
 pub use self::lex_result::*;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
@@ -37,8 +36,8 @@ pub struct Tokenizer<'t, H: FnMut(LexResult)> {
     state_enter: bool,
     token_handler: H,
     state: fn(&mut Tokenizer<'t, H>, Option<u8>),
-    current_token: Option<TokenInfo<'t>>,
-    attr_buffer: Vec<AttributeInfo>,
+    current_token: Option<ShallowToken<'t>>,
+    attr_buffer: Vec<ShallowAttribute>,
 }
 
 define_state_machine!();
@@ -56,7 +55,7 @@ impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
             token_handler,
             state: Tokenizer::data_state,
             current_token: None,
-            attr_buffer: Vec::with_capacity(DEFAULT_ATTR_BUFFER_CAPACITY)
+            attr_buffer: Vec::with_capacity(DEFAULT_ATTR_BUFFER_CAPACITY),
         }
     }
 

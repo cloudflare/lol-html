@@ -1,25 +1,31 @@
-use std::collections::HashMap;
+use super::raw_subslice::RawSubslice;
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Token {
-    Character(String),
+#[derive(Debug)]
+pub struct Attribute<'r> {
+    pub name: RawSubslice<'r>,
+    pub value: RawSubslice<'r>,
+}
 
-    Comment(String),
+#[derive(Debug)]
+pub enum Token<'r> {
+    Character(RawSubslice<'r>),
+
+    Comment(RawSubslice<'r>),
 
     StartTag {
-        name: String,
-        attributes: HashMap<String, String>,
+        name: RawSubslice<'r>,
+        attributes: Vec<Attribute<'r>>,
         self_closing: bool,
     },
 
     EndTag {
-        name: String,
+        name: RawSubslice<'r>,
     },
 
     Doctype {
-        name: Option<String>,
-        public_id: Option<String>,
-        system_id: Option<String>,
+        name: Option<RawSubslice<'r>>,
+        public_id: Option<RawSubslice<'r>>,
+        system_id: Option<RawSubslice<'r>>,
         force_quirks: bool,
     },
 

@@ -1,52 +1,55 @@
-mod token_info;
+mod raw_subslice;
+mod shallow_token;
 mod token;
 
-pub use self::token_info::{AttributeInfo, TokenInfo};
-pub use self::token::Token;
-use std::collections::HashMap;
-use std::iter::FromIterator;
+use self::raw_subslice::RawSubslice;
+use self::shallow_token::SliceRange;
+pub use self::shallow_token::{ShallowAttribute, ShallowToken};
+pub use self::token::{Attribute, Token};
 
-fn bytes_to_string(bytes: &[u8]) -> String {
-    unsafe { String::from_utf8_unchecked(bytes.to_vec()) }
+fn as_opt_subslice(raw: &[u8], range: Option<SliceRange>) -> Option<RawSubslice> {
+    range.map(|range| RawSubslice::from((raw, range)))
 }
 
 pub struct LexResult<'r, 't: 'r> {
-    pub token_info: TokenInfo<'t>,
+    pub shallow_token: ShallowToken<'t>,
     pub raw: Option<&'r [u8]>,
 }
 
-impl<'r, 't> Into<Token> for LexResult<'r, 't> {
-    fn into(self) -> Token {
-        match (self.token_info, self.raw) {
-            (TokenInfo::Character, Some(raw)) => Token::Character(bytes_to_string(raw)),
-            (TokenInfo::Comment, Some(raw)) => Token::Comment(bytes_to_string(raw)),
+impl<'r, 't> LexResult<'r, 't> {
+    pub fn as_token(&self) -> Token<'r> {
+        match (&self.shallow_token, self.raw) {
+            (&ShallowToken::Character, Some(raw)) => Token::Character(RawSubslice::from(raw)),
+            (&ShallowToken::Comment, Some(raw)) => Token::Comment(RawSubslice::from(raw)),
 
             (
-                TokenInfo::StartTag {
+                &ShallowToken::StartTag {
                     name,
                     attributes,
                     self_closing,
                 },
                 Some(raw),
             ) => Token::StartTag {
-                name: name.as_string(raw),
+                name: RawSubslice::from((raw, name)),
 
-                attributes: HashMap::from_iter(
-                    attributes
-                        .iter()
-                        .rev()
-                        .map(|attr| (name.as_string(raw), attr.value.as_string(raw))),
-                ),
+                attributes: attributes
+                    .iter()
+                    .rev()
+                    .map(|&ShallowAttribute { name, value }| Attribute {
+                        name: RawSubslice::from((raw, name)),
+                        value: RawSubslice::from((raw, value)),
+                    })
+                    .collect(),
 
                 self_closing,
             },
 
-            (TokenInfo::EndTag { name }, Some(raw)) => Token::EndTag {
-                name: name.as_string(raw),
+            (&ShallowToken::EndTag { name }, Some(raw)) => Token::EndTag {
+                name: RawSubslice::from((raw, name)),
             },
 
             (
-                TokenInfo::Doctype {
+                &ShallowToken::Doctype {
                     name,
                     public_id,
                     system_id,
@@ -54,13 +57,13 @@ impl<'r, 't> Into<Token> for LexResult<'r, 't> {
                 },
                 Some(raw),
             ) => Token::Doctype {
-                name: name.as_ref().map(|s| s.as_string(raw)),
-                public_id: public_id.as_ref().map(|s| s.as_string(raw)),
-                system_id: system_id.as_ref().map(|s| s.as_string(raw)),
+                name: as_opt_subslice(raw, name),
+                public_id: as_opt_subslice(raw, public_id),
+                system_id: as_opt_subslice(raw, system_id),
                 force_quirks,
             },
 
-            (TokenInfo::Eof, None) => Token::Eof,
+            (&ShallowToken::Eof, None) => Token::Eof,
             _ => unreachable!(),
         }
     }

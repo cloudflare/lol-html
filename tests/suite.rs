@@ -1,23 +1,21 @@
-use serde_json;
 use glob;
-use std::io::BufReader;
+use serde_json;
 use std::fs::File;
+use std::io::BufReader;
 use test_case::TestCase;
 
 #[derive(Deserialize)]
 struct Suite {
-    #[serde(default)] pub tests: Vec<TestCase>,
+    #[serde(default)]
+    pub tests: Vec<TestCase>,
 }
 
 macro_rules! read_tests {
-    ($path: expr) => (
-        glob::glob(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/data/",
-            $path
-        )).unwrap()
-        .map(|path| BufReader::new(File::open(path.unwrap()).unwrap()))
-    )
+    ($path:expr) => {
+        glob::glob(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/", $path))
+            .unwrap()
+            .map(|path| BufReader::new(File::open(path.unwrap()).unwrap()))
+    };
 }
 
 pub fn get_tests() -> Vec<TestCase> {

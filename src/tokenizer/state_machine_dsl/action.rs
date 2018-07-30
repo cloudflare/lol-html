@@ -1,7 +1,7 @@
 macro_rules! action {
-    ( | $me:ident |> emit_eof ) => {
+    (| $me:ident | > emit_eof) => {
         let res = LexResult {
-            token_info: TokenInfo::Eof,
+            shallow_token: ShallowToken::Eof,
             raw: None,
         };
 
@@ -9,10 +9,10 @@ macro_rules! action {
         $me.finished = true;
     };
 
-    ( | $me:ident |> emit_chars ) => {
+    (| $me:ident | > emit_chars) => {
         if $me.pos > $me.raw_start {
             let res = LexResult {
-                token_info: TokenInfo::Character,
+                shallow_token: ShallowToken::Character,
                 raw: Some(&$me.buffer[$me.raw_start..$me.pos]),
             };
 
@@ -20,22 +20,22 @@ macro_rules! action {
         }
     };
 
-    ( | $me:ident |> start_raw ) => {
+    (| $me:ident | > start_raw) => {
         $me.raw_start = $me.pos;
     };
 
-    ( | $me:ident |> create_start_tag ) => {
+    (| $me:ident | > create_start_tag) => {
         // TODO
     };
 
     // State transition actions
     //--------------------------------------------------------------------
-    ( @state_transition | $me:ident |> reconsume in $state:ident ) => {
+    (@state_transition | $me:ident | > reconsume in $state:ident) => {
         $me.pos -= 1;
         state_transition!(| $me |> --> $state);
     };
 
-    ( @state_transition | $me:ident |> --> $state:ident ) => {
+    (@state_transition | $me:ident | > - -> $state:ident) => {
         $me.state = Tokenizer::$state;
         $me.state_enter = true;
         return;

@@ -1,7 +1,7 @@
-use serde_json;
 use super::unescape::Unescape;
-use cool_thing::{LexResult, Token, Tokenizer};
-use token::TokenDef;
+use cool_thing::{LexResult, Tokenizer};
+use serde_json;
+use token::TestToken;
 
 #[derive(Clone, Copy, Deserialize, Debug)]
 pub enum InitialState {
@@ -42,8 +42,8 @@ pub struct TestCase {
     pub description: String,
     pub input: String,
 
-    #[serde(rename = "output", with = "TokenDef")]
-    pub expected_tokens: Vec<Token>,
+    #[serde(rename = "output")]
+    pub expected_tokens: Vec<TestToken>,
 
     #[serde(skip)]
     pub ignored: bool,
@@ -76,7 +76,7 @@ impl TestCase {
         self.ignored = self.unescape().is_err();
 
         // NOTE: tokenizer should always produce EOF token
-        self.expected_tokens.push(Token::Eof);
+        self.expected_tokens.push(TestToken::Eof);
     }
 
     pub fn run(&self) {
@@ -85,11 +85,13 @@ impl TestCase {
 
             {
                 let mut tokenizer = Tokenizer::new(2048, |lex_res: LexResult| {
-                    let token: Token = lex_res.into();
+                    let token = TestToken::from(&lex_res.as_token());
                     let mut is_consequent_char = false;
 
-                    if let (&Token::Character(ref cs), Some(&mut Token::Character(ref mut ps))) =
-                        (&token, actual_tokens.last_mut())
+                    if let (
+                        &TestToken::Character(ref cs),
+                        Some(&mut TestToken::Character(ref mut ps)),
+                    ) = (&token, actual_tokens.last_mut())
                     {
                         *ps += cs;
                         is_consequent_char = true;

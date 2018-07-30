@@ -1,7 +1,7 @@
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
-use std::str::Chars;
 use std::iter::Peekable;
+use std::str::Chars;
 
 #[derive(PartialEq, Eq)]
 enum Entities {
