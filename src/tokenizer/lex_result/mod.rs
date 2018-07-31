@@ -20,7 +20,10 @@ impl<'r> LexResult<'r> {
     pub fn as_token(&self) -> Token<'r> {
         match (&self.shallow_token, self.raw) {
             (&ShallowToken::Character, Some(raw)) => Token::Character(RawSubslice::from(raw)),
-            (&ShallowToken::Comment, Some(raw)) => Token::Comment(RawSubslice::from(raw)),
+
+            (&ShallowToken::Comment(text), Some(raw)) => {
+                Token::Comment(RawSubslice::from((raw, text)))
+            },
 
             (
                 &ShallowToken::StartTag {
@@ -38,8 +41,7 @@ impl<'r> LexResult<'r> {
                     .map(|&ShallowAttribute { name, value }| Attribute {
                         name: RawSubslice::from((raw, name)),
                         value: RawSubslice::from((raw, value)),
-                    })
-                    .collect(),
+                    }).collect(),
 
                 self_closing,
             },

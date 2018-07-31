@@ -10,9 +10,23 @@ macro_rules! action {
         $me.finished = true;
     };
 
-    ( | $me:ident |> emit_chars ) => ( action_helper!(@emit_textual_token |$me|> Character); );
+    ( | $me:ident |> emit_chars ) => {
+        if $me.pos > $me.raw_start {
+            // NOTE: unlike any other tokens, character tokens don't have
+            // any lexical symbols that determine their bounds. Therefore,
+            // representation of character token content is the raw slice.
+            // Also, we always emit characters if we encounter some other bounded
+            // lexical structure and, thus, we use exclusive range for the raw slice.
+            action_helper!(@emit_lex_result_with_raw_exclusive |$me|> ShallowToken::Character);
+        }
+    };
 
-    ( | $me:ident |> emit_comment ) => ( action_helper!(@emit_textual_token |$me|> Comment); );
+    ( | $me:ident |> emit_comment ) => {
+        let mut text = SliceRange::default();
+
+        action_helper!(@set_token_part_range |$me|> text);
+        action_helper!(@emit_lex_result_with_raw_inclusive |$me|> ShallowToken::Comment(text));
+    };
 
     ( | $me:ident |> start_raw ) => {
         $me.raw_start = $me.pos;

@@ -1,10 +1,4 @@
 macro_rules! action_helper {
-    ( @emit_textual_token | $me:ident |> $ty:ident ) => {
-        if $me.pos > $me.raw_start {
-            action_helper!(@emit_lex_result_with_raw_exclusive |$me|> ShallowToken::$ty);
-        }
-    };
-
     ( @emit_lex_result_with_raw_inclusive | $me:ident |> $token:expr ) => {
         debug!(@trace_raw $me, $me.pos + 1);
         action_helper!(@emit_lex_result |$me|> $token, Some(&$me.buffer[$me.raw_start..=$me.pos]));

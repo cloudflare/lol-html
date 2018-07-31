@@ -19,7 +19,7 @@ pub struct ShallowAttribute {
 pub enum ShallowToken {
     Character,
 
-    Comment,
+    Comment(SliceRange),
 
     StartTag {
         name: SliceRange,
