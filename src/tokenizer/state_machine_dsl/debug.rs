@@ -13,7 +13,7 @@ macro_rules! debug {
         }
     };
 
-    ( @trace_raw $self:ident, $end_pos:expr ) => {
+    ( @trace_raw $self:tt, $end_pos:expr ) => {
         #[cfg(feature = "trace_raw")]
         {
             use std::fmt::Write;

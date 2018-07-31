@@ -57,7 +57,7 @@ macro_rules! state_body {
     // Character match block
     //--------------------------------------------------------------------
     ( @match_block
-        | [ $self:ident, $ch:ident ] |>
+        | [ $self:tt, $ch:ident ] |>
         $( $pat:pat $(|$pat_cont:pat)* => ( $($actions:tt)* ) )*
     ) => {
         match $ch {
