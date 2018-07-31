@@ -8,7 +8,7 @@ macro_rules! action_list {
     // NOTE: state transition should always be in the end of the action list
     ( | $me:ident |> $($transition:tt)+ ) => {
         debug!(@trace_actions $($transition)+);
-        action!(@state_transition | $me |> $($transition)+);
+        state_transition_action!(| $me |> $($transition)+);
     };
 
     // NOTE: end of the action list
