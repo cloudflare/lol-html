@@ -13,20 +13,20 @@ macro_rules! debug {
         }
     };
 
-    ( @trace_raw $me:ident, $end_pos:expr ) => {
+    ( @trace_raw $self:ident, $end_pos:expr ) => {
         #[cfg(feature = "trace_raw")]
         {
             use std::fmt::Write;
 
-            let mut chunk = unsafe { String::from_utf8_unchecked($me.buffer.to_vec()) };
+            let mut chunk = unsafe { String::from_utf8_unchecked($self.buffer.to_vec()) };
             let mut start = String::new();
             let mut end = String::new();
 
-            write!(start, "|{}|", $me.raw_start).unwrap();
+            write!(start, "|{}|", $self.raw_start).unwrap();
             write!(end, "|{}|", $end_pos).unwrap();
 
             chunk.insert_str($end_pos, &end);
-            chunk.insert_str($me.raw_start, &start);
+            chunk.insert_str($self.raw_start, &start);
 
             println!("--Token raw slice--");
             println!("{}", chunk);

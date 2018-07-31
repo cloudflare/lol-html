@@ -1,12 +1,12 @@
 macro_rules! state_transition_action {
-    ( | $me:ident |> reconsume in $state:ident ) => {
-        $me.pos -= 1;
-        state_transition_action!(| $me |> --> $state);
+    ( | $self:ident |> reconsume in $state:ident ) => {
+        $self.pos -= 1;
+        state_transition_action!(| $self |> --> $state);
     };
 
-    ( | $me:ident |> --> $state:ident ) => {
-        $me.state = Tokenizer::$state;
-        $me.state_enter = true;
+    ( | $self:ident |> --> $state:ident ) => {
+        $self.state = Tokenizer::$state;
+        $self.state_enter = true;
         return;
     };
 }

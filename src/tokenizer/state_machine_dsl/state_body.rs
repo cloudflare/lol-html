@@ -57,12 +57,12 @@ macro_rules! state_body {
     // Character match block
     //--------------------------------------------------------------------
     ( @match_block
-        | [ $me:ident, $ch:ident ] |>
+        | [ $self:ident, $ch:ident ] |>
         $( $pat:pat $(|$pat_cont:pat)* => ( $($actions:tt)* ) )*
     ) => {
         match $ch {
             $(
-                $pat $(| $pat_cont)* => { action_list!(|$me|> $($actions)*); }
+                $pat $(| $pat_cont)* => { action_list!(|$self|> $($actions)*); }
             )*
         }
     };
