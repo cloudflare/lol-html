@@ -9,7 +9,7 @@ define_state_group!(data_states_group = {
     tag_open_state {
         b'!'  => ( --> markup_declaration_open_state )
         b'/'  => ( --> end_tag_open_state )
-        alpha => ( create_start_tag; start_slice; --> tag_name_state )
+        alpha => ( create_start_tag; start_token_part; --> tag_name_state )
         b'?'  => ( start_raw; --> bogus_comment_state )
         eof   => ( emit_chars; emit_eof; )
         _     => ( emit_chars; reconsume in data_state )
@@ -31,7 +31,7 @@ define_state_group!(data_states_group = {
         b'/'       => ( --> self_closing_start_tag_state )
         b'>'       => ( finish_tag_name; emit_current_token; --> data_state )
         eof        => ( emit_eof; )
-        _          => ( emit_eof; )
+        _          => ()
     }
 
     before_attribute_name_state {

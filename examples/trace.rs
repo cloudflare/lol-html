@@ -10,6 +10,7 @@ fn main() {
         let token: Token = lex_result.as_token();
 
         println!("------------------");
+        println!("Shallow token: {:#?}", lex_result.shallow_token);
         println!();
         println!("Token: {:#?}", token);
 

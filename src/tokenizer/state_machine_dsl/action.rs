@@ -18,8 +18,8 @@ macro_rules! action {
         $me.raw_start = $me.pos;
     };
 
-    ( | $me:ident |> start_slice ) => {
-        $me.slice_start = $me.pos;
+    ( | $me:ident |> start_token_part ) => {
+        $me.token_part_start = $me.pos - $me.raw_start;
     };
 
     ( | $me:ident |> create_start_tag ) => {
@@ -35,8 +35,8 @@ macro_rules! action {
     ( | $me:ident |> finish_tag_name ) => {
         match $me.current_token {
             Some(ShallowToken::StartTag { ref mut name, .. }) => {
-                (*name).start = $me.slice_start - $me.raw_start;
-                (*name).end = $me.pos;
+                (*name).start = $me.token_part_start;
+                (*name).end = $me.pos - $me.raw_start;
             }
             _ => unreachable!("Current token should always be a start tag at this point")
         }
@@ -46,6 +46,8 @@ macro_rules! action {
         match $me.current_token.take() {
             Some(token) => {
                 $me.current_token = None;
+
+                println!("Raw start: {}, end: {}", $me.raw_start, $me.pos);
 
                 let res = LexResult {
                     shallow_token: token,

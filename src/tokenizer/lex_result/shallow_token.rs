@@ -3,17 +3,19 @@ use std::rc::Rc;
 
 // NOTE: std::ops::Range implements iterator and, thus, doesn't implement Copy.
 // See: https://github.com/rust-lang/rust/pull/27186
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct SliceRange {
     pub start: usize,
     pub end: usize,
 }
 
+#[derive(Debug)]
 pub struct ShallowAttribute {
     pub name: SliceRange,
     pub value: SliceRange,
 }
 
+#[derive(Debug)]
 pub enum ShallowToken {
     Character,
 
