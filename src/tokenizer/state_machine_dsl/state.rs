@@ -19,7 +19,6 @@ macro_rules! state {
         state!($($rest)*);
     };
 
-
     // NOTE: end of the state list
     () => ();
 }
