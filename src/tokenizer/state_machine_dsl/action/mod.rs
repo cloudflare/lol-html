@@ -45,7 +45,7 @@ macro_rules! action {
         match $me.current_token.take() {
             Some(token) => {
                 $me.current_token = None;
-                action_helper!(@emit_lex_result |$me|> token);
+                action_helper!(@emit_lex_result_with_raw_inclusive |$me|> token);
             }
             None => unreachable!("Current token should be already created at this point")
         }
