@@ -16,6 +16,7 @@ define_state_group!(data_states_group = {
     }
 
     markup_declaration_open_state {
+        // TODO
         eof => ( emit_eof; )
         _   => ( emit_eof; )
     }
@@ -35,11 +36,13 @@ define_state_group!(data_states_group = {
     }
 
     before_attribute_name_state {
+        // TODO
         eof => ( emit_eof; )
         _   => ( emit_eof; )
     }
 
     self_closing_start_tag_state {
+        // TODO
         eof => ( emit_eof; )
         _   => ( emit_eof; )
     }
