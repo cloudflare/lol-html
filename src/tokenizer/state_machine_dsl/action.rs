@@ -35,8 +35,8 @@ macro_rules! action {
     ( | $me:ident |> finish_tag_name ) => {
         match $me.current_token {
             Some(ShallowToken::StartTag { ref mut name, .. }) => {
-                (*name).start = $me.token_part_start;
-                (*name).end = $me.pos - $me.raw_start;
+                name.start = $me.token_part_start;
+                name.end = $me.pos - $me.raw_start;
             }
             _ => unreachable!("Current token should always be a start tag at this point")
         }
