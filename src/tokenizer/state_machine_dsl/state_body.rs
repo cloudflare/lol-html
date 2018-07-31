@@ -3,6 +3,7 @@ macro_rules! state_body {
         state_body!(@map_arms | $scope_vars |> [$($arms)+], [])
     };
 
+
     // Recursively expand each arm's pattern
     //--------------------------------------------------------------------
     ( @map_arms
