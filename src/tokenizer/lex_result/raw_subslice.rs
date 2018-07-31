@@ -10,6 +10,9 @@ pub struct RawSubslice<'t> {
     bytes: &'t [u8],
 }
 
+// NOTE: these unsafe methods are used only by tests and tracer.
+// Unfortunately we can't limit them with #[cfg] since cargo
+// doesn't provide capabilites to enable features per configuration.
 impl<'t> RawSubslice<'t> {
     pub fn as_str(&self) -> &str {
         unsafe { str::from_utf8_unchecked(self.bytes) }
