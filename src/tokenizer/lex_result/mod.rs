@@ -64,7 +64,7 @@ impl<'r> LexResult<'r> {
             },
 
             (&ShallowToken::Eof, None) => Token::Eof,
-            _ => unreachable!(),
+            _ => unreachable!("Such a combination of raw value and token type shouldn't exist"),
         }
     }
 }
