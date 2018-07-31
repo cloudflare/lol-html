@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 autotests = false
 
+[features]
+trace_actions = []
+
 [[test]]
 harness = false
 name = "test_runner"

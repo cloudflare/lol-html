@@ -10,6 +10,9 @@ mod state_body;
 #[macro_use]
 mod state;
 
+#[macro_use]
+mod debug;
+
 macro_rules! define_state_group {
     ( $name:ident = { $($states:tt)+ } ) => {
         macro_rules! $name {

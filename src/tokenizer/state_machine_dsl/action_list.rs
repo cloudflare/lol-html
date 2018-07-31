@@ -1,11 +1,13 @@
 macro_rules! action_list {
     ( | $me:ident |> $action:tt; $($rest:tt)* ) => {
+        debug!(@trace_actions $action);
         action!(| $me |> $action);
         action_list!(| $me |> $($rest)*);
     };
 
     // NOTE: state transition should always be in the end of the action list
     ( | $me:ident |> $($transition:tt)+ ) => {
+        debug!(@trace_actions $($transition)+);
         action!(@state_transition | $me |> $($transition)+);
     };
 

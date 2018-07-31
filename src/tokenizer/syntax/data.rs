@@ -30,10 +30,9 @@ define_state_group!(data_states_group = {
         whitespace => ( --> before_attribute_name_state )
         b'/'       => ( --> self_closing_start_tag_state )
         b'>'       => ( finish_tag_name; emit_current_token; --> data_state )
-        eof => ( emit_eof; )
-        _   => ( emit_eof; )
+        eof        => ( emit_eof; )
+        _          => ( emit_eof; )
     }
-
 
     before_attribute_name_state {
         eof => ( emit_eof; )
