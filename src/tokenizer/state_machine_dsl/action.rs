@@ -6,6 +6,7 @@ macro_rules! action {
         };
 
         ($me.token_handler)(res);
+
         $me.finished = true;
     };
 
@@ -29,6 +30,32 @@ macro_rules! action {
             attributes: Rc::clone(&$me.attr_buffer),
             self_closing: false,
         });
+    };
+
+    ( | $me:ident |> finish_tag_name ) => {
+        match $me.current_token {
+            Some(ShallowToken::StartTag { ref mut name, .. }) => {
+                (*name).start = $me.slice_start - $me.raw_start;
+                (*name).end = $me.pos;
+            }
+            _ => unreachable!("Current token should always be a start tag at this point")
+        }
+    };
+
+    ( | $me: ident |> emit_current_token ) => {
+        match $me.current_token.take() {
+            Some(token) => {
+                $me.current_token = None;
+
+                let res = LexResult {
+                    shallow_token: token,
+                    raw: Some(&$me.buffer[$me.raw_start..=$me.pos]),
+                };
+
+                ($me.token_handler)(res);
+            }
+            None => unreachable!("Current token should be already created at this point")
+        }
     };
 
 

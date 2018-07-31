@@ -20,15 +20,29 @@ define_state_group!(data_states_group = {
         _   => ( emit_eof; )
     }
 
-    tag_name_state {
-        eof => ( emit_eof; )
-        _   => ( emit_eof; )
-    }
-
     bogus_comment_state {
         b'>' => ( emit_comment; --> data_state )
         eof  => ( emit_comment; emit_eof; )
         _    => ()
+    }
+
+    tag_name_state {
+        whitespace => ( --> before_attribute_name_state )
+        b'/'       => ( --> self_closing_start_tag_state )
+        b'>'       => ( finish_tag_name; emit_current_token; --> data_state )
+        eof => ( emit_eof; )
+        _   => ( emit_eof; )
+    }
+
+
+    before_attribute_name_state {
+        eof => ( emit_eof; )
+        _   => ( emit_eof; )
+    }
+
+    self_closing_start_tag_state {
+        eof => ( emit_eof; )
+        _   => ( emit_eof; )
     }
 
 });

@@ -9,7 +9,15 @@ fn main() {
     let mut tokenizer = Tokenizer::new(2048, |lex_result| {
         let token: Token = lex_result.as_token();
 
-        println!("{:#?}", token);
+        println!("------------------");
+        println!();
+        println!("Token: {:#?}", token);
+
+        if let Some(raw) = lex_result.raw {
+            println!("\nRaw: `{}`", unsafe { String::from_utf8_unchecked(raw.to_vec()) });
+        }
+
+        println!();
     });
 
     tokenizer

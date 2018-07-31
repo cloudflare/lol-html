@@ -39,6 +39,12 @@ macro_rules! state_body {
         state_body!(@callback | $cb_args |> Some(b'a'...b'z') | Some(b'A'...b'Z') => $actions);
     };
 
+    ( @arm_pat | $cb_args:tt |> whitespace => $actions:tt ) => {
+        state_body!(@callback | $cb_args |>
+            Some(b' ') | Some(b'\n') | Some(b'r') | Some(b'\t') | Some(b'\x0C') => $actions
+        );
+    };
+
     ( @arm_pat | $cb_args:tt |> eof => $actions:tt ) => {
         state_body!(@callback | $cb_args |> None => $actions);
     };
