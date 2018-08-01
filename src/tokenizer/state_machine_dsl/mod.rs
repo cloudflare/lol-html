@@ -11,6 +11,9 @@ mod state_body;
 mod state;
 
 #[macro_use]
+mod arm_pattern;
+
+#[macro_use]
 mod debug;
 
 macro_rules! define_state_group {
