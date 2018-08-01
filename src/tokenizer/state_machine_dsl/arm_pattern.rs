@@ -13,7 +13,7 @@ macro_rules! arm_pattern {
         );
     };
 
-    ( | [ [$self:tt, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $ch:tt ], $($rest_cb_args:tt)+ ] |>
         closing_quote => $actions:tt
     ) => {
         state_body!(@callback | [ [$self, $ch], $($rest_cb_args)+ ] |>

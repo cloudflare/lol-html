@@ -98,7 +98,7 @@ impl TestCase {
                             *prev = {
                                 let mut decoder = Decoder::new(prev);
 
-                                // TODO make these conditional
+                                // TODO make these conditional (just check initial state)
                                 decoder = decoder.unsafe_null();
                                 decoder = decoder.text_entities();
 

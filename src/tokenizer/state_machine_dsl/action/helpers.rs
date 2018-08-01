@@ -35,7 +35,8 @@ macro_rules! action_helper {
             Some(ShallowAttribute { ref mut $part, .. }) => {
                 action_helper!(@set_token_part_range |$self|> $part);
             }
-            None => unreachable!("Attribute should be created at this point")
+            // NOTE: end tag case
+            None => ()
         }
     };
 }
