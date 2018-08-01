@@ -1,4 +1,5 @@
 use super::unescape::Unescape;
+use super::decoder::Decoder;
 use cool_thing::{LexResult, Tokenizer};
 use serde_json;
 use token::TestToken;
@@ -88,13 +89,22 @@ impl TestCase {
                     let token = TestToken::from(&lex_res.as_token());
                     let mut is_consequent_char = false;
 
-                    if let (
-                        &TestToken::Character(ref cs),
-                        Some(&mut TestToken::Character(ref mut ps)),
-                    ) = (&token, actual_tokens.last_mut())
+                    if let Some(&mut TestToken::Character(ref mut prev)) = actual_tokens.last_mut()
                     {
-                        *ps += cs;
-                        is_consequent_char = true;
+                        if let TestToken::Character(ref curr) = token {
+                            *prev += curr;
+                            is_consequent_char = true;
+                        } else {
+                            *prev = {
+                                let mut decoder = Decoder::new(prev);
+
+                                // TODO make these conditional
+                                decoder = decoder.unsafe_null();
+                                decoder = decoder.text_entities();
+
+                                decoder.run()
+                            };
+                        }
                     }
 
                     if !is_consequent_char {
