@@ -20,6 +20,9 @@ mod script_data;
 mod tag;
 
 #[macro_use]
+mod attributes;
+
+#[macro_use]
 mod comment;
 
 macro_rules! define_state_machine {
@@ -31,6 +34,7 @@ macro_rules! define_state_machine {
         rcdata_states_group!();
         script_data_states_group!();
         tag_states_group!();
+        attributes_states_group!();
         comment_states_group!();
     };
 }

@@ -6,10 +6,4 @@ define_state_group!(data_states_group = {
         _    => ()
     }
 
-    markup_declaration_open_state {
-        // TODO
-        eof => ( emit_eof; )
-        _   => ( emit_eof; )
-    }
-
 });
