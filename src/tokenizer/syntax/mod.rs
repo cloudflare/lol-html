@@ -17,7 +17,10 @@ mod rcdata;
 mod script_data;
 
 #[macro_use]
-mod end_tag;
+mod tag;
+
+#[macro_use]
+mod comment;
 
 macro_rules! define_state_machine {
     () => {
@@ -27,6 +30,7 @@ macro_rules! define_state_machine {
         rawtext_states_group!();
         rcdata_states_group!();
         script_data_states_group!();
-        end_tag_states_group!();
+        tag_states_group!();
+        comment_states_group!();
     };
 }
