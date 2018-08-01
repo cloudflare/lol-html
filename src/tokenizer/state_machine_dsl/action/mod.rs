@@ -64,6 +64,12 @@ macro_rules! action {
         });
     };
 
+    ( | $self:tt |> create_end_tag ) => {
+        $self.current_token = Some(ShallowToken::EndTag {
+            name: SliceRange::default(),
+        });
+    };
+
 
     // Tag-related
     //--------------------------------------------------------------------
