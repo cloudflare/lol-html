@@ -45,6 +45,14 @@ macro_rules! state_body {
         );
     };
 
+    ( @arm_pat | [ [$self:tt, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+        closing_quote => $actions:tt
+    ) => {
+        state_body!(@callback | [ [$self, $ch], $($rest_cb_args)+ ] |>
+            Some(ch) if ch == $self.closing_quote => $actions
+        );
+    };
+
     ( @arm_pat | $cb_args:tt |> eof => $actions:tt ) => {
         state_body!(@callback | $cb_args |> None => $actions);
     };
@@ -58,11 +66,11 @@ macro_rules! state_body {
     //--------------------------------------------------------------------
     ( @match_block
         | [ $self:tt, $ch:ident ] |>
-        $( $pat:pat $(|$pat_cont:pat)* => ( $($actions:tt)* ) )*
+        $( $pat:pat $(|$pat_cont:pat)* $(if $pat_expr:expr)* => ( $($actions:tt)* ) )*
     ) => {
         match $ch {
             $(
-                $pat $(| $pat_cont)* => { action_list!(|$self|> $($actions)*); }
+                $pat $(| $pat_cont)* $(if $pat_expr)* => { action_list!(|$self|> $($actions)*); }
             )*
         }
     };

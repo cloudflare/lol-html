@@ -17,16 +17,16 @@ pub struct BufferCapacityExceededError<'t> {
     unprocessed_buffer: &'t [u8],
 }
 
-// 2. Implement simple states via function calls
-// 3. Define macroses and split into syntax files
 // 4. Add precommit hook
 // 4. Tag name hash
 // 5. Implement raw
 // 6. Implement streaming
 // 7. Implement in-state loops
-// 8. Implement re-looper like state embedding
-// 9. Implement buffer capacity error recovery (?)
-// 10. Parse errors
+// 8. Enable LTO
+// 9. Implement re-looper like state embedding
+// 10. Implement buffer capacity error recovery (?)
+// 11. Parse errors
+// 12. Attr buffer limits?
 
 pub struct Tokenizer<'t, H: FnMut(LexResult)> {
     buffer: Box<[u8]>,
@@ -40,6 +40,8 @@ pub struct Tokenizer<'t, H: FnMut(LexResult)> {
     token_handler: H,
     state: fn(&mut Tokenizer<'t, H>, Option<u8>),
     current_token: Option<ShallowToken>,
+    current_attr: Option<ShallowAttribute>,
+    closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<ShallowAttribute>>>,
 }
 
@@ -59,6 +61,8 @@ impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
             token_handler,
             state: Tokenizer::data_state,
             current_token: None,
+            current_attr: None,
+            closing_quote: b'"',
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),

@@ -36,6 +36,11 @@ macro_rules! action {
         $self.token_part_start = $self.pos - $self.raw_start;
     };
 
+    ( | $self:tt |> start_attr ) => {
+        $self.current_attr = Some(ShallowAttribute::default());
+        action!(|$self|> start_token_part);
+    };
+
     ( | $self:tt |> create_start_tag ) => {
         $self.attr_buffer.borrow_mut().clear();
 
@@ -55,13 +60,46 @@ macro_rules! action {
         }
     };
 
+    ( | $self:tt |> mark_as_self_closing ) => {
+        match $self.current_token {
+            Some(ShallowToken::StartTag { ref mut self_closing, .. }) => {
+                *self_closing = true;
+            }
+            _ => unreachable!("Current token should always be a start tag at this point")
+        }
+    };
+
+    ( | $self:tt |> finish_attr_name ) => {
+        action_helper!(@finish_attr_part |$self|> name);
+    };
+
+    ( | $self:tt |> finish_attr_value ) => {
+        action_helper!(@finish_attr_part |$self|> value);
+    };
+
+    ( | $self:tt |> finish_attr ) => {
+        match $self.current_attr.take() {
+            Some(attr) => {
+                $self.attr_buffer.borrow_mut().push(attr);
+            }
+            None => unreachable!("Attribute should be created at this point")
+        }
+    };
+
     ( | $self: ident |> emit_current_token ) => {
         match $self.current_token.take() {
             Some(token) => {
-                $self.current_token = None;
                 action_helper!(@emit_lex_result_with_raw_inclusive |$self|> token);
             }
             None => unreachable!("Current token should be already created at this point")
         }
+    };
+
+    ( | $self: ident |> set_closing_quote_to_double ) => {
+        $self.closing_quote = b'"';
+    };
+
+    ( | $self: ident |> set_closing_quote_to_single ) => {
+        $self.closing_quote = b'\'';
     };
 }

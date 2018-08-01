@@ -9,7 +9,7 @@ pub struct SliceRange {
     pub end: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ShallowAttribute {
     pub name: SliceRange,
     pub value: SliceRange,
