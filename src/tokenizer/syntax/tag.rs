@@ -17,9 +17,12 @@ define_state_group!(tag_states_group = {
     }
 
     markup_declaration_open_state {
-        // TODO
-        eof => ( emit_eof; )
-        _   => ( emit_eof; )
+        //TODO
+        [ "--" ]                     => ()
+        [ "DOCTYPE"; ignore_case ]   => ()
+        [ "[CDATA[" ]                => ()
+        eof                          => ( emit_eof; )
+        _                            => ( emit_eof; )
     }
 
     tag_name_state {

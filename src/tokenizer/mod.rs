@@ -1,3 +1,4 @@
+mod buffer;
 mod lex_result;
 
 #[macro_use]
@@ -6,16 +7,12 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
+use self::buffer::Buffer;
 pub use self::lex_result::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
-
-#[derive(Debug)]
-pub struct BufferCapacityExceededError<'t> {
-    unprocessed_buffer: &'t [u8],
-}
 
 // 4. Add precommit hook
 // 4. Tag name hash
@@ -27,11 +24,10 @@ pub struct BufferCapacityExceededError<'t> {
 // 10. Implement buffer capacity error recovery (?)
 // 11. Parse errors
 // 12. Attr buffer limits?
+// 13. Range slice for raw?
 
 pub struct Tokenizer<'t, H: FnMut(LexResult)> {
-    buffer: Box<[u8]>,
-    buffer_capacity: usize,
-    buffer_watermark: usize,
+    buffer: Buffer,
     pos: usize,
     raw_start: usize,
     token_part_start: usize,
@@ -50,9 +46,7 @@ define_state_machine!();
 impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
     pub fn new(buffer_capacity: usize, token_handler: H) -> Tokenizer<'t, H> {
         Tokenizer {
-            buffer: vec![0; buffer_capacity].into(),
-            buffer_capacity,
-            buffer_watermark: 0,
+            buffer: Buffer::new(buffer_capacity),
             pos: 0,
             raw_start: 0,
             token_part_start: 0,
@@ -69,26 +63,11 @@ impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
         }
     }
 
-    pub fn write(&mut self, chunk: Vec<u8>) -> Result<(), BufferCapacityExceededError> {
-        let chunk_len = chunk.len();
-
-        if self.buffer_watermark + chunk_len > self.buffer_capacity {
-            return Err(BufferCapacityExceededError {
-                unprocessed_buffer: &self.buffer[0..self.buffer_watermark],
-            });
-        }
-
-        let new_watermark = self.buffer_watermark + chunk_len;
-
-        (&mut self.buffer[self.buffer_watermark..new_watermark]).copy_from_slice(&chunk);
-        self.buffer_watermark = new_watermark;
+    pub fn write(&mut self, chunk: Vec<u8>) -> Result<(), &'static str> {
+        self.buffer.write(chunk)?;
 
         while !self.finished {
-            let ch = if self.pos < self.buffer_watermark {
-                Some(self.buffer[self.pos])
-            } else {
-                None
-            };
+            let ch = self.buffer.peek_at(self.pos);
 
             (self.state)(self, ch);
 

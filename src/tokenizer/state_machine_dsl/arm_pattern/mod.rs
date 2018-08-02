@@ -1,3 +1,6 @@
+#[macro_use]
+mod ch_sequence;
+
 macro_rules! arm_pattern {
     ( | $cb_args:tt |>
          alpha => $actions:tt
@@ -25,6 +28,15 @@ macro_rules! arm_pattern {
         eof => $actions:tt
     ) => {
         state_body!(@callback | $cb_args |> None => $actions);
+    };
+
+    ( | [ $scope_vars:tt, $($rest_cb_args:tt)+ ] |>
+        [ $seq_pat:tt $(; $case_mod:ident)* ] => $actions:tt
+    ) => {
+        // NOTE: character sequence arm should be expanded in
+        // place before we hit the character match block.
+        ch_sequence_arm_pattern!(|$scope_vars|> $seq_pat, $actions, $($case_mod)* );
+        state_body!(@callback | [ $scope_vars, $($rest_cb_args)+ ] |>);
     };
 
     ( | $cb_args:tt |> $pat:pat => $actions:tt ) => {

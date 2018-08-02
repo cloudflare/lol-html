@@ -12,7 +12,7 @@ macro_rules! action_helper {
 
         action_helper!(@emit_lex_result |$self|>
             $token,
-            Some(&$self.buffer[$self.raw_start..$end])
+            Some($self.buffer.slice($self.raw_start, $end))
         );
     };
 
