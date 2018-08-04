@@ -20,6 +20,17 @@ macro_rules! ch_sequence_arm_pattern {
         );
     };
 
+    ( | $scope_vars:tt |> "PUBLIC", $($rest_args:tt)* )  => {
+        ch_sequence_arm_pattern!(
+            @first |$scope_vars|> [ b'P', b'U', b'B', b'L', b'I', b'C' ], $($rest_args)*
+        );
+    };
+
+    ( | $scope_vars:tt |> "SYSTEM", $($rest_args:tt)* )  => {
+        ch_sequence_arm_pattern!(
+            @first |$scope_vars|> [ b'S', b'Y', b'S', b'T', b'E', b'M' ], $($rest_args)*
+        );
+    };
 
     // Character comparison expression
     //--------------------------------------------------------------------
@@ -37,7 +48,6 @@ macro_rules! ch_sequence_arm_pattern {
             _ => ()
         }
     };
-
 
     // Expand check for the first character
     //--------------------------------------------------------------------
@@ -71,6 +81,7 @@ macro_rules! ch_sequence_arm_pattern {
         ch_sequence_arm_pattern!(@match_block $self.buffer.peek_at($self.pos + $depth), $exp_ch, {
             $self.pos += $depth;
             action_list!(|$self|> $($actions)*);
+            // TODO patch action_list to not return on state transition here
             return;
         }, $($case_mod)*);
     };

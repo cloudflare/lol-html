@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 pub struct Buffer {
     bytes: Box<[u8]>,
     capacity: usize,
@@ -37,9 +39,13 @@ impl Buffer {
             None
         }
     }
+}
+
+impl Deref for Buffer {
+    type Target = [u8];
 
     #[inline]
-    pub fn slice(&self, start: usize, end: usize) -> &[u8] {
-        &self.bytes[start..end]
+    fn deref(&self) -> &[u8] {
+        &self.bytes
     }
 }

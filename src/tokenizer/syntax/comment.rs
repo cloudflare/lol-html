@@ -6,4 +6,10 @@ define_state_group!(comment_states_group = {
         _    => ()
     }
 
+    comment_start_state <-- ( start_token_part; ) {
+        // TODO
+        eof  => ( emit_eof; )
+        _    => ( emit_eof; )
+    }
+
 });

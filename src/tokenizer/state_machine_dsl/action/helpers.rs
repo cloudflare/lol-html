@@ -12,7 +12,7 @@ macro_rules! action_helper {
 
         action_helper!(@emit_lex_result |$self|>
             $token,
-            Some($self.buffer.slice($self.raw_start, $end))
+            Some(&$self.buffer[$self.raw_start..$end])
         );
     };
 
@@ -28,6 +28,16 @@ macro_rules! action_helper {
     ( @set_token_part_range | $self:tt |> $part:ident ) => {
         $part.start = $self.token_part_start;
         $part.end = $self.pos - $self.raw_start;
+    };
+
+    ( @set_opt_token_part_range | $self:tt |> $part:ident ) => {
+        *$part = Some({
+            let mut $part = SliceRange::default();
+
+            action_helper!(@set_token_part_range |$self|> $part);
+
+            $part
+        });
     };
 
     ( @finish_attr_part | $self:tt |> $part:ident ) => {

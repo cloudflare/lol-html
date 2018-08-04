@@ -70,6 +70,42 @@ macro_rules! action {
         });
     };
 
+    ( | $self:tt |> create_doctype ) => {
+        $self.current_token = Some(ShallowToken::Doctype {
+            name: None,
+            public_id: None,
+            system_id: None,
+            force_quirks: false,
+        });
+    };
+
+
+    // Doctype-related
+    //--------------------------------------------------------------------
+    ( | $self:tt |> set_force_quirks ) => {
+        if let Some(ShallowToken::Doctype { ref mut force_quirks, .. }) = $self.current_token {
+            *force_quirks = true;
+        }
+    };
+
+    ( | $self:tt |> finish_doctype_name ) => {
+        if let Some(ShallowToken::Doctype { ref mut name, .. }) = $self.current_token {
+            action_helper!(@set_opt_token_part_range |$self|> name);
+        }
+    };
+
+    ( | $self:tt |> finish_doctype_public_id ) => {
+        if let Some(ShallowToken::Doctype { ref mut public_id, .. }) = $self.current_token {
+            action_helper!(@set_opt_token_part_range |$self|> public_id);
+        }
+    };
+
+    ( | $self:tt |> finish_doctype_system_id ) => {
+        if let Some(ShallowToken::Doctype { ref mut system_id, .. }) = $self.current_token {
+            action_helper!(@set_opt_token_part_range |$self|> system_id);
+        }
+    };
+
 
     // Tag-related
     //--------------------------------------------------------------------

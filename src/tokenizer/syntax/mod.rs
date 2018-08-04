@@ -25,6 +25,9 @@ mod attributes;
 #[macro_use]
 mod comment;
 
+#[macro_use]
+mod doctype;
+
 macro_rules! define_state_machine {
     () => {
         cdata_section_states_group!();
@@ -36,5 +39,6 @@ macro_rules! define_state_machine {
         tag_states_group!();
         attributes_states_group!();
         comment_states_group!();
+        doctype_states_group!();
     };
 }

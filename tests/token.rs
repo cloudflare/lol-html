@@ -118,7 +118,7 @@ impl<'de> Deserialize<'de> for TestToken {
                         },
                         public_id: next!("5"),
                         system_id: next!("5"),
-                        force_quirks: next!("5"),
+                        force_quirks: !next!("5"),
                     },
                 })
             }
