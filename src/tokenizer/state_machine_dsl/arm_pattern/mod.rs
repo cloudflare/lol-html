@@ -12,7 +12,7 @@ macro_rules! arm_pattern {
         whitespace => $actions:tt
     ) => {
         state_body!(@callback | $cb_args |>
-            Some(b' ') | Some(b'\n') | Some(b'r') | Some(b'\t') | Some(b'\x0C') => $actions
+            Some(b' ') | Some(b'\n') | Some(b'\r') | Some(b'\t') | Some(b'\x0C') => $actions
         );
     };
 

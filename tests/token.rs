@@ -1,6 +1,6 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::Token;
+use cool_thing::{RawSubslice, Token};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -166,13 +166,27 @@ impl Unescape for TestToken {
     }
 }
 
+fn to_null_decoded(subslice: &RawSubslice) -> String {
+    Decoder::new(subslice.as_str())
+        .unsafe_null()
+        .run()
+}
+
+fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
+    let mut string = to_null_decoded(subslice);
+
+    string.make_ascii_lowercase();
+
+    string
+}
+
 impl<'t> From<&'t Token<'t>> for TestToken {
     fn from(token: &Token<'t>) -> Self {
         match *token {
             Token::Character(ref data) => TestToken::Character(data.as_string()),
 
             Token::Comment(ref data) => {
-                TestToken::Comment(Decoder::new(data.as_str()).unsafe_null().run())
+                TestToken::Comment(to_null_decoded(data))
             }
 
             Token::StartTag {
@@ -180,11 +194,11 @@ impl<'t> From<&'t Token<'t>> for TestToken {
                 ref attributes,
                 self_closing,
             } => TestToken::StartTag {
-                name: name.as_string(),
+                name: to_lower_null_decoded(name),
 
                 attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
                     (
-                        name.as_string(),
+                        to_lower_null_decoded(&attr.name),
                         Decoder::new(attr.value.as_str())
                             .unsafe_null()
                             .attr_entities()
@@ -196,7 +210,7 @@ impl<'t> From<&'t Token<'t>> for TestToken {
             },
 
             Token::EndTag { ref name } => TestToken::EndTag {
-                name: name.as_string(),
+                name: to_lower_null_decoded(name),
             },
 
             Token::Doctype {
@@ -205,9 +219,9 @@ impl<'t> From<&'t Token<'t>> for TestToken {
                 ref system_id,
                 force_quirks,
             } => TestToken::Doctype {
-                name: name.as_ref().map(|s| s.as_string()),
-                public_id: public_id.as_ref().map(|s| s.as_string()),
-                system_id: system_id.as_ref().map(|s| s.as_string()),
+                name: name.as_ref().map(to_lower_null_decoded),
+                public_id: public_id.as_ref().map(to_null_decoded),
+                system_id: system_id.as_ref().map(to_null_decoded),
                 force_quirks,
             },
 

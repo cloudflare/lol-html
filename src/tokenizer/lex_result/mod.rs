@@ -2,7 +2,7 @@ mod raw_subslice;
 mod shallow_token;
 mod token;
 
-use self::raw_subslice::RawSubslice;
+pub use self::raw_subslice::RawSubslice;
 pub use self::shallow_token::{ShallowAttribute, ShallowToken, SliceRange};
 pub use self::token::{Attribute, Token};
 

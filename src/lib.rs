@@ -1,3 +1,5 @@
 mod tokenizer;
 
-pub use tokenizer::{Attribute, LexResult, ShallowAttribute, ShallowToken, Token, Tokenizer};
+pub use tokenizer::{
+    Attribute, LexResult, RawSubslice, ShallowAttribute, ShallowToken, Token, Tokenizer,
+};

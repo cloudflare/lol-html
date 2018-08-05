@@ -93,7 +93,7 @@ define_state_group!(doctype_states_group = {
         whitespace => ()
         b'>'       => ( emit_current_token; --> data_state )
         eof        => ( set_force_quirks; emit_current_token; emit_eof; )
-        _          => ( set_force_quirks; --> bogus_doctype_state )
+        _          => ( --> bogus_doctype_state )
     }
 
     between_doctype_public_and_system_identifiers_state {
