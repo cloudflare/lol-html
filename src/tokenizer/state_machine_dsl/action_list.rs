@@ -1,7 +1,7 @@
 macro_rules! action_list {
-    ( | $self:tt |> $action:tt; $($rest:tt)* ) => {
-        debug!(@trace_actions $action);
-        action!(| $self |> $action);
+    ( | $self:tt |> $action:tt $($args:expr)*; $($rest:tt)* ) => {
+        debug!(@trace_actions $action $($args:expr)*);
+        action!(| $self |> $action $($args)*);
         action_list!(| $self |> $($rest)*);
     };
 

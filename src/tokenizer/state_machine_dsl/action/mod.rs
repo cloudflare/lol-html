@@ -24,13 +24,6 @@ macro_rules! action {
         }
     };
 
-    ( | $self:tt |> emit_comment ) => {
-        let mut text = SliceRange::default();
-
-        action_helper!(@set_token_part_range |$self|> text);
-        action_helper!(@emit_lex_result_with_raw_inclusive |$self|> ShallowToken::Comment(text));
-    };
-
     ( | $self: ident |> emit_current_token ) => {
         match $self.current_token.take() {
             Some(token) => {
@@ -79,8 +72,27 @@ macro_rules! action {
         });
     };
 
+    ( | $self:tt |> create_comment ) => {
+        $self.current_token = Some(ShallowToken::Comment(SliceRange::default()));
+    };
 
-    // Doctype-related
+
+    // Comment parts
+    //--------------------------------------------------------------------
+    ( | $self:tt |> mark_comment_text_end ) => {
+        if let Some(ShallowToken::Comment(ref mut text)) = $self.current_token {
+            action_helper!(@set_token_part_range |$self|> text);
+        }
+    };
+
+    ( | $self:tt |> shift_comment_text_end_by $shift:expr ) => {
+        if let Some(ShallowToken::Comment(ref mut text)) = $self.current_token {
+            text.end += $shift;
+        }
+    };
+
+
+    // Doctype parts
     //--------------------------------------------------------------------
     ( | $self:tt |> set_force_quirks ) => {
         if let Some(ShallowToken::Doctype { ref mut force_quirks, .. }) = $self.current_token {
@@ -107,7 +119,7 @@ macro_rules! action {
     };
 
 
-    // Tag-related
+    // Tag parts
     //--------------------------------------------------------------------
     ( | $self:tt |> finish_tag_name ) => {
         match $self.current_token {

@@ -4,7 +4,7 @@ define_state_group!(tag_states_group = {
         b'!'  => ( --> markup_declaration_open_state )
         b'/'  => ( --> end_tag_open_state )
         alpha => ( create_start_tag; start_token_part; --> tag_name_state )
-        b'?'  => ( start_token_part; --> bogus_comment_state )
+        b'?'  => ( reconsume in bogus_comment_state )
         eof   => ( emit_chars; emit_eof; )
         _     => ( emit_chars; reconsume in data_state )
     }
@@ -13,16 +13,16 @@ define_state_group!(tag_states_group = {
         alpha => ( create_end_tag; start_token_part; --> tag_name_state )
         b'>'  => ( --> data_state )
         eof   => ( emit_chars; emit_eof; )
-        _     => ( start_token_part; --> bogus_comment_state )
+        _     => ( reconsume in bogus_comment_state )
     }
 
     // TODO switch to CDATA
     markup_declaration_open_state <-- ( start_token_part; ) {
         [ "--" ]                   => ( --> comment_start_state )
         [ "DOCTYPE"; ignore_case ] => ( --> doctype_state )
-        [ "[CDATA[" ]              => ( --> bogus_comment_state )
-        eof                        => ( emit_eof; )
-        _                          => ( --> bogus_comment_state )
+        [ "[CDATA[" ]              => ( reconsume in bogus_comment_state )
+        eof                        => ( reconsume in bogus_comment_state )
+        _                          => ( reconsume in bogus_comment_state )
     }
 
     tag_name_state {
