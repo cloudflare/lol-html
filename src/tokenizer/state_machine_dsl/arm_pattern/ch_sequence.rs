@@ -80,7 +80,7 @@ macro_rules! ch_sequence_arm_pattern {
     ) => {
         ch_sequence_arm_pattern!(@match_block $self.buffer.peek_at($self.pos + $depth), $exp_ch, {
             $self.pos += $depth;
-            action_list!(|$self|> $($actions)*);
+            action_list!(|$self, $ch|> $($actions)*);
             // TODO patch action_list to not return on state transition here
             return;
         }, $($case_mod)*);

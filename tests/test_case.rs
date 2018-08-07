@@ -86,7 +86,7 @@ impl TestCase {
 
             {
                 let mut tokenizer = Tokenizer::new(2048, |lex_res: LexResult| {
-                    let token = TestToken::from(&lex_res.as_token());
+                    let token = TestToken::from(&lex_res);
                     let mut is_consequent_char = false;
 
                     if let Some(&mut TestToken::Character(ref mut prev)) = actual_tokens.last_mut()

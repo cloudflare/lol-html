@@ -1,5 +1,6 @@
 mod buffer;
 mod lex_result;
+mod tag_name_hash;
 
 #[macro_use]
 mod state_machine_dsl;
@@ -9,6 +10,7 @@ mod syntax;
 
 use self::buffer::Buffer;
 pub use self::lex_result::*;
+pub use self::tag_name_hash::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 

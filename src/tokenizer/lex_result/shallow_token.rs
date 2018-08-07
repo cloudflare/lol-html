@@ -23,12 +23,14 @@ pub enum ShallowToken {
 
     StartTag {
         name: SliceRange,
+        name_hash: Option<u64>,
         attributes: Rc<RefCell<Vec<ShallowAttribute>>>,
         self_closing: bool,
     },
 
     EndTag {
         name: SliceRange,
+        name_hash: Option<u64>,
     },
 
     Doctype {

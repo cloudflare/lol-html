@@ -12,7 +12,7 @@ macro_rules! state {
     ) => {
         $($vis)* fn $name(&mut self, ch: Option<u8>) {
             debug!(@trace_char ch);
-            action_list!(@state_enter |self|> $($($enter_actions)*)*);
+            action_list!(@state_enter |self, ch|> $($($enter_actions)*)*);
             state_body!(| [self, ch] |> $($arms)*);
         }
 

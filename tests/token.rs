@@ -1,6 +1,6 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::{RawSubslice, Token};
+use cool_thing::{get_tag_name_hash, RawSubslice, Token, LexResult};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -25,12 +25,14 @@ pub enum TestToken {
 
     StartTag {
         name: String,
+        name_hash: Option<u64>,
         attributes: HashMap<String, String>,
         self_closing: bool,
     },
 
     EndTag {
         name: String,
+        name_hash: Option<u64>,
     },
 
     Doctype {
@@ -83,7 +85,7 @@ impl<'de> Deserialize<'de> for TestToken {
 
                 let kind = next!("2 or more");
 
-                Ok(match kind {
+                let mut token = match kind {
                     TokenKind::Character => TestToken::Character(next!("2")),
                     TokenKind::Comment => TestToken::Comment(next!("2")),
                     TokenKind::StartTag => TestToken::StartTag {
@@ -92,6 +94,7 @@ impl<'de> Deserialize<'de> for TestToken {
                             value.make_ascii_lowercase();
                             value
                         },
+                        name_hash: None,
                         attributes: {
                             let value: HashMap<String, String> = next!("3 or 4");
                             HashMap::from_iter(value.into_iter().map(|(mut k, v)| {
@@ -107,6 +110,7 @@ impl<'de> Deserialize<'de> for TestToken {
                             value.make_ascii_lowercase();
                             value
                         },
+                        name_hash: None,
                     },
                     TokenKind::Doctype => TestToken::Doctype {
                         name: {
@@ -120,7 +124,24 @@ impl<'de> Deserialize<'de> for TestToken {
                         system_id: next!("5"),
                         force_quirks: !next!("5"),
                     },
-                })
+                };
+
+                match token {
+                    TestToken::StartTag {
+                        ref name,
+                        ref mut name_hash,
+                        ..
+                    }
+                    | TestToken::EndTag {
+                        ref name,
+                        ref mut name_hash,
+                    } => {
+                        *name_hash = get_tag_name_hash(name);
+                    }
+                    _ => (),
+                }
+
+                Ok(token)
             }
         }
 
@@ -135,7 +156,7 @@ impl Unescape for TestToken {
                 s.unescape()?;
             }
 
-            TestToken::EndTag { ref mut name } => {
+            TestToken::EndTag { ref mut name, .. } => {
                 name.unescape()?;
             }
 
@@ -145,6 +166,7 @@ impl Unescape for TestToken {
                 ..
             } => {
                 name.unescape()?;
+
                 for value in attributes.values_mut() {
                     value.unescape()?;
                 }
@@ -167,9 +189,7 @@ impl Unescape for TestToken {
 }
 
 fn to_null_decoded(subslice: &RawSubslice) -> String {
-    Decoder::new(subslice.as_str())
-        .unsafe_null()
-        .run()
+    Decoder::new(subslice.as_str()).unsafe_null().run()
 }
 
 fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
@@ -180,21 +200,23 @@ fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
     string
 }
 
-impl<'t> From<&'t Token<'t>> for TestToken {
-    fn from(token: &Token<'t>) -> Self {
-        match *token {
+impl<'r> From<&'r LexResult<'r>> for TestToken {
+    fn from(lex_res: &LexResult<'r>) -> Self {
+        let token = lex_res.as_token();
+
+        match token {
             Token::Character(ref data) => TestToken::Character(data.as_string()),
 
-            Token::Comment(ref data) => {
-                TestToken::Comment(to_null_decoded(data))
-            }
+            Token::Comment(ref data) => TestToken::Comment(to_null_decoded(data)),
 
             Token::StartTag {
                 ref name,
+                name_hash,
                 ref attributes,
                 self_closing,
             } => TestToken::StartTag {
                 name: to_lower_null_decoded(name),
+                name_hash,
 
                 attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
                     (
@@ -209,8 +231,12 @@ impl<'t> From<&'t Token<'t>> for TestToken {
                 self_closing,
             },
 
-            Token::EndTag { ref name } => TestToken::EndTag {
+            Token::EndTag {
+                ref name,
+                name_hash,
+            } => TestToken::EndTag {
                 name: to_lower_null_decoded(name),
+                name_hash,
             },
 
             Token::Doctype {

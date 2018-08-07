@@ -49,4 +49,12 @@ macro_rules! action_helper {
             None => ()
         }
     };
+
+    ( @update_tag_part | $self:tt |> $part:ident, $action:block ) => {
+        match $self.current_token {
+            Some(ShallowToken::StartTag { ref mut $part, .. }) |
+            Some(ShallowToken::EndTag { ref mut $part, .. }) => $action
+            _ => unreachable!("Current token should always be a start or an end tag at this point")
+        }
+    }
 }

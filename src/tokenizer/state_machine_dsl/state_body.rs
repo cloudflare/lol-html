@@ -39,7 +39,9 @@ macro_rules! state_body {
     ) => {
         match $ch {
             $(
-                $pat $(| $pat_cont)* $(if $pat_expr)* => { action_list!(|$self|> $($actions)*); }
+                $pat $(| $pat_cont)* $(if $pat_expr)* => {
+                    action_list!(|$self, $ch|> $($actions)*);
+                }
             )*
         }
     };
