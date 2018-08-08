@@ -39,6 +39,7 @@ pub struct Tokenizer<'t, H: FnMut(LexResult)> {
     state: fn(&mut Tokenizer<'t, H>, Option<u8>),
     current_token: Option<ShallowToken>,
     current_attr: Option<ShallowAttribute>,
+    last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<ShallowAttribute>>>,
 }
@@ -58,6 +59,7 @@ impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
             state: Tokenizer::data_state,
             current_token: None,
             current_attr: None,
+            last_start_tag_name_hash: None,
             closing_quote: b'"',
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,

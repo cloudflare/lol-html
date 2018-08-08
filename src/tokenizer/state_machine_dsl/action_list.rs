@@ -1,4 +1,14 @@
 macro_rules! action_list {
+    ( | $self:tt, $ch:ident |>
+        if $cond:ident ( $($if_actions:tt)* ) else ( $($else_actions:tt)* )
+    ) => {
+        if condition!(|$self|> $cond) {
+            action_list!(| $self, $ch |> $($if_actions)*);
+        } else {
+            action_list!(| $self, $ch |> $($else_actions)*);
+        }
+    };
+
     ( | $self:tt, $ch:ident |> $action:tt $($args:expr)*; $($rest:tt)* ) => {
         debug!(@trace_actions $action $($args:expr)*);
         action!(| $self, $ch |> $action $($args)*);

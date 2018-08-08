@@ -16,6 +16,9 @@ mod arm_pattern;
 #[macro_use]
 mod debug;
 
+#[macro_use]
+mod condition;
+
 macro_rules! define_state_group {
     ( $name:ident = { $($states:tt)+ } ) => {
         macro_rules! $name {

@@ -27,6 +27,10 @@ macro_rules! action {
     ( | $self:tt, $ch:ident |> emit_current_token ) => {
         match $self.current_token.take() {
             Some(token) => {
+                if let ShallowToken::StartTag { name_hash, .. } = token {
+                    $self.last_start_tag_name_hash = name_hash;
+                }
+
                 action_helper!(@emit_lex_result_with_raw_inclusive |$self|> token);
             }
             None => unreachable!("Current token should exist at this point")
