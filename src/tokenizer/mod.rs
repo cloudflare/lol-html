@@ -84,4 +84,8 @@ impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
     pub fn set_state(&mut self, state: fn(&mut Tokenizer<'t, H>, Option<u8>)) {
         self.state = state;
     }
+
+    pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
+        self.last_start_tag_name_hash = name_hash;
+    }
 }

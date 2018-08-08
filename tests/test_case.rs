@@ -1,6 +1,6 @@
-use super::unescape::Unescape;
 use super::decoder::Decoder;
-use cool_thing::{LexResult, Tokenizer};
+use super::unescape::Unescape;
+use cool_thing::{get_tag_name_hash, LexResult, Tokenizer};
 use serde_json;
 use token::TestToken;
 
@@ -113,6 +113,7 @@ impl TestCase {
                 });
 
                 tokenizer.set_state(cs.to_tokenizer_state());
+                tokenizer.set_last_start_tag_name_hash(get_tag_name_hash(&self.last_start_tag));
 
                 tokenizer
                     .write(self.input.bytes().collect())
