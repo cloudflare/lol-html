@@ -1,6 +1,6 @@
 define_state_group!(comment_states_group = {
 
-    bogus_comment_state <-- ( create_comment; start_token_part; ) {
+    bogus_comment_state {
         b'>' => ( mark_comment_text_end; emit_current_token; --> data_state )
         eof  => ( mark_comment_text_end; emit_current_token; emit_eof; )
         _    => ()
