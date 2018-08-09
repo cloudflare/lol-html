@@ -8,14 +8,14 @@ define_state_group!(rcdata_states_group = {
 
     rcdata_less_than_sign_state {
         b'/' => ( --> rcdata_end_tag_open_state )
-        eof => ( emit_chars; emit_eof; )
-        _   => ( emit_chars; reconsume in rcdata_state )
+        eof  => ( emit_chars; emit_eof; )
+        _    => ( emit_chars; reconsume in rcdata_state )
     }
 
     rcdata_end_tag_open_state {
         alpha => ( create_end_tag; start_token_part; update_tag_name_hash; --> rcdata_end_tag_name_state )
-        eof => ( emit_chars; emit_eof; )
-        _   => ( emit_chars; reconsume in rcdata_state )
+        eof   => ( emit_chars; emit_eof; )
+        _     => ( emit_chars; reconsume in rcdata_state )
     }
 
     rcdata_end_tag_name_state {
