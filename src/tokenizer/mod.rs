@@ -17,8 +17,8 @@ use std::rc::Rc;
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 // 4. Add precommit hook
-// 4. Tag name hash
-// 5. Implement raw
+// 5. Test raw
+// 6. Don't emit character immidiately, extend existing
 // 6. Implement streaming
 // 7. Implement in-state loops
 // 8. Enable LTO
