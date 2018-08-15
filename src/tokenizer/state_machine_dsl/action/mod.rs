@@ -24,6 +24,14 @@ macro_rules! action {
         }
     };
 
+    ( | $self:tt, $ch:ident |> emit_chars_up_to_cdata_end ) => {
+        if $self.cdata_end_pos > $self.raw_start {
+            action_helper!(
+                @emit_lex_result_with_raw |$self|> ShallowToken::Character, $self.cdata_end_pos
+            );
+        }
+    };
+
     ( | $self:tt, $ch:ident |> emit_current_token ) => {
         match $self.current_token.take() {
             Some(token) => {
@@ -42,6 +50,14 @@ macro_rules! action {
     //--------------------------------------------------------------------
     ( | $self:tt, $ch:ident |> start_raw ) => {
         $self.raw_start = $self.pos;
+    };
+
+    ( | $self:tt, $ch:ident |> mark_cdata_end ) => {
+        $self.cdata_end_pos = $self.pos;
+    };
+
+    ( | $self:tt, $ch:ident |> shift_cdata_end ) => {
+        $self.cdata_end_pos += 1;
     };
 
     ( | $self:tt, $ch:ident |> start_token_part ) => {

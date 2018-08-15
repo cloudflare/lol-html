@@ -6,26 +6,24 @@ use std::str;
 
 // NOTE: a thin wrapper around token's raw bytes subslice that allows us pretty print tokens
 #[derive(Default)]
-pub struct RawSubslice<'t> {
-    bytes: &'t [u8],
-}
+pub struct RawSubslice<'t>(&'t [u8]);
 
 // NOTE: these unsafe methods are used only by tests and tracer.
 // Unfortunately we can't limit them with #[cfg] since cargo
 // doesn't provide capabilites to enable features per configuration.
 impl<'t> RawSubslice<'t> {
     pub fn as_str(&self) -> &str {
-        unsafe { str::from_utf8_unchecked(self.bytes) }
+        unsafe { str::from_utf8_unchecked(self) }
     }
 
     pub fn as_string(&self) -> String {
-        unsafe { String::from_utf8_unchecked(self.bytes.to_vec()) }
+        unsafe { String::from_utf8_unchecked(self.to_vec()) }
     }
 }
 
 impl<'t> From<&'t [u8]> for RawSubslice<'t> {
     fn from(bytes: &'t [u8]) -> Self {
-        RawSubslice { bytes }
+        RawSubslice(bytes)
     }
 }
 
@@ -45,6 +43,6 @@ impl<'t> Deref for RawSubslice<'t> {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {
-        self.bytes
+        self.0
     }
 }
