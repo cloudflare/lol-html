@@ -1,3 +1,9 @@
+#[macro_use]
+mod escaped;
+
+#[macro_use]
+mod double_escaped;
+
 define_state_group!(script_data_states_group = {
 
     pub script_data_state <-- ( start_raw; ) {
@@ -17,33 +23,6 @@ define_state_group!(script_data_states_group = {
         alpha => ( create_end_tag; start_token_part; update_tag_name_hash; --> script_data_end_tag_name_state )
         eof   => ( emit_chars; emit_eof; )
         _     => ( emit_chars; reconsume in script_data_state )
-    }
-
-    script_data_escape_start_state {
-        [ "--" ] => ( --> script_data_escaped_dash_dash_state )
-        eof      => ( emit_chars; emit_eof; )
-        _        => ( emit_chars; reconsume in script_data_state )
-    }
-
-    script_data_escaped_dash_dash_state {
-        b'-' => ()
-        b'<' => ( --> script_data_escaped_less_than_sign_state )
-        b'>' => ( emit_chars; --> script_data_state )
-        eof  => ( emit_chars; emit_eof; )
-        _    => ( --> script_data_escaped_state )
-    }
-
-    script_data_escaped_state {
-        [ "--" ] => ( --> script_data_escaped_dash_dash_state )
-        b'<'     => ( --> script_data_escaped_less_than_sign_state )
-        eof      => ( emit_chars; emit_eof; )
-        _        => ()
-    }
-
-    script_data_escaped_less_than_sign_state {
-        // TODO
-        eof => ( emit_eof; )
-        _   => ( emit_eof; )
     }
 
     script_data_end_tag_name_state {

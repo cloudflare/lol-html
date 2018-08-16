@@ -32,6 +32,12 @@ macro_rules! ch_sequence_arm_pattern {
         );
     };
 
+    ( | $scope_vars:tt |> "SCRIPT", $($rest_args:tt)* )  => {
+        ch_sequence_arm_pattern!(
+            @first |$scope_vars|> [ b'S', b'C', b'R', b'I', b'P', b'T' ], $($rest_args)*
+        );
+    };
+
     // Character comparison expression
     //--------------------------------------------------------------------
     ( @cmp_exp $ch:ident, $exp_ch:expr ) => ( $ch == $exp_ch );
