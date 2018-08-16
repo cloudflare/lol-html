@@ -9,7 +9,7 @@ define_state_group!(script_data_escaped_states_group = {
     script_data_escaped_dash_dash_state {
         b'-' => ()
         b'<' => ( emit_chars; start_raw; --> script_data_escaped_less_than_sign_state )
-        b'>' => ( emit_chars; --> script_data_state )
+        b'>' => ( emit_chars; reconsume in script_data_state )
         eof  => ( emit_chars; emit_eof; )
         _    => ( --> script_data_escaped_state )
     }
