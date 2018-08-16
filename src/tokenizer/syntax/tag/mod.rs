@@ -1,3 +1,6 @@
+#[macro_use]
+mod attributes;
+
 define_state_group!(tag_states_group = {
 
     tag_open_state {
