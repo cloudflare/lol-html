@@ -21,7 +21,7 @@ pub enum InitialState {
 }
 
 impl InitialState {
-    fn to_tokenizer_state<'t, H: FnMut(LexResult)>(self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
+    fn to_tokenizer_state<'t, H: FnMut(LexResult)>(&self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
         match self {
             InitialState::Data => Tokenizer::data_state,
             InitialState::PlainText => Tokenizer::plaintext_state,
@@ -29,6 +29,20 @@ impl InitialState {
             InitialState::RawText => Tokenizer::rawtext_state,
             InitialState::ScriptData => Tokenizer::script_data_state,
             InitialState::CDataSection => Tokenizer::cdata_section_state,
+        }
+    }
+
+    fn should_replace_unsafe_null_in_text(&self) -> bool {
+        match self {
+            InitialState::Data | InitialState::CDataSection => false,
+            _ => true,
+        }
+    }
+
+    fn allows_text_entitites(&self) -> bool {
+        match self {
+            InitialState::Data | InitialState::RCData => true,
+            _ => false,
         }
     }
 }
@@ -99,8 +113,13 @@ impl TestCase {
                                 let mut decoder = Decoder::new(prev);
 
                                 // TODO make these conditional (just check initial state)
-                                decoder = decoder.unsafe_null();
-                                decoder = decoder.text_entities();
+                                if cs.should_replace_unsafe_null_in_text() {
+                                    decoder = decoder.unsafe_null();
+                                }
+
+                                if cs.allows_text_entitites() {
+                                    decoder = decoder.text_entities();
+                                }
 
                                 decoder.run()
                             };

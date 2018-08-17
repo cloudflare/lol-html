@@ -18,6 +18,7 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 // 4. Add precommit hook
 // 5. Test raw
+// 6. Implement feedback
 // 6. Don't emit character immidiately, extend existing
 // 6. Implement streaming
 // 7. Implement in-state loops
