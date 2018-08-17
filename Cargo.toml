@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 autotests = false
 
+[lib]
+doctest = false
+
 [features]
 trace_actions = []
 trace_char = []
@@ -11,7 +14,7 @@ trace_raw = []
 
 [[test]]
 harness = false
-name = "test_runner"
+name = "main"
 
 [dev-dependencies]
 getopts = "0.2.15"

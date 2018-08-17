@@ -50,12 +50,13 @@ fn main() {
     let html = matches.free.first().unwrap();
 
     let mut tokenizer = Tokenizer::new(2048, |lex_result| {
-        let token: Token = lex_result.as_token();
-
         println!("------------------");
-        println!("Shallow token: {:#?}", lex_result.shallow_token);
-        println!();
-        println!("Token: {:#?}", token);
+
+        if let Some(token) = lex_result.as_token() {
+            println!("Shallow token: {:#?}", lex_result.shallow_token.unwrap());
+            println!();
+            println!("Token: {:#?}", token);
+        }
 
         if let Some(raw) = lex_result.raw {
             println!("\nRaw: `{}`", unsafe {

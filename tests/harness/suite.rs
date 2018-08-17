@@ -2,7 +2,7 @@ use glob;
 use serde_json;
 use std::fs::File;
 use std::io::BufReader;
-use test_case::TestCase;
+use super::test_case::TestCase;
 
 #[derive(Deserialize)]
 struct Suite {

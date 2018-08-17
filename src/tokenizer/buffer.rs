@@ -46,6 +46,6 @@ impl Deref for Buffer {
 
     #[inline]
     fn deref(&self) -> &[u8] {
-        &self.bytes
+        &self.bytes[..self.watermark]
     }
 }

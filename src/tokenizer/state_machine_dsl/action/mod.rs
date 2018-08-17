@@ -6,10 +6,10 @@ mod state_transition;
 
 macro_rules! action {
 
-    // Token emission
+    // Lex result emission
     //--------------------------------------------------------------------
     ( | $self:tt, $ch:ident |> emit_eof ) => {
-        action_helper!(@emit_lex_result |$self|> ShallowToken::Eof, None);
+        action_helper!(@emit_lex_result |$self|> Some(ShallowToken::Eof), None);
         $self.finished = true;
     };
 
@@ -20,14 +20,16 @@ macro_rules! action {
             // representation of character token content is the raw slice.
             // Also, we always emit characters if we encounter some other bounded
             // lexical structure and, thus, we use exclusive range for the raw slice.
-            action_helper!(@emit_lex_result_with_raw_exclusive |$self|> ShallowToken::Character);
+            action_helper!(
+                @emit_lex_result_with_raw_exclusive |$self|> Some(ShallowToken::Character)
+            );
         }
     };
 
     ( | $self:tt, $ch:ident |> emit_chars_up_to_cdata_end ) => {
         if $self.cdata_end_pos > $self.raw_start {
             action_helper!(
-                @emit_lex_result_with_raw |$self|> ShallowToken::Character, $self.cdata_end_pos
+                @emit_lex_result_with_raw |$self|> Some(ShallowToken::Character), $self.cdata_end_pos
             );
         }
     };
@@ -39,10 +41,34 @@ macro_rules! action {
                     $self.last_start_tag_name_hash = name_hash;
                 }
 
-                action_helper!(@emit_lex_result_with_raw_inclusive |$self|> token);
+                action_helper!(@emit_lex_result_with_raw_inclusive |$self|> Some(token));
             }
             None => unreachable!("Current token should exist at this point")
         }
+    };
+
+    ( | $self:tt, $ch:ident |> emit_current_token_and_eof ) => {
+        match $self.current_token.take() {
+            Some(token) => {
+                // NOTE: we don't care about last_start_tag_name_hash here, since
+                // we'll not produce any tokens besides EOF. Also, considering that
+                // we are at EOF here we use exclusive range for token's raw.
+                action_helper!(@emit_lex_result_with_raw_exclusive |$self|> Some(token));
+            }
+            None => unreachable!("Current token should exist at this point")
+        }
+
+        action!(| $self, $ch |> emit_eof);
+    };
+
+    ( | $self:tt, $ch:ident |> emit_raw_without_token ) => {
+        action_helper!(@emit_lex_result_with_raw_inclusive |$self|> None);
+    };
+
+    ( | $self:tt, $ch:ident |> emit_raw_without_token_and_eof ) => {
+        // NOTE: since we are at EOF we use exclusive range for token's raw.
+        action_helper!(@emit_lex_result_with_raw_exclusive |$self|> None);
+        action!(| $self, $ch |> emit_eof);
     };
 
 

@@ -1,6 +1,6 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::{get_tag_name_hash, RawSubslice, Token, LexResult};
+use cool_thing::{get_tag_name_hash, RawSubslice, Token};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -200,23 +200,21 @@ fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
     string
 }
 
-impl<'r> From<&'r LexResult<'r>> for TestToken {
-    fn from(lex_res: &LexResult<'r>) -> Self {
-        let token = lex_res.as_token();
-
+impl<'r> From<&'r Token<'r>> for TestToken {
+    fn from(token: &Token<'r>) -> Self {
         match token {
-            Token::Character(ref data) => TestToken::Character(data.as_string()),
+            Token::Character(data) => TestToken::Character(data.as_string()),
 
-            Token::Comment(ref data) => TestToken::Comment(to_null_decoded(data)),
+            Token::Comment(data) => TestToken::Comment(to_null_decoded(data)),
 
             Token::StartTag {
-                ref name,
+                name,
                 name_hash,
-                ref attributes,
+                attributes,
                 self_closing,
             } => TestToken::StartTag {
                 name: to_lower_null_decoded(name),
-                name_hash,
+                name_hash: *name_hash,
 
                 attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
                     (
@@ -228,27 +226,24 @@ impl<'r> From<&'r LexResult<'r>> for TestToken {
                     )
                 })),
 
-                self_closing,
+                self_closing: *self_closing,
             },
 
-            Token::EndTag {
-                ref name,
-                name_hash,
-            } => TestToken::EndTag {
+            Token::EndTag { name, name_hash } => TestToken::EndTag {
                 name: to_lower_null_decoded(name),
-                name_hash,
+                name_hash: *name_hash,
             },
 
             Token::Doctype {
-                ref name,
-                ref public_id,
-                ref system_id,
+                name,
+                public_id,
+                system_id,
                 force_quirks,
             } => TestToken::Doctype {
                 name: name.as_ref().map(to_lower_null_decoded),
                 public_id: public_id.as_ref().map(to_null_decoded),
                 system_id: system_id.as_ref().map(to_null_decoded),
-                force_quirks,
+                force_quirks: *force_quirks,
             },
 
             Token::Eof => TestToken::Eof,

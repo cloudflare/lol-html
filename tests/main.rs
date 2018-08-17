@@ -12,13 +12,9 @@ extern crate test;
 #[macro_use]
 extern crate serde_derive;
 
-mod decoder;
-mod suite;
-mod test_case;
-mod token;
-mod unescape;
+mod harness;
 
-use suite::get_tests;
+use harness::get_tests;
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};
 
 fn main() {
@@ -40,8 +36,7 @@ fn main() {
                     test.run();
                 })),
             }
-        })
-        .collect();
+        }).collect();
 
     test_main(&args, tests);
 }

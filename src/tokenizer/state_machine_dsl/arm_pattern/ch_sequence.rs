@@ -87,8 +87,12 @@ macro_rules! ch_sequence_arm_pattern {
         ch_sequence_arm_pattern!(@match_block $self.buffer.peek_at($self.pos + $depth), $exp_ch, {
             $self.pos += $depth;
             action_list!(|$self, $ch|> $($actions)*);
-            // TODO patch action_list to not return on state transition here
-            return;
+
+            // TODO: we'll have unreachable return statement if the last
+            // action in the list is a state transition. Just supress warning
+            // for now. Later we can come up with more appropriate solution
+            // like checking the last action in the list.
+            #[allow(unreachable_code)] { return; }
         }, $($case_mod)*);
     };
 }

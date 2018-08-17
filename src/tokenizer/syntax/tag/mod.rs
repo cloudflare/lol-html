@@ -14,7 +14,7 @@ define_state_group!(tag_states_group = {
 
     end_tag_open_state {
         alpha => ( create_end_tag; start_token_part; update_tag_name_hash; --> tag_name_state )
-        b'>'  => ( --> data_state )
+        b'>'  => ( emit_raw_without_token; --> data_state )
         eof   => ( emit_chars; emit_eof; )
         _     => ( create_comment; start_token_part; reconsume in bogus_comment_state )
     }
@@ -32,13 +32,13 @@ define_state_group!(tag_states_group = {
         whitespace => ( finish_tag_name; --> before_attribute_name_state )
         b'/'       => ( finish_tag_name; --> self_closing_start_tag_state )
         b'>'       => ( finish_tag_name; emit_current_token; --> data_state )
-        eof        => ( emit_eof; )
+        eof        => ( emit_raw_without_token_and_eof; )
         _          => ( update_tag_name_hash; )
     }
 
     self_closing_start_tag_state {
         b'>' => ( mark_as_self_closing; emit_current_token; --> data_state )
-        eof  => ( emit_eof; )
+        eof  => ( emit_raw_without_token_and_eof; )
         _    => ( reconsume in before_attribute_name_state )
     }
 });
