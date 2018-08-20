@@ -22,8 +22,10 @@ fn main() {
 
     let tests = get_tests()
         .into_iter()
-        .map(|mut test| {
-            test.init();
+        .map(|test| {
+            if test.ignored {
+                println!("Ignoring test: `{}`", test.input);
+            }
 
             TestDescAndFn {
                 desc: TestDesc {

@@ -12,7 +12,7 @@ fn default_initial_states() -> Vec<InitialState> {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TestCase {
+pub struct Test {
     pub description: String,
     pub input: String,
 
@@ -32,7 +32,7 @@ pub struct TestCase {
     pub last_start_tag: String,
 }
 
-impl Unescape for TestCase {
+impl Unescape for Test {
     fn unescape(&mut self) -> Result<(), serde_json::error::Error> {
         if self.double_escaped {
             self.double_escaped = false;
@@ -91,7 +91,7 @@ fn handle_lex_result(
     raw_strings.push_raw(lex_res.raw);
 }
 
-impl TestCase {
+impl Test {
     pub fn init(&mut self) {
         self.ignored = self.unescape().is_err();
 

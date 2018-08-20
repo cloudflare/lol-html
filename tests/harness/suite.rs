@@ -1,13 +1,13 @@
+use super::test::Test;
 use glob;
-use serde_json;
+use serde_json::from_reader;
 use std::fs::File;
 use std::io::BufReader;
-use super::test_case::TestCase;
 
 #[derive(Deserialize)]
 struct Suite {
     #[serde(default)]
-    pub tests: Vec<TestCase>,
+    pub tests: Vec<Test>,
 }
 
 macro_rules! read_tests {
@@ -18,12 +18,14 @@ macro_rules! read_tests {
     };
 }
 
-pub fn get_tests() -> Vec<TestCase> {
+pub fn get_tests() -> Vec<Test> {
     let mut tests = Vec::new();
 
     for file in read_tests!("html5lib-tests/tokenizer/*.test") {
-        tests.extend(serde_json::from_reader::<_, Suite>(file).unwrap().tests);
+        tests.extend(from_reader::<_, Suite>(file).unwrap().tests);
     }
+
+    tests.iter_mut().for_each(|t| t.init());
 
     tests
 }

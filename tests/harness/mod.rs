@@ -2,7 +2,7 @@ mod decoder;
 mod initial_state;
 mod raw_string_vec;
 mod suite;
-mod test_case;
+mod test;
 mod token;
 mod unescape;
 
