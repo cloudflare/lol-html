@@ -1,10 +1,10 @@
 use super::decoder::Decoder;
 use super::initial_state::InitialState;
 use super::raw_string_vec::RawStringVec;
+use super::token::TestToken;
 use super::unescape::Unescape;
 use cool_thing::{get_tag_name_hash, LexResult, Tokenizer};
 use serde_json;
-use super::token::TestToken;
 
 fn default_initial_states() -> Vec<InitialState> {
     vec![InitialState::Data]
@@ -37,10 +37,12 @@ impl Unescape for Test {
         if self.double_escaped {
             self.double_escaped = false;
             self.input.unescape()?;
+
             for token in &mut self.expected_tokens {
                 token.unescape()?;
             }
         }
+
         Ok(())
     }
 }

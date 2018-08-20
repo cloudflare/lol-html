@@ -17,7 +17,9 @@ pub enum InitialState {
 }
 
 impl InitialState {
-    pub fn to_tokenizer_state<'t, H: FnMut(LexResult)>(&self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
+    pub fn to_tokenizer_state<'t, H: FnMut(LexResult)>(
+        &self,
+    ) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
         match self {
             InitialState::Data => Tokenizer::data_state,
             InitialState::PlainText => Tokenizer::plaintext_state,

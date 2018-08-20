@@ -38,7 +38,8 @@ fn main() {
                     test.run();
                 })),
             }
-        }).collect();
+        })
+        .collect();
 
     test_main(&args, tests);
 }
