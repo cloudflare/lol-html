@@ -1,6 +1,6 @@
 mod decoder;
 mod initial_state;
-mod raw_string_vec;
+mod parsing_result;
 mod suite;
 mod test;
 mod token;

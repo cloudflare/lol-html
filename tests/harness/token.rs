@@ -17,7 +17,7 @@ enum TokenKind {
     Doctype,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TestToken {
     Character(String),
 

@@ -1,10 +1,27 @@
-use super::decoder::Decoder;
 use super::initial_state::InitialState;
-use super::raw_string_vec::RawStringVec;
+use super::parsing_result::ParsingResult;
 use super::token::TestToken;
 use super::unescape::Unescape;
 use cool_thing::{get_tag_name_hash, LexResult, Tokenizer};
 use serde_json;
+
+macro_rules! assert_eql {
+    ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
+        assert!(
+            $actual == $expected,
+            "{}\n\
+             state: {:?}\n\
+             input: {:?}\n\
+             actual: {:#?}\n\
+             expected: {:#?}",
+            $msg,
+            $input,
+            $cs,
+            $actual,
+            $expected
+        );
+    };
+}
 
 fn default_initial_states() -> Vec<InitialState> {
     vec![InitialState::Data]
@@ -47,52 +64,6 @@ impl Unescape for Test {
     }
 }
 
-fn decode_text(text: &mut str, initial_state: InitialState) -> String {
-    let mut decoder = Decoder::new(text);
-
-    if initial_state.should_replace_unsafe_null_in_text() {
-        decoder = decoder.unsafe_null();
-    }
-
-    if initial_state.allows_text_entitites() {
-        decoder = decoder.text_entities();
-    }
-
-    decoder.run()
-}
-
-fn handle_lex_result(
-    tokens: &mut Vec<TestToken>,
-    raw_strings: &mut RawStringVec,
-    initial_state: InitialState,
-    lex_res: LexResult,
-) {
-    if let Some(token) = lex_res.as_token() {
-        let token = TestToken::from(&token);
-
-        if let Some(&mut TestToken::Character(ref mut prev)) = tokens.last_mut() {
-            if let TestToken::Character(ref curr) = token {
-                *prev += curr;
-
-                if let Some(ref mut prev_raw) = raw_strings
-                    .last_mut()
-                    .expect("Raw string for previous token should exist")
-                {
-                    *prev_raw += curr;
-                }
-
-                return;
-            } else {
-                *prev = decode_text(prev, initial_state);
-            }
-        }
-
-        tokens.push(token);
-    }
-
-    raw_strings.push_raw(lex_res.raw);
-}
-
 impl Test {
     pub fn init(&mut self) {
         self.ignored = self.unescape().is_err();
@@ -101,13 +72,12 @@ impl Test {
         self.expected_tokens.push(TestToken::Eof);
     }
 
-    fn parse(&self, input: Vec<u8>, initial_state: InitialState) -> (Vec<TestToken>, RawStringVec) {
-        let mut tokens = Vec::new();
-        let mut raw_strings = RawStringVec::default();
+    fn parse(&self, input: Vec<u8>, initial_state: InitialState) -> ParsingResult {
+        let mut result = ParsingResult::new(initial_state);
 
         {
             let mut tokenizer = Tokenizer::new(2048, |lex_res: LexResult| {
-                handle_lex_result(&mut tokens, &mut raw_strings, initial_state, lex_res);
+                result.add_lex_res(lex_res);
             });
 
             tokenizer.set_state(initial_state.to_tokenizer_state());
@@ -118,38 +88,32 @@ impl Test {
                 .expect("Tokenizer buffer capacity exceeded");
         }
 
-        (tokens, raw_strings)
+        result
     }
 
     pub fn run(&self) {
         for &cs in &self.initial_states {
-            macro_rules! assert_eql {
-                ($actual:expr, $expected:expr, $msg:expr) => {
-                    assert!(
-                        $actual == $expected,
-                        "{}\n\
-                         state: {:?}\n\
-                         input: {:?}\n\
-                         actual: {:#?}\n\
-                         expected: {:#?}",
-                        $msg,
-                        cs,
-                        self.input,
-                        $actual,
-                        $expected
-                    );
-                };
-            };
-
-            let (actual_tokens, raw_strings) = self.parse(self.input.bytes().collect(), cs);
-
-            assert_eql!(actual_tokens, self.expected_tokens, "Token mismatch");
+            let actual = self.parse(self.input.bytes().collect(), cs);
 
             assert_eql!(
-                raw_strings.get_cumulative_raw_string(),
+                *actual.get_tokens(),
+                self.expected_tokens,
                 self.input,
+                cs,
+                "Token mismatch"
+            );
+
+            assert_eql!(
+                actual.get_cumulative_raw_string(),
+                self.input,
+                self.input,
+                cs,
                 "Cumulative raw strings mismatch"
             );
+
+            // TODO: write raw strings one by one and check that the last token in result is equal
+            // to current. We need streaming support for that.
+            //self.assert_tokens_have_correct_raw_strings(actual, cs);
         }
     }
 }
