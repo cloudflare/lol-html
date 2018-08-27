@@ -1,4 +1,4 @@
-use cool_thing::{LexResult, Tokenizer};
+use cool_thing::{LexResult, TextParsingMode, Tokenizer};
 
 #[derive(Clone, Copy, Deserialize, Debug)]
 pub enum InitialState {
@@ -17,9 +17,9 @@ pub enum InitialState {
 }
 
 impl InitialState {
-    pub fn to_tokenizer_state<'t, H: FnMut(LexResult)>(
+    pub fn to_tokenizer_state<'t, TokenHandler: FnMut(LexResult)>(
         &self,
-    ) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
+    ) -> fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>) {
         match self {
             InitialState::Data => Tokenizer::data_state,
             InitialState::PlainText => Tokenizer::plaintext_state,
@@ -41,6 +41,19 @@ impl InitialState {
         match self {
             InitialState::Data | InitialState::RCData => true,
             _ => false,
+        }
+    }
+}
+
+impl From<TextParsingMode> for InitialState {
+    fn from(mode: TextParsingMode) -> Self {
+        match mode {
+            TextParsingMode::Data => InitialState::Data,
+            TextParsingMode::PlainText => InitialState::PlainText,
+            TextParsingMode::RCData => InitialState::RCData,
+            TextParsingMode::RawText => InitialState::RawText,
+            TextParsingMode::ScriptData => InitialState::ScriptData,
+            TextParsingMode::CDataSection => InitialState::CDataSection,
         }
     }
 }

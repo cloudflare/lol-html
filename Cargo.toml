@@ -11,6 +11,7 @@ doctest = false
 trace_actions = []
 trace_char = []
 trace_raw = []
+trace_all = ["trace_actions", "trace_char", "trace_raw"]
 
 [[test]]
 harness = false
@@ -24,6 +25,7 @@ serde = "1.0.19"
 serde_derive = "1.0.19"
 serde_json = "1.0.5"
 pre-commit = "0.5.2"
+itertools = "0.6.0"
 
 [package.metadata.precommit]
 fmt = "cargo fmt && git add -u"

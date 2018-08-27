@@ -14,16 +14,14 @@ mod state;
 mod arm_pattern;
 
 #[macro_use]
-mod debug;
-
-#[macro_use]
 mod condition;
 
 macro_rules! define_state_group {
     ( $name:ident = { $($states:tt)+ } ) => {
         macro_rules! $name {
             () => {
-                impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
+                impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler>
+                {
                     state!($($states)+);
                 }
             };

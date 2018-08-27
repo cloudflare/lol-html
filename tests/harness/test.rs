@@ -2,8 +2,9 @@ use super::initial_state::InitialState;
 use super::parsing_result::ParsingResult;
 use super::token::TestToken;
 use super::unescape::Unescape;
-use cool_thing::{get_tag_name_hash, LexResult, Tokenizer};
+use cool_thing::{get_tag_name_hash, LexResult, TextParsingMode, Tokenizer};
 use serde_json;
+use std::cell::Cell;
 
 macro_rules! assert_eql {
     ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
@@ -76,10 +77,14 @@ impl Test {
         let mut result = ParsingResult::new(initial_state);
 
         {
+            let text_parsing_mode = Cell::new(TextParsingMode::Data);
+            let mut text_parsing_mode_change_handler = |mode| text_parsing_mode.set(mode);
+
             let mut tokenizer = Tokenizer::new(2048, |lex_res: LexResult| {
-                result.add_lex_res(lex_res);
+                result.add_lex_res(lex_res, text_parsing_mode.get());
             });
 
+            tokenizer.set_text_parsing_mode_change_handler(&mut text_parsing_mode_change_handler);
             tokenizer.set_state(initial_state.to_tokenizer_state());
             tokenizer.set_last_start_tag_name_hash(get_tag_name_hash(&self.last_start_tag));
 
@@ -89,6 +94,23 @@ impl Test {
         }
 
         result
+    }
+
+    fn assert_tokens_have_correct_raw_strings(&self, actual: ParsingResult) {
+        if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
+            for (token, raw, text_parsing_mode) in token_raw_pairs {
+                let state = InitialState::from(text_parsing_mode);
+                let mut actual = self.parse(raw.bytes().collect(), state);
+
+                assert_eql!(
+                    *actual.get_tokens(),
+                    vec![token.to_owned(), TestToken::Eof],
+                    raw,
+                    state,
+                    "Token's raw string doesn't produce the same token"
+                );
+            }
+        }
     }
 
     pub fn run(&self) {
@@ -111,9 +133,7 @@ impl Test {
                 "Cumulative raw strings mismatch"
             );
 
-            // TODO: write raw strings one by one and check that the last token in result is equal
-            // to current. We need streaming support for that.
-            //self.assert_tokens_have_correct_raw_strings(actual, cs);
+            self.assert_tokens_have_correct_raw_strings(actual);
         }
     }
 }

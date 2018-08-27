@@ -1,7 +1,7 @@
 use super::decoder::Decoder;
 use super::initial_state::InitialState;
 use super::token::TestToken;
-use cool_thing::LexResult;
+use cool_thing::{LexResult, TextParsingMode};
 
 fn decode_text(text: &mut str, initial_state: InitialState) -> String {
     let mut decoder = Decoder::new(text);
@@ -19,6 +19,7 @@ fn decode_text(text: &mut str, initial_state: InitialState) -> String {
 
 pub struct ParsingResult {
     tokens: Vec<TestToken>,
+    token_text_parsing_modes: Vec<TextParsingMode>,
     raw_strings: Vec<String>,
     initial_state: InitialState,
 }
@@ -27,12 +28,13 @@ impl ParsingResult {
     pub fn new(initial_state: InitialState) -> Self {
         ParsingResult {
             tokens: Vec::new(),
+            token_text_parsing_modes: Vec::new(),
             raw_strings: Vec::new(),
             initial_state,
         }
     }
 
-    pub fn add_lex_res(&mut self, lex_res: LexResult) {
+    pub fn add_lex_res(&mut self, lex_res: LexResult, text_parsing_mode: TextParsingMode) {
         if let Some(token) = lex_res.as_token() {
             let token = TestToken::from(&token);
 
@@ -51,6 +53,7 @@ impl ParsingResult {
             }
 
             self.tokens.push(token);
+            self.token_text_parsing_modes.push(text_parsing_mode);
         }
 
         if let Some(raw) = lex_res.raw {
@@ -67,7 +70,7 @@ impl ParsingResult {
         &self.tokens
     }
 
-    pub fn into_token_raw_pairs(mut self) -> Option<Vec<(TestToken, String)>> {
+    pub fn into_token_raw_pairs(mut self) -> Option<Vec<(TestToken, String, TextParsingMode)>> {
         // NOTE: remove EOF which doesn't have raw representation
         self.tokens.pop();
 
@@ -75,10 +78,11 @@ impl ParsingResult {
         // token has a raw representation.
         if self.tokens.len() == self.raw_strings.len() {
             Some(
-                self.tokens
-                    .into_iter()
-                    .zip(self.raw_strings.into_iter())
-                    .collect(),
+                izip!(
+                    self.tokens.into_iter(),
+                    self.raw_strings.into_iter(),
+                    self.token_text_parsing_modes.into_iter()
+                ).collect(),
             )
         } else {
             None

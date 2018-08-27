@@ -8,15 +8,18 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
+#[macro_use]
+mod testing;
+
 use self::buffer::Buffer;
 pub use self::lex_result::*;
 pub use self::tag_name_hash::*;
+pub use self::testing::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-// 5. Test raw
 // 6. Implement feedback
 // 6. Don't emit character immidiately, extend existing
 // 6. Implement streaming
@@ -28,7 +31,7 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 12. Attr buffer limits?
 // 13. Range slice for raw?
 
-pub struct Tokenizer<'t, H: FnMut(LexResult)> {
+pub struct Tokenizer<'t, TokenHandler: FnMut(LexResult)> {
     buffer: Buffer,
     pos: usize,
     raw_start: usize,
@@ -36,8 +39,9 @@ pub struct Tokenizer<'t, H: FnMut(LexResult)> {
     cdata_end_pos: usize,
     finished: bool,
     state_enter: bool,
-    token_handler: H,
-    state: fn(&mut Tokenizer<'t, H>, Option<u8>),
+    token_handler: TokenHandler,
+    text_parsing_mode_change_handler: Option<&'t mut FnMut(TextParsingMode)>,
+    state: fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>),
     current_token: Option<ShallowToken>,
     current_attr: Option<ShallowAttribute>,
     last_start_tag_name_hash: Option<u64>,
@@ -47,8 +51,8 @@ pub struct Tokenizer<'t, H: FnMut(LexResult)> {
 
 define_state_machine!();
 
-impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
-    pub fn new(buffer_capacity: usize, token_handler: H) -> Tokenizer<'t, H> {
+impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler> {
+    pub fn new(buffer_capacity: usize, token_handler: TokenHandler) -> Self {
         Tokenizer {
             buffer: Buffer::new(buffer_capacity),
             pos: 0,
@@ -58,6 +62,7 @@ impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
             finished: false,
             state_enter: true,
             token_handler,
+            text_parsing_mode_change_handler: None,
             state: Tokenizer::data_state,
             current_token: None,
             current_attr: None,
@@ -83,11 +88,18 @@ impl<'t, H: FnMut(LexResult)> Tokenizer<'t, H> {
         Ok(())
     }
 
-    pub fn set_state(&mut self, state: fn(&mut Tokenizer<'t, H>, Option<u8>)) {
+    pub fn set_state(&mut self, state: fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>)) {
         self.state = state;
     }
 
     pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
         self.last_start_tag_name_hash = name_hash;
+    }
+
+    pub fn set_text_parsing_mode_change_handler(
+        &mut self,
+        handler: &'t mut FnMut(TextParsingMode),
+    ) {
+        self.text_parsing_mode_change_handler = Some(handler);
     }
 }
