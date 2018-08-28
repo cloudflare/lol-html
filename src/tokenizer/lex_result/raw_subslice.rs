@@ -1,16 +1,15 @@
 use super::shallow_token::SliceRange;
 use std::convert::From;
-use std::fmt;
 use std::ops::Deref;
-use std::str;
+
+#[cfg(feature = "testing_api")]
+use std::{fmt, str};
 
 // NOTE: a thin wrapper around token's raw bytes subslice that allows us pretty print tokens
 #[derive(Default)]
 pub struct RawSubslice<'t>(&'t [u8]);
 
-// NOTE: these unsafe methods are used only by tests and tracer.
-// Unfortunately we can't limit them with #[cfg] since cargo
-// doesn't provide capabilites to enable features per configuration.
+#[cfg(feature = "testing_api")]
 impl<'t> RawSubslice<'t> {
     pub fn as_str(&self) -> &str {
         unsafe { str::from_utf8_unchecked(self) }
@@ -33,6 +32,7 @@ impl<'t> From<(&'t [u8], SliceRange)> for RawSubslice<'t> {
     }
 }
 
+#[cfg(feature = "testing_api")]
 impl<'t> fmt::Debug for RawSubslice<'t> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "`{}`", self.as_str())

@@ -20,6 +20,23 @@ use std::rc::Rc;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
+// About feedback:
+// We need to maintain "non-lexical" tree only for tags
+// tags that can affect text parsing modes.
+// For that we need to analyze tree construction modes
+// and find those cases where start tags that initiate
+// text parsing modes can be ignored. Then we need to implement
+// same old feedback simulation, but also simulate limited
+// subset of insertion modes to know when to ignore particular
+// start tag that initiates text parsing.
+
+// 1. Mark raw sublsice methods under testing api
+// 2. Use single implementation of state from testing API,
+// for deserialization use strings (update example to use testing API
+// and create script for trace that enables all required features)
+// 3. Enable feedback tests
+// 4. Implement simple feedback to not be blocked on it
+
 // 6. Implement feedback
 // 6. Don't emit character immidiately, extend existing
 // 6. Implement streaming

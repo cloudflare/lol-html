@@ -1,12 +1,12 @@
 use super::raw_subslice::RawSubslice;
 
-#[derive(Debug)]
+#[cfg_attr(feature = "testing_api", derive(Debug))]
 pub struct Attribute<'r> {
     pub name: RawSubslice<'r>,
     pub value: RawSubslice<'r>,
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "testing_api", derive(Debug))]
 pub enum Token<'r> {
     Character(RawSubslice<'r>),
 
