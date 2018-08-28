@@ -9,12 +9,12 @@ mod state_machine_dsl;
 mod syntax;
 
 #[macro_use]
-mod testing;
+mod testing_api;
 
 use self::buffer::Buffer;
 pub use self::lex_result::*;
 pub use self::tag_name_hash::*;
-pub use self::testing::*;
+pub use self::testing_api::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -40,13 +40,15 @@ pub struct Tokenizer<'t, TokenHandler: FnMut(LexResult)> {
     finished: bool,
     state_enter: bool,
     token_handler: TokenHandler,
-    text_parsing_mode_change_handler: Option<&'t mut FnMut(TextParsingMode)>,
     state: fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>),
     current_token: Option<ShallowToken>,
     current_attr: Option<ShallowAttribute>,
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<ShallowAttribute>>>,
+
+    #[cfg(feature = "testing_api")]
+    text_parsing_mode_change_handler: Option<&'t mut FnMut(TextParsingMode)>,
 }
 
 define_state_machine!();
@@ -62,7 +64,6 @@ impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler> {
             finished: false,
             state_enter: true,
             token_handler,
-            text_parsing_mode_change_handler: None,
             state: Tokenizer::data_state,
             current_token: None,
             current_attr: None,
@@ -71,6 +72,9 @@ impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler> {
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
+
+            #[cfg(feature = "testing_api")]
+            text_parsing_mode_change_handler: None,
         }
     }
 
@@ -88,14 +92,17 @@ impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler> {
         Ok(())
     }
 
+    #[cfg(feature = "testing_api")]
     pub fn set_state(&mut self, state: fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>)) {
         self.state = state;
     }
 
+    #[cfg(feature = "testing_api")]
     pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
         self.last_start_tag_name_hash = name_hash;
     }
 
+    #[cfg(feature = "testing_api")]
     pub fn set_text_parsing_mode_change_handler(
         &mut self,
         handler: &'t mut FnMut(TextParsingMode),

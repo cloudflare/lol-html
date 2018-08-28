@@ -12,6 +12,7 @@ trace_actions = []
 trace_char = []
 trace_raw = []
 trace_all = ["trace_actions", "trace_char", "trace_raw"]
+testing_api = []
 
 [[test]]
 harness = false

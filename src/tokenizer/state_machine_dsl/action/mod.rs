@@ -233,8 +233,13 @@ macro_rules! action {
     // Testing related
     //--------------------------------------------------------------------
     ( | $self:tt, $ch:ident |> notify_text_parsing_mode_change $mode:expr ) => {
-        if let Some(ref mut text_parsing_mode_change_handler) = $self.text_parsing_mode_change_handler {
-            text_parsing_mode_change_handler($mode);
+        #[cfg(feature = "testing_api")]
+        {
+            if let Some(ref mut text_parsing_mode_change_handler) =
+                $self.text_parsing_mode_change_handler
+            {
+                text_parsing_mode_change_handler($mode);
+            }
         }
     };
 
