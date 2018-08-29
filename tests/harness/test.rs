@@ -1,4 +1,3 @@
-use super::initial_state::InitialState;
 use super::parsing_result::ParsingResult;
 use super::token::TestToken;
 use super::unescape::Unescape;
@@ -24,8 +23,8 @@ macro_rules! assert_eql {
     };
 }
 
-fn default_initial_states() -> Vec<InitialState> {
-    vec![InitialState::Data]
+fn default_initial_states() -> Vec<String> {
+    vec![String::from("Data state")]
 }
 
 #[derive(Deserialize)]
@@ -41,7 +40,7 @@ pub struct Test {
     pub ignored: bool,
 
     #[serde(default = "default_initial_states")]
-    pub initial_states: Vec<InitialState>,
+    pub initial_states: Vec<String>,
 
     #[serde(default)]
     pub double_escaped: bool,
@@ -73,8 +72,8 @@ impl Test {
         self.expected_tokens.push(TestToken::Eof);
     }
 
-    fn parse(&self, input: Vec<u8>, initial_state: InitialState) -> ParsingResult {
-        let mut result = ParsingResult::new(initial_state);
+    fn parse(&self, input: Vec<u8>, initial_text_parsing_mode: TextParsingMode) -> ParsingResult {
+        let mut result = ParsingResult::default();
 
         {
             let text_parsing_mode = Cell::new(TextParsingMode::Data);
@@ -85,7 +84,7 @@ impl Test {
             });
 
             tokenizer.set_text_parsing_mode_change_handler(&mut text_parsing_mode_change_handler);
-            tokenizer.set_state(initial_state.to_tokenizer_state());
+            tokenizer.set_state(initial_text_parsing_mode.into());
             tokenizer.set_last_start_tag_name_hash(get_tag_name_hash(&self.last_start_tag));
 
             tokenizer
@@ -99,14 +98,13 @@ impl Test {
     fn assert_tokens_have_correct_raw_strings(&self, actual: ParsingResult) {
         if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
             for (token, raw, text_parsing_mode) in token_raw_pairs {
-                let state = InitialState::from(text_parsing_mode);
-                let mut actual = self.parse(raw.bytes().collect(), state);
+                let mut actual = self.parse(raw.bytes().collect(), text_parsing_mode);
 
                 assert_eql!(
                     *actual.get_tokens(),
                     vec![token.to_owned(), TestToken::Eof],
                     raw,
-                    state,
+                    text_parsing_mode,
                     "Token's raw string doesn't produce the same token"
                 );
             }
@@ -114,7 +112,8 @@ impl Test {
     }
 
     pub fn run(&self) {
-        for &cs in &self.initial_states {
+        for cs in &self.initial_states {
+            let cs = TextParsingMode::from(cs.as_str());
             let actual = self.parse(self.input.bytes().collect(), cs);
 
             assert_eql!(

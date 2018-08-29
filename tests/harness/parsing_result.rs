@@ -1,9 +1,8 @@
 use super::decoder::Decoder;
-use super::initial_state::InitialState;
 use super::token::TestToken;
 use cool_thing::{LexResult, TextParsingMode};
 
-fn decode_text(text: &mut str, initial_state: InitialState) -> String {
+fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
 
     if initial_state.should_replace_unsafe_null_in_text() {
@@ -17,23 +16,14 @@ fn decode_text(text: &mut str, initial_state: InitialState) -> String {
     decoder.run()
 }
 
+#[derive(Default)]
 pub struct ParsingResult {
     tokens: Vec<TestToken>,
     token_text_parsing_modes: Vec<TextParsingMode>,
     raw_strings: Vec<String>,
-    initial_state: InitialState,
 }
 
 impl ParsingResult {
-    pub fn new(initial_state: InitialState) -> Self {
-        ParsingResult {
-            tokens: Vec::new(),
-            token_text_parsing_modes: Vec::new(),
-            raw_strings: Vec::new(),
-            initial_state,
-        }
-    }
-
     pub fn add_lex_res(&mut self, lex_res: LexResult, text_parsing_mode: TextParsingMode) {
         if let Some(token) = lex_res.as_token() {
             let token = TestToken::from(&token);
@@ -48,7 +38,7 @@ impl ParsingResult {
 
                     return;
                 } else {
-                    *prev_text = decode_text(prev_text, self.initial_state);
+                    *prev_text = decode_text(prev_text, text_parsing_mode);
                 }
             }
 

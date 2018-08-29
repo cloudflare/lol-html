@@ -12,7 +12,7 @@ fn parse_options() -> Option<Matches> {
         "s",
         "state",
         "Initial state",
-        "-s (Data|PlainText|RCData|RawText|ScriptData|CDataSection)",
+        "-s (Data state|PLAINTEXT state|RCDATA state|RAWTEXT state|Script data state|CDATA section state)",
     );
 
     opts.optopt("t", "last_start_tag", "Last start tag name", "-l");
@@ -68,16 +68,8 @@ fn main() {
     });
 
     tokenizer.set_state(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
-        None | Some("Data") => Tokenizer::data_state,
-        Some("PlainText") => Tokenizer::plaintext_state,
-        Some("RCData") => Tokenizer::rcdata_state,
-        Some("RawText") => Tokenizer::rawtext_state,
-        Some("ScriptData") => Tokenizer::script_data_state,
-        Some("CDataSection") => Tokenizer::cdata_section_state,
-        _ => {
-            eprintln!("Unknown state provided");
-            return;
-        }
+        None => Tokenizer::data_state,
+        Some(state) => TextParsingMode::from(state).into(),
     });
 
     if let Some(ref tag_name) = matches.opt_str("t") {

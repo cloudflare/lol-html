@@ -8,15 +8,18 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
+#[cfg(feature = "testing_api")]
 #[macro_use]
-mod testing_api;
+mod text_parsing_mode;
 
 use self::buffer::Buffer;
 pub use self::lex_result::*;
 pub use self::tag_name_hash::*;
-pub use self::testing_api::*;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+#[cfg(feature = "testing_api")]
+pub use self::text_parsing_mode::*;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
