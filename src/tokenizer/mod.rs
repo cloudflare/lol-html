@@ -30,7 +30,6 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // subset of insertion modes to know when to ignore particular
 // start tag that initiates text parsing.
 
-// 1. Mark raw sublsice methods under testing api
 // 2. Use single implementation of state from testing API,
 // for deserialization use strings (update example to use testing API
 // and create script for trace that enables all required features)

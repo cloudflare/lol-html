@@ -8,7 +8,7 @@ macro_rules! action_helper {
     };
 
     ( @emit_lex_result_with_raw | $self:tt |> $token:expr, $end:expr ) => {
-        debug!(@trace_raw $self, $end);
+        trace!(@raw $self, $end);
 
         action_helper!(@emit_lex_result |$self|>
             $token,

@@ -1,5 +1,5 @@
 #[macro_use]
-mod debug;
+mod trace;
 
 #[cfg(feature = "testing_api")]
 #[derive(Copy, Clone)]

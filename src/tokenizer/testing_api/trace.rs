@@ -1,10 +1,10 @@
-macro_rules! debug {
-    ( @trace_actions $($actions:tt)+ ) => {
+macro_rules! trace {
+    ( @actions $($actions:tt)+ ) => {
         #[cfg(feature = "trace_actions")]
         println!("@action: {}", stringify!($($actions)+));
     };
 
-    ( @trace_char $ch:ident ) => {
+    ( @chars $ch:ident ) => {
         #[cfg(feature = "trace_char")]
         {
             use std::char;
@@ -13,7 +13,7 @@ macro_rules! debug {
         }
     };
 
-    ( @trace_raw $self:tt, $end_pos:expr ) => {
+    ( @raw $self:tt, $end_pos:expr ) => {
         #[cfg(feature = "trace_raw")]
         {
             use std::fmt::Write;
