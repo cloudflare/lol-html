@@ -49,7 +49,7 @@ fn main() {
 
     let html = matches.free.first().unwrap();
 
-    let mut tokenizer = Tokenizer::new(2048, |lex_result| {
+    let mut tokenizer = Tokenizer::new(2048, |lex_result: LexResult| {
         println!("------------------");
 
         if let Some(token) = lex_result.as_token() {

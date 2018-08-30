@@ -1,4 +1,4 @@
-use super::{LexResult, Tokenizer};
+use super::{LexResultHandler, Tokenizer};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TextParsingMode {
@@ -34,11 +34,8 @@ impl<'s> From<&'s str> for TextParsingMode {
     }
 }
 
-impl<'t, TokenHandler> Into<fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>)> for TextParsingMode
-where
-    TokenHandler: FnMut(LexResult),
-{
-    fn into(self) -> fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>) {
+impl<'t, H: LexResultHandler> Into<fn(&mut Tokenizer<'t, H>, Option<u8>)> for TextParsingMode {
+    fn into(self) -> fn(&mut Tokenizer<'t, H>, Option<u8>) {
         match self {
             TextParsingMode::Data => Tokenizer::data_state,
             TextParsingMode::PlainText => Tokenizer::plaintext_state,

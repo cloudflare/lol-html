@@ -23,7 +23,7 @@ macro_rules! define_state_group {
     ( $name:ident = { $($states:tt)+ } ) => {
         macro_rules! $name {
             () => {
-                impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler>
+                impl<'t, H: LexResultHandler> Tokenizer<'t, H>
                 {
                     state!($($states)+);
                 }

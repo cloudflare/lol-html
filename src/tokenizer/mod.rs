@@ -1,5 +1,6 @@
 mod buffer;
 mod lex_result;
+mod lex_result_handler;
 mod tag_name_hash;
 
 #[macro_use]
@@ -14,6 +15,7 @@ mod text_parsing_mode;
 
 use self::buffer::Buffer;
 pub use self::lex_result::*;
+pub use self::lex_result_handler::*;
 pub use self::tag_name_hash::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -33,11 +35,8 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // subset of insertion modes to know when to ignore particular
 // start tag that initiates text parsing.
 
-// 2. Use single implementation of state from testing API,
-// for deserialization use strings (update example to use testing API
-// and create script for trace that enables all required features)
-// 3. Enable feedback tests
-// 4. Implement simple feedback to not be blocked on it
+// 1. Add benchmark
+// 2. Implement simple feedback to not be blocked on it
 
 // 6. Implement feedback
 // 6. Don't emit character immidiately, extend existing
@@ -50,7 +49,7 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 12. Attr buffer limits?
 // 13. Range slice for raw?
 
-pub struct Tokenizer<'t, TokenHandler: FnMut(LexResult)> {
+pub struct Tokenizer<'t, H: LexResultHandler> {
     buffer: Buffer,
     pos: usize,
     raw_start: usize,
@@ -58,8 +57,8 @@ pub struct Tokenizer<'t, TokenHandler: FnMut(LexResult)> {
     cdata_end_pos: usize,
     finished: bool,
     state_enter: bool,
-    token_handler: TokenHandler,
-    state: fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>),
+    lex_res_handler: H,
+    state: fn(&mut Tokenizer<'t, H>, Option<u8>),
     current_token: Option<ShallowToken>,
     current_attr: Option<ShallowAttribute>,
     last_start_tag_name_hash: Option<u64>,
@@ -72,8 +71,8 @@ pub struct Tokenizer<'t, TokenHandler: FnMut(LexResult)> {
 
 define_state_machine!();
 
-impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler> {
-    pub fn new(buffer_capacity: usize, token_handler: TokenHandler) -> Self {
+impl<'t, H: LexResultHandler> Tokenizer<'t, H> {
+    pub fn new(buffer_capacity: usize, lex_res_handler: H) -> Self {
         Tokenizer {
             buffer: Buffer::new(buffer_capacity),
             pos: 0,
@@ -82,7 +81,7 @@ impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler> {
             cdata_end_pos: 0,
             finished: false,
             state_enter: true,
-            token_handler,
+            lex_res_handler,
             state: Tokenizer::data_state,
             current_token: None,
             current_attr: None,
@@ -112,7 +111,7 @@ impl<'t, TokenHandler: FnMut(LexResult)> Tokenizer<'t, TokenHandler> {
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn set_state(&mut self, state: fn(&mut Tokenizer<'t, TokenHandler>, Option<u8>)) {
+    pub fn set_state(&mut self, state: fn(&mut Tokenizer<'t, H>, Option<u8>)) {
         self.state = state;
     }
 

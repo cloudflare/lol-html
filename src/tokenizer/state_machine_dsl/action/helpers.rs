@@ -22,7 +22,9 @@ macro_rules! action_helper {
             raw: $raw,
         };
 
-        ($self.token_handler)(res);
+        if let Some(state) = $self.lex_res_handler.handle(res) {
+            action_helper!(@switch_state |$self|> state);
+        }
     };
 
     ( @set_token_part_range | $self:tt |> $part:ident ) => {
@@ -56,5 +58,11 @@ macro_rules! action_helper {
             Some(ShallowToken::EndTag { ref mut $part, .. }) => $action
             _ => unreachable!("Current token should always be a start or an end tag at this point")
         }
-    }
+    };
+
+    ( @switch_state | $self:tt |> $state:expr ) => {
+        $self.state = $state;
+        $self.state_enter = true;
+        return;
+    };
 }
