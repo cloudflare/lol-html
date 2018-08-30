@@ -1,5 +1,5 @@
-use super::test::Test;
 use glob;
+use harness::test::Test;
 use serde_json::from_reader;
 use std::fs::File;
 use std::io::BufReader;
@@ -8,14 +8,6 @@ use std::io::BufReader;
 struct Suite {
     #[serde(default)]
     pub tests: Vec<Test>,
-}
-
-macro_rules! read_tests {
-    ($path:expr) => {
-        glob::glob(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/", $path))
-            .unwrap()
-            .map(|path| BufReader::new(File::open(path.unwrap()).unwrap()))
-    };
 }
 
 pub fn get_tests() -> Vec<Test> {

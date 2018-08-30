@@ -3,7 +3,7 @@ mod token_sink_proxy;
 
 use self::noop_tree_sink::NoopTreeSink;
 use self::token_sink_proxy::TokenSinkProxy;
-use super::token::TestToken;
+use harness::token::TestToken;
 use html5ever::tendril::StrTendril;
 use html5ever::tokenizer::{BufferQueue, Tokenizer, TokenizerOpts, TokenizerResult};
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};

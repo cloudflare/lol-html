@@ -17,9 +17,11 @@ extern crate itertools;
 #[macro_use]
 extern crate html5ever;
 
+#[macro_use]
 mod harness;
+mod fixtures;
 
-use harness::get_tests;
+use fixtures::get_tests;
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};
 
 fn main() {

@@ -23,7 +23,7 @@ macro_rules! assert_eql {
     };
 }
 
-fn default_initial_states() -> Vec<String> {
+pub fn default_initial_states() -> Vec<String> {
     vec![String::from("Data state")]
 }
 
