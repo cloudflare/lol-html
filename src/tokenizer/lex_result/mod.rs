@@ -30,14 +30,13 @@ impl<'r> LexResult<'r> {
                 (
                     &ShallowToken::StartTag {
                         name,
-                        name_hash,
                         ref attributes,
                         self_closing,
+                        ..
                     },
                     Some(raw),
                 ) => Token::StartTag {
                     name: RawSubslice::from((raw, name)),
-                    name_hash,
 
                     attributes: attributes
                         .borrow()
@@ -51,9 +50,8 @@ impl<'r> LexResult<'r> {
                     self_closing,
                 },
 
-                (&ShallowToken::EndTag { name, name_hash }, Some(raw)) => Token::EndTag {
+                (&ShallowToken::EndTag { name, .. }, Some(raw)) => Token::EndTag {
                     name: RawSubslice::from((raw, name)),
-                    name_hash,
                 },
 
                 (

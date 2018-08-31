@@ -26,7 +26,7 @@ pub struct ParsingResult {
 impl ParsingResult {
     pub fn add_lex_res(&mut self, lex_res: LexResult, text_parsing_mode: TextParsingMode) {
         if let Some(token) = lex_res.as_token() {
-            let token = TestToken::from(&token);
+            let token = (token, &lex_res).into();
 
             if let Some(TestToken::Character(ref mut prev_text)) = self.tokens.last_mut() {
                 if let TestToken::Character(ref cur_text) = token {

@@ -14,14 +14,12 @@ pub enum Token<'r> {
 
     StartTag {
         name: RawSubslice<'r>,
-        name_hash: Option<u64>,
         attributes: Vec<Attribute<'r>>,
         self_closing: bool,
     },
 
     EndTag {
         name: RawSubslice<'r>,
-        name_hash: Option<u64>,
     },
 
     Doctype {

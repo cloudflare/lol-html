@@ -1,6 +1,6 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::{get_tag_name_hash, RawSubslice, Token};
+use cool_thing::{get_tag_name_hash, LexResult, RawSubslice, ShallowToken, Token};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -200,21 +200,23 @@ fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
     string
 }
 
-impl<'r> From<&'r Token<'r>> for TestToken {
-    fn from(token: &Token<'r>) -> Self {
+impl<'r> From<(Token<'r>, &'r LexResult<'r>)> for TestToken {
+    fn from((token, lex_res): (Token<'r>, &'r LexResult<'r>)) -> Self {
         match token {
             Token::Character(data) => TestToken::Character(data.as_string()),
 
-            Token::Comment(data) => TestToken::Comment(to_null_decoded(data)),
+            Token::Comment(ref data) => TestToken::Comment(to_null_decoded(data)),
 
             Token::StartTag {
-                name,
-                name_hash,
-                attributes,
+                ref name,
+                ref attributes,
                 self_closing,
             } => TestToken::StartTag {
                 name: to_lower_null_decoded(name),
-                name_hash: *name_hash,
+                name_hash: match lex_res.shallow_token {
+                    Some(ShallowToken::StartTag { name_hash, .. }) => name_hash,
+                    _ => None,
+                },
 
                 attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
                     (
@@ -226,12 +228,15 @@ impl<'r> From<&'r Token<'r>> for TestToken {
                     )
                 })),
 
-                self_closing: *self_closing,
+                self_closing,
             },
 
-            Token::EndTag { name, name_hash } => TestToken::EndTag {
+            Token::EndTag { ref name } => TestToken::EndTag {
                 name: to_lower_null_decoded(name),
-                name_hash: *name_hash,
+                name_hash: match lex_res.shallow_token {
+                    Some(ShallowToken::EndTag { name_hash, .. }) => name_hash,
+                    _ => None,
+                },
             },
 
             Token::Doctype {
@@ -243,7 +248,7 @@ impl<'r> From<&'r Token<'r>> for TestToken {
                 name: name.as_ref().map(to_lower_null_decoded),
                 public_id: public_id.as_ref().map(to_null_decoded),
                 system_id: system_id.as_ref().map(to_null_decoded),
-                force_quirks: *force_quirks,
+                force_quirks,
             },
 
             Token::Eof => TestToken::Eof,
