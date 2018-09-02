@@ -1,6 +1,7 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::tokenizer::{get_tag_name_hash, LexResult, RawSubslice, ShallowToken, Token};
+use cool_thing::lex_result::{LexResult, RawSubslice, ShallowToken, Token};
+use cool_thing::tokenizer::get_tag_name_hash;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;

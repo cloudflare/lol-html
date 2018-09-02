@@ -1,7 +1,8 @@
 use super::parsing_result::ParsingResult;
 use super::token::TestToken;
 use super::unescape::Unescape;
-use cool_thing::tokenizer::{get_tag_name_hash, LexResult, TextParsingMode, Tokenizer};
+use cool_thing::lex_result::LexResult;
+use cool_thing::tokenizer::{get_tag_name_hash, TextParsingMode, Tokenizer};
 use cool_thing::tree_builder_simulator::TreeBuilderSimulator;
 use serde_json;
 use std::cell::Cell;

@@ -1,6 +1,7 @@
 use super::decoder::Decoder;
 use super::token::TestToken;
-use cool_thing::tokenizer::{LexResult, TextParsingMode};
+use cool_thing::lex_result::LexResult;
+use cool_thing::tokenizer::TextParsingMode;
 
 fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);

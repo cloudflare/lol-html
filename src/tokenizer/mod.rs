@@ -1,5 +1,4 @@
 mod buffer;
-mod lex_result;
 mod tag_name_hash;
 
 #[macro_use]
@@ -13,9 +12,9 @@ mod syntax;
 mod text_parsing_mode;
 
 use self::buffer::Buffer;
-pub use self::lex_result::handler::*;
-pub use self::lex_result::*;
 pub use self::tag_name_hash::*;
+use lex_result::handler::*;
+use lex_result::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -38,6 +37,9 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 2. Implement simple feedback to not be blocked on it
 
 // 6. Implement feedback
+// 7. Move lex result out of tokenizer, use it to store information
+// for the whole pipeline: such as namespace and if it ignored by tree builder
+// 5. Make all buffer size adjustable, propagate capacity errors to write function
 // 6. Don't emit character immidiately, extend existing
 // 6. Implement streaming
 // 7. Implement in-state loops
