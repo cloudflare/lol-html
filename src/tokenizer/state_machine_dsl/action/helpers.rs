@@ -22,8 +22,14 @@ macro_rules! action_helper {
             raw: $raw,
         };
 
-        if let Some(state) = $self.lex_res_handler.handle_and_provide_feedback(res) {
-            action_helper!(@switch_state |$self|> state);
+          if let Some(TokenizerAdjustment { state, allow_cdata }) =
+            $self.lex_res_handler.handle_and_provide_feedback(res)
+        {
+            if let Some(state) = state {
+                action_helper!(@switch_state |$self|> state);
+            }
+
+            $self.allow_cdata = allow_cdata;
         }
     };
 
