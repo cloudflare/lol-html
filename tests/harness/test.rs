@@ -1,7 +1,7 @@
 use super::parsing_result::ParsingResult;
 use super::token::TestToken;
 use super::unescape::Unescape;
-use cool_thing::lex_result::LexResult;
+use cool_thing::lex_unit::LexUnit;
 use cool_thing::tokenizer::{get_tag_name_hash, TextParsingMode, Tokenizer};
 use cool_thing::tree_builder_simulator::TreeBuilderSimulator;
 use serde_json;
@@ -82,7 +82,7 @@ impl Test {
             let mut text_parsing_mode_change_handler = |mode| text_parsing_mode.set(mode);
 
             let lex_res_handler =
-                |lex_res: LexResult| result.add_lex_res(lex_res, text_parsing_mode.get());
+                |lex_res: LexUnit| result.add_lex_res(lex_res, text_parsing_mode.get());
 
             let mut tokenizer = Tokenizer::new(2048, TreeBuilderSimulator::new(lex_res_handler));
 

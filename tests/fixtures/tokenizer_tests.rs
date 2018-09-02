@@ -1,8 +1,6 @@
 use glob;
 use harness::test::Test;
 use serde_json::from_reader;
-use std::fs::File;
-use std::io::BufReader;
 
 #[derive(Deserialize)]
 struct Suite {

@@ -12,12 +12,12 @@ fn as_opt_subslice(raw: &[u8], range: Option<SliceRange>) -> Option<RawSubslice>
     range.map(|range| RawSubslice::from((raw, range)))
 }
 
-pub struct LexResult<'r> {
+pub struct LexUnit<'r> {
     pub shallow_token: Option<ShallowToken>,
     pub raw: Option<&'r [u8]>,
 }
 
-impl<'r> LexResult<'r> {
+impl<'r> LexUnit<'r> {
     pub fn as_token(&self) -> Option<Token<'r>> {
         self.shallow_token
             .as_ref()

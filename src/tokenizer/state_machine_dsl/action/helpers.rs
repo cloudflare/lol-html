@@ -1,23 +1,23 @@
 macro_rules! action_helper {
-    ( @emit_lex_result_with_raw_inclusive | $self:tt |> $token:expr ) => {
-        action_helper!(@emit_lex_result_with_raw |$self|> $token, $self.pos + 1 )
+    ( @emit_lex_unit_with_raw_inclusive | $self:tt |> $token:expr ) => {
+        action_helper!(@emit_lex_unit_with_raw |$self|> $token, $self.pos + 1 )
     };
 
-    ( @emit_lex_result_with_raw_exclusive | $self:tt |> $token:expr ) => {
-        action_helper!(@emit_lex_result_with_raw |$self|> $token, $self.pos )
+    ( @emit_lex_unit_with_raw_exclusive | $self:tt |> $token:expr ) => {
+        action_helper!(@emit_lex_unit_with_raw |$self|> $token, $self.pos )
     };
 
-    ( @emit_lex_result_with_raw | $self:tt |> $token:expr, $end:expr ) => {
+    ( @emit_lex_unit_with_raw | $self:tt |> $token:expr, $end:expr ) => {
         trace!(@raw $self, $end);
 
-        action_helper!(@emit_lex_result |$self|>
+        action_helper!(@emit_lex_unit |$self|>
             $token,
             Some(&$self.buffer[$self.raw_start..$end])
         );
     };
 
-    ( @emit_lex_result | $self:tt |> $token:expr, $raw:expr ) => {
-        let res = LexResult {
+    ( @emit_lex_unit | $self:tt |> $token:expr, $raw:expr ) => {
+        let res = LexUnit {
             shallow_token: $token,
             raw: $raw,
         };

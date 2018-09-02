@@ -1,6 +1,6 @@
 use super::decoder::Decoder;
 use super::token::TestToken;
-use cool_thing::lex_result::LexResult;
+use cool_thing::lex_unit::LexUnit;
 use cool_thing::tokenizer::TextParsingMode;
 
 fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
@@ -25,7 +25,7 @@ pub struct ParsingResult {
 }
 
 impl ParsingResult {
-    pub fn add_lex_res(&mut self, lex_res: LexResult, text_parsing_mode: TextParsingMode) {
+    pub fn add_lex_res(&mut self, lex_res: LexUnit, text_parsing_mode: TextParsingMode) {
         if let Some(token) = lex_res.as_token() {
             let token = (token, &lex_res).into();
 

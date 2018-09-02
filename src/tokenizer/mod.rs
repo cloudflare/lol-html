@@ -13,8 +13,8 @@ mod text_parsing_mode;
 
 use self::buffer::Buffer;
 pub use self::tag_name_hash::*;
-use lex_result::handler::*;
-use lex_result::*;
+use lex_unit::handler::*;
+use lex_unit::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -73,7 +73,7 @@ pub struct Tokenizer<'t, H> {
 
 define_state_machine!();
 
-impl<'t, H: LexResultHandlerWithFeedback> Tokenizer<'t, H> {
+impl<'t, H: LexUnitHandlerWithFeedback> Tokenizer<'t, H> {
     pub fn new(buffer_capacity: usize, lex_res_handler: H) -> Self {
         Tokenizer {
             buffer: Buffer::new(buffer_capacity),

@@ -1,5 +1,5 @@
-use lex_result::handler::*;
-use lex_result::LexResult;
+use lex_unit::handler::*;
+use lex_unit::LexUnit;
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
@@ -14,7 +14,7 @@ pub struct TreeBuilderSimulator<H> {
     ns_stack: Vec<Namespace>,
 }
 
-impl<H: LexResultHandler> TreeBuilderSimulator<H> {
+impl<H: LexUnitHandler> TreeBuilderSimulator<H> {
     pub fn new(lex_res_handler: H) -> Self {
         TreeBuilderSimulator {
             lex_res_handler,
@@ -23,10 +23,10 @@ impl<H: LexResultHandler> TreeBuilderSimulator<H> {
     }
 }
 
-impl<H: LexResultHandler> LexResultHandlerWithFeedback for TreeBuilderSimulator<H> {
-    fn handle_and_provide_feedback<F: LexResultHandlerWithFeedback>(
+impl<H: LexUnitHandler> LexUnitHandlerWithFeedback for TreeBuilderSimulator<H> {
+    fn handle_and_provide_feedback<F: LexUnitHandlerWithFeedback>(
         &mut self,
-        lex_res: LexResult,
+        lex_res: LexUnit,
     ) -> Option<TokenizerAdjustment<F>> {
         self.lex_res_handler.handle(lex_res);
 

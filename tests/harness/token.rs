@@ -1,6 +1,6 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::lex_result::{LexResult, RawSubslice, ShallowToken, Token};
+use cool_thing::lex_unit::{LexUnit, RawSubslice, ShallowToken, Token};
 use cool_thing::tokenizer::get_tag_name_hash;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
@@ -201,8 +201,8 @@ fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
     string
 }
 
-impl<'r> From<(Token<'r>, &'r LexResult<'r>)> for TestToken {
-    fn from((token, lex_res): (Token<'r>, &'r LexResult<'r>)) -> Self {
+impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
+    fn from((token, lex_res): (Token<'r>, &'r LexUnit<'r>)) -> Self {
         match token {
             Token::Character(data) => TestToken::Character(data.as_string()),
 

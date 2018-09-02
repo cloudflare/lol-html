@@ -1,7 +1,7 @@
 extern crate cool_thing;
 extern crate getopts;
 
-use cool_thing::lex_result::*;
+use cool_thing::lex_unit::*;
 use cool_thing::tokenizer::*;
 use getopts::{Matches, Options};
 use std::env::args;
@@ -50,16 +50,16 @@ fn main() {
 
     let html = matches.free.first().unwrap();
 
-    let mut tokenizer = Tokenizer::new(2048, |lex_result: LexResult| {
+    let mut tokenizer = Tokenizer::new(2048, |lex_unit: LexUnit| {
         println!("------------------");
 
-        if let Some(token) = lex_result.as_token() {
-            println!("Shallow token: {:#?}", lex_result.shallow_token.unwrap());
+        if let Some(token) = lex_unit.as_token() {
+            println!("Shallow token: {:#?}", lex_unit.shallow_token.unwrap());
             println!();
             println!("Token: {:#?}", token);
         }
 
-        if let Some(raw) = lex_result.raw {
+        if let Some(raw) = lex_unit.raw {
             println!("\nRaw: `{}`", unsafe {
                 String::from_utf8_unchecked(raw.to_vec())
             });
