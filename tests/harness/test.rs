@@ -1,7 +1,8 @@
 use super::parsing_result::ParsingResult;
 use super::token::TestToken;
 use super::unescape::Unescape;
-use cool_thing::{get_tag_name_hash, LexResult, TextParsingMode, Tokenizer};
+use cool_thing::tokenizer::{get_tag_name_hash, LexResult, TextParsingMode, Tokenizer};
+use cool_thing::tree_builder_simulator::TreeBuilderSimulator;
 use serde_json;
 use std::cell::Cell;
 
@@ -36,9 +37,6 @@ pub struct Test {
     #[serde(rename = "output")]
     pub expected_tokens: Vec<TestToken>,
 
-    #[serde(skip)]
-    pub ignored: bool,
-
     #[serde(default = "default_initial_states")]
     pub initial_states: Vec<String>,
 
@@ -47,6 +45,9 @@ pub struct Test {
 
     #[serde(default)]
     pub last_start_tag: String,
+
+    #[serde(skip)]
+    pub ignored: bool,
 }
 
 impl Unescape for Test {
@@ -79,9 +80,10 @@ impl Test {
             let text_parsing_mode = Cell::new(TextParsingMode::Data);
             let mut text_parsing_mode_change_handler = |mode| text_parsing_mode.set(mode);
 
-            let mut tokenizer = Tokenizer::new(2048, |lex_res: LexResult| {
-                result.add_lex_res(lex_res, text_parsing_mode.get());
-            });
+            let lex_res_handler =
+                |lex_res: LexResult| result.add_lex_res(lex_res, text_parsing_mode.get());
+
+            let mut tokenizer = Tokenizer::new(2048, TreeBuilderSimulator::new(lex_res_handler));
 
             tokenizer.set_text_parsing_mode_change_handler(&mut text_parsing_mode_change_handler);
             tokenizer.set_state(initial_text_parsing_mode.into());

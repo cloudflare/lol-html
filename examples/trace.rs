@@ -1,7 +1,7 @@
 extern crate cool_thing;
 extern crate getopts;
 
-use cool_thing::*;
+use cool_thing::tokenizer::*;
 use getopts::{Matches, Options};
 use std::env::args;
 
