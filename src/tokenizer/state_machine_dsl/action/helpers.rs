@@ -22,7 +22,7 @@ macro_rules! action_helper {
             raw: $raw,
         };
 
-        if let Some(state) = $self.lex_res_handler.handle(res) {
+        if let Some(state) = $self.lex_res_handler.handle_and_provide_feedback(res) {
             action_helper!(@switch_state |$self|> state);
         }
     };

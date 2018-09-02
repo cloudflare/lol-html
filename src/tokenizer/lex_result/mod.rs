@@ -1,3 +1,4 @@
+pub mod handler;
 mod raw_subslice;
 mod shallow_token;
 mod token;

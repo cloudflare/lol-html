@@ -1,0 +1,32 @@
+use super::LexResult;
+use tokenizer::Tokenizer;
+
+pub type TokenizerStateAdjustment<H> = Option<fn(&mut Tokenizer<H>, Option<u8>)>;
+
+pub trait LexResultHandlerWithFeedback {
+    fn handle_and_provide_feedback<H: LexResultHandlerWithFeedback>(
+        &mut self,
+        lex_res: LexResult,
+    ) -> TokenizerStateAdjustment<H>;
+}
+
+pub trait LexResultHandler {
+    fn handle(&mut self, lex_res: LexResult);
+}
+
+impl<H: LexResultHandler> LexResultHandlerWithFeedback for H {
+    fn handle_and_provide_feedback<F: LexResultHandlerWithFeedback>(
+        &mut self,
+        lex_res: LexResult,
+    ) -> TokenizerStateAdjustment<F> {
+        self.handle(lex_res);
+        None
+    }
+}
+
+#[cfg(feature = "testing_api")]
+impl<F: FnMut(LexResult)> LexResultHandler for F {
+    fn handle(&mut self, lex_res: LexResult) {
+        self(lex_res);
+    }
+}

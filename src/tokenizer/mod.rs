@@ -1,6 +1,5 @@
 mod buffer;
 mod lex_result;
-mod lex_result_handler;
 mod tag_name_hash;
 
 #[macro_use]
@@ -14,8 +13,8 @@ mod syntax;
 mod text_parsing_mode;
 
 use self::buffer::Buffer;
+pub use self::lex_result::handler::*;
 pub use self::lex_result::*;
-pub use self::lex_result_handler::*;
 pub use self::tag_name_hash::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -49,7 +48,7 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 12. Attr buffer limits?
 // 13. Range slice for raw?
 
-pub struct Tokenizer<'t, H: LexResultHandler> {
+pub struct Tokenizer<'t, H> {
     buffer: Buffer,
     pos: usize,
     raw_start: usize,
@@ -71,7 +70,7 @@ pub struct Tokenizer<'t, H: LexResultHandler> {
 
 define_state_machine!();
 
-impl<'t, H: LexResultHandler> Tokenizer<'t, H> {
+impl<'t, H: LexResultHandlerWithFeedback> Tokenizer<'t, H> {
     pub fn new(buffer_capacity: usize, lex_res_handler: H) -> Self {
         Tokenizer {
             buffer: Buffer::new(buffer_capacity),
