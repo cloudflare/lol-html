@@ -33,6 +33,39 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // subset of insertion modes to know when to ignore particular
 // start tag that initiates text parsing.
 
+// OPTIMISATION IDEA:
+// Instead of using direct token flow approach when tokens come
+// from tokenizer through a number of handlers to serilizer
+// use different approach: connect tokenizer directly with
+// serializer, so in most cases serializer directly writes
+// original chunk to output, and only if handler rewrites
+// something - rewrite only specified subchunk of the original chunk.
+// Luckily, it's is easy to do considering that we use ranges
+// instead of real pointers.
+
+// OPTIMISATION IDEA:
+// Skip parsing particular parts of tokens if we are not interested in them:
+// e.g. for tree builder simulator we don't need anything besides start and end
+// tag names, so we can avoid collecting token attributes. If we have only tag
+// selectors we can avoid collecting attributes as well.
+
+// OPTIMISATION IDEA:
+// We can avoid using tokens for state adjustment: just introduce separate
+// events for tag name parsing and different type of handler trait. So,
+// we will not invoke simulator handler for text or doctype.
+
+// OPTIMISATION IDEA:
+// All selectors are based on start tag, so unless we have a matching
+// start tag, we can avoid capturing and producing any tokens.
+
+// OPTIMISATION IDEA:
+// Have two parsers: eager and full, both generated from the same syntax definition,
+// but having different action definitions. Eager parser doesn't produce tokens, it
+// just notifies matcher that it have seen particular start tag (all matching is based on tags).
+// If matcher says that tag matches, we switch to the full parser that actually produce
+// tokens. Then action executor tells if we should replace token. We run token through
+// serializer and substitute it into original chunk. Parser will share tree builder simulator.
+
 // 1. Add benchmark
 // 2. Implement simple feedback to not be blocked on it
 

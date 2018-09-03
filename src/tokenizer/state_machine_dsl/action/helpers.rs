@@ -22,7 +22,7 @@ macro_rules! action_helper {
             raw: $raw,
         };
 
-          if let Some(TokenizerAdjustment { state, allow_cdata }) =
+        if let Some(TokenizerAdjustment { state, allow_cdata }) =
             $self.lex_res_handler.handle_and_provide_feedback(res)
         {
             if let Some(state) = state {
