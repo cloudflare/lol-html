@@ -1,5 +1,5 @@
-use cool_thing::tokenizer::get_tag_name_hash;
-use harness::token::TestToken;
+use cool_thing::tag_name_hash::get_tag_name_hash;
+use harness::tokenizer_test::TestToken;
 use html5ever::tokenizer::{TagKind, Token, TokenSink, TokenSinkResult};
 use std::collections::HashMap;
 use std::iter::FromIterator;
@@ -65,9 +65,6 @@ where
             },
             Token::NullCharacterToken => {
                 self.push_character_token("\0");
-            }
-            Token::EOFToken => {
-                self.tokens.push(TestToken::Eof);
             }
             _ => {}
         }

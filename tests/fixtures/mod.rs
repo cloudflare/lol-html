@@ -1,13 +1,19 @@
-mod parser_feedback_tests;
+mod tag_name_hash_tests;
 mod tokenizer_tests;
+mod tokenizer_with_feedback_tests;
 
-use super::harness::test::Test;
+use test::TestDescAndFn;
 
-pub fn get_tests() -> Vec<Test> {
+pub fn get_tests() -> Vec<TestDescAndFn> {
     let mut tests = Vec::new();
 
-    tests.extend(tokenizer_tests::get_tests());
-    tests.extend(parser_feedback_tests::get_tests());
+    macro_rules! add_tests {
+        ($($m:ident),*) => {
+            $(tests.extend($m::get_tests());)*
+        };
+    }
+
+    add_tests!(tokenizer_tests, tokenizer_with_feedback_tests);
 
     tests
 }

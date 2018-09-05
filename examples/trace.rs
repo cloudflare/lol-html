@@ -2,6 +2,7 @@ extern crate cool_thing;
 extern crate getopts;
 
 use cool_thing::lex_unit::*;
+use cool_thing::tag_name_hash::*;
 use cool_thing::tokenizer::*;
 use getopts::{Matches, Options};
 use std::env::args;

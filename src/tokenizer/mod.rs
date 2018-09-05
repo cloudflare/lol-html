@@ -1,5 +1,4 @@
 mod buffer;
-mod tag_name_hash;
 
 #[macro_use]
 mod state_machine_dsl;
@@ -12,11 +11,11 @@ mod syntax;
 mod text_parsing_mode;
 
 use self::buffer::Buffer;
-pub use self::tag_name_hash::*;
 use lex_unit::handler::*;
 use lex_unit::*;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tag_name_hash::*;
 
 #[cfg(feature = "testing_api")]
 pub use self::text_parsing_mode::*;

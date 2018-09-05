@@ -2,9 +2,10 @@ mod feedback_tokens;
 
 use self::feedback_tokens::get_expected_tokens_with_feedback;
 use glob;
-use harness::test::{default_initial_states, Test};
+use harness::tokenizer_test::{default_initial_states, TokenizerTest};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use test::TestDescAndFn;
 
 fn parse_inputs(file: BufReader<File>) -> Vec<String> {
     let mut inputs = Vec::new();
@@ -30,12 +31,12 @@ fn parse_inputs(file: BufReader<File>) -> Vec<String> {
     inputs
 }
 
-pub fn get_tests() -> Vec<Test> {
+pub fn get_tests() -> Vec<TestDescAndFn> {
     let mut tests = Vec::new();
 
-    for file in read_tests!("html5lib-tests/tree-construction/*.dat") {
+    for file in read_test_data!("html5lib-tests/tree-construction/*.dat") {
         tests.extend(parse_inputs(file).into_iter().map(|input| {
-            Test {
+            TokenizerTest {
                 description: input
                     .chars()
                     .flat_map(|c| c.escape_default())
@@ -50,5 +51,5 @@ pub fn get_tests() -> Vec<Test> {
         }));
     }
 
-    tests
+    convert_tokenizer_tests!(tests)
 }

@@ -1,8 +1,14 @@
-use super::parsing_result::ParsingResult;
-use super::token::TestToken;
-use super::unescape::Unescape;
+mod decoder;
+mod parsing_result;
+mod token;
+mod unescape;
+
+use self::parsing_result::ParsingResult;
+pub use self::token::TestToken;
+use self::unescape::Unescape;
 use cool_thing::lex_unit::LexUnit;
-use cool_thing::tokenizer::{get_tag_name_hash, TextParsingMode, Tokenizer};
+use cool_thing::tag_name_hash::get_tag_name_hash;
+use cool_thing::tokenizer::{TextParsingMode, Tokenizer};
 use cool_thing::tree_builder_simulator::TreeBuilderSimulator;
 use serde_json;
 use std::cell::Cell;
@@ -31,7 +37,7 @@ pub fn default_initial_states() -> Vec<String> {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Test {
+pub struct TokenizerTest {
     pub description: String,
     pub input: String,
 
@@ -51,7 +57,7 @@ pub struct Test {
     pub ignored: bool,
 }
 
-impl Unescape for Test {
+impl Unescape for TokenizerTest {
     fn unescape(&mut self) -> Result<(), serde_json::error::Error> {
         if self.double_escaped {
             self.double_escaped = false;
@@ -66,7 +72,7 @@ impl Unescape for Test {
     }
 }
 
-impl Test {
+impl TokenizerTest {
     pub fn init(&mut self) {
         self.ignored = self.unescape().is_err();
 
