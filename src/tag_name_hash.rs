@@ -1,3 +1,15 @@
+// NOTE: unfortunately `static fn` is still unavaliable in stable,
+// so we need to use manually precalculated values in this enum.
+// Consistency between hashing algorithm and these values is guaranteed
+// by the dedicated test.
+#[repr(u64)]
+#[derive(Debug)]
+pub enum TagNameHash {
+    Svg = 25452u64,
+    Math = 596781u64,
+    H1 = 416u64,
+}
+
 // NOTE: All standard tag names contain only ASCII alpha characters
 // and digits from 1 to 6 (in numbered header tags, i.e. <h1> - <h6>).
 // Considering that tag names are case insensitive we have only

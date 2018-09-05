@@ -47,7 +47,7 @@ macro_rules! convert_tokenizer_tests {
 }
 
 macro_rules! test_fixture {
-    ($fixture_name:expr, { $(test($name:expr, $body:tt);)*}) => (
+    ($fixture_name:expr, { $(test($name:expr, $body:tt);)+}) => (
         use test::TestDescAndFn;
         use std::fmt::Write;
 
@@ -60,7 +60,7 @@ macro_rules! test_fixture {
                 write!(&mut name, "{} - {}", $fixture_name, $name).unwrap();
 
                 tests.push(create_test!(name, false, $body));
-            })*
+            })+
 
             tests
         }

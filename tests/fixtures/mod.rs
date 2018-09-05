@@ -13,7 +13,11 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
         };
     }
 
-    add_tests!(tokenizer_tests, tokenizer_with_feedback_tests);
+    add_tests!(
+        tag_name_hash_tests,
+        tokenizer_tests,
+        tokenizer_with_feedback_tests
+    );
 
     tests
 }
