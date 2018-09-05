@@ -1,4 +1,4 @@
-use cool_thing::tag_name_hash::get_tag_name_hash;
+use cool_thing::tag_name::TagName;
 use harness::tokenizer_test::TestToken;
 use html5ever::tokenizer::{TagKind, Token, TokenSink, TokenSinkResult};
 use std::collections::HashMap;
@@ -40,7 +40,7 @@ where
             }
             Token::TagToken(ref tag) => {
                 let name = tag.name.to_string();
-                let name_hash = get_tag_name_hash(&name);
+                let name_hash = TagName::get_hash(&name);
 
                 self.tokens.push(match tag.kind {
                     TagKind::StartTag => TestToken::StartTag {

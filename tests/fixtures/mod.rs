@@ -8,8 +8,8 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
     let mut tests = Vec::new();
 
     macro_rules! add_tests {
-        ($($m:ident),*) => {
-            $(tests.extend($m::get_tests());)*
+        ($($m:ident),+) => {
+            $(tests.extend($m::get_tests());)+
         };
     }
 

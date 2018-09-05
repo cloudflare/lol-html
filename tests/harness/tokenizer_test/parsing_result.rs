@@ -1,7 +1,7 @@
 use super::decoder::Decoder;
 use super::token::TestToken;
 use cool_thing::lex_unit::LexUnit;
-use cool_thing::tokenizer::TextParsingMode;
+use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot};
 
 fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
@@ -20,14 +20,14 @@ fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
 #[derive(Default)]
 pub struct ParsingResult {
     tokens: Vec<TestToken>,
-    token_text_parsing_modes: Vec<TextParsingMode>,
+    text_parsing_mode_snapshots: Vec<TextParsingModeSnapshot>,
     raw_strings: Vec<String>,
 }
 
 impl ParsingResult {
-    pub fn add_lex_res(&mut self, lex_res: LexUnit, text_parsing_mode: TextParsingMode) {
-        if let Some(token) = lex_res.as_token() {
-            let token = (token, &lex_res).into();
+    pub fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
+        if let Some(token) = lex_unit.as_token() {
+            let token = (token, lex_unit).into();
 
             if let Some(TestToken::Character(ref mut prev_text)) = self.tokens.last_mut() {
                 if let TestToken::Character(ref cur_text) = token {
@@ -39,15 +39,16 @@ impl ParsingResult {
 
                     return;
                 } else {
-                    *prev_text = decode_text(prev_text, text_parsing_mode);
+                    *prev_text = decode_text(prev_text, mode_snapshot.mode);
                 }
             }
 
             self.tokens.push(token);
-            self.token_text_parsing_modes.push(text_parsing_mode);
+
+            self.text_parsing_mode_snapshots.push(mode_snapshot);
         }
 
-        if let Some(raw) = lex_res.raw {
+        if let Some(raw) = lex_unit.raw {
             self.raw_strings
                 .push(unsafe { String::from_utf8_unchecked(raw.to_vec()) });
         }
@@ -61,7 +62,9 @@ impl ParsingResult {
         &self.tokens
     }
 
-    pub fn into_token_raw_pairs(mut self) -> Option<Vec<(TestToken, String, TextParsingMode)>> {
+    pub fn into_token_raw_pairs(
+        mut self,
+    ) -> Option<Vec<(TestToken, String, TextParsingModeSnapshot)>> {
         // NOTE: remove EOF which doesn't have raw representation
         self.tokens.pop();
 
@@ -72,7 +75,7 @@ impl ParsingResult {
                 izip!(
                     self.tokens.into_iter(),
                     self.raw_strings.into_iter(),
-                    self.token_text_parsing_modes.into_iter()
+                    self.text_parsing_mode_snapshots.into_iter()
                 ).collect(),
             )
         } else {

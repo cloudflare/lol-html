@@ -1,9 +1,8 @@
-mod noop_tree_sink;
 mod token_sink_proxy;
 
-use self::noop_tree_sink::NoopTreeSink;
 use self::token_sink_proxy::TokenSinkProxy;
 use harness::tokenizer_test::TestToken;
+use html5ever::rcdom::RcDom;
 use html5ever::tendril::StrTendril;
 use html5ever::tokenizer::{BufferQueue, Tokenizer, TokenizerOpts, TokenizerResult};
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
@@ -17,7 +16,7 @@ pub fn get_expected_tokens_with_feedback(input: &str) -> Vec<TestToken> {
     {
         let mut t = Tokenizer::new(
             TokenSinkProxy {
-                inner: TreeBuilder::new(NoopTreeSink::default(), TreeBuilderOpts::default()),
+                inner: TreeBuilder::new(RcDom::default(), TreeBuilderOpts::default()),
                 tokens: &mut tokens,
             },
             TokenizerOpts::default(),

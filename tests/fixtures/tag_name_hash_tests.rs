@@ -1,17 +1,17 @@
-use cool_thing::tag_name_hash::{get_tag_name_hash, TagNameHash};
+use cool_thing::tag_name::TagName;
 
 test_fixture!("Tag name hash", {
-    test("Should invalidate hash on non-ASCII aplhanum values", {
-        assert_eq!(get_tag_name_hash("div@&"), None);
+    test("Should invalidate hash for non-ASCII aplhanum values", {
+        assert_eq!(TagName::get_hash("div@&"), None);
     });
 
-    test("Should invalidate hash on long values", {
-        assert_eq!(get_tag_name_hash("aaaaaaaaaaaaaa"), None);
+    test("Should invalidate hash for long values", {
+        assert_eq!(TagName::get_hash("aaaaaaaaaaaaaa"), None);
     });
 
     test("Precalculated hash values use current hashing algorithm", {
-        assert_eq!(get_tag_name_hash("svg").unwrap(), TagNameHash::Svg as u64);
-        assert_eq!(get_tag_name_hash("math").unwrap(), TagNameHash::Math as u64);
-        assert_eq!(get_tag_name_hash("h1").unwrap(), TagNameHash::H1 as u64);
+        assert_eq!(TagName::get_hash("svg").unwrap(), TagName::Svg);
+        assert_eq!(TagName::get_hash("math").unwrap(), TagName::Math);
+        assert_eq!(TagName::get_hash("h1").unwrap(), TagName::H1);
     });
 });

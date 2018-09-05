@@ -1,5 +1,6 @@
 extern crate cool_thing;
 extern crate glob;
+extern crate html5ever;
 extern crate serde;
 extern crate serde_json;
 
@@ -15,10 +16,8 @@ extern crate serde_derive;
 extern crate itertools;
 
 #[macro_use]
-extern crate html5ever;
-
-#[macro_use]
 mod harness;
+
 mod fixtures;
 
 use fixtures::get_tests;

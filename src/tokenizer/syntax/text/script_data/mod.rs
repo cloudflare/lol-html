@@ -16,7 +16,7 @@ define_state_group!(script_data_states_group = {
         b'/' => ( --> script_data_end_tag_open_state )
         b'!' => ( --> script_data_escape_start_state )
         eof  => ( emit_chars; emit_eof; )
-        _    => ( reconsume in script_data_state )
+        _    => ( emit_chars; reconsume in script_data_state )
     }
 
     script_data_end_tag_open_state {

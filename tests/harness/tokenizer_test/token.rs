@@ -1,7 +1,7 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
 use cool_thing::lex_unit::{LexUnit, RawSubslice, ShallowToken, Token};
-use cool_thing::tag_name_hash::get_tag_name_hash;
+use cool_thing::tag_name::TagName;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -137,7 +137,7 @@ impl<'de> Deserialize<'de> for TestToken {
                         ref name,
                         ref mut name_hash,
                     } => {
-                        *name_hash = get_tag_name_hash(name);
+                        *name_hash = TagName::get_hash(name);
                     }
                     _ => (),
                 }
@@ -202,7 +202,7 @@ fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
 }
 
 impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
-    fn from((token, lex_res): (Token<'r>, &'r LexUnit<'r>)) -> Self {
+    fn from((token, lex_unit): (Token<'r>, &'r LexUnit<'r>)) -> Self {
         match token {
             Token::Character(data) => TestToken::Character(data.as_string()),
 
@@ -214,7 +214,7 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
                 self_closing,
             } => TestToken::StartTag {
                 name: to_lower_null_decoded(name),
-                name_hash: match lex_res.shallow_token {
+                name_hash: match lex_unit.shallow_token {
                     Some(ShallowToken::StartTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
@@ -234,7 +234,7 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
 
             Token::EndTag { ref name } => TestToken::EndTag {
                 name: to_lower_null_decoded(name),
-                name_hash: match lex_res.shallow_token {
+                name_hash: match lex_unit.shallow_token {
                     Some(ShallowToken::EndTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },

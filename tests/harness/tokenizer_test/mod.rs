@@ -7,9 +7,8 @@ use self::parsing_result::ParsingResult;
 pub use self::token::TestToken;
 use self::unescape::Unescape;
 use cool_thing::lex_unit::LexUnit;
-use cool_thing::tag_name_hash::get_tag_name_hash;
-use cool_thing::tokenizer::{TextParsingMode, Tokenizer};
-use cool_thing::tree_builder_simulator::TreeBuilderSimulator;
+use cool_thing::tag_name::TagName;
+use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot, Tokenizer};
 use serde_json;
 use std::cell::Cell;
 
@@ -72,6 +71,33 @@ impl Unescape for TokenizerTest {
     }
 }
 
+fn parse(input: Vec<u8>, initial_mode_snapshot: TextParsingModeSnapshot) -> ParsingResult {
+    let mut result = ParsingResult::default();
+
+    {
+        let mode_snapshot = Cell::new(TextParsingModeSnapshot {
+            mode: TextParsingMode::Data,
+            last_start_tag_name_hash: None,
+        });
+
+        let mut text_parsing_mode_change_handler = |s| mode_snapshot.set(s);
+
+        let mut tokenizer = Tokenizer::new(2048, |lex_unit: &LexUnit| {
+            result.add_lex_unit(lex_unit, mode_snapshot.get())
+        });
+
+        tokenizer.set_text_parsing_mode_change_handler(&mut text_parsing_mode_change_handler);
+        tokenizer.set_state(initial_mode_snapshot.mode.into());
+        tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+
+        tokenizer
+            .write(input)
+            .expect("Tokenizer buffer capacity exceeded");
+    }
+
+    result
+}
+
 impl TokenizerTest {
     pub fn init(&mut self) {
         self.ignored = self.unescape().is_err();
@@ -80,40 +106,16 @@ impl TokenizerTest {
         self.expected_tokens.push(TestToken::Eof);
     }
 
-    fn parse(&self, input: Vec<u8>, initial_text_parsing_mode: TextParsingMode) -> ParsingResult {
-        let mut result = ParsingResult::default();
-
-        {
-            let text_parsing_mode = Cell::new(TextParsingMode::Data);
-            let mut text_parsing_mode_change_handler = |mode| text_parsing_mode.set(mode);
-
-            let lex_res_handler =
-                |lex_res: LexUnit| result.add_lex_res(lex_res, text_parsing_mode.get());
-
-            let mut tokenizer = Tokenizer::new(2048, TreeBuilderSimulator::new(lex_res_handler));
-
-            tokenizer.set_text_parsing_mode_change_handler(&mut text_parsing_mode_change_handler);
-            tokenizer.set_state(initial_text_parsing_mode.into());
-            tokenizer.set_last_start_tag_name_hash(get_tag_name_hash(&self.last_start_tag));
-
-            tokenizer
-                .write(input)
-                .expect("Tokenizer buffer capacity exceeded");
-        }
-
-        result
-    }
-
     fn assert_tokens_have_correct_raw_strings(&self, actual: ParsingResult) {
         if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
-            for (token, raw, text_parsing_mode) in token_raw_pairs {
-                let mut actual = self.parse(raw.bytes().collect(), text_parsing_mode);
+            for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
+                let mut actual = parse(raw.bytes().collect(), text_parsing_mode_snapshot);
 
                 assert_eql!(
                     *actual.get_tokens(),
                     vec![token.to_owned(), TestToken::Eof],
                     raw,
-                    text_parsing_mode,
+                    text_parsing_mode_snapshot,
                     "Token's raw string doesn't produce the same token"
                 );
             }
@@ -123,7 +125,13 @@ impl TokenizerTest {
     pub fn run(&self) {
         for cs in &self.initial_states {
             let cs = TextParsingMode::from(cs.as_str());
-            let actual = self.parse(self.input.bytes().collect(), cs);
+            let actual = parse(
+                self.input.bytes().collect(),
+                TextParsingModeSnapshot {
+                    mode: cs,
+                    last_start_tag_name_hash: TagName::get_hash(&self.last_start_tag),
+                },
+            );
 
             assert_eql!(
                 *actual.get_tokens(),

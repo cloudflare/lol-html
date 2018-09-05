@@ -7,4 +7,8 @@ macro_rules! condition {
             _ => unreachable!("End tag should exist at this point"),
         }
     };
+
+    (| $self:tt | > cdata_allowed) => {
+        $self.allow_cdata
+    };
 }

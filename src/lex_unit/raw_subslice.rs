@@ -1,4 +1,4 @@
-use super::shallow_token::SliceRange;
+use super::token::SliceRange;
 use std::convert::From;
 use std::ops::Deref;
 

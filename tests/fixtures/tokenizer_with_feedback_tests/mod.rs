@@ -34,21 +34,26 @@ fn parse_inputs(file: BufReader<File>) -> Vec<String> {
 pub fn get_tests() -> Vec<TestDescAndFn> {
     let mut tests = Vec::new();
 
-    for file in read_test_data!("html5lib-tests/tree-construction/*.dat") {
-        tests.extend(parse_inputs(file).into_iter().map(|input| {
-            TokenizerTest {
-                description: input
-                    .chars()
-                    .flat_map(|c| c.escape_default())
-                    .collect::<String>() + " (with feedback)",
-                expected_tokens: get_expected_tokens_with_feedback(&input),
-                input,
-                initial_states: default_initial_states(),
-                double_escaped: false,
-                last_start_tag: String::new(),
-                ignored: false,
-            }
-        }));
+    for test_files in vec![
+        read_test_data!("html5lib-tests/tree-construction/*.dat"),
+        read_test_data!("regression/*.dat"),
+    ] {
+        for file in test_files {
+            tests.extend(parse_inputs(file).into_iter().map(|input| {
+                TokenizerTest {
+                    description: input
+                        .chars()
+                        .flat_map(|c| c.escape_default())
+                        .collect::<String>() + " (with feedback)",
+                    expected_tokens: get_expected_tokens_with_feedback(&input),
+                    input,
+                    initial_states: default_initial_states(),
+                    double_escaped: false,
+                    last_start_tag: String::new(),
+                    ignored: false,
+                }
+            }));
+        }
     }
 
     convert_tokenizer_tests!(tests)

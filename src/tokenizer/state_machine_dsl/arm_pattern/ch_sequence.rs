@@ -8,6 +8,12 @@ macro_rules! ch_sequence_arm_pattern {
         );
     };
 
+    ( | $scope_vars:tt |> "]>", $($rest_args:tt)* )  => {
+        ch_sequence_arm_pattern!(
+            @first |$scope_vars|> [ b']', b'>' ], $($rest_args)*
+        );
+    };
+
     ( | $scope_vars:tt |> "DOCTYPE", $($rest_args:tt)* )  => {
         ch_sequence_arm_pattern!(
             @first |$scope_vars|> [ b'D', b'O', b'C', b'T', b'Y', b'P', b'E' ], $($rest_args)*

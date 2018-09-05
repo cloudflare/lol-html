@@ -1,4 +1,6 @@
 mod buffer;
+mod text_parsing_mode;
+mod tree_builder_simulator;
 
 #[macro_use]
 mod state_machine_dsl;
@@ -6,19 +8,14 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
-#[cfg(feature = "testing_api")]
-#[macro_use]
-mod text_parsing_mode;
-
 use self::buffer::Buffer;
+pub use self::text_parsing_mode::*;
+use self::tree_builder_simulator::*;
 use lex_unit::handler::*;
 use lex_unit::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tag_name_hash::*;
-
-#[cfg(feature = "testing_api")]
-pub use self::text_parsing_mode::*;
+use tag_name::TagName;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
@@ -71,7 +68,7 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 6. Implement feedback
 // 7. Move lex result out of tokenizer, use it to store information
 // for the whole pipeline: such as namespace and if it ignored by tree builder
-// 5. Make all buffer size adjustable, propagate capacity errors to write function
+// 5. Make all buffer sizes adjustable, propagate capacity errors to write function
 // 6. Don't emit character immidiately, extend existing
 // 6. Implement streaming
 // 7. Implement in-state loops
@@ -82,41 +79,42 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 12. Attr buffer limits?
 // 13. Range slice for raw?
 
+type TokenizerState<'t, H> = fn(&mut Tokenizer<'t, H>, Option<u8>);
+
 pub struct Tokenizer<'t, H> {
     buffer: Buffer,
     pos: usize,
     raw_start: usize,
     token_part_start: usize,
-    cdata_end_pos: usize,
     finished: bool,
     state_enter: bool,
     allow_cdata: bool,
-    lex_res_handler: H,
-    state: fn(&mut Tokenizer<'t, H>, Option<u8>),
+    lex_unit_handler: H,
+    state: TokenizerState<'t, H>,
     current_token: Option<ShallowToken>,
     current_attr: Option<ShallowAttribute>,
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<ShallowAttribute>>>,
+    tree_builder_simulator: TreeBuilderSimulator,
 
     #[cfg(feature = "testing_api")]
-    text_parsing_mode_change_handler: Option<&'t mut FnMut(TextParsingMode)>,
+    text_parsing_mode_change_handler: Option<&'t mut TextParsingModeChangeHandler>,
 }
 
 define_state_machine!();
 
-impl<'t, H: LexUnitHandlerWithFeedback> Tokenizer<'t, H> {
-    pub fn new(buffer_capacity: usize, lex_res_handler: H) -> Self {
+impl<'t, H: LexUnitHandler> Tokenizer<'t, H> {
+    pub fn new(buffer_capacity: usize, lex_unit_handler: H) -> Self {
         Tokenizer {
             buffer: Buffer::new(buffer_capacity),
             pos: 0,
             raw_start: 0,
             token_part_start: 0,
-            cdata_end_pos: 0,
             finished: false,
             state_enter: true,
             allow_cdata: false,
-            lex_res_handler,
+            lex_unit_handler,
             state: Tokenizer::data_state,
             current_token: None,
             current_attr: None,
@@ -125,6 +123,7 @@ impl<'t, H: LexUnitHandlerWithFeedback> Tokenizer<'t, H> {
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
+            tree_builder_simulator: TreeBuilderSimulator::default(),
 
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
@@ -146,7 +145,7 @@ impl<'t, H: LexUnitHandlerWithFeedback> Tokenizer<'t, H> {
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn set_state(&mut self, state: fn(&mut Tokenizer<'t, H>, Option<u8>)) {
+    pub fn set_state(&mut self, state: TokenizerState<'t, H>) {
         self.state = state;
     }
 
@@ -158,7 +157,7 @@ impl<'t, H: LexUnitHandlerWithFeedback> Tokenizer<'t, H> {
     #[cfg(feature = "testing_api")]
     pub fn set_text_parsing_mode_change_handler(
         &mut self,
-        handler: &'t mut FnMut(TextParsingMode),
+        handler: &'t mut TextParsingModeChangeHandler,
     ) {
         self.text_parsing_mode_change_handler = Some(handler);
     }

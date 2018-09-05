@@ -19,25 +19,29 @@ define_state_group!(tag_states_group = {
         _     => ( create_comment; start_token_part; reconsume in bogus_comment_state )
     }
 
-    // TODO switch to CDATA
     markup_declaration_open_state <-- ( start_token_part; ) {
         [ "--" ]                   => ( --> comment_start_state )
         [ "DOCTYPE"; ignore_case ] => ( --> doctype_state )
-        [ "[CDATA[" ]              => ( create_comment; --> bogus_comment_state )
-        eof                        => ( create_comment; reconsume in bogus_comment_state )
-        _                          => ( create_comment; reconsume in bogus_comment_state )
+
+        [ "[CDATA[" ] => (
+            if cdata_allowed ( emit_raw_without_token; --> cdata_section_state )
+            else ( create_comment; --> bogus_comment_state )
+        )
+
+        eof => ( create_comment; reconsume in bogus_comment_state )
+        _   => ( create_comment; reconsume in bogus_comment_state )
     }
 
     tag_name_state {
         whitespace => ( finish_tag_name; --> before_attribute_name_state )
         b'/'       => ( finish_tag_name; --> self_closing_start_tag_state )
-        b'>'       => ( finish_tag_name; emit_current_token; --> data_state )
+        b'>'       => ( finish_tag_name; emit_tag; --> data_state )
         eof        => ( emit_raw_without_token_and_eof; )
         _          => ( update_tag_name_hash; )
     }
 
     self_closing_start_tag_state {
-        b'>' => ( mark_as_self_closing; emit_current_token; --> data_state )
+        b'>' => ( mark_as_self_closing; emit_tag; --> data_state )
         eof  => ( emit_raw_without_token_and_eof; )
         _    => ( reconsume in before_attribute_name_state )
     }

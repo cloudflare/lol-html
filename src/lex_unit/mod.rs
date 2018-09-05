@@ -1,11 +1,9 @@
 pub mod handler;
 mod raw_subslice;
-mod shallow_token;
 mod token;
 
 pub use self::raw_subslice::RawSubslice;
-pub use self::shallow_token::{ShallowAttribute, ShallowToken, SliceRange};
-pub use self::token::{Attribute, Token};
+pub use self::token::*;
 
 #[inline]
 fn as_opt_subslice(raw: &[u8], range: Option<SliceRange>) -> Option<RawSubslice> {
