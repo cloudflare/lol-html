@@ -42,8 +42,7 @@ macro_rules! convert_tokenizer_tests {
                 create_test!(t.description.to_owned(), t.ignored, {
                     t.run();
                 })
-            })
-            .collect()
+            }).collect()
     };
 }
 

@@ -43,8 +43,7 @@ impl<'r> LexUnit<'r> {
                         .map(|&ShallowAttribute { name, value }| Attribute {
                             name: RawSubslice::from((raw, name)),
                             value: RawSubslice::from((raw, value)),
-                        })
-                        .collect(),
+                        }).collect(),
 
                     self_closing,
                 },

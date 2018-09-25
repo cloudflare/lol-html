@@ -36,7 +36,7 @@ fn parse_options() -> Option<Matches> {
         }
     };
 
-    if let None = matches {
+    if matches.is_none() {
         eprintln!("{}", opts.usage("Usage: trace [options] INPUT"));
     }
 
@@ -82,6 +82,6 @@ fn main() {
     }
 
     tokenizer
-        .write(html.bytes().collect())
+        .write(html.as_bytes())
         .expect("Buffer capacity exceeded.");
 }

@@ -32,12 +32,12 @@ macro_rules! emit_tag {
                 TreeBuilderFeedback::RequestStartTagToken(reason) => {
                     let token = $lex_unit.as_token().expect("There should be a token at this point");
 
-                    $feedback = $self.tree_builder_simulator.fulfill_start_tag_token_request(token, reason);
+                    $feedback = $self.tree_builder_simulator.fulfill_start_tag_token_request(&token, reason);
                 }
                 TreeBuilderFeedback::RequestEndTagToken => {
                     let token = $lex_unit.as_token().expect("There should be a token at this point");
 
-                    $feedback = $self.tree_builder_simulator.fulfill_end_tag_token_request(token);
+                    $feedback = $self.tree_builder_simulator.fulfill_end_tag_token_request(&token);
                 },
                 TreeBuilderFeedback::RequestSelfClosingFlag => {
                     match $lex_unit.shallow_token {

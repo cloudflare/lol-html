@@ -44,7 +44,8 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
                     description: input
                         .chars()
                         .flat_map(|c| c.escape_default())
-                        .collect::<String>() + " (with feedback)",
+                        .collect::<String>()
+                        + " (with feedback)",
                     expected_tokens: get_expected_tokens_with_feedback(&input),
                     input,
                     initial_states: default_initial_states(),

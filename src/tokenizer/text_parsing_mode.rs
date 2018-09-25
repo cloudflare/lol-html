@@ -12,12 +12,12 @@ pub enum TextParsingMode {
 }
 
 impl TextParsingMode {
-    pub fn should_replace_unsafe_null_in_text(&self) -> bool {
-        *self != TextParsingMode::Data && *self != TextParsingMode::CDataSection
+    pub fn should_replace_unsafe_null_in_text(self) -> bool {
+        self != TextParsingMode::Data && self != TextParsingMode::CDataSection
     }
 
-    pub fn allows_text_entitites(&self) -> bool {
-        *self == TextParsingMode::Data || *self == TextParsingMode::RCData
+    pub fn allows_text_entitites(self) -> bool {
+        self == TextParsingMode::Data || self == TextParsingMode::RCData
     }
 }
 

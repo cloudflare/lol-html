@@ -71,7 +71,7 @@ impl Unescape for TokenizerTest {
     }
 }
 
-fn parse(input: Vec<u8>, initial_mode_snapshot: TextParsingModeSnapshot) -> ParsingResult {
+fn parse(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> ParsingResult {
     let mut result = ParsingResult::default();
 
     {
@@ -109,7 +109,7 @@ impl TokenizerTest {
     fn assert_tokens_have_correct_raw_strings(&self, actual: ParsingResult) {
         if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
             for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
-                let mut actual = parse(raw.bytes().collect(), text_parsing_mode_snapshot);
+                let mut actual = parse(raw.as_bytes(), text_parsing_mode_snapshot);
 
                 assert_eql!(
                     *actual.get_tokens(),
@@ -126,7 +126,7 @@ impl TokenizerTest {
         for cs in &self.initial_states {
             let cs = TextParsingMode::from(cs.as_str());
             let actual = parse(
-                self.input.bytes().collect(),
+                self.input.as_bytes(),
                 TextParsingModeSnapshot {
                     mode: cs,
                     last_start_tag_name_hash: TagName::get_hash(&self.last_start_tag),

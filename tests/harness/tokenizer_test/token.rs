@@ -71,6 +71,9 @@ impl<'de> Deserialize<'de> for TestToken {
                         match seq.next_element()? {
                             Some(value) => {
                                 #[allow(unused_assignments)]
+                                #[cfg_attr(
+                                    feature = "cargo-clippy", allow(eval_order_dependence)
+                                )]
                                 {
                                     actual_length += 1;
                                 }

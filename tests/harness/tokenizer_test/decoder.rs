@@ -37,7 +37,7 @@ impl<'a> Decoder<'a> {
     fn decode_numeric_entity(&mut self, radix: u32) -> bool {
         if let Some(mut code) = self.next_opt(|c| c.to_digit(radix)) {
             while let Some(digit) = self.next_opt(|c| c.to_digit(radix)) {
-                if code < 0x10FFFF {
+                if code < 0x0010_FFFF {
                     code = code * radix + digit;
                 }
             }

@@ -16,7 +16,7 @@ impl Buffer {
     }
 
     #[inline]
-    pub fn write(&mut self, chunk: Vec<u8>) -> Result<(), &'static str> {
+    pub fn write(&mut self, chunk: &[u8]) -> Result<(), &'static str> {
         let chunk_len = chunk.len();
 
         if self.watermark + chunk_len <= self.capacity {

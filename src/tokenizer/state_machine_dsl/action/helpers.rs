@@ -43,12 +43,8 @@ macro_rules! action_helper {
     };
 
     ( @finish_attr_part | $self:tt |> $part:ident ) => {
-        match $self.current_attr {
-            Some(ShallowAttribute { ref mut $part, .. }) => {
-                action_helper!(@set_token_part_range |$self|> $part);
-            }
-            // NOTE: end tag case
-            None => ()
+        if let Some(ShallowAttribute { ref mut $part, .. }) = $self.current_attr {
+            action_helper!(@set_token_part_range |$self|> $part);
         }
     };
 

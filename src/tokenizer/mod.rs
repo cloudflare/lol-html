@@ -80,7 +80,7 @@ impl<'t, H: LexUnitHandler> Tokenizer<'t, H> {
         }
     }
 
-    pub fn write(&mut self, chunk: Vec<u8>) -> Result<(), &'static str> {
+    pub fn write(&mut self, chunk: &[u8]) -> Result<(), &'static str> {
         self.buffer.write(chunk)?;
 
         while !self.finished {

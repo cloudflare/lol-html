@@ -11,6 +11,7 @@ enum Namespace {
     MathML,
 }
 
+#[derive(Copy, Clone)]
 pub enum StartTagTokenRequestReason {
     ForeignContentExitCheck,
     IntegrationPointCheck,
@@ -126,7 +127,8 @@ impl TreeBuilderSimulator {
     fn leave_ns(&mut self) -> TreeBuilderFeedback {
         self.ns_stack.pop();
 
-        self.current_ns = *self.ns_stack
+        self.current_ns = *self
+            .ns_stack
             .last()
             .expect("Namespace stack should always have at least one item");
 
@@ -225,7 +227,7 @@ impl TreeBuilderSimulator {
         }
     }
 
-    pub fn fulfill_end_tag_token_request<'r>(&mut self, token: Token<'r>) -> TreeBuilderFeedback {
+    pub fn fulfill_end_tag_token_request(&mut self, token: &Token) -> TreeBuilderFeedback {
         match token {
             Token::EndTag { ref name, .. } => {
                 // NOTE: we request end tag token only when we
@@ -241,9 +243,9 @@ impl TreeBuilderSimulator {
         }
     }
 
-    pub fn fulfill_start_tag_token_request<'r>(
+    pub fn fulfill_start_tag_token_request(
         &mut self,
-        token: Token<'r>,
+        token: &Token,
         request_reason: StartTagTokenRequestReason,
     ) -> TreeBuilderFeedback {
         match token {

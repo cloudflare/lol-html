@@ -200,12 +200,8 @@ macro_rules! action {
     };
 
     (| $self:tt, $ch:ident | > finish_attr) => {
-        match $self.current_attr.take() {
-            Some(attr) => {
-                $self.attr_buffer.borrow_mut().push(attr);
-            }
-            // NOTE: end tag case
-            None => (),
+        if let Some(attr) = $self.current_attr.take() {
+            $self.attr_buffer.borrow_mut().push(attr);
         }
     };
 
