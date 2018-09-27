@@ -10,10 +10,13 @@ macro_rules! state {
 
         $($rest:tt)*
     ) => {
-        $($vis)* fn $name(&mut self, ch: Option<u8>) {
+        $($vis)* fn $name(&mut self, ch: Option<u8>) -> Result<(), TokenizerErrorKind> {
             trace!(@chars ch);
-            action_list!(@state_enter |self, ch|> $($($enter_actions)*)*);
-            state_body!(| [self, ch] |> $($arms)*);
+            state_body!(| [self, ch] |> [$($arms)*], [$($($enter_actions)*)*]);
+
+            // NOTE: this can be unreachable if all state body
+            // arms expand into state transitions.
+            #[allow(unreachable_code)] { return Ok(()); }
         }
 
         state!($($rest)*);

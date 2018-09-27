@@ -1,6 +1,7 @@
 macro_rules! state_body {
-    ( | $scope_vars:tt |> $($arms:tt)+ ) => {
-        state_body!(@map_arms | $scope_vars |> [$($arms)+], [])
+    ( | [ $self:tt, $ch:ident ] |> [$($arms:tt)+], [$($enter_actions:tt)*] ) => {
+        action_list!(@state_enter |$self, $ch|> $($enter_actions)*);
+        state_body!(@map_arms | [$self, $ch] |> [$($arms)+], [])
     };
 
 

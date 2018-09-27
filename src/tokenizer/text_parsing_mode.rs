@@ -44,7 +44,7 @@ impl<'s> From<&'s str> for TextParsingMode {
             "RAWTEXT state" => TextParsingMode::RawText,
             "Script data state" => TextParsingMode::ScriptData,
             "CDATA section state" => TextParsingMode::CDataSection,
-            _ => unreachable!("Unknown text parsing mode"),
+            _ => panic!("Unknown text parsing mode"),
         }
     }
 }

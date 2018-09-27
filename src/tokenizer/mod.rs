@@ -29,7 +29,25 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 9. Implement re-looper like state embedding
 // 12. Attr buffer limits?
 
-type TokenizerState<'t, H> = fn(&mut Tokenizer<'t, H>, Option<u8>);
+#[derive(Debug, Copy, Clone)]
+pub enum TokenizerErrorKind {
+    BufferCapacityExceeded,
+    TextParsingAmbiguity,
+}
+
+#[cfg(feature = "testing_api")]
+impl<'s> From<&'s str> for TokenizerErrorKind {
+    fn from(kind: &'s str) -> Self {
+        match kind {
+            "BufferCapacityExceeded" => TokenizerErrorKind::BufferCapacityExceeded,
+            "TextParsingAmbiguity" => TokenizerErrorKind::TextParsingAmbiguity,
+            _ => panic!("Unknown tokenizer error kind"),
+        }
+    }
+}
+
+type TokenizerState<'t, H> =
+    fn(&mut Tokenizer<'t, H>, Option<u8>) -> Result<(), TokenizerErrorKind>;
 
 pub struct Tokenizer<'t, H> {
     buffer: Buffer,
@@ -80,13 +98,13 @@ impl<'t, H: LexUnitHandler> Tokenizer<'t, H> {
         }
     }
 
-    pub fn write(&mut self, chunk: &[u8]) -> Result<(), &'static str> {
+    pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerErrorKind> {
         self.buffer.write(chunk)?;
 
         while !self.finished {
             let ch = self.buffer.peek_at(self.pos);
 
-            (self.state)(self, ch);
+            (self.state)(self, ch)?;
 
             self.pos += 1;
         }
