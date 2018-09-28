@@ -6,17 +6,23 @@ macro_rules! emit_tag {
             Some(ShallowToken::StartTag { name_hash, .. }) => {
                 $self.last_start_tag_name_hash = name_hash;
 
-                emit_tag!(@emit_and_get_feedback |$self|> token, name_hash, get_feedback_for_start_tag_name);
+                emit_tag!(@emit_and_get_feedback |$self|>
+                    token,
+                    $self.tree_builder_simulator.get_feedback_for_start_tag_name(name_hash)?
+                );
             }
             Some(ShallowToken::EndTag { name_hash, .. }) => {
-                emit_tag!(@emit_and_get_feedback |$self|> token, name_hash, get_feedback_for_end_tag_name);
+                emit_tag!(@emit_and_get_feedback |$self|>
+                    token,
+                    $self.tree_builder_simulator.get_feedback_for_end_tag_name(name_hash)
+                );
             }
             _ => unreachable!("Token should be a start or an end tag at this point"),
         }
     };
 
-    ( @emit_and_get_feedback | $self:tt | > $token:ident, $name_hash:ident, $get_feedback:ident ) => {
-        let mut feedback = $self.tree_builder_simulator.$get_feedback($name_hash);
+    ( @emit_and_get_feedback | $self:tt | > $token:ident, $get_feedback:expr ) => {
+        let mut feedback = $get_feedback;
         let lex_unit = action_helper!(@emit_lex_unit_with_raw_inclusive |$self|> $token);
 
         emit_tag!(@handle_tree_builder_feedback |$self|> feedback, lex_unit);

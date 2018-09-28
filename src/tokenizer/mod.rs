@@ -1,21 +1,22 @@
-mod buffer;
-mod text_parsing_mode;
-mod tree_builder_simulator;
-
 #[macro_use]
 mod state_machine_dsl;
 
 #[macro_use]
 mod syntax;
 
+mod buffer;
+mod tree_builder_simulator;
+
 use self::buffer::Buffer;
-pub use self::text_parsing_mode::*;
 use self::tree_builder_simulator::*;
 use lex_unit::handler::*;
 use lex_unit::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tag_name::TagName;
+
+#[cfg(feature = "testing_api")]
+pub use self::tree_builder_simulator::{TextParsingMode, TextParsingModeSnapshot};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
@@ -46,7 +47,7 @@ impl<'s> From<&'s str> for TokenizerErrorKind {
     }
 }
 
-type TokenizerState<'t, H> =
+pub type TokenizerState<'t, H> =
     fn(&mut Tokenizer<'t, H>, Option<u8>) -> Result<(), TokenizerErrorKind>;
 
 pub struct Tokenizer<'t, H> {

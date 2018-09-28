@@ -30,6 +30,7 @@ pub enum TagName {
     Dt = 313u64,
     Em = 338u64,
     Embed = 11_083_081u64,
+    Frameset = 402_873_737_561u64,
     H1 = 416u64,
     H2 = 417u64,
     H3 = 418u64,
@@ -50,6 +51,7 @@ pub enum TagName {
     Pre = 22_250u64,
     Ruby = 780_542u64,
     S = 24u64,
+    Select = 816_359_705u64,
     Small = 25_762_353u64,
     Span = 808_147u64,
     Strong = 832_295_532u64,
@@ -152,4 +154,10 @@ impl TagName {
 
         hash
     }
+}
+
+macro_rules! tag_is_one_of {
+    ($tag_name_hash:expr, [$($tag:ident),+]) => {
+        $($tag_name_hash == TagName::$tag)||+
+    };
 }

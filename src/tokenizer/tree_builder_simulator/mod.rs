@@ -1,6 +1,11 @@
+mod text_parsing_ambiguity;
+mod text_parsing_mode;
+
+use self::text_parsing_ambiguity::TextParsingAmbiguityTracker;
+pub use self::text_parsing_mode::*;
 use lex_unit::{Attribute, Token};
 use tag_name::TagName;
-use tokenizer::TextParsingMode;
+use tokenizer::TokenizerErrorKind;
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
@@ -102,6 +107,7 @@ fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
 pub struct TreeBuilderSimulator {
     ns_stack: Vec<Namespace>,
     current_ns: Namespace,
+    text_parsing_ambiguity_tracker: TextParsingAmbiguityTracker,
 }
 
 impl Default for TreeBuilderSimulator {
@@ -109,6 +115,7 @@ impl Default for TreeBuilderSimulator {
         let mut simulator = TreeBuilderSimulator {
             ns_stack: Vec::with_capacity(DEFAULT_NS_STACK_CAPACITY),
             current_ns: Namespace::Html,
+            text_parsing_ambiguity_tracker: TextParsingAmbiguityTracker::default(),
         };
 
         simulator.ns_stack.push(Namespace::Html);
@@ -190,8 +197,11 @@ impl TreeBuilderSimulator {
     pub fn get_feedback_for_start_tag_name(
         &mut self,
         tag_name_hash: Option<u64>,
-    ) -> TreeBuilderFeedback {
-        match tag_name_hash {
+    ) -> Result<TreeBuilderFeedback, TokenizerErrorKind> {
+        self.text_parsing_ambiguity_tracker
+            .track_start_tag(tag_name_hash)?;
+
+        Ok(match tag_name_hash {
             Some(t) if t == TagName::Svg => self.enter_ns(Namespace::Svg),
             Some(t) if t == TagName::Math => self.enter_ns(Namespace::MathML),
             Some(t) if self.current_ns == Namespace::Html => get_text_parsing_mode_adjustment(t),
@@ -199,13 +209,16 @@ impl TreeBuilderSimulator {
                 self.get_feedback_for_start_tag_in_foreign_content(tag_name_hash)
             }
             _ => TreeBuilderFeedback::None,
-        }
+        })
     }
 
     pub fn get_feedback_for_end_tag_name(
         &mut self,
         tag_name_hash: Option<u64>,
     ) -> TreeBuilderFeedback {
+        self.text_parsing_ambiguity_tracker
+            .track_end_tag(tag_name_hash);
+
         match tag_name_hash {
             Some(t) if self.current_ns == Namespace::Svg && t == TagName::Svg => self.leave_ns(),
             Some(t) if self.current_ns == Namespace::MathML && t == TagName::Math => {
@@ -231,8 +244,8 @@ impl TreeBuilderSimulator {
         match token {
             Token::EndTag { ref name, .. } => {
                 // NOTE: we request end tag token only when we
-                // need for `<annotation-xml>` tag in HTML integration
-                // in MathMl.
+                // need attribute for `<annotation-xml>` tag in HTML
+                // integration point in MathMl.
                 if eq_case_ins(name, b"annotation-xml") {
                     self.leave_ns()
                 } else {

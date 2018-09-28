@@ -1,5 +1,5 @@
-use super::{Tokenizer, TokenizerState};
 use lex_unit::handler::LexUnitHandler;
+use tokenizer::{Tokenizer, TokenizerState};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TextParsingMode {

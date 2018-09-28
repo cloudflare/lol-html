@@ -90,9 +90,7 @@ fn parse(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> Parsin
         tokenizer.set_state(initial_mode_snapshot.mode.into());
         tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 
-        tokenizer
-            .write(input)
-            .expect("Tokenizer buffer capacity exceeded");
+        tokenizer.write(input).unwrap();
     }
 
     result
