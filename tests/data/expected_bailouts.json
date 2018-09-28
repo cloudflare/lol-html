@@ -1,0 +1,31 @@
+{
+  "<!doctype html><frameset></frameset></html><plaintext></plaintext>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<!doctype html><frameset></frameset></html>"
+  },
+
+  "<!doctype html><frameset></frameset><plaintext></plaintext>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<!doctype html><frameset></frameset>"
+  },
+
+  "<!doctype html><frameset><plaintext></plaintext>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<!doctype html><frameset>"
+  },
+
+  "<!doctype html><select><plaintext></plaintext>X": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<!doctype html><select>"
+  },
+
+  "<!doctype html><table><select><plaintext>a<caption>b": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<!doctype html><table><select>"
+  },
+
+  "<select><noembed></select><script x='a@b'a>y='a@b'//a@b%0a\\u0061lert(1)</script x>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<select>"
+  }
+}

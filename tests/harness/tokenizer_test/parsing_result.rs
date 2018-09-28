@@ -1,7 +1,8 @@
 use super::decoder::Decoder;
 use super::token::TestToken;
+use super::Bailout;
 use cool_thing::lex_unit::LexUnit;
-use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot};
+use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot, TokenizerBailoutReason};
 
 fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
@@ -22,6 +23,7 @@ pub struct ParsingResult {
     tokens: Vec<TestToken>,
     text_parsing_mode_snapshots: Vec<TextParsingModeSnapshot>,
     raw_strings: Vec<String>,
+    bailout: Option<Bailout>,
 }
 
 impl ParsingResult {
@@ -54,12 +56,23 @@ impl ParsingResult {
         }
     }
 
+    pub fn add_bailout(&mut self, reason: TokenizerBailoutReason) {
+        self.bailout = Some(Bailout {
+            reason: format!("{:?}", reason),
+            parsed_chunk: self.get_cumulative_raw_string(),
+        });
+    }
+
     pub fn get_cumulative_raw_string(&self) -> String {
         self.raw_strings.iter().fold(String::new(), |c, s| c + s)
     }
 
     pub fn get_tokens(&self) -> &Vec<TestToken> {
         &self.tokens
+    }
+
+    pub fn get_bailout(&self) -> &Option<Bailout> {
+        &self.bailout
     }
 
     pub fn into_token_raw_pairs(

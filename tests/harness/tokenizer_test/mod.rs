@@ -34,6 +34,13 @@ pub fn default_initial_states() -> Vec<String> {
     vec![String::from("Data state")]
 }
 
+#[derive(Deserialize, Default, Clone, PartialEq, Eq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Bailout {
+    pub reason: String,
+    pub parsed_chunk: String,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenizerTest {
@@ -54,6 +61,9 @@ pub struct TokenizerTest {
 
     #[serde(skip)]
     pub ignored: bool,
+
+    #[serde(skip)]
+    pub expected_bailout: Option<Bailout>,
 }
 
 impl Unescape for TokenizerTest {
@@ -73,6 +83,7 @@ impl Unescape for TokenizerTest {
 
 fn parse(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> ParsingResult {
     let mut result = ParsingResult::default();
+    let mut bailout_reason = None;
 
     {
         let mode_snapshot = Cell::new(TextParsingModeSnapshot {
@@ -90,7 +101,13 @@ fn parse(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> Parsin
         tokenizer.set_state(initial_mode_snapshot.mode.into());
         tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 
-        tokenizer.write(input).unwrap();
+        tokenizer
+            .write(input)
+            .unwrap_or_else(|e| bailout_reason = Some(e));
+    }
+
+    if let Some(reason) = bailout_reason {
+        result.add_bailout(reason);
     }
 
     result
@@ -123,6 +140,7 @@ impl TokenizerTest {
     pub fn run(&self) {
         for cs in &self.initial_states {
             let cs = TextParsingMode::from(cs.as_str());
+
             let actual = parse(
                 self.input.as_bytes(),
                 TextParsingModeSnapshot {
@@ -132,22 +150,32 @@ impl TokenizerTest {
             );
 
             assert_eql!(
-                *actual.get_tokens(),
-                self.expected_tokens,
+                *actual.get_bailout(),
+                self.expected_bailout,
                 self.input,
                 cs,
-                "Token mismatch"
+                "Tokenizer bailout error mismatch"
             );
 
-            assert_eql!(
-                actual.get_cumulative_raw_string(),
-                self.input,
-                self.input,
-                cs,
-                "Cumulative raw strings mismatch"
-            );
+            if actual.get_bailout().is_none() {
+                assert_eql!(
+                    *actual.get_tokens(),
+                    self.expected_tokens,
+                    self.input,
+                    cs,
+                    "Token mismatch"
+                );
 
-            self.assert_tokens_have_correct_raw_strings(actual);
+                assert_eql!(
+                    actual.get_cumulative_raw_string(),
+                    self.input,
+                    self.input,
+                    cs,
+                    "Cumulative raw strings mismatch"
+                );
+
+                self.assert_tokens_have_correct_raw_strings(actual);
+            }
         }
     }
 }

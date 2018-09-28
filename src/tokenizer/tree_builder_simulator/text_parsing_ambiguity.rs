@@ -48,10 +48,8 @@ impl TextParsingAmbiguityTracker {
                 }
                 TrackerState::InSelect => {
                     // NOTE: <select> start tag in "in select" insertion mode
-                    // acts as an end tag. <textarea> being a text parsing mode
-                    // switching tag causes premature closing of <select> as well.
-                    // Both cases are conformance errors.
-                    if t == TagName::Select || t == TagName::Textarea {
+                    // acts as an end tag.
+                    if t == TagName::Select {
                         self.state = TrackerState::Default;
                     }
                     // NOTE: <script> is allowed in "in select" insertion mode.

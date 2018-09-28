@@ -2,7 +2,9 @@ mod feedback_tokens;
 
 use self::feedback_tokens::get_expected_tokens_with_feedback;
 use glob;
-use harness::tokenizer_test::{default_initial_states, TokenizerTest};
+use harness::tokenizer_test::{default_initial_states, Bailout, TokenizerTest};
+use serde_json::from_reader;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use test::TestDescAndFn;
@@ -31,8 +33,18 @@ fn parse_inputs(file: BufReader<File>) -> Vec<String> {
     inputs
 }
 
+#[derive(Deserialize, Default)]
+pub struct ExpectedBailouts(HashMap<String, Bailout>);
+
+fn load_expected_bailouts() -> ExpectedBailouts {
+    let file = read_test_data!("expected_bailouts.json").pop().unwrap();
+
+    from_reader::<_, ExpectedBailouts>(file).unwrap()
+}
+
 pub fn get_tests() -> Vec<TestDescAndFn> {
     let mut tests = Vec::new();
+    let expected_bailouts = load_expected_bailouts();
 
     for test_files in vec![
         read_test_data!("html5lib-tests/tree-construction/*.dat"),
@@ -40,6 +52,8 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
     ] {
         for file in test_files {
             tests.extend(parse_inputs(file).into_iter().map(|input| {
+                let expected_bailout = expected_bailouts.0.get(&input).cloned();
+
                 TokenizerTest {
                     description: input
                         .chars()
@@ -52,6 +66,7 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
                     double_escaped: false,
                     last_start_tag: String::new(),
                     ignored: false,
+                    expected_bailout,
                 }
             }));
         }
