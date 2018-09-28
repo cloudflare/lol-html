@@ -31,24 +31,13 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 // 12. Attr buffer limits?
 
 #[derive(Debug, Copy, Clone)]
-pub enum TokenizerErrorKind {
+pub enum TokenizerBailoutReason {
     BufferCapacityExceeded,
     TextParsingAmbiguity,
 }
 
-#[cfg(feature = "testing_api")]
-impl<'s> From<&'s str> for TokenizerErrorKind {
-    fn from(kind: &'s str) -> Self {
-        match kind {
-            "BufferCapacityExceeded" => TokenizerErrorKind::BufferCapacityExceeded,
-            "TextParsingAmbiguity" => TokenizerErrorKind::TextParsingAmbiguity,
-            _ => panic!("Unknown tokenizer error kind"),
-        }
-    }
-}
-
 pub type TokenizerState<'t, H> =
-    fn(&mut Tokenizer<'t, H>, Option<u8>) -> Result<(), TokenizerErrorKind>;
+    fn(&mut Tokenizer<'t, H>, Option<u8>) -> Result<(), TokenizerBailoutReason>;
 
 pub struct Tokenizer<'t, H> {
     buffer: Buffer,
@@ -99,7 +88,7 @@ impl<'t, H: LexUnitHandler> Tokenizer<'t, H> {
         }
     }
 
-    pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerErrorKind> {
+    pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerBailoutReason> {
         self.buffer.write(chunk)?;
 
         while !self.finished {

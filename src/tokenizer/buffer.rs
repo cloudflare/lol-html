@@ -1,5 +1,5 @@
 use std::ops::Deref;
-use tokenizer::TokenizerErrorKind;
+use tokenizer::TokenizerBailoutReason;
 
 pub struct Buffer {
     bytes: Box<[u8]>,
@@ -17,7 +17,7 @@ impl Buffer {
     }
 
     #[inline]
-    pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerErrorKind> {
+    pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerBailoutReason> {
         let chunk_len = chunk.len();
 
         if self.watermark + chunk_len <= self.capacity {
@@ -28,7 +28,7 @@ impl Buffer {
 
             Ok(())
         } else {
-            Err(TokenizerErrorKind::BufferCapacityExceeded)
+            Err(TokenizerBailoutReason::BufferCapacityExceeded)
         }
     }
 

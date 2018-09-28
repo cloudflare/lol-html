@@ -10,7 +10,7 @@ macro_rules! state {
 
         $($rest:tt)*
     ) => {
-        $($vis)* fn $name(&mut self, ch: Option<u8>) -> Result<(), TokenizerErrorKind> {
+        $($vis)* fn $name(&mut self, ch: Option<u8>) -> Result<(), TokenizerBailoutReason> {
             trace!(@chars ch);
             state_body!(| [self, ch] |> [$($arms)*], [$($($enter_actions)*)*]);
 

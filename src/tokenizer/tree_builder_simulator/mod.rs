@@ -5,7 +5,7 @@ use self::text_parsing_ambiguity::TextParsingAmbiguityTracker;
 pub use self::text_parsing_mode::*;
 use lex_unit::{Attribute, Token};
 use tag_name::TagName;
-use tokenizer::TokenizerErrorKind;
+use tokenizer::TokenizerBailoutReason;
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
@@ -197,7 +197,7 @@ impl TreeBuilderSimulator {
     pub fn get_feedback_for_start_tag_name(
         &mut self,
         tag_name_hash: Option<u64>,
-    ) -> Result<TreeBuilderFeedback, TokenizerErrorKind> {
+    ) -> Result<TreeBuilderFeedback, TokenizerBailoutReason> {
         self.text_parsing_ambiguity_tracker
             .track_start_tag(tag_name_hash)?;
 
