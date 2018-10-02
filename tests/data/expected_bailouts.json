@@ -27,5 +27,25 @@
   "<select><noembed></select><script x='a@b'a>y='a@b'//a@b%0a\\u0061lert(1)</script x>": {
     "reason": "TextParsingAmbiguity",
     "parsedChunk": "<select>"
+  },
+
+  "<select><div><style><div></div></style></div></select>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<select><div>"
+  },
+
+  "<select><template><select><style><div></div></style></select></template></select>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<select><template><select>"
+  },
+
+  "<select><template><template></template><select><style><div></div></style></select></template></select>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<select><template><template></template><select>"
+  },
+
+  "<select><template><template></template><style><div></div></style></template></select>": {
+    "reason": "TextParsingAmbiguity",
+    "parsedChunk": "<select><template><template></template>"
   }
 }

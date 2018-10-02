@@ -34,6 +34,7 @@ const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 pub enum TokenizerBailoutReason {
     BufferCapacityExceeded,
     TextParsingAmbiguity,
+    MaxTagNestingReached,
 }
 
 pub type TokenizerState<'t, H> =

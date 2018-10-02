@@ -5,6 +5,7 @@ use tokenizer::TokenizerBailoutReason;
 enum TrackerState {
     Default,
     InSelect,
+    InTemplateInSelect(u8),
     InOrAfterFrameset,
 }
 
@@ -32,6 +33,7 @@ impl Default for TextParsingAmbiguityTracker {
     }
 }
 
+// TODO template in select case
 impl TextParsingAmbiguityTracker {
     pub fn track_start_tag(
         &mut self,
@@ -47,13 +49,28 @@ impl TextParsingAmbiguityTracker {
                     }
                 }
                 TrackerState::InSelect => {
-                    // NOTE: <select> start tag in "in select" insertion mode
-                    // acts as an end tag.
-                    if t == TagName::Select {
+                    // NOTE: these start tags cause premature exit
+                    // from "in select" insertion mode.
+                    if tag_is_one_of!(t, [Select, Textarea, Input, Keygen]) {
                         self.state = TrackerState::Default;
+                    } else if t == TagName::Template {
+                        self.state = TrackerState::InTemplateInSelect(1);
                     }
                     // NOTE: <script> is allowed in "in select" insertion mode.
                     else if t != TagName::Script {
+                        assert_not_ambigious_mode_switch(t)?;
+                    }
+                }
+                TrackerState::InTemplateInSelect(depth) => {
+                    if t == TagName::Template {
+                        let depth = depth + 1;
+
+                        if depth == u8::max_value() {
+                            return Err(TokenizerBailoutReason::MaxTagNestingReached);
+                        }
+
+                        self.state = TrackerState::InTemplateInSelect(depth);
+                    } else {
                         assert_not_ambigious_mode_switch(t)?;
                     }
                 }
@@ -70,9 +87,19 @@ impl TextParsingAmbiguityTracker {
     }
 
     pub fn track_end_tag(&mut self, tag_name_hash: Option<u64>) {
-        if let (Some(t), TrackerState::InSelect) = (tag_name_hash, self.state) {
-            if t == TagName::Select {
-                self.state = TrackerState::Default;
+        if let Some(t) = tag_name_hash {
+            match self.state {
+                TrackerState::InSelect if t == TagName::Select => {
+                    self.state = TrackerState::Default;
+                }
+                TrackerState::InTemplateInSelect(depth) if t == TagName::Template => {
+                    self.state = if depth == 1 {
+                        TrackerState::InSelect
+                    } else {
+                        TrackerState::InTemplateInSelect(depth - 1)
+                    }
+                }
+                _ => (),
             }
         }
     }
