@@ -20,16 +20,6 @@ pub use self::tree_builder_simulator::{TextParsingMode, TextParsingModeSnapshot}
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-// 1. Add benchmark
-// 6. Implement feedback
-// 5. Make all buffer sizes adjustable, propagate capacity errors to write function
-// 6. Don't emit character immidiately, extend existing
-// 6. Implement streaming
-// 7. Implement in-state loops
-// 8. Enable LTO
-// 9. Implement re-looper like state embedding
-// 12. Attr buffer limits?
-
 #[derive(Debug, Copy, Clone)]
 pub enum TokenizerBailoutReason {
     BufferCapacityExceeded,
