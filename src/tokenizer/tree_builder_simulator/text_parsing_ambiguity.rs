@@ -63,13 +63,11 @@ impl TextParsingAmbiguityTracker {
                 }
                 TrackerState::InTemplateInSelect(depth) => {
                     if t == TagName::Template {
-                        let depth = depth + 1;
-
                         if depth == u8::max_value() {
                             return Err(TokenizerBailoutReason::MaxTagNestingReached);
                         }
 
-                        self.state = TrackerState::InTemplateInSelect(depth);
+                        self.state = TrackerState::InTemplateInSelect(depth + 1);
                     } else {
                         assert_not_ambigious_mode_switch(t)?;
                     }
