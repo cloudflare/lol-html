@@ -93,7 +93,7 @@ fn parse(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> Parsin
 
         let mut text_parsing_mode_change_handler = |s| mode_snapshot.set(s);
 
-        let mut tokenizer = Tokenizer::new(2048, |lex_unit: &LexUnit| {
+        let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
             result.add_lex_unit(lex_unit, mode_snapshot.get())
         });
 
