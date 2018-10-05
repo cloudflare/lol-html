@@ -60,12 +60,6 @@ fn eq_case_ins(actual: &[u8], expected: &[u8]) -> bool {
     true
 }
 
-macro_rules! tag_is_one_of {
-    ($tag_name_hash:expr, [$($tag:ident),+]) => {
-        $($tag_name_hash == TagName::$tag)||+
-    };
-}
-
 #[inline]
 fn get_text_parsing_mode_adjustment(tag_name_hash: u64) -> TreeBuilderFeedback {
     if tag_is_one_of!(tag_name_hash, [Textarea, Title]) {
