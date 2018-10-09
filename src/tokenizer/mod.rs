@@ -27,10 +27,10 @@ pub enum TokenizerBailoutReason {
     MaxTagNestingReached,
 }
 
-pub type TokenizerState<'t, H> =
-    fn(&mut Tokenizer<'t, H>, Option<u8>) -> Result<(), TokenizerBailoutReason>;
+pub type TokenizerState<H> =
+    fn(&mut Tokenizer<H>, Option<u8>) -> Result<(), TokenizerBailoutReason>;
 
-pub struct Tokenizer<'t, H> {
+pub struct Tokenizer<H> {
     buffer: Buffer,
     pos: usize,
     raw_start: usize,
@@ -39,7 +39,7 @@ pub struct Tokenizer<'t, H> {
     state_enter: bool,
     allow_cdata: bool,
     lex_unit_handler: H,
-    state: TokenizerState<'t, H>,
+    state: TokenizerState<H>,
     current_token: Option<ShallowToken>,
     current_attr: Option<ShallowAttribute>,
     last_start_tag_name_hash: Option<u64>,
@@ -48,12 +48,12 @@ pub struct Tokenizer<'t, H> {
     tree_builder_simulator: TreeBuilderSimulator,
 
     #[cfg(feature = "testing_api")]
-    text_parsing_mode_change_handler: Option<&'t mut TextParsingModeChangeHandler>,
+    text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
 }
 
 define_state_machine!();
 
-impl<'t, H: LexUnitHandler> Tokenizer<'t, H> {
+impl<H: LexUnitHandler> Tokenizer<H> {
     pub fn new(buffer_capacity: usize, lex_unit_handler: H) -> Self {
         Tokenizer {
             buffer: Buffer::new(buffer_capacity),
@@ -94,7 +94,7 @@ impl<'t, H: LexUnitHandler> Tokenizer<'t, H> {
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn set_state(&mut self, state: TokenizerState<'t, H>) {
+    pub fn set_state(&mut self, state: TokenizerState<H>) {
         self.state = state;
     }
 
@@ -106,7 +106,7 @@ impl<'t, H: LexUnitHandler> Tokenizer<'t, H> {
     #[cfg(feature = "testing_api")]
     pub fn set_text_parsing_mode_change_handler(
         &mut self,
-        handler: &'t mut TextParsingModeChangeHandler,
+        handler: Box<dyn TextParsingModeChangeHandler>,
     ) {
         self.text_parsing_mode_change_handler = Some(handler);
     }

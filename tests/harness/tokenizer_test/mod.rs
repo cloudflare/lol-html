@@ -10,7 +10,8 @@ use cool_thing::lex_unit::LexUnit;
 use cool_thing::tag_name::TagName;
 use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot, Tokenizer};
 use serde_json;
-use std::cell::Cell;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 macro_rules! assert_eql {
     ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
@@ -86,18 +87,21 @@ fn parse(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> Parsin
     let mut bailout_reason = None;
 
     {
-        let mode_snapshot = Cell::new(TextParsingModeSnapshot {
+        let mode_snapshot = Rc::new(RefCell::new(TextParsingModeSnapshot {
             mode: TextParsingMode::Data,
             last_start_tag_name_hash: None,
-        });
+        }));
 
-        let mut text_parsing_mode_change_handler = |s| mode_snapshot.set(s);
+        let mode_snapshot_rc = Rc::clone(&mode_snapshot);
+
+        let text_parsing_mode_change_handler =
+            Box::new(move |s| *mode_snapshot_rc.borrow_mut() = s);
 
         let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
-            result.add_lex_unit(lex_unit, mode_snapshot.get())
+            result.add_lex_unit(lex_unit, *mode_snapshot.borrow())
         });
 
-        tokenizer.set_text_parsing_mode_change_handler(&mut text_parsing_mode_change_handler);
+        tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
         tokenizer.set_state(initial_mode_snapshot.mode.into());
         tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 

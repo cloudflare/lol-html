@@ -11,6 +11,7 @@ pub mod tokenizer;
 // 3. Eager tokenizer
 // 4. Tokenizer driver
 // 5. Adjustable limits
+// 6. Try to get rid of lifetime for Tokenizer (it is required only for testing API)
 //
 // -- Performance
 // 1. Implement benchmark
