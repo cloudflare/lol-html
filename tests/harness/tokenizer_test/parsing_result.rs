@@ -2,7 +2,11 @@ use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
 use cool_thing::lex_unit::LexUnit;
-use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot, TokenizerBailoutReason};
+use cool_thing::tokenizer::{
+    TextParsingMode, TextParsingModeSnapshot, Tokenizer, TokenizerBailoutReason,
+};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
@@ -27,7 +31,52 @@ pub struct ParsingResult {
 }
 
 impl ParsingResult {
-    pub fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
+    pub fn new(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> Self {
+        let mut result = ParsingResult {
+            tokens: Vec::new(),
+            text_parsing_mode_snapshots: Vec::new(),
+            raw_strings: Vec::new(),
+            bailout: None,
+        };
+
+        result.parse(input, initial_mode_snapshot);
+
+        result
+    }
+
+    fn parse(&mut self, input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) {
+        let mut bailout_reason = None;
+
+        {
+            let mode_snapshot = Rc::new(RefCell::new(TextParsingModeSnapshot {
+                mode: TextParsingMode::Data,
+                last_start_tag_name_hash: None,
+            }));
+
+            let mode_snapshot_rc = Rc::clone(&mode_snapshot);
+
+            let text_parsing_mode_change_handler =
+                Box::new(move |s| *mode_snapshot_rc.borrow_mut() = s);
+
+            let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
+                self.add_lex_unit(lex_unit, *mode_snapshot.borrow())
+            });
+
+            tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
+            tokenizer.set_state(initial_mode_snapshot.mode.into());
+            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+
+            tokenizer
+                .write(input)
+                .unwrap_or_else(|e| bailout_reason = Some(e));
+        }
+
+        if let Some(reason) = bailout_reason {
+            self.add_bailout(reason);
+        }
+    }
+
+    fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
         if let Some(token) = lex_unit.as_token() {
             let token = (token, lex_unit).into();
 
@@ -56,7 +105,7 @@ impl ParsingResult {
         }
     }
 
-    pub fn add_bailout(&mut self, reason: TokenizerBailoutReason) {
+    fn add_bailout(&mut self, reason: TokenizerBailoutReason) {
         self.bailout = Some(Bailout {
             reason: format!("{:?}", reason),
             parsed_chunk: self.get_cumulative_raw_string(),

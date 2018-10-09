@@ -6,12 +6,9 @@ mod unescape;
 use self::parsing_result::ParsingResult;
 pub use self::token::TestToken;
 use self::unescape::Unescape;
-use cool_thing::lex_unit::LexUnit;
 use cool_thing::tag_name::TagName;
-use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot, Tokenizer};
+use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot};
 use serde_json;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 macro_rules! assert_eql {
     ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
@@ -82,41 +79,6 @@ impl Unescape for TokenizerTest {
     }
 }
 
-fn parse(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> ParsingResult {
-    let mut result = ParsingResult::default();
-    let mut bailout_reason = None;
-
-    {
-        let mode_snapshot = Rc::new(RefCell::new(TextParsingModeSnapshot {
-            mode: TextParsingMode::Data,
-            last_start_tag_name_hash: None,
-        }));
-
-        let mode_snapshot_rc = Rc::clone(&mode_snapshot);
-
-        let text_parsing_mode_change_handler =
-            Box::new(move |s| *mode_snapshot_rc.borrow_mut() = s);
-
-        let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
-            result.add_lex_unit(lex_unit, *mode_snapshot.borrow())
-        });
-
-        tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
-        tokenizer.set_state(initial_mode_snapshot.mode.into());
-        tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
-
-        tokenizer
-            .write(input)
-            .unwrap_or_else(|e| bailout_reason = Some(e));
-    }
-
-    if let Some(reason) = bailout_reason {
-        result.add_bailout(reason);
-    }
-
-    result
-}
-
 impl TokenizerTest {
     pub fn init(&mut self) {
         self.ignored = self.unescape().is_err();
@@ -128,7 +90,7 @@ impl TokenizerTest {
     fn assert_tokens_have_correct_raw_strings(&self, actual: ParsingResult) {
         if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
             for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
-                let mut actual = parse(raw.as_bytes(), text_parsing_mode_snapshot);
+                let mut actual = ParsingResult::new(raw.as_bytes(), text_parsing_mode_snapshot);
 
                 assert_eql!(
                     *actual.get_tokens(),
@@ -145,7 +107,7 @@ impl TokenizerTest {
         for cs in &self.initial_states {
             let cs = TextParsingMode::from(cs.as_str());
 
-            let actual = parse(
+            let actual = ParsingResult::new(
                 self.input.as_bytes(),
                 TextParsingModeSnapshot {
                     mode: cs,
