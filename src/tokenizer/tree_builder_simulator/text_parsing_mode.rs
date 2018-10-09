@@ -3,14 +3,21 @@ use tokenizer::{Tokenizer, TokenizerState};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TextParsingMode {
-    Data,
     PlainText,
     RCData,
     RawText,
     ScriptData,
+
+    // NOTE: these two can be constructed only in the test code.
+    // Prevent rustc from complaining on release builds.
+    #[allow(dead_code)]
+    Data,
+
+    #[allow(dead_code)]
     CDataSection,
 }
 
+#[cfg(feature = "testing_api")]
 impl TextParsingMode {
     pub fn should_replace_unsafe_null_in_text(self) -> bool {
         self != TextParsingMode::Data && self != TextParsingMode::CDataSection
