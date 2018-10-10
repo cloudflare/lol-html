@@ -1,6 +1,7 @@
 extern crate cool_thing;
 extern crate glob;
 extern crate html5ever;
+extern crate rand;
 extern crate serde;
 extern crate serde_json;
 

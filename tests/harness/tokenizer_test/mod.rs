@@ -1,14 +1,17 @@
+mod chunked_input;
 mod decoder;
 mod parsing_result;
 mod token;
 mod unescape;
 
+use self::chunked_input::ChunkedInput;
 use self::parsing_result::ParsingResult;
 pub use self::token::TestToken;
 use self::unescape::Unescape;
 use cool_thing::tag_name::TagName;
 use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot};
 use serde_json;
+use std::fmt::Write;
 
 macro_rules! assert_eql {
     ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
@@ -43,7 +46,7 @@ pub struct Bailout {
 #[serde(rename_all = "camelCase")]
 pub struct TokenizerTest {
     pub description: String,
-    pub input: String,
+    pub input: ChunkedInput,
 
     #[serde(rename = "output")]
     pub expected_tokens: Vec<TestToken>,
@@ -85,12 +88,24 @@ impl TokenizerTest {
 
         // NOTE: tokenizer should always produce EOF token
         self.expected_tokens.push(TestToken::Eof);
+
+        let mut new_descr = String::new();
+
+        write!(
+            &mut new_descr,
+            "`{}` (chunk size: {})",
+            self.description,
+            self.input.get_chunk_size()
+        ).unwrap();
+
+        self.description = new_descr;
     }
 
     fn assert_tokens_have_correct_raw_strings(&self, actual: ParsingResult) {
         if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
             for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
-                let mut actual = ParsingResult::new(raw.as_bytes(), text_parsing_mode_snapshot);
+                let raw = raw.into();
+                let mut actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
 
                 assert_eql!(
                     *actual.get_tokens(),
@@ -108,7 +123,7 @@ impl TokenizerTest {
             let cs = TextParsingMode::from(cs.as_str());
 
             let actual = ParsingResult::new(
-                self.input.as_bytes(),
+                &self.input,
                 TextParsingModeSnapshot {
                     mode: cs,
                     last_start_tag_name_hash: TagName::get_hash(&self.last_start_tag),

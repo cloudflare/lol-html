@@ -1,3 +1,4 @@
+use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
@@ -31,7 +32,7 @@ pub struct ParsingResult {
 }
 
 impl ParsingResult {
-    pub fn new(input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) -> Self {
+    pub fn new(input: &ChunkedInput, initial_mode_snapshot: TextParsingModeSnapshot) -> Self {
         let mut result = ParsingResult {
             tokens: Vec::new(),
             text_parsing_mode_snapshots: Vec::new(),
@@ -39,12 +40,18 @@ impl ParsingResult {
             bailout: None,
         };
 
-        result.parse(input, initial_mode_snapshot);
+        if let Err(e) = result.parse(input, initial_mode_snapshot) {
+            result.add_bailout(e);
+        }
 
         result
     }
 
-    fn parse(&mut self, input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) {
+    fn parse(
+        &mut self,
+        input: &ChunkedInput,
+        initial_mode_snapshot: TextParsingModeSnapshot,
+    ) -> Result<(), TokenizerBailoutReason> {
         let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot {
             mode: TextParsingMode::Data,
             last_start_tag_name_hash: None,
@@ -52,25 +59,22 @@ impl ParsingResult {
 
         let mode_snapshot_rc = Rc::clone(&mode_snapshot);
         let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc.set(s));
-        let mut bailout_reason = None;
 
-        {
-            let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
-                self.add_lex_unit(lex_unit, mode_snapshot.get())
-            });
+        let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
+            self.add_lex_unit(lex_unit, mode_snapshot.get())
+        });
 
-            tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
-            tokenizer.set_state(initial_mode_snapshot.mode.into());
-            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+        tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
+        tokenizer.set_state(initial_mode_snapshot.mode.into());
+        tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 
-            tokenizer
-                .write(input)
-                .unwrap_or_else(|e| bailout_reason = Some(e));
+        for chunk in input.get_chunks() {
+            tokenizer.write(chunk)?;
         }
 
-        if let Some(reason) = bailout_reason {
-            self.add_bailout(reason);
-        }
+        tokenizer.end();
+
+        Ok(())
     }
 
     fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {

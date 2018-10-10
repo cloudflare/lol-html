@@ -61,7 +61,7 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
                         .collect::<String>()
                         + " (with feedback)",
                     expected_tokens: get_expected_tokens_with_feedback(&input),
-                    input,
+                    input: input.into(),
                     initial_states: default_initial_states(),
                     double_escaped: false,
                     last_start_tag: String::new(),

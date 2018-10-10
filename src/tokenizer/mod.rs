@@ -93,6 +93,10 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         Ok(())
     }
 
+    pub fn end(&self) {
+        // TODO
+    }
+
     #[cfg(feature = "testing_api")]
     pub fn set_state(&mut self, state: TokenizerState<H>) {
         self.state = state;

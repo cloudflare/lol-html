@@ -94,8 +94,8 @@ macro_rules! ch_sequence_arm_pattern {
             $self.pos += $depth;
             action_list!(|$self, $ch|> $($actions)*);
 
-            // NOTE: this maybe unreachable on expansion, e.g. if we have
-            // state transition in the action list.
+            // NOTE: this may be unreachable on expansion, e.g. if
+            // we have state transition in the action list.
             #[allow(unreachable_code)] { return Ok(()); }
         }, $($case_mod)*);
     };
