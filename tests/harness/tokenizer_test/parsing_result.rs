@@ -5,7 +5,7 @@ use cool_thing::lex_unit::LexUnit;
 use cool_thing::tokenizer::{
     TextParsingMode, TextParsingModeSnapshot, Tokenizer, TokenizerBailoutReason,
 };
-use std::cell::RefCell;
+use std::cell::Cell;
 use std::rc::Rc;
 
 fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
@@ -45,21 +45,18 @@ impl ParsingResult {
     }
 
     fn parse(&mut self, input: &[u8], initial_mode_snapshot: TextParsingModeSnapshot) {
+        let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot {
+            mode: TextParsingMode::Data,
+            last_start_tag_name_hash: None,
+        }));
+
+        let mode_snapshot_rc = Rc::clone(&mode_snapshot);
+        let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc.set(s));
         let mut bailout_reason = None;
 
         {
-            let mode_snapshot = Rc::new(RefCell::new(TextParsingModeSnapshot {
-                mode: TextParsingMode::Data,
-                last_start_tag_name_hash: None,
-            }));
-
-            let mode_snapshot_rc = Rc::clone(&mode_snapshot);
-
-            let text_parsing_mode_change_handler =
-                Box::new(move |s| *mode_snapshot_rc.borrow_mut() = s);
-
             let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
-                self.add_lex_unit(lex_unit, *mode_snapshot.borrow())
+                self.add_lex_unit(lex_unit, mode_snapshot.get())
             });
 
             tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);

@@ -48,7 +48,7 @@ pub struct Tokenizer<H> {
     tree_builder_simulator: TreeBuilderSimulator,
 
     #[cfg(feature = "testing_api")]
-    text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
+    text_parsing_mode_change_handler: Option<Box<TextParsingModeChangeHandler>>,
 }
 
 define_state_machine!();
@@ -106,7 +106,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     #[cfg(feature = "testing_api")]
     pub fn set_text_parsing_mode_change_handler(
         &mut self,
-        handler: Box<dyn TextParsingModeChangeHandler>,
+        handler: Box<TextParsingModeChangeHandler>,
     ) {
         self.text_parsing_mode_change_handler = Some(handler);
     }
