@@ -7,7 +7,7 @@
 //! required to maintain its state. This module implements such feedback
 //! simulation. However, there are few cases where we can't unambiguously
 //! determine parsing context and prefer to bail out from the tokenization
-//!  in such a case (see `TextParsingAmbiguityTracker` for the details).
+//! in such a case (see `TextParsingAmbiguityTracker` for the details).
 
 mod text_parsing_ambiguity;
 mod text_parsing_mode;
