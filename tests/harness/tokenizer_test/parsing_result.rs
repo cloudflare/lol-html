@@ -102,7 +102,7 @@ impl ParsingResult {
 
         if let Some(raw) = lex_unit.raw {
             self.raw_strings
-                .push(unsafe { String::from_utf8_unchecked(raw.to_vec()) });
+                .push(String::from_utf8(raw.to_vec()).unwrap());
         }
     }
 

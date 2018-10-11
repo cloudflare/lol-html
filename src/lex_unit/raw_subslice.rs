@@ -12,11 +12,11 @@ pub struct RawSubslice<'t>(&'t [u8]);
 #[cfg(feature = "testing_api")]
 impl<'t> RawSubslice<'t> {
     pub fn as_str(&self) -> &str {
-        unsafe { str::from_utf8_unchecked(self) }
+        str::from_utf8(self).unwrap()
     }
 
     pub fn as_string(&self) -> String {
-        unsafe { String::from_utf8_unchecked(self.to_vec()) }
+        String::from_utf8(self.to_vec()).unwrap()
     }
 }
 

@@ -13,19 +13,14 @@ pub struct ChunkedInput {
 
 impl From<String> for ChunkedInput {
     fn from(input: String) -> Self {
-        let len = input.len();
-
-        // NOTE: Chunk size can be enforced using environment variable
-        let chunk_size = match env::var("CHUNK_SIZE") {
-            Ok(val) => val.parse().unwrap(),
-            Err(_) => if len > 1 {
-                thread_rng().gen_range(1, len)
-            } else {
-                len
-            },
+        let mut input = ChunkedInput {
+            input,
+            chunk_size: 1,
         };
 
-        ChunkedInput { input, chunk_size }
+        input.set_chunk_size();
+
+        input
     }
 }
 
@@ -36,6 +31,19 @@ impl ChunkedInput {
 
     pub fn get_chunk_size(&self) -> usize {
         self.chunk_size
+    }
+
+    fn set_chunk_size(&mut self) {
+        let len = self.input.len();
+
+        self.chunk_size = match env::var("CHUNK_SIZE") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_) => if len > 1 {
+                thread_rng().gen_range(1, len)
+            } else {
+                len
+            },
+        };
     }
 }
 
@@ -67,7 +75,10 @@ impl<'de> Deserialize<'de> for ChunkedInput {
 
 impl Unescape for ChunkedInput {
     fn unescape(&mut self) -> Result<(), Error> {
-        self.input.unescape()
+        self.input.unescape()?;
+        self.set_chunk_size();
+
+        Ok(())
     }
 }
 
