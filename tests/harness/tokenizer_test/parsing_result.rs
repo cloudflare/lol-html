@@ -2,7 +2,7 @@ use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
-use cool_thing::lex_unit::LexUnit;
+use cool_thing::lex_unit::{LexUnit, ShallowToken};
 use cool_thing::tokenizer::{
     TextParsingMode, TextParsingModeSnapshot, Tokenizer, TokenizerBailoutReason,
 };
@@ -27,8 +27,9 @@ fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
 pub struct ParsingResult {
     tokens: Vec<TestToken>,
     text_parsing_mode_snapshots: Vec<TextParsingModeSnapshot>,
-    raw_strings: Vec<String>,
+    raw_slices: Vec<Vec<u8>>,
     bailout: Option<Bailout>,
+    buffered_chars: Option<Vec<u8>>,
 }
 
 impl ParsingResult {
@@ -36,8 +37,9 @@ impl ParsingResult {
         let mut result = ParsingResult {
             tokens: Vec::new(),
             text_parsing_mode_snapshots: Vec::new(),
-            raw_strings: Vec::new(),
+            raw_slices: Vec::new(),
             bailout: None,
+            buffered_chars: None,
         };
 
         if let Err(e) = result.parse(input, initial_mode_snapshot) {
@@ -77,32 +79,44 @@ impl ParsingResult {
         Ok(())
     }
 
-    fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
-        if let Some(token) = lex_unit.as_token() {
-            let token = (token, lex_unit).into();
+    fn add_buffered_chars(&mut self, mode_snapshot: TextParsingModeSnapshot) {
+        if let Some(buffered_chars) = self.buffered_chars.take() {
+            let mut text = String::from_utf8(buffered_chars).unwrap();
 
-            if let Some(TestToken::Character(ref mut prev_text)) = self.tokens.last_mut() {
-                if let TestToken::Character(ref cur_text) = token {
-                    *prev_text += cur_text;
+            text = decode_text(&mut text, mode_snapshot.mode);
+            self.tokens.push(TestToken::Character(text));
+        }
+    }
 
-                    if let Some(prev_raw) = self.raw_strings.last_mut() {
-                        *prev_raw += cur_text;
-                    }
+    fn buffer_chars(&mut self, chars: &[u8], mode_snapshot: TextParsingModeSnapshot) {
+        if let Some(ref mut buffered_chars) = self.buffered_chars {
+            buffered_chars.extend_from_slice(chars);
 
-                    return;
-                } else {
-                    *prev_text = decode_text(prev_text, mode_snapshot.mode);
-                }
+            if let Some(last_raw) = self.raw_slices.last_mut() {
+                last_raw.extend_from_slice(chars);
             }
-
-            self.tokens.push(token);
-
+        } else {
+            self.buffered_chars = Some(chars.to_vec());
+            self.raw_slices.push(chars.to_vec());
             self.text_parsing_mode_snapshots.push(mode_snapshot);
         }
+    }
 
-        if let Some(raw) = lex_unit.raw {
-            self.raw_strings
-                .push(String::from_utf8(raw.to_vec()).unwrap());
+    fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
+        if let (Some(ShallowToken::Character), Some(raw)) =
+            (lex_unit.shallow_token.as_ref(), lex_unit.raw)
+        {
+            self.buffer_chars(raw, mode_snapshot);
+        } else {
+            if let Some(token) = lex_unit.as_token() {
+                self.add_buffered_chars(mode_snapshot);
+                self.tokens.push((token, lex_unit).into());
+                self.text_parsing_mode_snapshots.push(mode_snapshot);
+            }
+
+            if let Some(raw) = lex_unit.raw {
+                self.raw_slices.push(raw.to_vec());
+            }
         }
     }
 
@@ -114,7 +128,10 @@ impl ParsingResult {
     }
 
     pub fn get_cumulative_raw_string(&self) -> String {
-        self.raw_strings.iter().fold(String::new(), |c, s| c + s)
+        String::from_utf8(self.raw_slices.iter().fold(Vec::new(), |mut c, s| {
+            c.extend_from_slice(s);
+            c
+        })).unwrap()
     }
 
     pub fn get_tokens(&self) -> &Vec<TestToken> {
@@ -131,13 +148,18 @@ impl ParsingResult {
         // NOTE: remove EOF which doesn't have raw representation
         self.tokens.pop();
 
-        // NOTE: we can build list of pairs only if each
-        // token has a raw representation.
-        if self.tokens.len() == self.raw_strings.len() {
+        // NOTE: there are cases there character token can contain
+        // part that is ignored during parsing, but still has raw
+        // representation. E.g. `a</>b` will produce `ab` character
+        // token, however we'll have `a` and `</>b` raw strings and,
+        // thus, we can't produce one-on-one mapping.
+        if self.tokens.len() == self.raw_slices.len() {
             Some(
                 izip!(
                     self.tokens.into_iter(),
-                    self.raw_strings.into_iter(),
+                    self.raw_slices
+                        .into_iter()
+                        .map(|s| String::from_utf8(s).unwrap()),
                     self.text_parsing_mode_snapshots.into_iter()
                 ).collect(),
             )

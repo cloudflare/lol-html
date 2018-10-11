@@ -26,7 +26,8 @@ impl From<String> for ChunkedInput {
 
 impl ChunkedInput {
     pub fn get_chunks(&self) -> Vec<&[u8]> {
-        self.input.as_bytes().chunks(self.chunk_size).collect()
+        vec![self.input.as_bytes()]
+        //self.input.as_bytes().chunks(self.chunk_size).collect()
     }
 
     pub fn get_chunk_size(&self) -> usize {
