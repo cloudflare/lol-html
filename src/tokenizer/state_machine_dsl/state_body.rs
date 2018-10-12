@@ -1,7 +1,7 @@
 macro_rules! state_body {
-    ( | [ $self:tt, $ch:ident ] |> [$($arms:tt)+], [$($enter_actions:tt)*] ) => {
-        action_list!(@state_enter |$self, $ch|> $($enter_actions)*);
-        state_body!(@map_arms | [$self, $ch] |> [$($arms)+], [])
+    ( | [ $self:tt, $input_chunk:ident, $ch:ident ] |> [$($arms:tt)+], [$($enter_actions:tt)*] ) => {
+        action_list!(@state_enter |$self, $input_chunk, $ch|> $($enter_actions)*);
+        state_body!(@map_arms | [$self, $input_chunk, $ch] |> [$($arms)+], [])
     };
 
 
@@ -35,13 +35,13 @@ macro_rules! state_body {
     // Character match block
     //--------------------------------------------------------------------
     ( @match_block
-        | [ $self:tt, $ch:ident ] |>
+        | [ $self:tt, $input_chunk:ident, $ch:ident ] |>
         $( $pat:pat $(|$pat_cont:pat)* $(if $pat_expr:expr)* => ( $($actions:tt)* ) )*
     ) => {
         match $ch {
             $(
                 $pat $(| $pat_cont)* $(if $pat_expr)* => {
-                    action_list!(|$self, $ch|> $($actions)*);
+                    action_list!(|$self, $input_chunk, $ch|> $($actions)*);
                 }
             )*
         }

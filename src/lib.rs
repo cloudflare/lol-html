@@ -1,4 +1,5 @@
 pub mod tokenizer;
+pub mod transform_stream;
 
 // TODO
 // -- Functionality

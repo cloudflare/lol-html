@@ -1,5 +1,5 @@
 macro_rules! emit_tag {
-    ( $self:tt ) => {
+    ( $self:tt, $input_chunk:ident ) => {
         let token = $self.current_token.take();
 
         let mut feedback = match token {
@@ -12,7 +12,7 @@ macro_rules! emit_tag {
             _ => unreachable!("Token should be a start or an end tag at this point"),
         };
 
-        let lex_unit = action_helper!(@emit_lex_unit_with_raw_inclusive |$self|> token);
+        let lex_unit = action_helper!(@emit_lex_unit_with_raw_inclusive |$self, $input_chunk|> token);
 
         emit_tag!(@handle_tree_builder_feedback |$self|> feedback, lex_unit);
     };

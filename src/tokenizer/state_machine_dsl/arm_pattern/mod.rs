@@ -16,10 +16,10 @@ macro_rules! arm_pattern {
         );
     };
 
-    ( | [ [$self:tt, $ch:tt ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         closing_quote => $actions:tt
     ) => {
-        state_body!(@callback | [ [$self, $ch], $($rest_cb_args)+ ] |>
+        state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
             Some(ch) if ch == $self.closing_quote => $actions
         );
     };

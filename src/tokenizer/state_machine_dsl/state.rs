@@ -10,9 +10,13 @@ macro_rules! state {
 
         $($rest:tt)*
     ) => {
-        $($vis)* fn $name(&mut self, ch: Option<u8>) -> Result<(), TokenizerBailoutReason> {
+        $($vis)* fn $name(
+            &mut self,
+            input_chunk: &InputChunk,
+            ch: Option<u8>
+        ) -> Result<(), TokenizerBailoutReason> {
             trace!(@chars ch);
-            state_body!(| [self, ch] |> [$($arms)*], [$($($enter_actions)*)*]);
+            state_body!(|[self, input_chunk, ch]|> [$($arms)*], [$($($enter_actions)*)*]);
 
             // NOTE: this can be unreachable if all state body
             // arms expand into state transitions.

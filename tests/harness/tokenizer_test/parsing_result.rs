@@ -5,6 +5,7 @@ use super::Bailout;
 use cool_thing::tokenizer::{
     LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView, Tokenizer, TokenizerBailoutReason,
 };
+use cool_thing::transform_stream::InputChunk;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -61,19 +62,18 @@ impl ParsingResult {
         let mode_snapshot_rc = Rc::clone(&mode_snapshot);
         let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc.set(s));
 
-        let mut tokenizer = Tokenizer::new(4095, |lex_unit: &LexUnit| {
-            self.add_lex_unit(lex_unit, mode_snapshot.get())
-        });
+        let mut tokenizer =
+            Tokenizer::new(|lex_unit: &LexUnit| self.add_lex_unit(lex_unit, mode_snapshot.get()));
 
         tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
         tokenizer.set_state(initial_mode_snapshot.mode.into());
         tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 
         for chunk in input.get_chunks() {
-            tokenizer.tokenize_chunk(chunk)?;
+            tokenizer.tokenize_chunk(&InputChunk::new(chunk))?;
         }
 
-        tokenizer.end();
+        tokenizer.finish();
 
         Ok(())
     }

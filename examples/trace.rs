@@ -2,6 +2,7 @@ extern crate cool_thing;
 extern crate getopts;
 
 use cool_thing::tokenizer::*;
+use cool_thing::transform_stream::InputChunk;
 use getopts::{Matches, Options};
 use std::env::args;
 
@@ -49,7 +50,7 @@ fn main() {
 
     let html = matches.free.first().unwrap();
 
-    let mut tokenizer = Tokenizer::new(2048, |lex_unit: &LexUnit| {
+    let mut tokenizer = Tokenizer::new(|lex_unit: &LexUnit| {
         println!("------------------");
 
         if let Some(token) = lex_unit.as_token() {
@@ -76,5 +77,8 @@ fn main() {
         tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
     }
 
-    tokenizer.tokenize_chunk(html.as_bytes()).unwrap();
+    tokenizer
+        .tokenize_chunk(&InputChunk::new(html.as_bytes()))
+        .unwrap();
+    tokenizer.finish();
 }
