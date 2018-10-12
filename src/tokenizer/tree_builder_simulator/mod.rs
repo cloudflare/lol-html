@@ -14,9 +14,7 @@ mod text_parsing_mode;
 
 use self::text_parsing_ambiguity::TextParsingAmbiguityTracker;
 pub use self::text_parsing_mode::*;
-use lex_unit::{Attribute, Token};
-use tag_name::TagName;
-use tokenizer::TokenizerBailoutReason;
+use tokenizer::{Attribute, TagName, Token, TokenizerBailoutReason};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 

@@ -18,7 +18,7 @@ macro_rules! action_helper {
 
     ( @emit_lex_unit | $self:tt |> $token:expr, $raw:expr ) => ({
         let lex_unit = LexUnit {
-            shallow_token: $token,
+            token_view: $token,
             raw: $raw,
         };
 
@@ -43,15 +43,15 @@ macro_rules! action_helper {
     };
 
     ( @finish_attr_part | $self:tt |> $part:ident ) => {
-        if let Some(ShallowAttribute { ref mut $part, .. }) = $self.current_attr {
+        if let Some(AttributeView { ref mut $part, .. }) = $self.current_attr {
             action_helper!(@set_token_part_range |$self|> $part);
         }
     };
 
     ( @update_tag_part | $self:tt |> $part:ident, $action:block ) => {
         match $self.current_token {
-            Some(ShallowToken::StartTag { ref mut $part, .. }) |
-            Some(ShallowToken::EndTag { ref mut $part, .. }) => $action
+            Some(TokenView::StartTag { ref mut $part, .. }) |
+            Some(TokenView::EndTag { ref mut $part, .. }) => $action
             _ => unreachable!("Current token should always be a start or an end tag at this point")
         }
     };

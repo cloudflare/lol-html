@@ -1,4 +1,4 @@
-use cool_thing::tag_name::TagName;
+use cool_thing::tokenizer::TagName;
 use harness::tokenizer_test::TestToken;
 use html5ever::tokenizer::{TagKind, Token, TokenSink, TokenSinkResult};
 use std::collections::HashMap;

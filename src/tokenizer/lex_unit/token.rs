@@ -11,7 +11,7 @@ pub struct SliceRange {
 }
 
 #[derive(Debug, Default)]
-pub struct ShallowAttribute {
+pub struct AttributeView {
     pub name: SliceRange,
     pub value: SliceRange,
 }
@@ -23,7 +23,7 @@ pub struct Attribute<'r> {
 }
 
 #[derive(Debug)]
-pub enum ShallowToken {
+pub enum TokenView {
     Character,
 
     Comment(SliceRange),
@@ -31,7 +31,7 @@ pub enum ShallowToken {
     StartTag {
         name: SliceRange,
         name_hash: Option<u64>,
-        attributes: Rc<RefCell<Vec<ShallowAttribute>>>,
+        attributes: Rc<RefCell<Vec<AttributeView>>>,
         self_closing: bool,
     },
 

@@ -1,7 +1,6 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::lex_unit::{LexUnit, RawSubslice, ShallowToken, Token};
-use cool_thing::tag_name::TagName;
+use cool_thing::tokenizer::{LexUnit, RawSubslice, TagName, Token, TokenView};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -217,8 +216,8 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
                 self_closing,
             } => TestToken::StartTag {
                 name: to_lower_null_decoded(name),
-                name_hash: match lex_unit.shallow_token {
-                    Some(ShallowToken::StartTag { name_hash, .. }) => name_hash,
+                name_hash: match lex_unit.token_view {
+                    Some(TokenView::StartTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
 
@@ -237,8 +236,8 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
 
             Token::EndTag { ref name } => TestToken::EndTag {
                 name: to_lower_null_decoded(name),
-                name_hash: match lex_unit.shallow_token {
-                    Some(ShallowToken::EndTag { name_hash, .. }) => name_hash,
+                name_hash: match lex_unit.token_view {
+                    Some(TokenView::EndTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
             },

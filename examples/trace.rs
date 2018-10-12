@@ -1,8 +1,6 @@
 extern crate cool_thing;
 extern crate getopts;
 
-use cool_thing::lex_unit::*;
-use cool_thing::tag_name::TagName;
 use cool_thing::tokenizer::*;
 use getopts::{Matches, Options};
 use std::env::args;
@@ -55,10 +53,7 @@ fn main() {
         println!("------------------");
 
         if let Some(token) = lex_unit.as_token() {
-            println!(
-                "Shallow token: {:#?}",
-                lex_unit.shallow_token.as_ref().unwrap()
-            );
+            println!("Token view: {:#?}", lex_unit.token_view.as_ref().unwrap());
             println!();
             println!("Token: {:#?}", token);
         }

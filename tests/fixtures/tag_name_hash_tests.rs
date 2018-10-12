@@ -1,4 +1,4 @@
-use cool_thing::tag_name::TagName;
+use cool_thing::tokenizer::TagName;
 
 test_fixture!("Tag name hash", {
     test("Should invalidate hash for non-ASCII aplhanum values", {

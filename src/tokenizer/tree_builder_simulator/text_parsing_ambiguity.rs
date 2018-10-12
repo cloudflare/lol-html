@@ -34,8 +34,7 @@
 //! construction state. Though, current assumption is that markup that can
 //! trigger this bailout case should be seen quite rarely in the wild.
 
-use tag_name::TagName;
-use tokenizer::TokenizerBailoutReason;
+use tokenizer::{TagName, TokenizerBailoutReason};
 
 #[derive(Copy, Clone)]
 enum TrackerState {

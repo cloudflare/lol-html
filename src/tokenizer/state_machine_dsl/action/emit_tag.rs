@@ -3,11 +3,11 @@ macro_rules! emit_tag {
         let token = $self.current_token.take();
 
         let mut feedback = match token {
-            Some(ShallowToken::StartTag { name_hash, .. }) => {
+            Some(TokenView::StartTag { name_hash, .. }) => {
                 $self.last_start_tag_name_hash = name_hash;
                 $self.tree_builder_simulator.get_feedback_for_start_tag_name(name_hash)?
             }
-            Some(ShallowToken::EndTag { name_hash, .. }) =>
+            Some(TokenView::EndTag { name_hash, .. }) =>
                 $self.tree_builder_simulator.get_feedback_for_end_tag_name(name_hash),
             _ => unreachable!("Token should be a start or an end tag at this point"),
         };
@@ -35,8 +35,8 @@ macro_rules! emit_tag {
                     $feedback = $self.tree_builder_simulator.fulfill_end_tag_token_request(&token);
                 },
                 TreeBuilderFeedback::RequestSelfClosingFlag => {
-                    match $lex_unit.shallow_token {
-                        Some(ShallowToken::StartTag { self_closing, ..}) => {
+                    match $lex_unit.token_view {
+                        Some(TokenView::StartTag { self_closing, ..}) => {
                             $feedback = $self.tree_builder_simulator.fulfill_self_closing_flag_request(self_closing);
                         },
                         _ => unreachable!("Token should be a start tag at this point"),

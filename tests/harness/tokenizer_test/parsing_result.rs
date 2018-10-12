@@ -2,9 +2,8 @@ use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
-use cool_thing::lex_unit::{LexUnit, ShallowToken};
 use cool_thing::tokenizer::{
-    TextParsingMode, TextParsingModeSnapshot, Tokenizer, TokenizerBailoutReason,
+    LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView, Tokenizer, TokenizerBailoutReason,
 };
 use std::cell::Cell;
 use std::rc::Rc;
@@ -103,8 +102,8 @@ impl ParsingResult {
     }
 
     fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
-        if let (Some(ShallowToken::Character), Some(raw)) =
-            (lex_unit.shallow_token.as_ref(), lex_unit.raw)
+        if let (Some(TokenView::Character), Some(raw)) =
+            (lex_unit.token_view.as_ref(), lex_unit.raw)
         {
             self.buffer_chars(raw, mode_snapshot);
         } else {

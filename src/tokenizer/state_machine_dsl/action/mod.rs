@@ -11,7 +11,7 @@ macro_rules! action {
     // Lex result emission
     //--------------------------------------------------------------------
     (| $self:tt, $ch:ident | > emit_eof) => {
-        action_helper!(@emit_lex_unit |$self|> Some(ShallowToken::Eof), None);
+        action_helper!(@emit_lex_unit |$self|> Some(TokenView::Eof), None);
         $self.finished = true;
     };
 
@@ -22,7 +22,7 @@ macro_rules! action {
             // representation of character token content is the raw slice.
             // Also, we always emit characters if we encounter some other bounded
             // lexical structure and, thus, we use exclusive range for the raw slice.
-            action_helper!(@emit_lex_unit_with_raw_exclusive |$self|> Some(ShallowToken::Character));
+            action_helper!(@emit_lex_unit_with_raw_exclusive |$self|> Some(TokenView::Character));
         }
     };
 
@@ -73,7 +73,7 @@ macro_rules! action {
     (| $self:tt, $ch:ident | > create_start_tag) => {
         $self.attr_buffer.borrow_mut().clear();
 
-        $self.current_token = Some(ShallowToken::StartTag {
+        $self.current_token = Some(TokenView::StartTag {
             name: SliceRange::default(),
             name_hash: Some(0),
             attributes: Rc::clone(&$self.attr_buffer),
@@ -82,14 +82,14 @@ macro_rules! action {
     };
 
     (| $self:tt, $ch:ident | > create_end_tag) => {
-        $self.current_token = Some(ShallowToken::EndTag {
+        $self.current_token = Some(TokenView::EndTag {
             name: SliceRange::default(),
             name_hash: Some(0),
         });
     };
 
     (| $self:tt, $ch:ident | > create_doctype) => {
-        $self.current_token = Some(ShallowToken::Doctype {
+        $self.current_token = Some(TokenView::Doctype {
             name: None,
             public_id: None,
             system_id: None,
@@ -98,19 +98,19 @@ macro_rules! action {
     };
 
     (| $self:tt, $ch:ident | > create_comment) => {
-        $self.current_token = Some(ShallowToken::Comment(SliceRange::default()));
+        $self.current_token = Some(TokenView::Comment(SliceRange::default()));
     };
 
     // Comment parts
     //--------------------------------------------------------------------
     (| $self:tt, $ch:ident | > mark_comment_text_end) => {
-        if let Some(ShallowToken::Comment(ref mut text)) = $self.current_token {
+        if let Some(TokenView::Comment(ref mut text)) = $self.current_token {
             action_helper!(@set_token_part_range |$self|> text);
         }
     };
 
     (| $self:tt, $ch:ident | > shift_comment_text_end_by $shift:expr) => {
-        if let Some(ShallowToken::Comment(ref mut text)) = $self.current_token {
+        if let Some(TokenView::Comment(ref mut text)) = $self.current_token {
             text.end += $shift;
         }
     };
@@ -118,7 +118,7 @@ macro_rules! action {
     // Doctype parts
     //--------------------------------------------------------------------
     (| $self:tt, $ch:ident | > set_force_quirks) => {
-        if let Some(ShallowToken::Doctype {
+        if let Some(TokenView::Doctype {
             ref mut force_quirks,
             ..
         }) = $self.current_token
@@ -128,13 +128,13 @@ macro_rules! action {
     };
 
     (| $self:tt, $ch:ident | > finish_doctype_name) => {
-        if let Some(ShallowToken::Doctype { ref mut name, .. }) = $self.current_token {
+        if let Some(TokenView::Doctype { ref mut name, .. }) = $self.current_token {
             action_helper!(@set_opt_token_part_range |$self|> name);
         }
     };
 
     (| $self:tt, $ch:ident | > finish_doctype_public_id) => {
-        if let Some(ShallowToken::Doctype {
+        if let Some(TokenView::Doctype {
             ref mut public_id, ..
         }) = $self.current_token
         {
@@ -143,7 +143,7 @@ macro_rules! action {
     };
 
     (| $self:tt, $ch:ident | > finish_doctype_system_id) => {
-        if let Some(ShallowToken::Doctype {
+        if let Some(TokenView::Doctype {
             ref mut system_id, ..
         }) = $self.current_token
         {
@@ -172,7 +172,7 @@ macro_rules! action {
     };
 
     (| $self:tt, $ch:ident | > mark_as_self_closing) => {
-        if let Some(ShallowToken::StartTag {
+        if let Some(TokenView::StartTag {
             ref mut self_closing,
             ..
         }) = $self.current_token
@@ -185,8 +185,8 @@ macro_rules! action {
     //--------------------------------------------------------------------
     (| $self:tt, $ch:ident | > start_attr) => {
         // NOTE: create attribute only if we are parsing a start tag
-        if let Some(ShallowToken::StartTag { .. }) = $self.current_token {
-            $self.current_attr = Some(ShallowAttribute::default());
+        if let Some(TokenView::StartTag { .. }) = $self.current_token {
+            $self.current_attr = Some(AttributeView::default());
             action!(|$self, $ch|> start_token_part);
         }
     };

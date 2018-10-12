@@ -8,8 +8,7 @@ use self::chunked_input::ChunkedInput;
 use self::parsing_result::ParsingResult;
 pub use self::token::TestToken;
 use self::unescape::Unescape;
-use cool_thing::tag_name::TagName;
-use cool_thing::tokenizer::{TextParsingMode, TextParsingModeSnapshot};
+use cool_thing::tokenizer::{TagName, TextParsingMode, TextParsingModeSnapshot};
 use serde_json;
 use std::fmt::Write;
 

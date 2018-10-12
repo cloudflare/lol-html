@@ -16,6 +16,31 @@ impl Buffer {
         }
     }
 
+    // TransformStream contains tokenizer and input
+    // Peek is implemented on input, tokenizer methods
+    // receive input as argument.
+
+    // Data type:
+    // 1. Original chunk
+    // 2. Buffered
+
+    // Write:
+    //
+
+    // After write:
+    //
+
+    // Peek:
+    //
+
+    // Rename buffer to input
+    // 1. Set chunk as initial bytes
+    // 2. If current token still exists after parsing then:
+    //    b.Move data from `bytes` start at raw_start up to the end into `buffer`
+    //    a.Use buffer as `bytes` if it's not currently `bytes`
+    // 3. If after parsing whole input has been consumed then set
+    // switch back to using chunk as `bytes`
+
     #[inline]
     pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerBailoutReason> {
         let chunk_len = chunk.len();

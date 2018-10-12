@@ -4,21 +4,35 @@ mod state_machine_dsl;
 #[macro_use]
 mod syntax;
 
+#[macro_use]
+mod tag_name;
+
 mod buffer;
+mod lex_unit;
 mod tree_builder_simulator;
 
 use self::buffer::Buffer;
+pub use self::lex_unit::*;
+pub use self::tag_name::TagName;
 use self::tree_builder_simulator::*;
-use lex_unit::handler::*;
-use lex_unit::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tag_name::TagName;
 
 #[cfg(feature = "testing_api")]
 pub use self::tree_builder_simulator::{TextParsingMode, TextParsingModeSnapshot};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
+
+pub trait LexUnitHandler {
+    fn handle(&mut self, lex_unit: &LexUnit);
+}
+
+#[cfg(feature = "testing_api")]
+impl<F: FnMut(&LexUnit)> LexUnitHandler for F {
+    fn handle(&mut self, lex_unit: &LexUnit) {
+        self(lex_unit);
+    }
+}
 
 #[derive(Debug, Copy, Clone)]
 pub enum TokenizerBailoutReason {
@@ -40,11 +54,11 @@ pub struct Tokenizer<H> {
     allow_cdata: bool,
     lex_unit_handler: H,
     state: TokenizerState<H>,
-    current_token: Option<ShallowToken>,
-    current_attr: Option<ShallowAttribute>,
+    current_token: Option<TokenView>,
+    current_attr: Option<AttributeView>,
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
-    attr_buffer: Rc<RefCell<Vec<ShallowAttribute>>>,
+    attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
     tree_builder_simulator: TreeBuilderSimulator,
 
     #[cfg(feature = "testing_api")]
