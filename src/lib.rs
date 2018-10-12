@@ -7,6 +7,7 @@ pub mod tokenizer;
 // 3. Eager tokenizer
 // 4. Tokenizer driver
 // 5. Adjustable limits
+// 6. Get rid of token view as we don't need to store buffer anymore
 //
 // -- Performance
 // 1. Implement benchmark

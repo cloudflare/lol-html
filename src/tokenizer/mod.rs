@@ -7,11 +7,11 @@ mod syntax;
 #[macro_use]
 mod tag_name;
 
-mod buffer;
+mod input_chunk;
 mod lex_unit;
 mod tree_builder_simulator;
 
-use self::buffer::Buffer;
+use self::input_chunk::InputChunk;
 pub use self::lex_unit::*;
 pub use self::tag_name::TagName;
 use self::tree_builder_simulator::*;
@@ -45,7 +45,7 @@ pub type TokenizerState<H> =
     fn(&mut Tokenizer<H>, Option<u8>) -> Result<(), TokenizerBailoutReason>;
 
 pub struct Tokenizer<H> {
-    buffer: Buffer,
+    input_chunk: InputChunk,
     pos: usize,
     raw_start: usize,
     token_part_start: usize,
@@ -70,7 +70,7 @@ define_state_machine!();
 impl<H: LexUnitHandler> Tokenizer<H> {
     pub fn new(buffer_capacity: usize, lex_unit_handler: H) -> Self {
         Tokenizer {
-            buffer: Buffer::new(buffer_capacity),
+            input_chunk: InputChunk::new(buffer_capacity),
             pos: 0,
             raw_start: 0,
             token_part_start: 0,
@@ -93,11 +93,11 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerBailoutReason> {
-        self.buffer.write(chunk)?;
+    pub fn tokenize_chunk(&mut self, chunk: &[u8]) -> Result<(), TokenizerBailoutReason> {
+        self.input_chunk.write(chunk)?;
 
         while !self.finished {
-            let ch = self.buffer.peek_at(self.pos);
+            let ch = self.input_chunk.peek_at(self.pos);
 
             (self.state)(self, ch)?;
 

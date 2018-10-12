@@ -76,7 +76,5 @@ fn main() {
         tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
     }
 
-    tokenizer
-        .write(html.as_bytes())
-        .expect("Buffer capacity exceeded.");
+    tokenizer.tokenize_chunk(html.as_bytes()).unwrap();
 }

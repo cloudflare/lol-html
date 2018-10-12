@@ -1,20 +1,26 @@
 use std::ops::Deref;
 use tokenizer::TokenizerBailoutReason;
 
-pub struct Buffer {
+pub struct InputChunk {
     bytes: Box<[u8]>,
     capacity: usize,
     watermark: usize,
 }
 
-impl Buffer {
+impl InputChunk {
     pub fn new(capacity: usize) -> Self {
-        Buffer {
+        InputChunk {
             bytes: vec![0; capacity].into(),
             capacity,
             watermark: 0,
         }
     }
+
+    // 2. Rename write in tokenizer into tokenize_chunk
+    // 3. Rename end into finish in Tokenizer
+    // 4. Don't store InputChunk in tokenizer
+    // 5. Get rid of token view, since we don't have referential
+    // structure problem anymore.
 
     // TransformStream contains tokenizer and input
     // Peek is implemented on input, tokenizer methods
@@ -32,14 +38,6 @@ impl Buffer {
 
     // Peek:
     //
-
-    // Rename buffer to input
-    // 1. Set chunk as initial bytes
-    // 2. If current token still exists after parsing then:
-    //    b.Move data from `bytes` start at raw_start up to the end into `buffer`
-    //    a.Use buffer as `bytes` if it's not currently `bytes`
-    // 3. If after parsing whole input has been consumed then set
-    // switch back to using chunk as `bytes`
 
     #[inline]
     pub fn write(&mut self, chunk: &[u8]) -> Result<(), TokenizerBailoutReason> {
@@ -67,7 +65,7 @@ impl Buffer {
     }
 }
 
-impl Deref for Buffer {
+impl Deref for InputChunk {
     type Target = [u8];
 
     #[inline]

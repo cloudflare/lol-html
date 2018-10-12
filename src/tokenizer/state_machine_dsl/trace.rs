@@ -18,7 +18,7 @@ macro_rules! trace {
         {
             use std::fmt::Write;
 
-            let mut chunk = unsafe { String::from_utf8_unchecked($self.buffer.to_vec()) };
+            let mut chunk = unsafe { String::from_utf8_unchecked($self.input_chunk.to_vec()) };
             let mut start = String::new();
             let mut end = String::new();
 
