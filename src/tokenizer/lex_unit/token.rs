@@ -16,7 +16,7 @@ pub struct AttributeView {
     pub value: SliceRange,
 }
 
-#[cfg_attr(feature = "testing_api", derive(Debug))]
+#[derive(Debug)]
 pub struct Attribute<'r> {
     pub name: RawSubslice<'r>,
     pub value: RawSubslice<'r>,
@@ -50,7 +50,7 @@ pub enum TokenView {
     Eof,
 }
 
-#[cfg_attr(feature = "testing_api", derive(Debug))]
+#[derive(Debug)]
 pub enum Token<'r> {
     Character(RawSubslice<'r>),
 

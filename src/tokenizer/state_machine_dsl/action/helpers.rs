@@ -8,7 +8,7 @@ macro_rules! action_helper {
     };
 
     ( @emit_lex_unit_with_raw | $self:tt, $input_chunk:ident |> $token:expr, $end:expr ) => ({
-        trace!(@raw $self, $end);
+        trace!(@raw $self, $input_chunk, $end);
 
         action_helper!(@emit_lex_unit |$self|>
             $token,

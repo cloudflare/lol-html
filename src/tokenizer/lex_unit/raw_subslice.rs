@@ -1,15 +1,11 @@
 use super::token::SliceRange;
 use std::convert::From;
 use std::ops::Deref;
-
-#[cfg(feature = "testing_api")]
 use std::{fmt, str};
 
 // NOTE: a thin wrapper around token's raw bytes subslice that allows us pretty print tokens
-#[derive(Default)]
 pub struct RawSubslice<'t>(&'t [u8]);
 
-#[cfg(feature = "testing_api")]
 impl<'t> RawSubslice<'t> {
     pub fn as_str(&self) -> &str {
         str::from_utf8(self).unwrap()
@@ -32,7 +28,6 @@ impl<'t> From<(&'t [u8], SliceRange)> for RawSubslice<'t> {
     }
 }
 
-#[cfg(feature = "testing_api")]
 impl<'t> fmt::Debug for RawSubslice<'t> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "`{}`", self.as_str())

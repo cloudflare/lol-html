@@ -43,7 +43,6 @@ impl<'r> LexUnit<'r> {
                             name: RawSubslice::from((raw, name)),
                             value: RawSubslice::from((raw, value)),
                         }).collect(),
-
                     self_closing,
                 },
 

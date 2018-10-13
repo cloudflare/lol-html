@@ -1,3 +1,4 @@
+mod base;
 pub mod tokenizer;
 pub mod transform_stream;
 
