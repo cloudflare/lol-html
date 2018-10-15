@@ -94,7 +94,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
 
     pub fn tokenize_chunk(&mut self, input_chunk: &Chunk) -> Result<(), TokenizerBailoutReason> {
         while !self.finished {
-            let ch = input_chunk.peek_at(self.pos);
+            let ch = input_chunk.get(self.pos);
 
             (self.state)(self, &input_chunk, ch)?;
 

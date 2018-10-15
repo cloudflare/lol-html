@@ -79,7 +79,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input_chunk:ident, $ch:ident] |>
         $depth:expr, [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {
-        ch_sequence_arm_pattern!(@match_block $input_chunk.peek_at($self.pos + $depth), $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block $input_chunk.get($self.pos + $depth), $exp_ch, {
             ch_sequence_arm_pattern!(
                 @iter |[$self, $input_chunk, $ch]|> $depth + 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
@@ -90,7 +90,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input_chunk:ident, $ch:ident] |>
         $depth:expr, [$exp_ch:expr], ( $($actions:tt)* ), $($case_mod:ident)*
     ) => {
-        ch_sequence_arm_pattern!(@match_block $input_chunk.peek_at($self.pos + $depth), $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block $input_chunk.get($self.pos + $depth), $exp_ch, {
             $self.pos += $depth;
             action_list!(|$self, $input_chunk, $ch|> $($actions)*);
 

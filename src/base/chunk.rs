@@ -13,7 +13,7 @@ impl<'b> From<&'b [u8]> for Chunk<'b> {
 
 impl<'b> Chunk<'b> {
     #[inline]
-    pub fn peek_at(&self, pos: usize) -> Option<u8> {
+    pub fn get(&self, pos: usize) -> Option<u8> {
         if pos < self.len() {
             Some(self[pos])
         } else {
