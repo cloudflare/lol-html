@@ -6,6 +6,7 @@ pub struct LexUnit<'b> {
     input_chunk: &'b Chunk<'b>,
     raw_range: Option<Range>,
     token_view: Option<TokenView>,
+    raw: LazyCell<Option<Bytes<'b>>>,
     token: LazyCell<Option<Token<'b>>>,
 }
 
@@ -19,6 +20,7 @@ impl<'b> LexUnit<'b> {
             input_chunk,
             raw_range,
             token_view,
+            raw: LazyCell::new(),
             token: LazyCell::new(),
         }
     }
@@ -28,8 +30,10 @@ impl<'b> LexUnit<'b> {
         range.map(|range| self.input_chunk.slice(range))
     }
 
-    pub fn get_raw(&self) -> Option<Bytes<'b>> {
-        self.get_opt_input_slice(self.raw_range)
+    pub fn get_raw(&self) -> Option<&Bytes<'b>> {
+        self.raw
+            .borrow_with(|| self.get_opt_input_slice(self.raw_range))
+            .as_ref()
     }
 
     pub fn get_token_view(&self) -> Option<&TokenView> {
