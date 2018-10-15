@@ -9,9 +9,9 @@ pub struct AttributeView {
 }
 
 #[derive(Debug)]
-pub struct Attribute<'b> {
-    pub name: Bytes<'b>,
-    pub value: Bytes<'b>,
+pub struct Attribute<'c> {
+    pub name: Bytes<'c>,
+    pub value: Bytes<'c>,
 }
 
 #[derive(Debug)]
@@ -43,25 +43,25 @@ pub enum TokenView {
 }
 
 #[derive(Debug)]
-pub enum Token<'b> {
-    Character(Bytes<'b>),
+pub enum Token<'c> {
+    Character(Bytes<'c>),
 
-    Comment(Bytes<'b>),
+    Comment(Bytes<'c>),
 
     StartTag {
-        name: Bytes<'b>,
-        attributes: Vec<Attribute<'b>>,
+        name: Bytes<'c>,
+        attributes: Vec<Attribute<'c>>,
         self_closing: bool,
     },
 
     EndTag {
-        name: Bytes<'b>,
+        name: Bytes<'c>,
     },
 
     Doctype {
-        name: Option<Bytes<'b>>,
-        public_id: Option<Bytes<'b>>,
-        system_id: Option<Bytes<'b>>,
+        name: Option<Bytes<'c>>,
+        public_id: Option<Bytes<'c>>,
+        system_id: Option<Bytes<'c>>,
         force_quirks: bool,
     },
 

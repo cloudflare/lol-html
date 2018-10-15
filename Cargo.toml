@@ -18,6 +18,9 @@ testing_api = []
 harness = false
 name = "main"
 
+[dependencies]
+lazycell = "1.2"
+
 [dev-dependencies]
 getopts = "0.2.15"
 glob = "0.2.11"

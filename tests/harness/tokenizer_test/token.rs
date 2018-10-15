@@ -204,16 +204,16 @@ fn to_lower_null_decoded(bytes: &Bytes) -> String {
     string
 }
 
-impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
-    fn from((token, lex_unit): (Token<'r>, &'r LexUnit<'r>)) -> Self {
+impl TestToken {
+    pub fn new(token: &Token, lex_unit: &LexUnit) -> Self {
         match token {
             Token::Character(data) => TestToken::Character(data.as_string()),
 
             Token::Comment(ref data) => TestToken::Comment(to_null_decoded(data)),
 
             Token::StartTag {
-                ref name,
-                ref attributes,
+                name,
+                attributes,
                 self_closing,
             } => TestToken::StartTag {
                 name: to_lower_null_decoded(name),
@@ -232,10 +232,10 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
                     )
                 })),
 
-                self_closing,
+                self_closing: *self_closing,
             },
 
-            Token::EndTag { ref name } => TestToken::EndTag {
+            Token::EndTag { name } => TestToken::EndTag {
                 name: to_lower_null_decoded(name),
                 name_hash: match lex_unit.get_token_view() {
                     Some(&TokenView::EndTag { name_hash, .. }) => name_hash,
@@ -252,7 +252,7 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
                 name: name.as_ref().map(to_lower_null_decoded),
                 public_id: public_id.as_ref().map(to_null_decoded),
                 system_id: system_id.as_ref().map(to_null_decoded),
-                force_quirks,
+                force_quirks: *force_quirks,
             },
 
             Token::Eof => TestToken::Eof,

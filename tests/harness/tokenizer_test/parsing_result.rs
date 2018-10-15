@@ -108,7 +108,7 @@ impl ParsingResult {
         } else {
             if let Some(token) = lex_unit.get_token() {
                 self.add_buffered_chars(mode_snapshot);
-                self.tokens.push((token, lex_unit).into());
+                self.tokens.push(TestToken::new(token, lex_unit));
                 self.text_parsing_mode_snapshots.push(mode_snapshot);
             }
 

@@ -1,3 +1,5 @@
+extern crate lazycell;
+
 pub mod base;
 pub mod tokenizer;
 pub mod transform_stream;

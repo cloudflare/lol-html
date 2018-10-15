@@ -8,10 +8,12 @@ mod syntax;
 mod tag_name;
 
 mod lex_unit;
+mod token;
 mod tree_builder_simulator;
 
-pub use self::lex_unit::*;
+pub use self::lex_unit::LexUnit;
 pub use self::tag_name::TagName;
+pub use self::token::*;
 use self::tree_builder_simulator::*;
 use base::{Chunk, Range};
 use std::cell::RefCell;
