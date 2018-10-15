@@ -92,7 +92,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    pub fn tokenize_chunk(&mut self, input_chunk: &Chunk) -> Result<(), TokenizerBailoutReason> {
+    pub fn tokenize_chunk(&mut self, input_chunk: &Chunk) -> Result<usize, TokenizerBailoutReason> {
         while !self.finished {
             let ch = input_chunk.get(self.pos);
 
@@ -101,11 +101,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
             self.pos += 1;
         }
 
-        Ok(())
-    }
-
-    pub fn finish(&self) {
-        // TODO
+        Ok(self.pos)
     }
 
     #[cfg(feature = "testing_api")]

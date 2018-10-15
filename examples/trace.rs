@@ -77,5 +77,4 @@ fn main() {
     }
 
     tokenizer.tokenize_chunk(&html.as_bytes().into()).unwrap();
-    tokenizer.finish();
 }

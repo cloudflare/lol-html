@@ -72,8 +72,6 @@ impl ParsingResult {
             tokenizer.tokenize_chunk(&chunk.into())?;
         }
 
-        tokenizer.finish();
-
         Ok(())
     }
 
