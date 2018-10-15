@@ -140,7 +140,7 @@ impl TreeBuilderSimulator {
         self.current_ns = *self
             .ns_stack
             .last()
-            .expect("Namespace stack should always has at least one item");
+            .expect("Namespace stack should always have at least one item");
 
         TreeBuilderFeedback::set_allow_cdata(self.current_ns != Namespace::Html)
     }
