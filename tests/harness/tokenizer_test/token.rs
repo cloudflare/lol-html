@@ -8,6 +8,18 @@ use std::collections::HashMap;
 use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
 
+fn to_null_decoded(bytes: &Bytes) -> String {
+    Decoder::new(bytes.as_str()).unsafe_null().run()
+}
+
+fn to_lower_null_decoded(bytes: &Bytes) -> String {
+    let mut string = to_null_decoded(bytes);
+
+    string.make_ascii_lowercase();
+
+    string
+}
+
 #[derive(Clone, Copy, Deserialize)]
 enum TokenKind {
     Character,
@@ -44,6 +56,58 @@ pub enum TestToken {
     },
 
     Eof,
+}
+
+impl TestToken {
+    pub fn new(token: &Token, lex_unit: &LexUnit) -> Self {
+        match token {
+            Token::Character(data) => TestToken::Character(data.as_string()),
+
+            Token::Comment(ref data) => TestToken::Comment(to_null_decoded(data)),
+
+            Token::StartTag(tag) => TestToken::StartTag {
+                name: to_lower_null_decoded(&tag.name),
+                name_hash: match lex_unit.get_token_view() {
+                    Some(&TokenView::StartTag { name_hash, .. }) => name_hash,
+                    _ => None,
+                },
+
+                attributes: HashMap::from_iter(tag.get_attributes().iter().rev().map(|attr| {
+                    (
+                        to_lower_null_decoded(&attr.name),
+                        Decoder::new(attr.value.as_str())
+                            .unsafe_null()
+                            .attr_entities()
+                            .run(),
+                    )
+                })),
+
+                self_closing: tag.self_closing,
+            },
+
+            Token::EndTag { name } => TestToken::EndTag {
+                name: to_lower_null_decoded(name),
+                name_hash: match lex_unit.get_token_view() {
+                    Some(&TokenView::EndTag { name_hash, .. }) => name_hash,
+                    _ => None,
+                },
+            },
+
+            Token::Doctype {
+                name,
+                public_id,
+                system_id,
+                force_quirks,
+            } => TestToken::Doctype {
+                name: name.as_ref().map(to_lower_null_decoded),
+                public_id: public_id.as_ref().map(to_null_decoded),
+                system_id: system_id.as_ref().map(to_null_decoded),
+                force_quirks: *force_quirks,
+            },
+
+            Token::Eof => TestToken::Eof,
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for TestToken {
@@ -189,73 +253,5 @@ impl Unescape for TestToken {
             TestToken::Eof => (),
         }
         Ok(())
-    }
-}
-
-fn to_null_decoded(bytes: &Bytes) -> String {
-    Decoder::new(bytes.as_str()).unsafe_null().run()
-}
-
-fn to_lower_null_decoded(bytes: &Bytes) -> String {
-    let mut string = to_null_decoded(bytes);
-
-    string.make_ascii_lowercase();
-
-    string
-}
-
-impl TestToken {
-    pub fn new(token: &Token, lex_unit: &LexUnit) -> Self {
-        match token {
-            Token::Character(data) => TestToken::Character(data.as_string()),
-
-            Token::Comment(ref data) => TestToken::Comment(to_null_decoded(data)),
-
-            Token::StartTag {
-                name,
-                attributes,
-                self_closing,
-            } => TestToken::StartTag {
-                name: to_lower_null_decoded(name),
-                name_hash: match lex_unit.get_token_view() {
-                    Some(&TokenView::StartTag { name_hash, .. }) => name_hash,
-                    _ => None,
-                },
-
-                attributes: HashMap::from_iter(attributes.iter().rev().map(|attr| {
-                    (
-                        to_lower_null_decoded(&attr.name),
-                        Decoder::new(attr.value.as_str())
-                            .unsafe_null()
-                            .attr_entities()
-                            .run(),
-                    )
-                })),
-
-                self_closing: *self_closing,
-            },
-
-            Token::EndTag { name } => TestToken::EndTag {
-                name: to_lower_null_decoded(name),
-                name_hash: match lex_unit.get_token_view() {
-                    Some(&TokenView::EndTag { name_hash, .. }) => name_hash,
-                    _ => None,
-                },
-            },
-
-            Token::Doctype {
-                name,
-                public_id,
-                system_id,
-                force_quirks,
-            } => TestToken::Doctype {
-                name: name.as_ref().map(to_lower_null_decoded),
-                public_id: public_id.as_ref().map(to_null_decoded),
-                system_id: system_id.as_ref().map(to_null_decoded),
-                force_quirks: *force_quirks,
-            },
-
-            Token::Eof => TestToken::Eof,
-        }
     }
 }

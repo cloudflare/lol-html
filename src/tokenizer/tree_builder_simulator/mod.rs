@@ -265,15 +265,11 @@ impl TreeBuilderSimulator {
         request_reason: StartTagTokenRequestReason,
     ) -> TreeBuilderFeedback {
         match token {
-            Token::StartTag {
-                ref name,
-                ref attributes,
-                self_closing,
-            } => match request_reason {
+            Token::StartTag(tag) => match request_reason {
                 StartTagTokenRequestReason::ForeignContentExitCheck => {
                     // NOTE: for foreign content exit we request token only if
                     // we saw <font> tag and we need to check its attributes.
-                    for Attribute { ref name, .. } in attributes {
+                    for Attribute { ref name, .. } in tag.get_attributes() {
                         if eq_case_ins(name, b"color")
                             || eq_case_ins(name, b"size")
                             || eq_case_ins(name, b"face")
@@ -283,11 +279,11 @@ impl TreeBuilderSimulator {
                     }
                 }
                 StartTagTokenRequestReason::IntegrationPointCheck => {
-                    if !self_closing && eq_case_ins(name, b"annotation-xml") {
+                    if !tag.self_closing && eq_case_ins(&tag.name, b"annotation-xml") {
                         for Attribute {
                             ref name,
                             ref value,
-                        } in attributes
+                        } in tag.get_attributes()
                         {
                             if eq_case_ins(name, b"encoding")
                                 && (eq_case_ins(value, b"text/html")

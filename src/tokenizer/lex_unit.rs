@@ -2,16 +2,16 @@ use base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
 pub use tokenizer::token::*;
 
-pub struct LexUnit<'c> {
-    input_chunk: &'c Chunk<'c>,
+pub struct LexUnit<'b> {
+    input_chunk: &'b Chunk<'b>,
     raw_range: Option<Range>,
     token_view: Option<TokenView>,
-    token: LazyCell<Option<Token<'c>>>,
+    token: LazyCell<Option<Token<'b>>>,
 }
 
-impl<'c> LexUnit<'c> {
+impl<'b> LexUnit<'b> {
     pub fn new(
-        input_chunk: &'c Chunk<'c>,
+        input_chunk: &'b Chunk<'b>,
         token_view: Option<TokenView>,
         raw_range: Option<Range>,
     ) -> Self {
@@ -24,11 +24,11 @@ impl<'c> LexUnit<'c> {
     }
 
     #[inline]
-    fn get_opt_input_slice(&self, range: Option<Range>) -> Option<Bytes<'c>> {
+    fn get_opt_input_slice(&self, range: Option<Range>) -> Option<Bytes<'b>> {
         range.map(|range| self.input_chunk.slice(range))
     }
 
-    pub fn get_raw(&self) -> Option<Bytes<'c>> {
+    pub fn get_raw(&self) -> Option<Bytes<'b>> {
         self.get_opt_input_slice(self.raw_range)
     }
 
@@ -36,7 +36,7 @@ impl<'c> LexUnit<'c> {
         self.token_view.as_ref()
     }
 
-    pub fn get_token(&self) -> Option<&Token<'c>> {
+    pub fn get_token(&self) -> Option<&Token<'b>> {
         self.token
             .borrow_with(|| {
                 self.token_view.as_ref().map(|token_view| match token_view {
@@ -53,18 +53,12 @@ impl<'c> LexUnit<'c> {
                         ref attributes,
                         self_closing,
                         ..
-                    } => Token::StartTag {
-                        name: self.input_chunk.slice(name),
-
-                        attributes: attributes
-                            .borrow()
-                            .iter()
-                            .map(|&AttributeView { name, value }| Attribute {
-                                name: self.input_chunk.slice(name),
-                                value: self.input_chunk.slice(value),
-                            }).collect(),
+                    } => Token::StartTag(StartTagToken::new(
+                        self.input_chunk,
+                        self.input_chunk.slice(name),
+                        attributes,
                         self_closing,
-                    },
+                    )),
 
                     &TokenView::EndTag { name, .. } => Token::EndTag {
                         name: self.input_chunk.slice(name),
