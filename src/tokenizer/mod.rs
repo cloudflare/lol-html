@@ -13,9 +13,9 @@ mod tree_builder_simulator;
 pub use self::lex_unit::*;
 pub use self::tag_name::TagName;
 use self::tree_builder_simulator::*;
+use base::{Chunk, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
-use transform_stream::InputChunk;
 
 #[cfg(feature = "testing_api")]
 pub use self::tree_builder_simulator::{TextParsingMode, TextParsingModeSnapshot};
@@ -41,7 +41,7 @@ pub enum TokenizerBailoutReason {
 }
 
 pub type TokenizerState<H> =
-    fn(&mut Tokenizer<H>, &InputChunk, Option<u8>) -> Result<(), TokenizerBailoutReason>;
+    fn(&mut Tokenizer<H>, &Chunk, Option<u8>) -> Result<(), TokenizerBailoutReason>;
 
 pub struct Tokenizer<H> {
     pos: usize,
@@ -90,10 +90,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    pub fn tokenize_chunk(
-        &mut self,
-        input_chunk: &InputChunk,
-    ) -> Result<(), TokenizerBailoutReason> {
+    pub fn tokenize_chunk(&mut self, input_chunk: &Chunk) -> Result<(), TokenizerBailoutReason> {
         while !self.finished {
             let ch = input_chunk.peek_at(self.pos);
 

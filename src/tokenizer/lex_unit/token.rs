@@ -1,49 +1,41 @@
-use super::raw_subslice::RawSubslice;
+use base::{Bytes, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-// NOTE: std::ops::Range implements iterator and, thus, doesn't implement Copy.
-// See: https://github.com/rust-lang/rust/pull/27186
-#[derive(Clone, Copy, Default, Debug)]
-pub struct SliceRange {
-    pub start: usize,
-    pub end: usize,
-}
-
 #[derive(Debug, Default)]
 pub struct AttributeView {
-    pub name: SliceRange,
-    pub value: SliceRange,
+    pub name: Range,
+    pub value: Range,
 }
 
 #[derive(Debug)]
-pub struct Attribute<'r> {
-    pub name: RawSubslice<'r>,
-    pub value: RawSubslice<'r>,
+pub struct Attribute<'b> {
+    pub name: Bytes<'b>,
+    pub value: Bytes<'b>,
 }
 
 #[derive(Debug)]
 pub enum TokenView {
     Character,
 
-    Comment(SliceRange),
+    Comment(Range),
 
     StartTag {
-        name: SliceRange,
+        name: Range,
         name_hash: Option<u64>,
         attributes: Rc<RefCell<Vec<AttributeView>>>,
         self_closing: bool,
     },
 
     EndTag {
-        name: SliceRange,
+        name: Range,
         name_hash: Option<u64>,
     },
 
     Doctype {
-        name: Option<SliceRange>,
-        public_id: Option<SliceRange>,
-        system_id: Option<SliceRange>,
+        name: Option<Range>,
+        public_id: Option<Range>,
+        system_id: Option<Range>,
         force_quirks: bool,
     },
 
@@ -51,25 +43,25 @@ pub enum TokenView {
 }
 
 #[derive(Debug)]
-pub enum Token<'r> {
-    Character(RawSubslice<'r>),
+pub enum Token<'b> {
+    Character(Bytes<'b>),
 
-    Comment(RawSubslice<'r>),
+    Comment(Bytes<'b>),
 
     StartTag {
-        name: RawSubslice<'r>,
-        attributes: Vec<Attribute<'r>>,
+        name: Bytes<'b>,
+        attributes: Vec<Attribute<'b>>,
         self_closing: bool,
     },
 
     EndTag {
-        name: RawSubslice<'r>,
+        name: Bytes<'b>,
     },
 
     Doctype {
-        name: Option<RawSubslice<'r>>,
-        public_id: Option<RawSubslice<'r>>,
-        system_id: Option<RawSubslice<'r>>,
+        name: Option<Bytes<'b>>,
+        public_id: Option<Bytes<'b>>,
+        system_id: Option<Bytes<'b>>,
         force_quirks: bool,
     },
 

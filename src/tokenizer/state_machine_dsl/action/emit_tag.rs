@@ -25,18 +25,18 @@ macro_rules! emit_tag {
                     break;
                 }
                 TreeBuilderFeedback::RequestStartTagToken(reason) => {
-                    let token = $lex_unit.as_token().expect("There should be a token at this point");
+                    let token = $lex_unit.get_token().expect("There should be a token at this point");
 
                     $feedback = $self.tree_builder_simulator.fulfill_start_tag_token_request(&token, reason);
                 }
                 TreeBuilderFeedback::RequestEndTagToken => {
-                    let token = $lex_unit.as_token().expect("There should be a token at this point");
+                    let token = $lex_unit.get_token().expect("There should be a token at this point");
 
                     $feedback = $self.tree_builder_simulator.fulfill_end_tag_token_request(&token);
                 },
                 TreeBuilderFeedback::RequestSelfClosingFlag => {
-                    match $lex_unit.token_view {
-                        Some(TokenView::StartTag { self_closing, ..}) => {
+                    match $lex_unit.get_token_view() {
+                        Some(&TokenView::StartTag { self_closing, ..}) => {
                             $feedback = $self.tree_builder_simulator.fulfill_self_closing_flag_request(self_closing);
                         },
                         _ => unreachable!("Token should be a start tag at this point"),

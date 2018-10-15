@@ -1,72 +1,85 @@
-mod raw_subslice;
 mod token;
 
-pub use self::raw_subslice::RawSubslice;
 pub use self::token::*;
+use base::{Bytes, Chunk, Range};
 
-#[inline]
-fn as_opt_subslice(raw: &[u8], range: Option<SliceRange>) -> Option<RawSubslice> {
-    range.map(|range| RawSubslice::from((raw, range)))
+pub struct LexUnit<'b> {
+    input_chunk: &'b Chunk<'b>,
+    raw_range: Option<Range>,
+    token_view: Option<TokenView>,
 }
 
-pub struct LexUnit<'r> {
-    pub token_view: Option<TokenView>,
-    pub raw: Option<&'r [u8]>,
-}
+impl<'b> LexUnit<'b> {
+    pub fn new(
+        input_chunk: &'b Chunk<'b>,
+        token_view: Option<TokenView>,
+        raw_range: Option<Range>,
+    ) -> Self {
+        LexUnit {
+            input_chunk,
+            raw_range,
+            token_view,
+        }
+    }
 
-impl<'r> LexUnit<'r> {
-    pub fn as_token(&self) -> Option<Token<'r>> {
-        self.token_view
-            .as_ref()
-            .map(|token_view| match (token_view, self.raw) {
-                (TokenView::Character, Some(raw)) => Token::Character(RawSubslice::from(raw)),
+    #[inline]
+    fn get_opt_input_slice(&self, range: Option<Range>) -> Option<Bytes<'b>> {
+        range.map(|range| self.input_chunk.slice(range))
+    }
 
-                (&TokenView::Comment(text), Some(raw)) => {
-                    Token::Comment(RawSubslice::from((raw, text)))
-                }
+    pub fn get_raw(&self) -> Option<Bytes<'b>> {
+        self.get_opt_input_slice(self.raw_range)
+    }
 
-                (
-                    &TokenView::StartTag {
-                        name,
-                        ref attributes,
-                        self_closing,
-                        ..
-                    },
-                    Some(raw),
-                ) => Token::StartTag {
-                    name: RawSubslice::from((raw, name)),
+    pub fn get_token_view(&self) -> Option<&TokenView> {
+        self.token_view.as_ref()
+    }
 
-                    attributes: attributes
-                        .borrow()
-                        .iter()
-                        .map(|&AttributeView { name, value }| Attribute {
-                            name: RawSubslice::from((raw, name)),
-                            value: RawSubslice::from((raw, value)),
-                        }).collect(),
-                    self_closing,
-                },
+    pub fn get_token(&self) -> Option<Token<'b>> {
+        self.token_view.as_ref().map(|token_view| match token_view {
+            TokenView::Character => Token::Character(
+                self.input_chunk.slice(
+                    self.raw_range
+                        .expect("Character token should always has raw representation"),
+                ),
+            ),
+            &TokenView::Comment(text) => Token::Comment(self.input_chunk.slice(text)),
 
-                (&TokenView::EndTag { name, .. }, Some(raw)) => Token::EndTag {
-                    name: RawSubslice::from((raw, name)),
-                },
+            &TokenView::StartTag {
+                name,
+                ref attributes,
+                self_closing,
+                ..
+            } => Token::StartTag {
+                name: self.input_chunk.slice(name),
 
-                (
-                    &TokenView::Doctype {
-                        name,
-                        public_id,
-                        system_id,
-                        force_quirks,
-                    },
-                    Some(raw),
-                ) => Token::Doctype {
-                    name: as_opt_subslice(raw, name),
-                    public_id: as_opt_subslice(raw, public_id),
-                    system_id: as_opt_subslice(raw, system_id),
-                    force_quirks,
-                },
+                attributes: attributes
+                    .borrow()
+                    .iter()
+                    .map(|&AttributeView { name, value }| Attribute {
+                        name: self.input_chunk.slice(name),
+                        value: self.input_chunk.slice(value),
+                    }).collect(),
+                self_closing,
+            },
 
-                (TokenView::Eof, None) => Token::Eof,
-                _ => unreachable!("Such a combination of raw value and token type shouldn't exist"),
-            })
+            &TokenView::EndTag { name, .. } => Token::EndTag {
+                name: self.input_chunk.slice(name),
+            },
+
+            &TokenView::Doctype {
+                name,
+                public_id,
+                system_id,
+                force_quirks,
+            } => Token::Doctype {
+                name: self.get_opt_input_slice(name),
+                public_id: self.get_opt_input_slice(public_id),
+                system_id: self.get_opt_input_slice(system_id),
+                force_quirks,
+            },
+
+            TokenView::Eof => Token::Eof,
+        })
     }
 }

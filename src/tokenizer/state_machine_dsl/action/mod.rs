@@ -11,7 +11,7 @@ macro_rules! action {
     // Lex result emission
     //--------------------------------------------------------------------
     (| $self:tt, $input_chunk:ident, $ch:ident | > emit_eof) => {
-        action_helper!(@emit_lex_unit |$self|> Some(TokenView::Eof), None);
+        action_helper!(@emit_lex_unit |$self|> Some(TokenView::Eof), None, $input_chunk);
         $self.finished = true;
     };
 
@@ -71,7 +71,7 @@ macro_rules! action {
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > start_token_part) => {
-        $self.token_part_start = $self.pos - $self.raw_start;
+        $self.token_part_start = $self.pos;
     };
 
     // Token creation
@@ -80,7 +80,7 @@ macro_rules! action {
         $self.attr_buffer.borrow_mut().clear();
 
         $self.current_token = Some(TokenView::StartTag {
-            name: SliceRange::default(),
+            name: Range::default(),
             name_hash: Some(0),
             attributes: Rc::clone(&$self.attr_buffer),
             self_closing: false,
@@ -89,7 +89,7 @@ macro_rules! action {
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > create_end_tag) => {
         $self.current_token = Some(TokenView::EndTag {
-            name: SliceRange::default(),
+            name: Range::default(),
             name_hash: Some(0),
         });
     };
@@ -104,7 +104,7 @@ macro_rules! action {
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > create_comment) => {
-        $self.current_token = Some(TokenView::Comment(SliceRange::default()));
+        $self.current_token = Some(TokenView::Comment(Range::default()));
     };
 
     // Comment parts

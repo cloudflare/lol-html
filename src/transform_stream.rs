@@ -1,7 +1,3 @@
-mod input_chunk;
-
-pub use self::input_chunk::InputChunk;
-
 // 1. Rename InputChunk to Chunk and input_chunk to input (make a trait: last, etc. )
 // 2. Rename RawSublice to Bytes and SliceRange to Range (move to Bytes)
 // 3. Implement Lazy and make token and attributes lazy

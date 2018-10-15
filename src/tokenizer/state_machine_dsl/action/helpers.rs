@@ -10,17 +10,20 @@ macro_rules! action_helper {
     ( @emit_lex_unit_with_raw | $self:tt, $input_chunk:ident |> $token:expr, $end:expr ) => ({
         trace!(@raw $self, $input_chunk, $end);
 
+        let raw_range = Some(Range {
+            start: $self.raw_start,
+            end: $end,
+        });
+
         action_helper!(@emit_lex_unit |$self|>
             $token,
-            Some(&$input_chunk[$self.raw_start..$end])
+            raw_range,
+            $input_chunk
         )
     });
 
-    ( @emit_lex_unit | $self:tt |> $token:expr, $raw:expr ) => ({
-        let lex_unit = LexUnit {
-            token_view: $token,
-            raw: $raw,
-        };
+    ( @emit_lex_unit | $self:tt |> $token:expr, $raw:expr, $input_chunk:ident ) => ({
+        let lex_unit = LexUnit::new($input_chunk, $token, $raw);
 
         $self.lex_unit_handler.handle(&lex_unit);
 
@@ -29,12 +32,12 @@ macro_rules! action_helper {
 
     ( @set_token_part_range | $self:tt |> $part:ident ) => {
         $part.start = $self.token_part_start;
-        $part.end = $self.pos - $self.raw_start;
+        $part.end = $self.pos;
     };
 
     ( @set_opt_token_part_range | $self:tt |> $part:ident ) => {
         *$part = Some({
-            let mut $part = SliceRange::default();
+            let mut $part = Range::default();
 
             action_helper!(@set_token_part_range |$self|> $part);
 

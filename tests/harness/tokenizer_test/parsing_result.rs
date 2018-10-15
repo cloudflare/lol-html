@@ -5,7 +5,6 @@ use super::Bailout;
 use cool_thing::tokenizer::{
     LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView, Tokenizer, TokenizerBailoutReason,
 };
-use cool_thing::transform_stream::InputChunk;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -70,7 +69,7 @@ impl ParsingResult {
         tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 
         for chunk in input.get_chunks() {
-            tokenizer.tokenize_chunk(&InputChunk::new(chunk))?;
+            tokenizer.tokenize_chunk(&chunk.into())?;
         }
 
         tokenizer.finish();
@@ -103,17 +102,17 @@ impl ParsingResult {
 
     fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
         if let (Some(TokenView::Character), Some(raw)) =
-            (lex_unit.token_view.as_ref(), lex_unit.raw)
+            (lex_unit.get_token_view(), lex_unit.get_raw())
         {
-            self.buffer_chars(raw, mode_snapshot);
+            self.buffer_chars(&raw, mode_snapshot);
         } else {
-            if let Some(token) = lex_unit.as_token() {
+            if let Some(token) = lex_unit.get_token() {
                 self.add_buffered_chars(mode_snapshot);
                 self.tokens.push((token, lex_unit).into());
                 self.text_parsing_mode_snapshots.push(mode_snapshot);
             }
 
-            if let Some(raw) = lex_unit.raw {
+            if let Some(raw) = lex_unit.get_raw() {
                 self.raw_slices.push(raw.to_vec());
             }
         }

@@ -1,10 +1,9 @@
-mod base;
+pub mod base;
 pub mod tokenizer;
 pub mod transform_stream;
 
 // TODO
 // -- Functionality
-// 1. Move tag name to tokenizer
 // 2. Streaming
 // 3. Eager tokenizer
 // 4. Tokenizer driver

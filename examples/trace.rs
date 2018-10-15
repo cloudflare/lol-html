@@ -2,7 +2,6 @@ extern crate cool_thing;
 extern crate getopts;
 
 use cool_thing::tokenizer::*;
-use cool_thing::transform_stream::InputChunk;
 use getopts::{Matches, Options};
 use std::env::args;
 
@@ -53,13 +52,13 @@ fn main() {
     let mut tokenizer = Tokenizer::new(|lex_unit: &LexUnit| {
         println!("------------------");
 
-        if let Some(token) = lex_unit.as_token() {
-            println!("Token view: {:#?}", lex_unit.token_view.as_ref().unwrap());
+        if let Some(token) = lex_unit.get_token() {
+            println!("Token view: {:#?}", lex_unit.get_token_view().unwrap());
             println!();
             println!("Token: {:#?}", token);
         }
 
-        if let Some(raw) = lex_unit.raw {
+        if let Some(raw) = lex_unit.get_raw() {
             println!("\nRaw: `{}`", unsafe {
                 String::from_utf8_unchecked(raw.to_vec())
             });
@@ -77,8 +76,6 @@ fn main() {
         tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
     }
 
-    tokenizer
-        .tokenize_chunk(&InputChunk::new(html.as_bytes()))
-        .unwrap();
+    tokenizer.tokenize_chunk(&html.as_bytes().into()).unwrap();
     tokenizer.finish();
 }

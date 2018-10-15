@@ -1,6 +1,7 @@
 use super::decoder::Decoder;
 use super::unescape::Unescape;
-use cool_thing::tokenizer::{LexUnit, RawSubslice, TagName, Token, TokenView};
+use cool_thing::base::Bytes;
+use cool_thing::tokenizer::{LexUnit, TagName, Token, TokenView};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -191,12 +192,12 @@ impl Unescape for TestToken {
     }
 }
 
-fn to_null_decoded(subslice: &RawSubslice) -> String {
-    Decoder::new(subslice.as_str()).unsafe_null().run()
+fn to_null_decoded(bytes: &Bytes) -> String {
+    Decoder::new(bytes.as_str()).unsafe_null().run()
 }
 
-fn to_lower_null_decoded(subslice: &RawSubslice) -> String {
-    let mut string = to_null_decoded(subslice);
+fn to_lower_null_decoded(bytes: &Bytes) -> String {
+    let mut string = to_null_decoded(bytes);
 
     string.make_ascii_lowercase();
 
@@ -216,8 +217,8 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
                 self_closing,
             } => TestToken::StartTag {
                 name: to_lower_null_decoded(name),
-                name_hash: match lex_unit.token_view {
-                    Some(TokenView::StartTag { name_hash, .. }) => name_hash,
+                name_hash: match lex_unit.get_token_view() {
+                    Some(&TokenView::StartTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
 
@@ -236,8 +237,8 @@ impl<'r> From<(Token<'r>, &'r LexUnit<'r>)> for TestToken {
 
             Token::EndTag { ref name } => TestToken::EndTag {
                 name: to_lower_null_decoded(name),
-                name_hash: match lex_unit.token_view {
-                    Some(TokenView::EndTag { name_hash, .. }) => name_hash,
+                name_hash: match lex_unit.get_token_view() {
+                    Some(&TokenView::EndTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
             },

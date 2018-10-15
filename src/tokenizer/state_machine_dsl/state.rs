@@ -12,7 +12,7 @@ macro_rules! state {
     ) => {
         $($vis)* fn $name(
             &mut self,
-            input_chunk: &InputChunk,
+            input_chunk: &Chunk,
             ch: Option<u8>
         ) -> Result<(), TokenizerBailoutReason> {
             trace!(@chars ch);
