@@ -20,14 +20,26 @@ macro_rules! arm_pattern {
         closing_quote => $actions:tt
     ) => {
         state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
-            Some(ch) if ch == $self.closing_quote => $actions
+            Some(ch) if *ch == $self.closing_quote => $actions
         );
     };
 
-    ( | $cb_args:tt |>
-        eof => $actions:tt
+    // NOTE: this arm is always enforced by the compiler to make match exhaustive,
+    // so it's safe to break parsing loop here, since we don't have any input left
+    // to parse. We execute EOF actions only if it's a last chunk, otherwise we just
+    // break the parsing loop if it hasn't been done by the explicit EOC arm.
+    ( | [ [$self:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+        eof => ( $($actions:tt)* )
     ) => {
-        state_body!(@callback | $cb_args |> None => $actions);
+        state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
+            None => ({
+                if $self.last_chunk {
+                    action_list!(|$self, $input_chunk, $ch|> $($actions)* );
+                }
+
+                return Ok(ParsingLoopDirective::Break);
+            })
+        );
     };
 
     ( | [ $scope_vars:tt, $($rest_cb_args:tt)+ ] |>

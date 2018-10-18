@@ -68,7 +68,6 @@ impl Default for TextParsingAmbiguityTracker {
     }
 }
 
-// TODO template in select case
 impl TextParsingAmbiguityTracker {
     pub fn track_start_tag(
         &mut self,

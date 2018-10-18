@@ -1,18 +1,18 @@
-use base::{Bytes, Chunk, Range};
+use base::{Bytes, Range};
 use lazycell::LazyCell;
 pub use tokenizer::token::*;
 
-pub struct LexUnit<'b> {
-    input_chunk: &'b Chunk<'b>,
+pub struct LexUnit<'c> {
+    input_chunk: &'c Bytes<'c>,
     raw_range: Option<Range>,
     token_view: Option<TokenView>,
-    raw: LazyCell<Option<Bytes<'b>>>,
-    token: LazyCell<Option<Token<'b>>>,
+    raw: LazyCell<Option<Bytes<'c>>>,
+    token: LazyCell<Option<Token<'c>>>,
 }
 
-impl<'b> LexUnit<'b> {
+impl<'c> LexUnit<'c> {
     pub fn new(
-        input_chunk: &'b Chunk<'b>,
+        input_chunk: &'c Bytes<'c>,
         token_view: Option<TokenView>,
         raw_range: Option<Range>,
     ) -> Self {
@@ -26,11 +26,11 @@ impl<'b> LexUnit<'b> {
     }
 
     #[inline]
-    fn get_opt_input_slice(&self, range: Option<Range>) -> Option<Bytes<'b>> {
+    fn get_opt_input_slice(&self, range: Option<Range>) -> Option<Bytes<'c>> {
         range.map(|range| self.input_chunk.slice(range))
     }
 
-    pub fn get_raw(&self) -> Option<&Bytes<'b>> {
+    pub fn get_raw(&self) -> Option<&Bytes<'c>> {
         self.raw
             .borrow_with(|| self.get_opt_input_slice(self.raw_range))
             .as_ref()
@@ -40,7 +40,7 @@ impl<'b> LexUnit<'b> {
         self.token_view.as_ref()
     }
 
-    pub fn get_token(&self) -> Option<&Token<'b>> {
+    pub fn get_token(&self) -> Option<&Token<'c>> {
         self.token
             .borrow_with(|| {
                 self.token_view.as_ref().map(|token_view| match token_view {

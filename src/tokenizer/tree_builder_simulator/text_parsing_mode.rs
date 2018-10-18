@@ -27,7 +27,7 @@ impl TextParsingMode {
     }
 }
 
-impl<'t, H: LexUnitHandler> Into<TokenizerState<H>> for TextParsingMode {
+impl<H: LexUnitHandler> Into<TokenizerState<H>> for TextParsingMode {
     fn into(self) -> TokenizerState<H> {
         match self {
             TextParsingMode::Data => Tokenizer::data_state,

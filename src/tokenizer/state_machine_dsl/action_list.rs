@@ -9,7 +9,9 @@ macro_rules! action_list {
         }
     };
 
-    ( | $self:tt, $input_chunk:ident, $ch:ident |> $action:tt $($args:expr)*; $($rest:tt)* ) => {
+    ( | $self:tt, $input_chunk:ident, $ch:ident |> { $($code_block:tt)* } ) => ( $($code_block)* );
+
+    ( | $self:tt, $input_chunk:ident, $ch:ident |> $action:ident $($args:expr)*; $($rest:tt)* ) => {
         trace!(@actions $action $($args:expr)*);
         action!(| $self, $input_chunk, $ch |> $action $($args)*);
         action_list!(| $self, $input_chunk, $ch |> $($rest)*);

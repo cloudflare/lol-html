@@ -15,7 +15,7 @@ pub use self::lex_unit::LexUnit;
 pub use self::tag_name::TagName;
 pub use self::token::*;
 use self::tree_builder_simulator::*;
-use base::{Chunk, Range};
+use base::{Bytes, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -35,6 +35,11 @@ impl<F: FnMut(&LexUnit)> LexUnitHandler for F {
     }
 }
 
+pub enum ParsingLoopDirective {
+    Break,
+    Continue,
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum TokenizerBailoutReason {
     BufferCapacityExceeded,
@@ -42,14 +47,14 @@ pub enum TokenizerBailoutReason {
     MaxTagNestingReached,
 }
 
-pub type TokenizerState<H> =
-    fn(&mut Tokenizer<H>, &Chunk, Option<u8>) -> Result<(), TokenizerBailoutReason>;
+pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Bytes, Option<&u8>)
+    -> Result<ParsingLoopDirective, TokenizerBailoutReason>;
 
 pub struct Tokenizer<H> {
     pos: usize,
     raw_start: usize,
     token_part_start: usize,
-    finished: bool,
+    last_chunk: bool,
     state_enter: bool,
     allow_cdata: bool,
     lex_unit_handler: H,
@@ -73,7 +78,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
             pos: 0,
             raw_start: 0,
             token_part_start: 0,
-            finished: false,
+            last_chunk: false,
             state_enter: true,
             allow_cdata: false,
             lex_unit_handler,
@@ -92,16 +97,25 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    pub fn tokenize_chunk(&mut self, input_chunk: &Chunk) -> Result<usize, TokenizerBailoutReason> {
-        while !self.finished {
-            let ch = input_chunk.get(self.pos);
+    pub fn tokenize_chunk(
+        &mut self,
+        input_chunk: &Bytes,
+        last_chunk: bool,
+    ) -> Result<usize, TokenizerBailoutReason> {
+        self.last_chunk = last_chunk;
 
-            (self.state)(self, &input_chunk, ch)?;
+        loop {
+            let ch = input_chunk.get(self.pos);
+            let directive = (self.state)(self, &input_chunk, ch)?;
 
             self.pos += 1;
+
+            if let ParsingLoopDirective::Break = directive {
+                break;
+            }
         }
 
-        Ok(self.pos)
+        Ok(self.raw_start)
     }
 
     #[cfg(feature = "testing_api")]

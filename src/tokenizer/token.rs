@@ -1,4 +1,4 @@
-use base::{Bytes, Chunk, Range};
+use base::{Bytes, Range};
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -45,7 +45,7 @@ pub enum TokenView {
 
 #[derive(Debug)]
 pub struct StartTagToken<'c> {
-    input_chunk: &'c Chunk<'c>,
+    input_chunk: &'c Bytes<'c>,
     pub name: Bytes<'c>,
     pub self_closing: bool,
     attributes_view: Rc<RefCell<Vec<AttributeView>>>,
@@ -54,7 +54,7 @@ pub struct StartTagToken<'c> {
 
 impl<'c> StartTagToken<'c> {
     pub fn new(
-        input_chunk: &'c Chunk<'c>,
+        input_chunk: &'c Bytes<'c>,
         name: Bytes<'c>,
         attributes_view: &Rc<RefCell<Vec<AttributeView>>>,
         self_closing: bool,

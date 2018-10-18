@@ -12,15 +12,15 @@ macro_rules! state {
     ) => {
         $($vis)* fn $name(
             &mut self,
-            input_chunk: &Chunk,
-            ch: Option<u8>
-        ) -> Result<(), TokenizerBailoutReason> {
+            input_chunk: &Bytes,
+            ch: Option<&u8>
+        ) -> Result<ParsingLoopDirective, TokenizerBailoutReason> {
             trace!(@chars ch);
             state_body!(|[self, input_chunk, ch]|> [$($arms)*], [$($($enter_actions)*)*]);
 
             // NOTE: this can be unreachable if all state body
             // arms expand into state transitions.
-            #[allow(unreachable_code)] { return Ok(()); }
+            #[allow(unreachable_code)] { return Ok(ParsingLoopDirective::Continue); }
         }
 
         state!($($rest)*);

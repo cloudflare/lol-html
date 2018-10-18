@@ -1,8 +1,9 @@
-use base::Chunk;
+use base::Range;
 use std::ops::Deref;
 use std::{fmt, str};
 
 /// Bytes is a thin wrapper around a byte slice with some handy APIs
+#[repr(transparent)]
 pub struct Bytes<'b>(&'b [u8]);
 
 impl<'b> Bytes<'b> {
@@ -13,17 +14,15 @@ impl<'b> Bytes<'b> {
     pub fn as_string(&self) -> String {
         String::from_utf8(self.to_vec()).unwrap()
     }
+
+    pub fn slice(&self, range: Range) -> Bytes {
+        self[range.start..range.end].into()
+    }
 }
 
 impl<'b> From<&'b [u8]> for Bytes<'b> {
     fn from(bytes: &'b [u8]) -> Self {
         Bytes(bytes)
-    }
-}
-
-impl<'b> From<&'b Chunk<'b>> for Bytes<'b> {
-    fn from(chunk: &'b Chunk<'b>) -> Self {
-        chunk.into()
     }
 }
 

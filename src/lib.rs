@@ -18,3 +18,6 @@ pub mod transform_stream;
 // 3. In-state loops
 // 4. Don't emit character immidiately, extend existing
 // 5. State embedding
+
+// 1. Create chars and store it as a token
+// 2.

@@ -46,8 +46,8 @@ macro_rules! ch_sequence_arm_pattern {
 
     // Character comparison expression
     //--------------------------------------------------------------------
-    ( @cmp_exp $ch:ident, $exp_ch:expr ) => ( $ch == $exp_ch );
-    ( @cmp_exp $ch:ident, $exp_ch:expr, ignore_case ) => ( $ch == $exp_ch || $ch == $exp_ch ^ 0x20 );
+    ( @cmp_exp $ch:ident, $exp_ch:expr ) => ( *$ch == $exp_ch );
+    ( @cmp_exp $ch:ident, $exp_ch:expr, ignore_case ) => ( *$ch == $exp_ch || *$ch == $exp_ch ^ 0x20 );
 
 
     // Match block expansion
@@ -96,7 +96,7 @@ macro_rules! ch_sequence_arm_pattern {
 
             // NOTE: this may be unreachable on expansion, e.g. if
             // we have state transition in the action list.
-            #[allow(unreachable_code)] { return Ok(()); }
+            #[allow(unreachable_code)] { return Ok(ParsingLoopDirective::Continue); }
         }, $($case_mod)*);
     };
 }

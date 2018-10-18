@@ -76,5 +76,7 @@ fn main() {
         tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
     }
 
-    tokenizer.tokenize_chunk(&html.as_bytes().into()).unwrap();
+    tokenizer
+        .tokenize_chunk(&html.as_bytes().into(), true)
+        .unwrap();
 }

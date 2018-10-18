@@ -12,7 +12,6 @@ macro_rules! action {
     //--------------------------------------------------------------------
     (| $self:tt, $input_chunk:ident, $ch:ident | > emit_eof) => {
         action_helper!(@emit_lex_unit |$self|> Some(TokenView::Eof), None, $input_chunk);
-        $self.finished = true;
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > emit_chars) => {
@@ -171,7 +170,7 @@ macro_rules! action {
         if let Some(ch) = $ch {
             action_helper!(@update_tag_part |$self|> name_hash,
                 {
-                    *name_hash = TagName::update_hash(*name_hash, ch);
+                    *name_hash = TagName::update_hash(*name_hash, *ch);
                 }
             );
         }

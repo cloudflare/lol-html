@@ -62,7 +62,7 @@ macro_rules! action_helper {
     ( @switch_state | $self:tt |> $state:expr ) => {
         $self.state = $state;
         $self.state_enter = true;
-        return Ok(());
+        return Ok(ParsingLoopDirective::Continue);
     };
 
     ( @notify_text_parsing_mode_change | $self:tt |> $mode:expr ) => {
