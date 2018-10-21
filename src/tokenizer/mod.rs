@@ -15,7 +15,7 @@ pub use self::lex_unit::LexUnit;
 pub use self::tag_name::TagName;
 pub use self::token::*;
 use self::tree_builder_simulator::*;
-use base::{Bytes, Range};
+use base::{IterableChunk, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -47,14 +47,12 @@ pub enum TokenizerBailoutReason {
     MaxTagNestingReached,
 }
 
-pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Bytes, Option<&u8>)
+pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &mut IterableChunk, Option<u8>)
     -> Result<ParsingLoopDirective, TokenizerBailoutReason>;
 
 pub struct Tokenizer<H> {
-    pos: usize,
     lex_unit_start: usize,
     token_part_start: usize,
-    last_chunk: bool,
     state_enter: bool,
     allow_cdata: bool,
     lex_unit_handler: H,
@@ -67,7 +65,7 @@ pub struct Tokenizer<H> {
     tree_builder_simulator: TreeBuilderSimulator,
 
     #[cfg(feature = "testing_api")]
-    text_parsing_mode_change_handler: Option<Box<TextParsingModeChangeHandler>>,
+    text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
 }
 
 define_state_machine!();
@@ -75,10 +73,8 @@ define_state_machine!();
 impl<H: LexUnitHandler> Tokenizer<H> {
     pub fn new(lex_unit_handler: H) -> Self {
         Tokenizer {
-            pos: 0,
             lex_unit_start: 0,
             token_part_start: 0,
-            last_chunk: false,
             state_enter: true,
             allow_cdata: false,
             lex_unit_handler,
@@ -99,16 +95,11 @@ impl<H: LexUnitHandler> Tokenizer<H> {
 
     pub fn tokenize_chunk(
         &mut self,
-        input_chunk: &Bytes,
-        last_chunk: bool,
+        input_chunk: &mut IterableChunk,
     ) -> Result<usize, TokenizerBailoutReason> {
-        self.last_chunk = last_chunk;
-
         loop {
-            let ch = input_chunk.get(self.pos);
-            let directive = (self.state)(self, &input_chunk, ch)?;
-
-            self.pos += 1;
+            let ch = input_chunk.next();
+            let directive = (self.state)(self, input_chunk, ch)?;
 
             if let ParsingLoopDirective::Break = directive {
                 break;
@@ -131,7 +122,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     #[cfg(feature = "testing_api")]
     pub fn set_text_parsing_mode_change_handler(
         &mut self,
-        handler: Box<TextParsingModeChangeHandler>,
+        handler: Box<dyn TextParsingModeChangeHandler>,
     ) {
         self.text_parsing_mode_change_handler = Some(handler);
     }

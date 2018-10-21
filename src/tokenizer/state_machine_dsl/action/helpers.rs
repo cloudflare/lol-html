@@ -1,10 +1,10 @@
 macro_rules! action_helper {
     ( @emit_lex_unit_with_raw_inclusive | $self:tt, $input_chunk:ident |> $token:expr ) => {
-        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, $self.pos + 1 )
+        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, $input_chunk.get_pos() + 1 )
     };
 
     ( @emit_lex_unit_with_raw_exclusive | $self:tt, $input_chunk:ident |> $token:expr ) => {
-        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, $self.pos )
+        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, $input_chunk.get_pos() )
     };
 
     ( @emit_lex_unit_with_raw | $self:tt, $input_chunk:ident |> $token:expr, $end:expr ) => ({
@@ -32,24 +32,24 @@ macro_rules! action_helper {
         lex_unit
     });
 
-    ( @set_token_part_range | $self:tt |> $part:ident ) => {
+    ( @set_token_part_range | $self:tt, $input_chunk:ident |> $part:ident ) => {
         $part.start = $self.token_part_start;
-        $part.end = $self.pos;
+        $part.end = $input_chunk.get_pos();
     };
 
-    ( @set_opt_token_part_range | $self:tt |> $part:ident ) => {
+    ( @set_opt_token_part_range | $self:tt, $input_chunk:ident |> $part:ident ) => {
         *$part = Some({
             let mut $part = Range::default();
 
-            action_helper!(@set_token_part_range |$self|> $part);
+            action_helper!(@set_token_part_range |$self, $input_chunk|> $part);
 
             $part
         });
     };
 
-    ( @finish_attr_part | $self:tt |> $part:ident ) => {
+    ( @finish_attr_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
         if let Some(AttributeView { ref mut $part, .. }) = $self.current_attr {
-            action_helper!(@set_token_part_range |$self|> $part);
+            action_helper!(@set_token_part_range |$self, $input_chunk|> $part);
         }
     };
 

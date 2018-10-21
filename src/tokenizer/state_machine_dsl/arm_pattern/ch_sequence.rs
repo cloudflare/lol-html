@@ -46,8 +46,8 @@ macro_rules! ch_sequence_arm_pattern {
 
     // Character comparison expression
     //--------------------------------------------------------------------
-    ( @cmp_exp $ch:ident, $exp_ch:expr ) => ( *$ch == $exp_ch );
-    ( @cmp_exp $ch:ident, $exp_ch:expr, ignore_case ) => ( *$ch == $exp_ch || *$ch == $exp_ch ^ 0x20 );
+    ( @cmp_exp $ch:ident, $exp_ch:expr ) => ( $ch == $exp_ch );
+    ( @cmp_exp $ch:ident, $exp_ch:expr, ignore_case ) => ( $ch == $exp_ch || $ch == $exp_ch ^ 0x20 );
 
 
     // Match block expansion
@@ -79,7 +79,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input_chunk:ident, $ch:ident] |>
         $depth:expr, [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {
-        ch_sequence_arm_pattern!(@match_block $input_chunk.get($self.pos + $depth), $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block $input_chunk.lookahead($depth), $exp_ch, {
             ch_sequence_arm_pattern!(
                 @iter |[$self, $input_chunk, $ch]|> $depth + 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
@@ -90,8 +90,8 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input_chunk:ident, $ch:ident] |>
         $depth:expr, [$exp_ch:expr], ( $($actions:tt)* ), $($case_mod:ident)*
     ) => {
-        ch_sequence_arm_pattern!(@match_block $input_chunk.get($self.pos + $depth), $exp_ch, {
-            $self.pos += $depth;
+        ch_sequence_arm_pattern!(@match_block $input_chunk.lookahead($depth), $exp_ch, {
+            $input_chunk.advance($depth);
             action_list!(|$self, $input_chunk, $ch|> $($actions)*);
 
             // NOTE: this may be unreachable on expansion, e.g. if

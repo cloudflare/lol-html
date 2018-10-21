@@ -1,4 +1,3 @@
-use base::Range;
 use std::ops::Deref;
 use std::{fmt, str};
 
@@ -13,10 +12,6 @@ impl<'b> Bytes<'b> {
 
     pub fn as_string(&self) -> String {
         String::from_utf8(self.to_vec()).unwrap()
-    }
-
-    pub fn slice(&self, range: Range) -> Bytes {
-        self[range.start..range.end].into()
     }
 }
 

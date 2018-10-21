@@ -20,7 +20,7 @@ macro_rules! arm_pattern {
         closing_quote => $actions:tt
     ) => {
         state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
-            Some(ch) if *ch == $self.closing_quote => $actions
+            Some(ch) if ch == $self.closing_quote => $actions
         );
     };
 
@@ -28,7 +28,7 @@ macro_rules! arm_pattern {
         eoc => ( $($actions:tt)* )
     ) => {
         state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
-            None if !$self.last_chunk  => ({
+            None if !$input_chunk.is_last() => ({
                 action_list!(|$self, $input_chunk, $ch|> $($actions)* );
 
                 return Ok(ParsingLoopDirective::Break);
@@ -45,7 +45,7 @@ macro_rules! arm_pattern {
     ) => {
         state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
             None => ({
-                if $self.last_chunk {
+                if $input_chunk.is_last() {
                     action_list!(|$self, $input_chunk, $ch|> $($actions)* );
                 }
 

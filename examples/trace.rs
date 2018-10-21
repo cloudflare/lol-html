@@ -1,6 +1,7 @@
 extern crate cool_thing;
 extern crate getopts;
 
+use cool_thing::base::*;
 use cool_thing::tokenizer::*;
 use getopts::{Matches, Options};
 use std::env::args;
@@ -77,6 +78,6 @@ fn main() {
     }
 
     tokenizer
-        .tokenize_chunk(&html.as_bytes().into(), true)
+        .tokenize_chunk(&mut IterableChunk::new(html.as_bytes(), true))
         .unwrap();
 }

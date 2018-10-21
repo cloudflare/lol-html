@@ -2,6 +2,7 @@ use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
+use cool_thing::base::IterableChunk;
 use cool_thing::tokenizer::{
     LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView, Tokenizer, TokenizerBailoutReason,
 };
@@ -69,7 +70,7 @@ impl ParsingResult {
         tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 
         for chunk in input.get_chunks() {
-            tokenizer.tokenize_chunk(&chunk.into(), true)?;
+            tokenizer.tokenize_chunk(&mut IterableChunk::new(chunk, true))?;
         }
 
         Ok(())

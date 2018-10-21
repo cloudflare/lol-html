@@ -22,11 +22,11 @@ impl<'a> Decoder<'a> {
         self.next_if(|c| c == expected).is_some()
     }
 
-    fn next_if<F: Fn(char) -> bool>(&mut self, f: F) -> Option<char> {
+    fn next_if(&mut self, f: impl Fn(char) -> bool) -> Option<char> {
         self.next_opt(|c| if f(c) { Some(c) } else { None })
     }
 
-    fn next_opt<T, F: Fn(char) -> Option<T>>(&mut self, f: F) -> Option<T> {
+    fn next_opt<T>(&mut self, f: impl Fn(char) -> Option<T>) -> Option<T> {
         let opt = self.chars.peek().cloned().and_then(f);
         if opt.is_some() {
             self.chars.next();

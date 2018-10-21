@@ -15,7 +15,7 @@ macro_rules! action {
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > emit_chars) => {
-        if $self.pos > $self.lex_unit_start {
+        if $input_chunk.get_pos() > $self.lex_unit_start {
             // NOTE: unlike any other tokens, character tokens don't have
             // any lexical symbols that determine their bounds. Therefore,
             // representation of character token content is the raw slice.
@@ -66,7 +66,7 @@ macro_rules! action {
     // Slices
     //--------------------------------------------------------------------
     (| $self:tt, $input_chunk:ident, $ch:ident | > start_token_part) => {
-        $self.token_part_start = $self.pos;
+        $self.token_part_start = $input_chunk.get_pos();
     };
 
     // Token creation
@@ -106,7 +106,7 @@ macro_rules! action {
     //--------------------------------------------------------------------
     (| $self:tt, $input_chunk:ident, $ch:ident | > mark_comment_text_end) => {
         if let Some(TokenView::Comment(ref mut text)) = $self.current_token {
-            action_helper!(@set_token_part_range |$self|> text);
+            action_helper!(@set_token_part_range |$self, $input_chunk|> text);
         }
     };
 
@@ -130,7 +130,7 @@ macro_rules! action {
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > finish_doctype_name) => {
         if let Some(TokenView::Doctype { ref mut name, .. }) = $self.current_token {
-            action_helper!(@set_opt_token_part_range |$self|> name);
+            action_helper!(@set_opt_token_part_range |$self, $input_chunk|> name);
         }
     };
 
@@ -139,7 +139,7 @@ macro_rules! action {
             ref mut public_id, ..
         }) = $self.current_token
         {
-            action_helper!(@set_opt_token_part_range |$self|> public_id);
+            action_helper!(@set_opt_token_part_range |$self, $input_chunk|> public_id);
         }
     };
 
@@ -148,7 +148,7 @@ macro_rules! action {
             ref mut system_id, ..
         }) = $self.current_token
         {
-            action_helper!(@set_opt_token_part_range |$self|> system_id);
+            action_helper!(@set_opt_token_part_range |$self, $input_chunk|> system_id);
         }
     };
 
@@ -157,7 +157,7 @@ macro_rules! action {
     (| $self:tt, $input_chunk:ident, $ch:ident | > finish_tag_name) => {
         action_helper!(@update_tag_part |$self|> name,
             {
-                action_helper!(@set_token_part_range |$self|> name);
+                action_helper!(@set_token_part_range |$self, $input_chunk|> name);
             }
         );
     };
@@ -166,7 +166,7 @@ macro_rules! action {
         if let Some(ch) = $ch {
             action_helper!(@update_tag_part |$self|> name_hash,
                 {
-                    *name_hash = TagName::update_hash(*name_hash, *ch);
+                    *name_hash = TagName::update_hash(*name_hash, ch);
                 }
             );
         }
@@ -193,11 +193,11 @@ macro_rules! action {
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > finish_attr_name) => {
-        action_helper!(@finish_attr_part |$self|> name);
+        action_helper!(@finish_attr_part |$self, $input_chunk|> name);
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > finish_attr_value) => {
-        action_helper!(@finish_attr_part |$self|> value);
+        action_helper!(@finish_attr_part |$self, $input_chunk|> value);
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > finish_attr) => {
