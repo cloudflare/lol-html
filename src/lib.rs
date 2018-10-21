@@ -19,5 +19,4 @@ pub mod transform_stream;
 // 4. Don't emit character immidiately, extend existing
 // 5. State embedding
 
-// 1. Create chars and store it as a token
-// 2.
+// 1. Revive Chunk. Move last, pos, consume, lookahead, consume_few

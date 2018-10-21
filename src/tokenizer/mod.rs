@@ -52,7 +52,7 @@ pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Bytes, Option<&u8>)
 
 pub struct Tokenizer<H> {
     pos: usize,
-    raw_start: usize,
+    lex_unit_start: usize,
     token_part_start: usize,
     last_chunk: bool,
     state_enter: bool,
@@ -76,7 +76,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     pub fn new(lex_unit_handler: H) -> Self {
         Tokenizer {
             pos: 0,
-            raw_start: 0,
+            lex_unit_start: 0,
             token_part_start: 0,
             last_chunk: false,
             state_enter: true,
@@ -115,7 +115,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
             }
         }
 
-        Ok(self.raw_start)
+        Ok(self.lex_unit_start)
     }
 
     #[cfg(feature = "testing_api")]

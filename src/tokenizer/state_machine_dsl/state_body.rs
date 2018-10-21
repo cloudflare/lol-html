@@ -38,6 +38,9 @@ macro_rules! state_body {
         | [ $self:tt, $input_chunk:ident, $ch:ident ] |>
         $( $pat:pat $(|$pat_cont:pat)* $(if $pat_expr:expr)* => ( $($actions:tt)* ) )*
     ) => {
+        // NOTE: guard against unreachable patterns
+        // (e.g. such may occure if `eof => ...` arm comes before `eoc => ...` arm.)
+        #[deny(unreachable_patterns)]
         match $ch {
             $(
                 $pat $(| $pat_cont)* $(if $pat_expr)* => {

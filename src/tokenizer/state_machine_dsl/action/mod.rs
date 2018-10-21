@@ -15,7 +15,7 @@ macro_rules! action {
     };
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > emit_chars) => {
-        if $self.pos > $self.raw_start {
+        if $self.pos > $self.lex_unit_start {
             // NOTE: unlike any other tokens, character tokens don't have
             // any lexical symbols that determine their bounds. Therefore,
             // representation of character token content is the raw slice.
@@ -65,10 +65,6 @@ macro_rules! action {
 
     // Slices
     //--------------------------------------------------------------------
-    (| $self:tt, $input_chunk:ident, $ch:ident | > start_raw) => {
-        $self.raw_start = $self.pos;
-    };
-
     (| $self:tt, $input_chunk:ident, $ch:ident | > start_token_part) => {
         $self.token_part_start = $self.pos;
     };

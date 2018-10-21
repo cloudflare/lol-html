@@ -11,9 +11,11 @@ macro_rules! action_helper {
         trace!(@raw $self, $input_chunk, $end);
 
         let raw_range = Some(Range {
-            start: $self.raw_start,
+            start: $self.lex_unit_start,
             end: $end,
         });
+
+        $self.lex_unit_start = $end;
 
         action_helper!(@emit_lex_unit |$self|>
             $token,

@@ -10,7 +10,7 @@ define_state_group!(script_data_double_escaped_states_group = {
 
     script_data_double_escaped_state {
         [ "--" ] => ( --> script_data_double_escaped_dash_dash_state )
-        b'<'     => ( emit_chars; start_raw; --> script_data_double_escaped_less_than_sign_state )
+        b'<'     => ( emit_chars; --> script_data_double_escaped_less_than_sign_state )
         eof      => ( emit_chars; emit_eof; )
         _        => ()
     }

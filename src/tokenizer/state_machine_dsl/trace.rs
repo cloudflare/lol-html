@@ -22,11 +22,11 @@ macro_rules! trace {
             let mut start = String::new();
             let mut end = String::new();
 
-            write!(start, "|{}|", $self.raw_start).unwrap();
+            write!(start, "|{}|", $self.lex_unit_start).unwrap();
             write!(end, "|{}|", $end_pos).unwrap();
 
             chunk.insert_str($end_pos, &end);
-            chunk.insert_str($self.raw_start, &start);
+            chunk.insert_str($self.lex_unit_start, &start);
 
             println!("--Token raw slice--");
             println!("{}", chunk);

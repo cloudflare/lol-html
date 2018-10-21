@@ -1,7 +1,8 @@
 define_state_group!(cdata_section_states_group = {
 
-    pub cdata_section_state <-- ( start_raw; notify_text_parsing_mode_change TextParsingMode::CDataSection; ) {
-        b']' => ( emit_chars; start_raw; --> cdata_section_bracket_state )
+    pub cdata_section_state <-- ( notify_text_parsing_mode_change TextParsingMode::CDataSection; ) {
+        b']' => ( emit_chars; --> cdata_section_bracket_state )
+        eoc  => ( emit_chars; )
         eof  => ( emit_chars; emit_eof; )
         _    => ()
     }
