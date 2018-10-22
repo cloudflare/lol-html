@@ -25,14 +25,9 @@ impl<'c> LexUnit<'c> {
         }
     }
 
-    #[inline]
-    fn get_opt_input_slice(&self, range: Option<Range>) -> Option<Bytes<'c>> {
-        range.map(|range| self.input_chunk.slice(range))
-    }
-
     pub fn get_raw(&self) -> Option<&Bytes<'c>> {
         self.raw
-            .borrow_with(|| self.get_opt_input_slice(self.raw_range))
+            .borrow_with(|| self.input_chunk.maybe_slice(self.raw_range))
             .as_ref()
     }
 
@@ -74,9 +69,9 @@ impl<'c> LexUnit<'c> {
                         system_id,
                         force_quirks,
                     } => Token::Doctype {
-                        name: self.get_opt_input_slice(name),
-                        public_id: self.get_opt_input_slice(public_id),
-                        system_id: self.get_opt_input_slice(system_id),
+                        name: self.input_chunk.maybe_slice(name),
+                        public_id: self.input_chunk.maybe_slice(public_id),
+                        system_id: self.input_chunk.maybe_slice(system_id),
                         force_quirks,
                     },
 
