@@ -45,6 +45,7 @@ impl<'c> LexUnit<'c> {
                                 .expect("Character token should always have raw representation"),
                         ),
                     ),
+
                     &TokenView::Comment(text) => Token::Comment(self.input_chunk.slice(text)),
 
                     &TokenView::StartTag {

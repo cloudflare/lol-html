@@ -78,6 +78,6 @@ fn main() {
     }
 
     tokenizer
-        .tokenize_chunk(&mut IterableChunk::new(html.as_bytes(), true))
+        .tokenize_chunk(&mut IterableChunk::new(html.as_bytes(), true, 0))
         .unwrap();
 }

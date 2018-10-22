@@ -5,16 +5,23 @@ use std::ops::Deref;
 pub struct IterableChunk<'b> {
     bytes: Bytes<'b>,
     next_pos: usize,
+    offset_from_prev_chunk_start: usize,
     last: bool,
 }
 
 impl<'b> IterableChunk<'b> {
-    pub fn new(bytes: &'b [u8], last: bool) -> Self {
+    pub fn new(bytes: &'b [u8], last: bool, offset_from_prev_chunk_start: usize) -> Self {
         IterableChunk {
             bytes: bytes.into(),
             next_pos: 0,
+            offset_from_prev_chunk_start,
             last,
         }
+    }
+
+    #[inline]
+    pub fn get_offset_from_prev_chunk_start(&self) -> usize {
+        self.offset_from_prev_chunk_start
     }
 
     #[inline]

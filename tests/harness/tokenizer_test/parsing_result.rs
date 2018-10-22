@@ -70,7 +70,7 @@ impl ParsingResult {
         tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
 
         for chunk in input.get_chunks() {
-            tokenizer.tokenize_chunk(&mut IterableChunk::new(chunk, true))?;
+            tokenizer.tokenize_chunk(&mut IterableChunk::new(chunk, true, 0))?;
         }
 
         Ok(())

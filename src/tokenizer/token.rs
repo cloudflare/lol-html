@@ -1,4 +1,4 @@
-use base::{Bytes, IterableChunk, Range};
+use base::{Alignable, Bytes, IterableChunk, Range};
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -9,10 +9,11 @@ pub struct AttributeView {
     pub value: Range,
 }
 
-#[derive(Debug)]
-pub struct Attribute<'c> {
-    pub name: Bytes<'c>,
-    pub value: Bytes<'c>,
+impl Alignable for AttributeView {
+    fn align(&mut self, offset: usize) {
+        self.name.align(offset);
+        self.value.align(offset);
+    }
 }
 
 #[derive(Debug)]
@@ -41,6 +42,38 @@ pub enum TokenView {
     },
 
     Eof,
+}
+
+impl Alignable for TokenView {
+    fn align(&mut self, offset: usize) {
+        match self {
+            TokenView::Comment(text) => text.align(offset),
+            TokenView::StartTag {
+                name, attributes, ..
+            } => {
+                name.align(offset);
+                attributes.borrow_mut().align(offset);
+            }
+            TokenView::EndTag { name, .. } => name.align(offset),
+            TokenView::Doctype {
+                name,
+                public_id,
+                system_id,
+                ..
+            } => {
+                name.align(offset);
+                public_id.align(offset);
+                system_id.align(offset);
+            }
+            _ => (),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Attribute<'c> {
+    pub name: Bytes<'c>,
+    pub value: Bytes<'c>,
 }
 
 #[derive(Debug)]

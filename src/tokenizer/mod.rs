@@ -15,7 +15,7 @@ pub use self::lex_unit::LexUnit;
 pub use self::tag_name::TagName;
 pub use self::token::*;
 use self::tree_builder_simulator::*;
-use base::{IterableChunk, Range};
+use base::{Alignable, IterableChunk, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -97,6 +97,8 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         &mut self,
         input_chunk: &mut IterableChunk,
     ) -> Result<usize, TokenizerBailoutReason> {
+        self.align(input_chunk.get_offset_from_prev_chunk_start());
+
         loop {
             let ch = input_chunk.next();
             let directive = (self.state)(self, input_chunk, ch)?;
@@ -125,5 +127,15 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         handler: Box<dyn TextParsingModeChangeHandler>,
     ) {
         self.text_parsing_mode_change_handler = Some(handler);
+    }
+}
+
+impl<H> Alignable for Tokenizer<H> {
+    #[inline]
+    fn align(&mut self, offset: usize) {
+        self.lex_unit_start.align(offset);
+        self.token_part_start.align(offset);
+        self.current_token.align(offset);
+        self.current_attr.align(offset);
     }
 }
