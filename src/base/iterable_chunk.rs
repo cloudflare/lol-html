@@ -30,7 +30,7 @@ impl<'b> IterableChunk<'b> {
     }
 
     #[inline]
-    pub fn maybe_slice(&self, range: Option<Range>) -> Option<Bytes> {
+    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes> {
         range.map(|range| self.slice(range))
     }
 

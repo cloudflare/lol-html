@@ -36,18 +36,24 @@ define_state_group!(script_data_escaped_states_group = {
 
     script_data_escaped_end_tag_name_state {
         whitespace => (
-            if appropriate_end_tag ( finish_tag_name; --> before_attribute_name_state )
-            else ( emit_chars; reconsume in script_data_escaped_state )
+            if appropriate_end_tag
+                ( finish_tag_name; --> before_attribute_name_state )
+            else
+                ( emit_chars; reconsume in script_data_escaped_state )
         )
 
         b'/' => (
-            if appropriate_end_tag ( finish_tag_name; --> self_closing_start_tag_state )
-            else ( emit_chars; reconsume in script_data_escaped_state )
+            if appropriate_end_tag
+                ( finish_tag_name; --> self_closing_start_tag_state )
+            else
+                ( emit_chars; reconsume in script_data_escaped_state )
         )
 
         b'>' => (
-            if appropriate_end_tag ( finish_tag_name; emit_current_token; --> data_state )
-            else ( emit_chars; reconsume in script_data_escaped_state )
+            if appropriate_end_tag
+                ( finish_tag_name; emit_current_token; --> data_state )
+            else
+                ( emit_chars; reconsume in script_data_escaped_state )
         )
 
         alpha => ( update_tag_name_hash; )

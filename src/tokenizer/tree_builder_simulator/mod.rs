@@ -14,7 +14,7 @@ mod text_parsing_mode;
 
 use self::text_parsing_ambiguity::TextParsingAmbiguityTracker;
 pub use self::text_parsing_mode::*;
-use tokenizer::{Attribute, TagName, Token, TokenizerBailoutReason};
+use tokenizer::{Attribute, StartTagToken, TagName, Token, TokenizerBailoutReason};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
@@ -245,7 +245,7 @@ impl TreeBuilderSimulator {
 
     pub fn fulfill_end_tag_token_request(&mut self, token: &Token) -> TreeBuilderFeedback {
         match token {
-            Token::EndTag { ref name, .. } => {
+            Token::EndTag { name, .. } => {
                 // NOTE: we request end tag token only when we
                 // need attribute for `<annotation-xml>` tag in HTML
                 // integration point in MathMl.
@@ -261,41 +261,34 @@ impl TreeBuilderSimulator {
 
     pub fn fulfill_start_tag_token_request(
         &mut self,
-        token: &Token,
+        token: &StartTagToken,
         request_reason: StartTagTokenRequestReason,
     ) -> TreeBuilderFeedback {
-        match token {
-            Token::StartTag(tag) => match request_reason {
-                StartTagTokenRequestReason::ForeignContentExitCheck => {
-                    // NOTE: for foreign content exit we request token only if
-                    // we saw <font> tag and we need to check its attributes.
-                    for Attribute { ref name, .. } in tag.get_attributes() {
-                        if eq_case_ins(name, b"color")
-                            || eq_case_ins(name, b"size")
-                            || eq_case_ins(name, b"face")
+        match request_reason {
+            StartTagTokenRequestReason::ForeignContentExitCheck => {
+                // NOTE: for foreign content exit we request token only if
+                // we saw <font> tag and we need to check its attributes.
+                for Attribute { name, .. } in token.get_attributes() {
+                    if eq_case_ins(name, b"color")
+                        || eq_case_ins(name, b"size")
+                        || eq_case_ins(name, b"face")
+                    {
+                        return self.leave_ns();
+                    }
+                }
+            }
+            StartTagTokenRequestReason::IntegrationPointCheck => {
+                if !token.self_closing && eq_case_ins(&token.name, b"annotation-xml") {
+                    for Attribute { name, value } in token.get_attributes() {
+                        if eq_case_ins(name, b"encoding")
+                            && (eq_case_ins(value, b"text/html")
+                                || eq_case_ins(value, b"application/xhtml+xml"))
                         {
-                            return self.leave_ns();
+                            return self.enter_ns(Namespace::Html);
                         }
                     }
                 }
-                StartTagTokenRequestReason::IntegrationPointCheck => {
-                    if !tag.self_closing && eq_case_ins(&tag.name, b"annotation-xml") {
-                        for Attribute {
-                            ref name,
-                            ref value,
-                        } in tag.get_attributes()
-                        {
-                            if eq_case_ins(name, b"encoding")
-                                && (eq_case_ins(value, b"text/html")
-                                    || eq_case_ins(value, b"application/xhtml+xml"))
-                            {
-                                return self.enter_ns(Namespace::Html);
-                            }
-                        }
-                    }
-                }
-            },
-            _ => unreachable!("Token should be a start tag at this point"),
+            }
         }
 
         TreeBuilderFeedback::None

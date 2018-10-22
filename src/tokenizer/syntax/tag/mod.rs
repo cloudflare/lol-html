@@ -24,8 +24,10 @@ define_state_group!(tag_states_group = {
         [ "DOCTYPE"; ignore_case ] => ( --> doctype_state )
 
         [ "[CDATA[" ] => (
-            if cdata_allowed ( emit_raw_without_token; --> cdata_section_state )
-            else ( create_comment; --> bogus_comment_state )
+            if cdata_allowed
+                ( emit_raw_without_token; --> cdata_section_state )
+            else
+                ( create_comment; --> bogus_comment_state )
         )
 
         eof => ( create_comment; reconsume in bogus_comment_state )

@@ -1,6 +1,9 @@
 macro_rules! action_list {
     ( | $self:tt, $input_chunk:ident, $ch:ident |>
-        if $cond:ident ( $($if_actions:tt)* ) else ( $($else_actions:tt)* )
+        if $cond:ident
+            ( $($if_actions:tt)* )
+        else
+            ( $($else_actions:tt)* )
     ) => {
         if condition!(|$self|> $cond) {
             action_list!(| $self, $input_chunk, $ch |> $($if_actions)*);
