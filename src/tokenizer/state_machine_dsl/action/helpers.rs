@@ -32,16 +32,19 @@ macro_rules! action_helper {
         lex_unit
     });
 
-    ( @set_token_part_range | $self:tt, $input_chunk:ident |> $part:ident ) => {
-        $part.start = $self.token_part_start;
+    ( @finish_token_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
+        $part.start = $self.token_part_start
+            .take()
+            .expect("Token part start should be initialized at this point");
+
         $part.end = $input_chunk.get_pos();
     };
 
-    ( @set_opt_token_part_range | $self:tt, $input_chunk:ident |> $part:ident ) => {
+    ( @finish_opt_token_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
         *$part = Some({
             let mut $part = Range::default();
 
-            action_helper!(@set_token_part_range |$self, $input_chunk|> $part);
+            action_helper!(@finish_token_part |$self, $input_chunk|> $part);
 
             $part
         });
@@ -49,7 +52,7 @@ macro_rules! action_helper {
 
     ( @finish_attr_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
         if let Some(AttributeView { ref mut $part, .. }) = $self.current_attr {
-            action_helper!(@set_token_part_range |$self, $input_chunk|> $part);
+            action_helper!(@finish_token_part |$self, $input_chunk|> $part);
         }
     };
 

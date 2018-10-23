@@ -3,25 +3,18 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct IterableChunk<'b> {
-    bytes: Bytes<'b>,
+    data: Bytes<'b>,
     next_pos: usize,
-    offset_from_prev_chunk_start: usize,
     last: bool,
 }
 
 impl<'b> IterableChunk<'b> {
-    pub fn new(bytes: &'b [u8], last: bool, offset_from_prev_chunk_start: usize) -> Self {
+    pub fn new(data: &'b [u8], last: bool) -> Self {
         IterableChunk {
-            bytes: bytes.into(),
+            data: data.into(),
             next_pos: 0,
-            offset_from_prev_chunk_start,
             last,
         }
-    }
-
-    #[inline]
-    pub fn get_offset_from_prev_chunk_start(&self) -> usize {
-        self.offset_from_prev_chunk_start
     }
 
     #[inline]
@@ -89,6 +82,6 @@ impl<'b> Deref for IterableChunk<'b> {
 
     #[inline]
     fn deref(&self) -> &Bytes<'b> {
-        &self.bytes
+        &self.data
     }
 }

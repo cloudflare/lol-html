@@ -2,11 +2,9 @@ use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
-use cool_thing::base::IterableChunk;
-use cool_thing::errors::TransformBailoutReason;
-use cool_thing::tokenizer::{
-    LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView, Tokenizer,
-};
+use cool_thing::errors::Error;
+use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView};
+use cool_thing::transform_stream::TransformStream;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -54,7 +52,7 @@ impl ParsingResult {
         &mut self,
         input: &ChunkedInput,
         initial_mode_snapshot: TextParsingModeSnapshot,
-    ) -> Result<(), TransformBailoutReason> {
+    ) -> Result<(), Error> {
         let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot {
             mode: TextParsingMode::Data,
             last_start_tag_name_hash: None,
@@ -63,16 +61,23 @@ impl ParsingResult {
         let mode_snapshot_rc = Rc::clone(&mode_snapshot);
         let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc.set(s));
 
-        let mut tokenizer =
-            Tokenizer::new(|lex_unit: &LexUnit| self.add_lex_unit(lex_unit, mode_snapshot.get()));
+        let mut transform_stream = TransformStream::new(2048, |lex_unit: &LexUnit| {
+            self.add_lex_unit(lex_unit, mode_snapshot.get())
+        });
 
-        tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
-        tokenizer.set_state(initial_mode_snapshot.mode.into());
-        tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+        {
+            let tokenizer = transform_stream.get_tokenizer();
+
+            tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
+            tokenizer.set_state(initial_mode_snapshot.mode.into());
+            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+        }
 
         for chunk in input.get_chunks() {
-            tokenizer.tokenize_chunk(&mut IterableChunk::new(chunk, true, 0))?;
+            transform_stream.write(chunk)?;
         }
+
+        transform_stream.end()?;
 
         Ok(())
     }
@@ -118,7 +123,7 @@ impl ParsingResult {
         }
     }
 
-    fn add_bailout(&mut self, reason: TransformBailoutReason) {
+    fn add_bailout(&mut self, reason: Error) {
         self.bailout = Some(Bailout {
             reason: format!("{:?}", reason),
             parsed_chunk: self.get_cumulative_raw_string(),

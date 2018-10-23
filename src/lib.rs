@@ -1,4 +1,5 @@
 extern crate lazycell;
+extern crate safemem;
 
 pub mod base;
 pub mod errors;
@@ -8,6 +9,7 @@ pub mod transform_stream;
 // TODO
 // -- Functionality
 // 2. Streaming
+// TODO!!! Fix StartTagToken display
 // 3. Eager tokenizer
 // 4. Tokenizer driver
 // 5. Adjustable limits

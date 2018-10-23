@@ -20,6 +20,7 @@ name = "main"
 
 [dependencies]
 lazycell = "1.2"
+safemem = "0.3.0"
 
 [dev-dependencies]
 getopts = "0.2.15"

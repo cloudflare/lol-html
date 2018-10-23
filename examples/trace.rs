@@ -1,8 +1,8 @@
 extern crate cool_thing;
 extern crate getopts;
 
-use cool_thing::base::*;
 use cool_thing::tokenizer::*;
+use cool_thing::transform_stream::TransformStream;
 use getopts::{Matches, Options};
 use std::env::args;
 
@@ -50,7 +50,7 @@ fn main() {
 
     let html = matches.free.first().unwrap();
 
-    let mut tokenizer = Tokenizer::new(|lex_unit: &LexUnit| {
+    let mut transform_stream = TransformStream::new(2048, |lex_unit: &LexUnit| {
         println!("------------------");
 
         if let Some(token) = lex_unit.get_token() {
@@ -68,16 +68,19 @@ fn main() {
         println!();
     });
 
-    tokenizer.set_state(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
-        None => Tokenizer::data_state,
-        Some(state) => TextParsingMode::from(state).into(),
-    });
+    {
+        let tokenizer = transform_stream.get_tokenizer();
 
-    if let Some(ref tag_name) = matches.opt_str("t") {
-        tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
+        tokenizer.set_state(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
+            None => Tokenizer::data_state,
+            Some(state) => TextParsingMode::from(state).into(),
+        });
+
+        if let Some(ref tag_name) = matches.opt_str("t") {
+            tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
+        }
     }
 
-    tokenizer
-        .tokenize_chunk(&mut IterableChunk::new(html.as_bytes(), true, 0))
-        .unwrap();
+    transform_stream.write(html.as_bytes()).unwrap();
+    transform_stream.end().unwrap();
 }

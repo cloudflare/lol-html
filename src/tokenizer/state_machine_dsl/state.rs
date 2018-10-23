@@ -14,7 +14,7 @@ macro_rules! state {
             &mut self,
             input_chunk: &mut IterableChunk,
             ch: Option<u8>
-        ) -> Result<ParsingLoopDirective, TransformBailoutReason> {
+        ) -> Result<ParsingLoopDirective, Error> {
             trace!(@chars ch);
             state_body!(|[self, input_chunk, ch]|> [$($arms)*], [$($($enter_actions)*)*]);
 

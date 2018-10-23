@@ -1,8 +1,8 @@
-pub trait Alignable {
+pub trait Align {
     fn align(&mut self, offset: usize);
 }
 
-impl<T: Alignable> Alignable for Vec<T> {
+impl<T: Align> Align for Vec<T> {
     #[inline]
     fn align(&mut self, offset: usize) {
         for item in self.iter_mut() {
@@ -11,7 +11,7 @@ impl<T: Alignable> Alignable for Vec<T> {
     }
 }
 
-impl<T: Alignable> Alignable for Option<T> {
+impl<T: Align> Align for Option<T> {
     #[inline]
     fn align(&mut self, offset: usize) {
         if let Some(val) = self {
@@ -20,7 +20,7 @@ impl<T: Alignable> Alignable for Option<T> {
     }
 }
 
-impl Alignable for usize {
+impl Align for usize {
     #[inline]
     fn align(&mut self, offset: usize) {
         *self -= offset;

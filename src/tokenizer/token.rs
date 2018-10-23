@@ -1,4 +1,4 @@
-use base::{Alignable, Bytes, IterableChunk, Range};
+use base::{Align, Bytes, IterableChunk, Range};
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -9,7 +9,7 @@ pub struct AttributeView {
     pub value: Range,
 }
 
-impl Alignable for AttributeView {
+impl Align for AttributeView {
     fn align(&mut self, offset: usize) {
         self.name.align(offset);
         self.value.align(offset);
@@ -44,7 +44,7 @@ pub enum TokenView {
     Eof,
 }
 
-impl Alignable for TokenView {
+impl Align for TokenView {
     fn align(&mut self, offset: usize) {
         match self {
             TokenView::Comment(text) => text.align(offset),

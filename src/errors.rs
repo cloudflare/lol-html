@@ -1,5 +1,5 @@
 #[derive(Debug, Copy, Clone)]
-pub enum TransformBailoutReason {
+pub enum Error {
     BufferCapacityExceeded,
     TextParsingAmbiguity,
     MaxTagNestingReached,

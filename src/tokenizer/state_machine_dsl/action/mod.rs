@@ -66,7 +66,7 @@ macro_rules! action {
     // Slices
     //--------------------------------------------------------------------
     (| $self:tt, $input_chunk:ident, $ch:ident | > start_token_part) => {
-        $self.token_part_start = $input_chunk.get_pos();
+        $self.token_part_start = Some($input_chunk.get_pos());
     };
 
     // Token creation
@@ -106,7 +106,7 @@ macro_rules! action {
     //--------------------------------------------------------------------
     (| $self:tt, $input_chunk:ident, $ch:ident | > mark_comment_text_end) => {
         if let Some(TokenView::Comment(ref mut text)) = $self.current_token {
-            action_helper!(@set_token_part_range |$self, $input_chunk|> text);
+            action_helper!(@finish_token_part |$self, $input_chunk|> text);
         }
     };
 
@@ -130,7 +130,7 @@ macro_rules! action {
 
     (| $self:tt, $input_chunk:ident, $ch:ident | > finish_doctype_name) => {
         if let Some(TokenView::Doctype { ref mut name, .. }) = $self.current_token {
-            action_helper!(@set_opt_token_part_range |$self, $input_chunk|> name);
+            action_helper!(@finish_opt_token_part |$self, $input_chunk|> name);
         }
     };
 
@@ -139,7 +139,7 @@ macro_rules! action {
             ref mut public_id, ..
         }) = $self.current_token
         {
-            action_helper!(@set_opt_token_part_range |$self, $input_chunk|> public_id);
+            action_helper!(@finish_opt_token_part |$self, $input_chunk|> public_id);
         }
     };
 
@@ -148,7 +148,7 @@ macro_rules! action {
             ref mut system_id, ..
         }) = $self.current_token
         {
-            action_helper!(@set_opt_token_part_range |$self, $input_chunk|> system_id);
+            action_helper!(@finish_opt_token_part |$self, $input_chunk|> system_id);
         }
     };
 
@@ -157,7 +157,7 @@ macro_rules! action {
     (| $self:tt, $input_chunk:ident, $ch:ident | > finish_tag_name) => {
         action_helper!(@update_tag_part |$self|> name,
             {
-                action_helper!(@set_token_part_range |$self, $input_chunk|> name);
+                action_helper!(@finish_token_part |$self, $input_chunk|> name);
             }
         );
     };

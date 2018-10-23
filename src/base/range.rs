@@ -1,4 +1,4 @@
-use base::Alignable;
+use base::Align;
 
 // NOTE: std::ops::Range implements iterator and, thus, doesn't implement Copy.
 // See: https://github.com/rust-lang/rust/pull/27186
@@ -8,7 +8,7 @@ pub struct Range {
     pub end: usize,
 }
 
-impl Alignable for Range {
+impl Align for Range {
     fn align(&mut self, offset: usize) {
         self.start.align(offset);
         self.end.align(offset);
