@@ -1,5 +1,6 @@
+use std::fmt::{self, Debug};
 use std::ops::Deref;
-use std::{fmt, str};
+use std::str;
 
 /// Bytes is a thin wrapper around a byte slice with some handy APIs
 #[repr(transparent)]
@@ -21,7 +22,7 @@ impl<'b> From<&'b [u8]> for Bytes<'b> {
     }
 }
 
-impl<'b> fmt::Debug for Bytes<'b> {
+impl<'b> Debug for Bytes<'b> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "`{}`", self.as_str())
     }

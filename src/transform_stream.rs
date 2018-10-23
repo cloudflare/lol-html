@@ -24,16 +24,16 @@ impl<H: LexUnitHandler> TransformStream<H> {
     // 3. buffer.shrink_to
     // 4. set buffered chunk position to blocked
 
-    pub fn write(&mut self, chunk: &[u8]) -> Result<(), Error> {
+    pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         assert!(!self.finished, "Attempt to call write() after end()");
 
         let blocked_byte_count = {
             let mut chunk = IterableChunk::new(
                 if self.has_buffered_data {
-                    self.buffer.append(chunk)?;
+                    self.buffer.append(data)?;
                     &self.buffer
                 } else {
-                    chunk
+                    data
                 },
                 false,
             );
@@ -45,9 +45,9 @@ impl<H: LexUnitHandler> TransformStream<H> {
             if self.has_buffered_data {
                 self.buffer.shrink_to_last(blocked_byte_count);
             } else {
-                let blocked_bytes = &chunk[chunk.len() - blocked_byte_count..];
+                let blocked_bytes = &data[data.len() - blocked_byte_count..];
 
-                self.buffer.init_with(blocked_bytes)?;
+                self.buffer.clean_and_consume(blocked_bytes)?;
             }
         }
 

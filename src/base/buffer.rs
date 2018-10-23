@@ -1,11 +1,15 @@
+use base::Input;
 use errors::Error;
 use safemem::copy_over;
 use std::ops::Deref;
 
+#[derive(Debug)]
 pub struct Buffer {
     data: Box<[u8]>,
     capacity: usize,
     watermark: usize,
+    next_pos: usize,
+    last: bool,
 }
 
 impl Buffer {
@@ -14,12 +18,13 @@ impl Buffer {
             data: vec![0; capacity].into(),
             capacity,
             watermark: 0,
+            next_pos: 0,
+            last: false,
         }
     }
 
-    #[inline]
-    pub fn get_watermark(&self) -> usize {
-        self.watermark
+    pub fn mark_as_last_input(&mut self) {
+        self.last = true;
     }
 
     pub fn append(&mut self, slice: &[u8]) -> Result<(), Error> {
@@ -38,7 +43,7 @@ impl Buffer {
     }
 
     #[inline]
-    pub fn init_with(&mut self, slice: &[u8]) -> Result<(), Error> {
+    pub fn clean_and_consume(&mut self, slice: &[u8]) -> Result<(), Error> {
         self.watermark = 0;
 
         self.append(slice)
@@ -48,6 +53,23 @@ impl Buffer {
         copy_over(&mut self.data, self.watermark - byte_count, 0, byte_count);
 
         self.watermark = byte_count;
+    }
+}
+
+impl Input for Buffer {
+    #[inline]
+    fn get_next_pos(&self) -> usize {
+        self.next_pos
+    }
+
+    #[inline]
+    fn set_next_pos(&mut self, pos: usize) {
+        self.next_pos = pos;
+    }
+
+    #[inline]
+    fn is_last(&self) -> bool {
+        self.last
     }
 }
 
