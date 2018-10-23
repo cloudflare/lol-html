@@ -16,6 +16,7 @@ pub use self::tag_name::TagName;
 pub use self::token::*;
 use self::tree_builder_simulator::*;
 use base::{Alignable, IterableChunk, Range};
+use errors::TransformBailoutReason;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -40,15 +41,8 @@ pub enum ParsingLoopDirective {
     Continue,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum TokenizerBailoutReason {
-    BufferCapacityExceeded,
-    TextParsingAmbiguity,
-    MaxTagNestingReached,
-}
-
 pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &mut IterableChunk, Option<u8>)
-    -> Result<ParsingLoopDirective, TokenizerBailoutReason>;
+    -> Result<ParsingLoopDirective, TransformBailoutReason>;
 
 pub struct Tokenizer<H> {
     lex_unit_start: usize,
@@ -96,7 +90,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     pub fn tokenize_chunk(
         &mut self,
         input_chunk: &mut IterableChunk,
-    ) -> Result<usize, TokenizerBailoutReason> {
+    ) -> Result<usize, TransformBailoutReason> {
         self.align(input_chunk.get_offset_from_prev_chunk_start());
 
         loop {

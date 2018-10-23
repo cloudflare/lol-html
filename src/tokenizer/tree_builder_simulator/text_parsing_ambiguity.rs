@@ -34,7 +34,8 @@
 //! construction state. Though, current assumption is that markup that can
 //! trigger this bailout case should be seen quite rarely in the wild.
 
-use tokenizer::{TagName, TokenizerBailoutReason};
+use errors::TransformBailoutReason;
+use tokenizer::TagName;
 
 #[derive(Copy, Clone)]
 enum TrackerState {
@@ -45,12 +46,12 @@ enum TrackerState {
 }
 
 #[inline]
-fn assert_not_ambigious_mode_switch(tag_name_hash: u64) -> Result<(), TokenizerBailoutReason> {
+fn assert_not_ambigious_mode_switch(tag_name_hash: u64) -> Result<(), TransformBailoutReason> {
     if tag_is_one_of!(
         tag_name_hash,
         [Textarea, Title, Plaintext, Script, Style, Iframe, Xmp, Noembed, Noframes, Noscript]
     ) {
-        Err(TokenizerBailoutReason::TextParsingAmbiguity)
+        Err(TransformBailoutReason::TextParsingAmbiguity)
     } else {
         Ok(())
     }
@@ -72,7 +73,7 @@ impl TextParsingAmbiguityTracker {
     pub fn track_start_tag(
         &mut self,
         tag_name_hash: Option<u64>,
-    ) -> Result<(), TokenizerBailoutReason> {
+    ) -> Result<(), TransformBailoutReason> {
         if let Some(t) = tag_name_hash {
             match self.state {
                 TrackerState::Default => {
@@ -98,7 +99,7 @@ impl TextParsingAmbiguityTracker {
                 TrackerState::InTemplateInSelect(depth) => {
                     if t == TagName::Template {
                         if depth == u8::max_value() {
-                            return Err(TokenizerBailoutReason::MaxTagNestingReached);
+                            return Err(TransformBailoutReason::MaxTagNestingReached);
                         }
 
                         self.state = TrackerState::InTemplateInSelect(depth + 1);

@@ -3,8 +3,9 @@ use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
 use cool_thing::base::IterableChunk;
+use cool_thing::errors::TransformBailoutReason;
 use cool_thing::tokenizer::{
-    LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView, Tokenizer, TokenizerBailoutReason,
+    LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView, Tokenizer,
 };
 use std::cell::Cell;
 use std::rc::Rc;
@@ -53,7 +54,7 @@ impl ParsingResult {
         &mut self,
         input: &ChunkedInput,
         initial_mode_snapshot: TextParsingModeSnapshot,
-    ) -> Result<(), TokenizerBailoutReason> {
+    ) -> Result<(), TransformBailoutReason> {
         let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot {
             mode: TextParsingMode::Data,
             last_start_tag_name_hash: None,
@@ -117,7 +118,7 @@ impl ParsingResult {
         }
     }
 
-    fn add_bailout(&mut self, reason: TokenizerBailoutReason) {
+    fn add_bailout(&mut self, reason: TransformBailoutReason) {
         self.bailout = Some(Bailout {
             reason: format!("{:?}", reason),
             parsed_chunk: self.get_cumulative_raw_string(),
