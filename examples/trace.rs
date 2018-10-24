@@ -16,19 +16,22 @@ fn parse_options() -> Option<Matches> {
         "-s (Data state|PLAINTEXT state|RCDATA state|RAWTEXT state|Script data state|CDATA section state)",
     );
 
-    opts.optopt("t", "last_start_tag", "Last start tag name", "-l");
+    opts.optopt("t", "last_start_tag", "Last start tag name", "-t");
+    opts.optopt("c", "chunk_size", "Chunk size", "-c");
 
     opts.optflag("h", "help", "Show this help");
 
     let matches = match opts.parse(args().skip(1)) {
-        Ok(matches) => if matches.free.is_empty() {
-            eprintln!("Missing HTML input");
-            None
-        } else if matches.opt_present("h") {
-            None
-        } else {
-            Some(matches)
-        },
+        Ok(matches) => {
+            if matches.free.is_empty() {
+                eprintln!("Missing HTML input");
+                None
+            } else if matches.opt_present("h") {
+                None
+            } else {
+                Some(matches)
+            }
+        }
         Err(e) => {
             eprintln!("{}", e);
             None
@@ -60,9 +63,7 @@ fn main() {
         }
 
         if let Some(raw) = lex_unit.get_raw() {
-            println!("\nRaw: `{}`", unsafe {
-                String::from_utf8_unchecked(raw.to_vec())
-            });
+            println!("{}", raw.as_str());
         }
 
         println!();
@@ -81,6 +82,15 @@ fn main() {
         }
     }
 
-    transform_stream.write(html.as_bytes()).unwrap();
+    let chunks = if let Some(chunk_size) = matches.opt_get("c").unwrap() {
+        html.as_bytes().chunks(chunk_size).collect()
+    } else {
+        vec![html.as_bytes()]
+    };
+
+    for chunk in chunks {
+        transform_stream.write(chunk).unwrap();
+    }
+
     transform_stream.end().unwrap();
 }

@@ -4,12 +4,18 @@ macro_rules! trace {
         println!("@action: {}", stringify!($($actions)+));
     };
 
-    ( @chars $ch:ident ) => {
+    ( @chars $action_descr:expr $(, $ch:ident)* ) => {
         #[cfg(feature = "trace_char")]
         {
-            use std::char;
+            print!("{}", $action_descr);
 
-            println!(">ch: {:?}", $ch.map(|ch| unsafe { char::from_u32_unchecked(ch as u32) }));
+            $({
+                use std::char;
+
+                print!(": {:?}", $ch.map(|ch| unsafe { char::from_u32_unchecked(ch as u32) }));
+            })*
+
+            println!();
         }
     };
 
@@ -18,7 +24,7 @@ macro_rules! trace {
         {
             use std::fmt::Write;
 
-            let mut chunk = unsafe { String::from_utf8_unchecked($input_chunk.to_vec()) };
+            let mut chunk = $input_chunk.as_bytes().as_string();
             let mut start = String::new();
             let mut end = String::new();
 

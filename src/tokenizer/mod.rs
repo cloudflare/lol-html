@@ -15,7 +15,7 @@ pub use self::lex_unit::LexUnit;
 pub use self::tag_name::TagName;
 pub use self::token::*;
 use self::tree_builder_simulator::*;
-use base::{Align, IterableChunk, Range};
+use base::{Align, Input, Range};
 use errors::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -42,11 +42,12 @@ pub enum ParsingLoopDirective {
 }
 
 pub type TokenizerState<H> =
-    fn(&mut Tokenizer<H>, &mut IterableChunk, Option<u8>) -> Result<ParsingLoopDirective, Error>;
+    fn(&mut Tokenizer<H>, &dyn Input, Option<u8>) -> Result<ParsingLoopDirective, Error>;
 
 pub struct Tokenizer<H> {
+    next_pos: usize,
     lex_unit_start: usize,
-    token_part_start: Option<usize>,
+    token_part_start: usize,
     state_enter: bool,
     allow_cdata: bool,
     lex_unit_handler: H,
@@ -67,8 +68,9 @@ define_state_machine!();
 impl<H: LexUnitHandler> Tokenizer<H> {
     pub fn new(lex_unit_handler: H) -> Self {
         Tokenizer {
+            next_pos: 0,
             lex_unit_start: 0,
-            token_part_start: None,
+            token_part_start: 0,
             state_enter: true,
             allow_cdata: false,
             lex_unit_handler,
@@ -87,9 +89,9 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    pub fn tokenize_chunk(&mut self, input_chunk: &mut IterableChunk) -> Result<usize, Error> {
+    pub fn tokenize(&mut self, input_chunk: &dyn Input) -> Result<usize, Error> {
         loop {
-            let ch = input_chunk.next();
+            let ch = input!(@consume_ch self, input_chunk);
             let directive = (self.state)(self, input_chunk, ch)?;
 
             if let ParsingLoopDirective::Break = directive {
@@ -97,17 +99,21 @@ impl<H: LexUnitHandler> Tokenizer<H> {
             }
         }
 
+        let blocked_bytes_count = input_chunk.len() - self.lex_unit_start;
+
         if !input_chunk.is_last() {
             self.align_for_next_chunk();
         }
 
-        Ok(input_chunk.get_pos() - self.lex_unit_start)
+        Ok(blocked_bytes_count)
     }
 
     fn align_for_next_chunk(&mut self) {
         let offset = self.lex_unit_start;
 
         self.lex_unit_start = 0;
+
+        self.next_pos.align(offset + 1);
         self.token_part_start.align(offset);
         self.current_token.align(offset);
         self.current_attr.align(offset);

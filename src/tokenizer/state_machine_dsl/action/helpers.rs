@@ -1,10 +1,10 @@
 macro_rules! action_helper {
     ( @emit_lex_unit_with_raw_inclusive | $self:tt, $input_chunk:ident |> $token:expr ) => {
-        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, $input_chunk.get_pos() + 1 )
+        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, input!(@pos $self) + 1 )
     };
 
     ( @emit_lex_unit_with_raw_exclusive | $self:tt, $input_chunk:ident |> $token:expr ) => {
-        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, $input_chunk.get_pos() )
+        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, input!(@pos $self) )
     };
 
     ( @emit_lex_unit_with_raw | $self:tt, $input_chunk:ident |> $token:expr, $end:expr ) => ({
@@ -33,11 +33,8 @@ macro_rules! action_helper {
     });
 
     ( @finish_token_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
-        $part.start = $self.token_part_start
-            .take()
-            .expect("Token part start should be initialized at this point");
-
-        $part.end = $input_chunk.get_pos();
+        $part.start = $self.token_part_start;
+        $part.end = input!(@pos $self);
     };
 
     ( @finish_opt_token_part | $self:tt, $input_chunk:ident |> $part:ident ) => {

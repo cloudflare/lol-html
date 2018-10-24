@@ -19,6 +19,9 @@ mod condition;
 #[macro_use]
 mod trace;
 
+#[macro_use]
+mod input;
+
 macro_rules! define_state_group {
     ( $name:ident = { $($states:tt)+ } ) => {
         macro_rules! $name {

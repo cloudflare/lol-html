@@ -52,10 +52,15 @@ macro_rules! ch_sequence_arm_pattern {
 
     // Match block expansion
     //--------------------------------------------------------------------
-    ( @match_block $ch:expr, $exp_ch:expr, $body:tt, $($case_mod:ident)* ) => {
+    ( @match_block
+        $input_chunk:ident, $ch:expr, $exp_ch:expr, $body:tt, $($case_mod:ident)*
+    ) => {
         match $ch {
             Some(ch) if ch_sequence_arm_pattern!(@cmp_exp ch, $exp_ch $(, $case_mod)*) => {
                $body
+            },
+            None if !$input_chunk.is_last() => {
+                return Ok(ParsingLoopDirective::Break);
             },
             _ => ()
         }
@@ -66,7 +71,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @first | [$self:tt, $input_chunk:ident, $ch:ident] |>
         [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {
-        ch_sequence_arm_pattern!(@match_block $ch, $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block $input_chunk, $ch, $exp_ch, {
             ch_sequence_arm_pattern!(
                 @iter |[$self, $input_chunk, $ch]|> 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
@@ -78,25 +83,29 @@ macro_rules! ch_sequence_arm_pattern {
     //--------------------------------------------------------------------
     ( @iter | [$self:tt, $input_chunk:ident, $ch:ident] |>
         $depth:expr, [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
-    ) => {
-        ch_sequence_arm_pattern!(@match_block $input_chunk.lookahead($depth), $exp_ch, {
+    ) => {{
+        let ch = input!(@lookahead $self, $input_chunk, $depth);
+
+        ch_sequence_arm_pattern!(@match_block $input_chunk, ch, $exp_ch, {
             ch_sequence_arm_pattern!(
                 @iter |[$self, $input_chunk, $ch]|> $depth + 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
         }, $($case_mod)*);
-    };
+    }};
 
     // NOTE: end of recursion
     ( @iter | [$self:tt, $input_chunk:ident, $ch:ident] |>
         $depth:expr, [$exp_ch:expr], ( $($actions:tt)* ), $($case_mod:ident)*
-    ) => {
-        ch_sequence_arm_pattern!(@match_block $input_chunk.lookahead($depth), $exp_ch, {
-            $input_chunk.advance($depth);
+    ) => {{
+        let ch = input!(@lookahead $self, $input_chunk, $depth);
+
+        ch_sequence_arm_pattern!(@match_block $input_chunk, ch, $exp_ch, {
+            input!(@consume_several $self, $depth);
             action_list!(|$self, $input_chunk, $ch|> $($actions)*);
 
             // NOTE: this may be unreachable on expansion, e.g. if
             // we have state transition in the action list.
             #[allow(unreachable_code)] { return Ok(ParsingLoopDirective::Continue); }
         }, $($case_mod)*);
-    };
+    }};
 }

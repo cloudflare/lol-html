@@ -1,9 +1,9 @@
-use base::{Bytes, IterableChunk, Range};
+use base::{Bytes, Input, Range};
 use lazycell::LazyCell;
 pub use tokenizer::token::*;
 
 pub struct LexUnit<'c> {
-    input_chunk: &'c IterableChunk<'c>,
+    input_chunk: &'c dyn Input<'c>,
     raw_range: Option<Range>,
     token_view: Option<TokenView>,
     raw: LazyCell<Option<Bytes<'c>>>,
@@ -12,7 +12,7 @@ pub struct LexUnit<'c> {
 
 impl<'c> LexUnit<'c> {
     pub fn new(
-        input_chunk: &'c IterableChunk<'c>,
+        input_chunk: &'c dyn Input<'c>,
         token_view: Option<TokenView>,
         raw_range: Option<Range>,
     ) -> Self {

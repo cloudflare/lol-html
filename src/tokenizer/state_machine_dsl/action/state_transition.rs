@@ -1,6 +1,6 @@
 macro_rules! state_transition_action {
     (| $self:tt, $input_chunk:ident | > reconsume in $state:ident) => {
-        $input_chunk.step_back();
+        input!(@unconsume_ch $self);
         action_helper!(@switch_state |$self|> Tokenizer::$state);
     };
 

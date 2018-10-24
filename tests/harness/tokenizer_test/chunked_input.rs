@@ -26,8 +26,13 @@ impl From<String> for ChunkedInput {
 
 impl ChunkedInput {
     pub fn get_chunks(&self) -> Vec<&[u8]> {
-        vec![self.input.as_bytes()]
-        //self.input.as_bytes().chunks(self.chunk_size).collect()
+        let bytes = self.input.as_bytes();
+
+        if self.chunk_size > 0 {
+            bytes.chunks(self.chunk_size).collect()
+        } else {
+            vec![bytes]
+        }
     }
 
     pub fn get_chunk_size(&self) -> usize {
@@ -39,11 +44,13 @@ impl ChunkedInput {
 
         self.chunk_size = match env::var("CHUNK_SIZE") {
             Ok(val) => val.parse().unwrap(),
-            Err(_) => if len > 1 {
-                thread_rng().gen_range(1, len)
-            } else {
-                len
-            },
+            Err(_) => {
+                if len > 1 {
+                    thread_rng().gen_range(1, len)
+                } else {
+                    len
+                }
+            }
         };
     }
 }

@@ -23,6 +23,8 @@ impl<T: Align> Align for Option<T> {
 impl Align for usize {
     #[inline]
     fn align(&mut self, offset: usize) {
-        *self -= offset;
+        if *self >= offset {
+            *self -= offset;
+        }
     }
 }

@@ -12,10 +12,9 @@ macro_rules! state {
     ) => {
         $($vis)* fn $name(
             &mut self,
-            input_chunk: &mut IterableChunk,
+            input_chunk: &dyn Input,
             ch: Option<u8>
         ) -> Result<ParsingLoopDirective, Error> {
-            trace!(@chars ch);
             state_body!(|[self, input_chunk, ch]|> [$($arms)*], [$($($enter_actions)*)*]);
 
             // NOTE: this can be unreachable if all state body
