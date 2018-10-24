@@ -22,24 +22,23 @@ impl<H: LexUnitHandler> TransformStream<H> {
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         assert!(!self.finished, "Attempt to call write() after end()");
 
-        let blocked_bytes_count = if self.has_buffered_data {
+        let blocked_byte_count = if self.has_buffered_data {
             self.buffer.append(data)?;
             self.tokenizer.tokenize(&self.buffer)
         } else {
             self.tokenizer.tokenize(&Chunk::from(data))
         }?;
 
-        let need_to_buffer = blocked_bytes_count > 0;
+        let need_to_buffer = blocked_byte_count > 0;
 
         if need_to_buffer {
             if self.has_buffered_data {
-                // TODO: get rid of warnings
+                // TODO: trace for buffering
                 // TODO: debug for input can be removed after debug for starttag
                 // TODO: debug for StartTag
-                // TODO: input chunk to input
-                self.buffer.shrink_to_last(blocked_bytes_count);
+                self.buffer.shrink_to_last(blocked_byte_count);
             } else {
-                let blocked_bytes = &data[data.len() - blocked_bytes_count..];
+                let blocked_bytes = &data[data.len() - blocked_byte_count..];
 
                 self.buffer.init_with(blocked_bytes)?;
             }

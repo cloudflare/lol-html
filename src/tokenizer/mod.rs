@@ -89,26 +89,26 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    pub fn tokenize(&mut self, input_chunk: &dyn Input) -> Result<usize, Error> {
+    pub fn tokenize(&mut self, input: &dyn Input) -> Result<usize, Error> {
         loop {
-            let ch = input!(@consume_ch self, input_chunk);
-            let directive = (self.state)(self, input_chunk, ch)?;
+            let ch = input!(@consume_ch self, input);
+            let directive = (self.state)(self, input, ch)?;
 
             if let ParsingLoopDirective::Break = directive {
                 break;
             }
         }
 
-        let blocked_bytes_count = input_chunk.len() - self.lex_unit_start;
+        let blocked_byte_count = input.len() - self.lex_unit_start;
 
-        if !input_chunk.is_last() {
-            self.align_for_next_chunk();
+        if !input.is_last() {
+            self.align_for_next_input();
         }
 
-        Ok(blocked_bytes_count)
+        Ok(blocked_byte_count)
     }
 
-    fn align_for_next_chunk(&mut self) {
+    fn align_for_next_input(&mut self) {
         let offset = self.lex_unit_start;
 
         self.lex_unit_start = 0;

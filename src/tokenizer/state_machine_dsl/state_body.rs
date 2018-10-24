@@ -1,7 +1,7 @@
 macro_rules! state_body {
-    ( | [ $self:tt, $input_chunk:ident, $ch:ident ] |> [$($arms:tt)+], [$($enter_actions:tt)*] ) => {
-        action_list!(@state_enter |$self, $input_chunk, $ch|> $($enter_actions)*);
-        state_body!(@map_arms | [$self, $input_chunk, $ch] |> [$($arms)+], [])
+    ( | [ $self:tt, $input:ident, $ch:ident ] |> [$($arms:tt)+], [$($enter_actions:tt)*] ) => {
+        action_list!(@state_enter |$self, $input, $ch|> $($enter_actions)*);
+        state_body!(@map_arms | [$self, $input, $ch] |> [$($arms)+], [])
     };
 
 
@@ -35,7 +35,7 @@ macro_rules! state_body {
     // Character match block
     //--------------------------------------------------------------------
     ( @match_block
-        | [ $self:tt, $input_chunk:ident, $ch:ident ] |>
+        | [ $self:tt, $input:ident, $ch:ident ] |>
         $( $pat:pat $(|$pat_cont:pat)* $(if $pat_expr:expr)* => ( $($actions:tt)* ) )*
     ) => {
         // NOTE: guard against unreachable patterns
@@ -44,7 +44,7 @@ macro_rules! state_body {
         match $ch {
             $(
                 $pat $(| $pat_cont)* $(if $pat_expr)* => {
-                    action_list!(|$self, $input_chunk, $ch|> $($actions)*);
+                    action_list!(|$self, $input, $ch|> $($actions)*);
                 }
             )*
         }

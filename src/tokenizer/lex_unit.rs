@@ -3,7 +3,7 @@ use lazycell::LazyCell;
 pub use tokenizer::token::*;
 
 pub struct LexUnit<'c> {
-    input_chunk: &'c dyn Input<'c>,
+    input: &'c dyn Input<'c>,
     raw_range: Option<Range>,
     token_view: Option<TokenView>,
     raw: LazyCell<Option<Bytes<'c>>>,
@@ -12,12 +12,12 @@ pub struct LexUnit<'c> {
 
 impl<'c> LexUnit<'c> {
     pub fn new(
-        input_chunk: &'c dyn Input<'c>,
+        input: &'c dyn Input<'c>,
         token_view: Option<TokenView>,
         raw_range: Option<Range>,
     ) -> Self {
         LexUnit {
-            input_chunk,
+            input,
             raw_range,
             token_view,
             raw: LazyCell::new(),
@@ -27,7 +27,7 @@ impl<'c> LexUnit<'c> {
 
     pub fn get_raw(&self) -> Option<&Bytes<'c>> {
         self.raw
-            .borrow_with(|| self.input_chunk.opt_slice(self.raw_range))
+            .borrow_with(|| self.input.opt_slice(self.raw_range))
             .as_ref()
     }
 
@@ -40,13 +40,13 @@ impl<'c> LexUnit<'c> {
             .borrow_with(|| {
                 self.token_view.as_ref().map(|token_view| match token_view {
                     TokenView::Character => Token::Character(
-                        self.input_chunk.slice(
+                        self.input.slice(
                             self.raw_range
                                 .expect("Character token should always have raw representation"),
                         ),
                     ),
 
-                    &TokenView::Comment(text) => Token::Comment(self.input_chunk.slice(text)),
+                    &TokenView::Comment(text) => Token::Comment(self.input.slice(text)),
 
                     &TokenView::StartTag {
                         name,
@@ -54,14 +54,14 @@ impl<'c> LexUnit<'c> {
                         self_closing,
                         ..
                     } => Token::StartTag(StartTagToken::new(
-                        self.input_chunk,
-                        self.input_chunk.slice(name),
+                        self.input,
+                        self.input.slice(name),
                         attributes,
                         self_closing,
                     )),
 
                     &TokenView::EndTag { name, .. } => Token::EndTag {
-                        name: self.input_chunk.slice(name),
+                        name: self.input.slice(name),
                     },
 
                     &TokenView::Doctype {
@@ -70,9 +70,9 @@ impl<'c> LexUnit<'c> {
                         system_id,
                         force_quirks,
                     } => Token::Doctype {
-                        name: self.input_chunk.opt_slice(name),
-                        public_id: self.input_chunk.opt_slice(public_id),
-                        system_id: self.input_chunk.opt_slice(system_id),
+                        name: self.input.opt_slice(name),
+                        public_id: self.input.opt_slice(public_id),
+                        system_id: self.input.opt_slice(system_id),
                         force_quirks,
                     },
 

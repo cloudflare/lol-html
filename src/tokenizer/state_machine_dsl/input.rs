@@ -8,9 +8,7 @@ macro_rules! input {
 
         $self.next_pos += 1;
 
-        trace!(@chars "consume", ch);
-
-        ch
+        trace!(@chars "consume", ch)
     }};
 
     ( @unconsume_ch $self:tt ) => {
@@ -26,10 +24,6 @@ macro_rules! input {
     };
 
     ( @lookahead $self:tt, $input:ident, $offset:expr ) => {{
-        let ch = $input.get($self.next_pos + $offset - 1);
-
-        trace!(@chars "lookahead", ch);
-
-        ch
+        trace!(@chars "lookahead", $input.get($self.next_pos + $offset - 1))
     }};
 }

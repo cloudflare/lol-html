@@ -78,7 +78,7 @@ pub struct Attribute<'c> {
 
 #[derive(Debug)]
 pub struct StartTagToken<'c> {
-    input_chunk: &'c dyn Input<'c>,
+    input: &'c dyn Input<'c>,
     pub name: Bytes<'c>,
     pub self_closing: bool,
     attributes_view: Rc<RefCell<Vec<AttributeView>>>,
@@ -87,13 +87,13 @@ pub struct StartTagToken<'c> {
 
 impl<'c> StartTagToken<'c> {
     pub fn new(
-        input_chunk: &'c dyn Input,
+        input: &'c dyn Input,
         name: Bytes<'c>,
         attributes_view: &Rc<RefCell<Vec<AttributeView>>>,
         self_closing: bool,
     ) -> Self {
         StartTagToken {
-            input_chunk,
+            input,
             name,
             attributes_view: Rc::clone(&attributes_view),
             self_closing,
@@ -107,8 +107,8 @@ impl<'c> StartTagToken<'c> {
                 .borrow()
                 .iter()
                 .map(|a| Attribute {
-                    name: self.input_chunk.slice(a.name),
-                    value: self.input_chunk.slice(a.value),
+                    name: self.input.slice(a.name),
+                    value: self.input.slice(a.value),
                 }).collect()
         })
     }

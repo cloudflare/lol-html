@@ -1,14 +1,14 @@
 macro_rules! action_helper {
-    ( @emit_lex_unit_with_raw_inclusive | $self:tt, $input_chunk:ident |> $token:expr ) => {
-        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, input!(@pos $self) + 1 )
+    ( @emit_lex_unit_with_raw_inclusive | $self:tt, $input:ident |> $token:expr ) => {
+        action_helper!(@emit_lex_unit_with_raw |$self, $input|> $token, input!(@pos $self) + 1 )
     };
 
-    ( @emit_lex_unit_with_raw_exclusive | $self:tt, $input_chunk:ident |> $token:expr ) => {
-        action_helper!(@emit_lex_unit_with_raw |$self, $input_chunk|> $token, input!(@pos $self) )
+    ( @emit_lex_unit_with_raw_exclusive | $self:tt, $input:ident |> $token:expr ) => {
+        action_helper!(@emit_lex_unit_with_raw |$self, $input|> $token, input!(@pos $self) )
     };
 
-    ( @emit_lex_unit_with_raw | $self:tt, $input_chunk:ident |> $token:expr, $end:expr ) => ({
-        trace!(@raw $self, $input_chunk, $end);
+    ( @emit_lex_unit_with_raw | $self:tt, $input:ident |> $token:expr, $end:expr ) => ({
+        trace!(@raw $self, $input, $end);
 
         let raw_range = Some(Range {
             start: $self.lex_unit_start,
@@ -20,36 +20,36 @@ macro_rules! action_helper {
         action_helper!(@emit_lex_unit |$self|>
             $token,
             raw_range,
-            $input_chunk
+            $input
         )
     });
 
-    ( @emit_lex_unit | $self:tt |> $token:expr, $raw:expr, $input_chunk:ident ) => ({
-        let lex_unit = LexUnit::new($input_chunk, $token, $raw);
+    ( @emit_lex_unit | $self:tt |> $token:expr, $raw:expr, $input:ident ) => ({
+        let lex_unit = LexUnit::new($input, $token, $raw);
 
         $self.lex_unit_handler.handle(&lex_unit);
 
         lex_unit
     });
 
-    ( @finish_token_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
+    ( @finish_token_part | $self:tt, $input:ident |> $part:ident ) => {
         $part.start = $self.token_part_start;
         $part.end = input!(@pos $self);
     };
 
-    ( @finish_opt_token_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
+    ( @finish_opt_token_part | $self:tt, $input:ident |> $part:ident ) => {
         *$part = Some({
             let mut $part = Range::default();
 
-            action_helper!(@finish_token_part |$self, $input_chunk|> $part);
+            action_helper!(@finish_token_part |$self, $input|> $part);
 
             $part
         });
     };
 
-    ( @finish_attr_part | $self:tt, $input_chunk:ident |> $part:ident ) => {
+    ( @finish_attr_part | $self:tt, $input:ident |> $part:ident ) => {
         if let Some(AttributeView { ref mut $part, .. }) = $self.current_attr {
-            action_helper!(@finish_token_part |$self, $input_chunk|> $part);
+            action_helper!(@finish_token_part |$self, $input|> $part);
         }
     };
 

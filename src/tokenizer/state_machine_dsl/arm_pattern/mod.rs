@@ -16,20 +16,20 @@ macro_rules! arm_pattern {
         );
     };
 
-    ( | [ [$self:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         closing_quote => $actions:tt
     ) => {
-        state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
+        state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
             Some(ch) if ch == $self.closing_quote => $actions
         );
     };
 
-    ( | [ [$self:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         eoc => ( $($actions:tt)* )
     ) => {
-        state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
-            None if !$input_chunk.is_last() => ({
-                action_list!(|$self, $input_chunk, $ch|> $($actions)* );
+        state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
+            None if !$input.is_last() => ({
+                action_list!(|$self, $input, $ch|> $($actions)* );
 
                 return Ok(ParsingLoopDirective::Break);
             })
@@ -38,15 +38,15 @@ macro_rules! arm_pattern {
 
     // NOTE: this arm is always enforced by the compiler to make match exhaustive,
     // so it's safe to break parsing loop here, since we don't have any input left
-    // to parse. We execute EOF actions only if it's a last chunk, otherwise we just
+    // to parse. We execute EOF actions only if it's a last input, otherwise we just
     // break the parsing loop if it hasn't been done by the explicit EOC arm.
-    ( | [ [$self:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         eof => ( $($actions:tt)* )
     ) => {
-        state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
+        state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
             None => ({
-                if $input_chunk.is_last() {
-                    action_list!(|$self, $input_chunk, $ch|> $($actions)* );
+                if $input.is_last() {
+                    action_list!(|$self, $input, $ch|> $($actions)* );
                 }
 
                 return Ok(ParsingLoopDirective::Break);

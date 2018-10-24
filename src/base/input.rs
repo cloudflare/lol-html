@@ -22,6 +22,11 @@ pub trait Input<'b>: Debug + 'b {
         self.get_data().len()
     }
 
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn as_bytes(&self) -> Bytes {
         self.get_data().into()
     }

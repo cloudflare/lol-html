@@ -39,7 +39,6 @@ impl Buffer {
         }
     }
 
-    #[inline]
     pub fn init_with(&mut self, slice: &[u8]) -> Result<(), Error> {
         self.watermark = 0;
 
