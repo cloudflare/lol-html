@@ -5,6 +5,7 @@ use super::Bailout;
 use cool_thing::errors::Error;
 use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView};
 use cool_thing::transform_stream::TransformStream;
+use itertools::izip;
 use std::cell::Cell;
 use std::rc::Rc;
 

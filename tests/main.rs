@@ -1,6 +1,7 @@
 extern crate cool_thing;
 extern crate glob;
 extern crate html5ever;
+extern crate itertools;
 extern crate rand;
 extern crate serde;
 extern crate serde_json;
@@ -12,9 +13,6 @@ extern crate test;
 
 #[macro_use]
 extern crate serde_derive;
-
-#[macro_use]
-extern crate itertools;
 
 #[macro_use]
 mod harness;
