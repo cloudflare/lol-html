@@ -1,16 +1,12 @@
 macro_rules! state {
-    // NOTE: wrap optional visibility modifier in `[]` to avoid
-    // local ambiguity with the state name.
-    ( pub $($rest:tt)* ) => ( state!([pub] $($rest)*); );
-
     (
-        $([ $vis:ident ])* $name:ident $(<-- ( $($enter_actions:tt)* ))* {
+        $vis:vis $name:ident $(<-- ( $($enter_actions:tt)* ))* {
             $($arms:tt)*
         }
 
         $($rest:tt)*
     ) => {
-        $($vis)* fn $name(
+        $vis fn $name(
             &mut self,
             input: &Chunk,
             ch: Option<u8>

@@ -139,18 +139,14 @@ impl<'de> Deserialize<'de> for TestToken {
                         match seq.next_element()? {
                             Some(value) => {
                                 #[allow(unused_assignments)]
-                                #[cfg_attr(
-                                    feature = "cargo-clippy", allow(eval_order_dependence)
-                                )]
+                                #[cfg_attr(feature = "cargo-clippy", allow(eval_order_dependence))]
                                 {
                                     actual_length += 1;
                                 }
 
                                 value
                             }
-                            None => {
-                                return Err(DeError::invalid_length(actual_length, &$error_msg))
-                            }
+                            None => return Err(DeError::invalid_length(actual_length, &$error_msg)),
                         }
                     };
                 }
