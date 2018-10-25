@@ -19,6 +19,25 @@ impl<H: LexUnitHandler> TransformStream<H> {
         }
     }
 
+    fn buffer_blocked_bytes(
+        &mut self,
+        data: &[u8],
+        blocked_byte_count: usize,
+    ) -> Result<(), Error> {
+        if self.has_buffered_data {
+            self.buffer.shrink_to_last(blocked_byte_count);
+        } else {
+            let blocked_bytes = &data[data.len() - blocked_byte_count..];
+
+            self.buffer.init_with(blocked_bytes)?;
+            self.has_buffered_data = true;
+        }
+
+        trace!(@buffer self.buffer);
+
+        Ok(())
+    }
+
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         assert!(!self.finished, "Attempt to call write() after end()");
         trace!(@write data);
@@ -36,21 +55,11 @@ impl<H: LexUnitHandler> TransformStream<H> {
             self.tokenizer.tokenize(&chunk)?
         };
 
-        let need_to_buffer = blocked_byte_count > 0;
-
-        if need_to_buffer {
-            if self.has_buffered_data {
-                self.buffer.shrink_to_last(blocked_byte_count);
-            } else {
-                let blocked_bytes = &data[data.len() - blocked_byte_count..];
-
-                self.buffer.init_with(blocked_bytes)?;
-            }
-
-            trace!(@buffer self.buffer);
+        if blocked_byte_count > 0 {
+            self.buffer_blocked_bytes(data, blocked_byte_count)?;
+        } else {
+            self.has_buffered_data = false;
         }
-
-        self.has_buffered_data = need_to_buffer;
 
         Ok(())
     }
