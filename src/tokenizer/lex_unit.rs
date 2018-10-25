@@ -1,9 +1,10 @@
-use base::{Bytes, Input, Range};
+use base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
+use std::fmt::{self, Debug, Write};
 pub use tokenizer::token::*;
 
 pub struct LexUnit<'c> {
-    input: &'c dyn Input<'c>,
+    input: &'c Chunk<'c>,
     raw_range: Option<Range>,
     token_view: Option<TokenView>,
     raw: LazyCell<Option<Bytes<'c>>>,
@@ -12,7 +13,7 @@ pub struct LexUnit<'c> {
 
 impl<'c> LexUnit<'c> {
     pub fn new(
-        input: &'c dyn Input<'c>,
+        input: &'c Chunk<'c>,
         token_view: Option<TokenView>,
         raw_range: Option<Range>,
     ) -> Self {
@@ -79,5 +80,33 @@ impl<'c> LexUnit<'c> {
                     TokenView::Eof => Token::Eof,
                 })
             }).as_ref()
+    }
+}
+
+impl<'c> Debug for LexUnit<'c> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut builder = f.debug_struct("LexUnit");
+
+        if let Some(raw_range) = self.raw_range {
+            let mut pretty_raw = self.input.as_string();
+            let mut start = String::new();
+            let mut end = String::new();
+
+            write!(start, "|{}|", raw_range.start)?;
+            write!(end, "|{}|", raw_range.end)?;
+
+            pretty_raw.insert_str(raw_range.end, &end);
+            pretty_raw.insert_str(raw_range.start, &start);
+
+            builder.field("raw", &format_args!("`{}`", &pretty_raw));
+        }
+
+        if let (Some(token_view), Some(token)) = (self.token_view.as_ref(), self.get_token()) {
+            builder
+                .field("token_view", token_view)
+                .field("token", token);
+        }
+
+        builder.finish()
     }
 }

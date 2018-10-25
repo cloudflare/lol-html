@@ -8,10 +8,7 @@ autotests = false
 doctest = false
 
 [features]
-trace_actions = []
-trace_char = []
-trace_raw = []
-trace_all = ["trace_actions", "trace_char", "trace_raw"]
+debug_trace = []
 testing_api = []
 
 [[test]]

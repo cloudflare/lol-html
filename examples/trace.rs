@@ -54,18 +54,8 @@ fn main() {
     let html = matches.free.first().unwrap();
 
     let mut transform_stream = TransformStream::new(2048, |lex_unit: &LexUnit| {
-        println!("------------------");
-
-        if let Some(token) = lex_unit.get_token() {
-            println!("Token view: {:#?}", lex_unit.get_token_view().unwrap());
-            println!();
-            println!("Token: {:#?}", token);
-        }
-
-        if let Some(raw) = lex_unit.get_raw() {
-            println!("{}", raw.as_str());
-        }
-
+        println!();
+        println!("{:#?}", lex_unit);
         println!();
     });
 

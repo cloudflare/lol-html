@@ -12,7 +12,7 @@ macro_rules! state {
     ) => {
         $($vis)* fn $name(
             &mut self,
-            input: &dyn Input,
+            input: &Chunk,
             ch: Option<u8>
         ) -> Result<ParsingLoopDirective, Error> {
             state_body!(|[self, input, ch]|> [$($arms)*], [$($($enter_actions)*)*]);

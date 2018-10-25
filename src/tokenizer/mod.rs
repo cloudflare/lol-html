@@ -15,7 +15,7 @@ pub use self::lex_unit::LexUnit;
 pub use self::tag_name::TagName;
 pub use self::token::*;
 use self::tree_builder_simulator::*;
-use base::{Align, Input, Range};
+use base::{Align, Chunk, Range};
 use errors::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -42,7 +42,7 @@ pub enum ParsingLoopDirective {
 }
 
 pub type TokenizerState<H> =
-    fn(&mut Tokenizer<H>, &dyn Input, Option<u8>) -> Result<ParsingLoopDirective, Error>;
+    fn(&mut Tokenizer<H>, &Chunk, Option<u8>) -> Result<ParsingLoopDirective, Error>;
 
 pub struct Tokenizer<H> {
     next_pos: usize,
@@ -89,7 +89,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    pub fn tokenize(&mut self, input: &dyn Input) -> Result<usize, Error> {
+    pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
         loop {
             let ch = input!(@consume_ch self, input);
             let directive = (self.state)(self, input, ch)?;
@@ -102,13 +102,13 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         let blocked_byte_count = input.len() - self.lex_unit_start;
 
         if !input.is_last() {
-            self.align_for_next_input();
+            self.adjust_for_next_input();
         }
 
         Ok(blocked_byte_count)
     }
 
-    fn align_for_next_input(&mut self) {
+    fn adjust_for_next_input(&mut self) {
         let offset = self.lex_unit_start;
 
         self.lex_unit_start = 0;

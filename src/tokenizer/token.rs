@@ -1,4 +1,4 @@
-use base::{Align, Bytes, Input, Range};
+use base::{Align, Bytes, Chunk, Range};
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::fmt::{self, Debug};
@@ -78,7 +78,7 @@ pub struct Attribute<'c> {
 }
 
 pub struct StartTagToken<'c> {
-    input: &'c dyn Input<'c>,
+    input: &'c Chunk<'c>,
     pub name: Bytes<'c>,
     pub self_closing: bool,
     attributes_view: Rc<RefCell<Vec<AttributeView>>>,
@@ -87,7 +87,7 @@ pub struct StartTagToken<'c> {
 
 impl<'c> StartTagToken<'c> {
     pub fn new(
-        input: &'c dyn Input,
+        input: &'c Chunk,
         name: Bytes<'c>,
         attributes_view: &Rc<RefCell<Vec<AttributeView>>>,
         self_closing: bool,
@@ -116,11 +116,11 @@ impl<'c> StartTagToken<'c> {
 
 impl<'c> Debug for StartTagToken<'c> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "StartTagToken {{")?;
-        writeln!(f, "   name: {:?}", self.name)?;
-        writeln!(f, "   attributes: {:?}", self.get_attributes())?;
-        writeln!(f, "   self_closing: {}", self.self_closing)?;
-        write!(f, "}}")
+        f.debug_struct("StartTagToken")
+            .field("name", &self.name)
+            .field("attributes", self.get_attributes())
+            .field("self_closing", &self.self_closing)
+            .finish()
     }
 }
 

@@ -7,6 +7,10 @@ use std::str;
 pub struct Bytes<'b>(&'b [u8]);
 
 impl<'b> Bytes<'b> {
+    pub fn empty() -> Self {
+        Bytes(&[])
+    }
+
     pub fn as_str(&self) -> &str {
         str::from_utf8(self).unwrap()
     }

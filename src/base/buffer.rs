@@ -1,4 +1,3 @@
-use base::Input;
 use errors::Error;
 use safemem::copy_over;
 
@@ -6,7 +5,6 @@ pub struct Buffer {
     data: Box<[u8]>,
     capacity: usize,
     watermark: usize,
-    last: bool,
 }
 
 impl Buffer {
@@ -15,12 +13,7 @@ impl Buffer {
             data: vec![0; capacity].into(),
             capacity,
             watermark: 0,
-            last: false,
         }
-    }
-
-    pub fn mark_as_last_input(&mut self) {
-        self.last = true;
     }
 
     pub fn append(&mut self, slice: &[u8]) -> Result<(), Error> {
@@ -49,16 +42,8 @@ impl Buffer {
 
         self.watermark = byte_count;
     }
-}
 
-impl<'b> Input<'b> for Buffer {
-    #[inline]
-    fn is_last(&self) -> bool {
-        self.last
-    }
-
-    #[inline]
-    fn get_data(&self) -> &[u8] {
+    pub fn bytes(&self) -> &[u8] {
         &self.data[..self.watermark]
     }
 }

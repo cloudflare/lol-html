@@ -1,2 +1,2 @@
 #!/bin/sh
-cargo run --features trace_all,testing_api --example=trace "$@"
+cargo run --features debug_trace,testing_api --example=trace "$@"

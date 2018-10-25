@@ -8,8 +8,6 @@ macro_rules! action_helper {
     };
 
     ( @emit_lex_unit_with_raw | $self:tt, $input:ident |> $token:expr, $end:expr ) => ({
-        trace!(@raw $self, $input, $end);
-
         let raw_range = Some(Range {
             start: $self.lex_unit_start,
             end: $end,
