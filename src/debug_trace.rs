@@ -28,4 +28,38 @@ macro_rules! trace {
             $($ch)*
         }
     };
+
+    ( @buffer $buffer:expr ) => {
+        #[cfg(feature = "debug_trace")]
+        {
+            use base::Bytes;
+
+            println!("-- Buffered: {:#?}", Bytes::from($buffer.bytes()));
+        }
+    };
+
+    ( @write $slice:expr ) => {
+        #[cfg(feature = "debug_trace")]
+        {
+            use base::Bytes;
+
+            println!("-- Write: {:#?}", Bytes::from($slice));
+        }
+    };
+
+    ( @end ) => {
+        #[cfg(feature = "debug_trace")]
+        {
+            println!("-- End");
+        }
+    };
+
+    ( @chunk $chunk:expr ) => {
+        #[cfg(feature = "debug_trace")]
+        {
+            println!();
+            println!("{:#?}", $chunk);
+            println!();
+        }
+    };
 }

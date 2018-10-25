@@ -21,6 +21,7 @@ impl<H: LexUnitHandler> TransformStream<H> {
 
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         assert!(!self.finished, "Attempt to call write() after end()");
+        trace!(@write data);
 
         let blocked_byte_count = {
             let chunk = if self.has_buffered_data {
@@ -30,6 +31,8 @@ impl<H: LexUnitHandler> TransformStream<H> {
                 data
             }.into();
 
+            trace!(@chunk chunk);
+
             self.tokenizer.tokenize(&chunk)?
         };
 
@@ -37,13 +40,14 @@ impl<H: LexUnitHandler> TransformStream<H> {
 
         if need_to_buffer {
             if self.has_buffered_data {
-                // TODO: trace for buffering
                 self.buffer.shrink_to_last(blocked_byte_count);
             } else {
                 let blocked_bytes = &data[data.len() - blocked_byte_count..];
 
                 self.buffer.init_with(blocked_bytes)?;
             }
+
+            trace!(@buffer self.buffer);
         }
 
         self.has_buffered_data = need_to_buffer;
@@ -53,6 +57,7 @@ impl<H: LexUnitHandler> TransformStream<H> {
 
     pub fn end(&mut self) -> Result<(), Error> {
         assert!(!self.finished, "Attempt to call end() twice");
+        trace!(@end);
 
         self.finished = true;
 
@@ -61,6 +66,8 @@ impl<H: LexUnitHandler> TransformStream<H> {
         } else {
             Chunk::last_empty()
         };
+
+        trace!(@chunk chunk);
 
         self.tokenizer.tokenize(&chunk)?;
 
