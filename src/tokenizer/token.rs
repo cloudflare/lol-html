@@ -2,6 +2,7 @@ use base::{Align, Bytes, Chunk, Range};
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::fmt::{self, Debug};
+use std::ops::Deref;
 use std::rc::Rc;
 
 #[derive(Debug, Default)]
@@ -77,33 +78,28 @@ pub struct Attribute<'c> {
     pub value: Bytes<'c>,
 }
 
-pub struct StartTagToken<'c> {
+pub struct AttributeList<'c> {
     input: &'c Chunk<'c>,
-    pub name: Bytes<'c>,
-    pub self_closing: bool,
-    attributes_view: Rc<RefCell<Vec<AttributeView>>>,
+    attribute_views: Rc<RefCell<Vec<AttributeView>>>,
     attributes: LazyCell<Vec<Attribute<'c>>>,
 }
 
-impl<'c> StartTagToken<'c> {
-    pub fn new(
-        input: &'c Chunk,
-        name: Bytes<'c>,
-        attributes_view: &Rc<RefCell<Vec<AttributeView>>>,
-        self_closing: bool,
-    ) -> Self {
-        StartTagToken {
+impl<'c> AttributeList<'c> {
+    pub fn new(input: &'c Chunk, attribute_views: &Rc<RefCell<Vec<AttributeView>>>) -> Self {
+        AttributeList {
             input,
-            name,
-            attributes_view: Rc::clone(&attributes_view),
-            self_closing,
+            attribute_views: Rc::clone(&attribute_views),
             attributes: LazyCell::new(),
         }
     }
+}
 
-    pub fn get_attributes(&self) -> &Vec<Attribute<'c>> {
+impl<'c> Deref for AttributeList<'c> {
+    type Target = Vec<Attribute<'c>>;
+
+    fn deref(&self) -> &Vec<Attribute<'c>> {
         self.attributes.borrow_with(|| {
-            self.attributes_view
+            self.attribute_views
                 .borrow()
                 .iter()
                 .map(|a| Attribute {
@@ -114,13 +110,9 @@ impl<'c> StartTagToken<'c> {
     }
 }
 
-impl<'c> Debug for StartTagToken<'c> {
+impl<'c> Debug for AttributeList<'c> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("StartTagToken")
-            .field("name", &self.name)
-            .field("attributes", self.get_attributes())
-            .field("self_closing", &self.self_closing)
-            .finish()
+        self.deref().fmt(f)
     }
 }
 
@@ -129,10 +121,11 @@ pub enum Token<'c> {
     Character(Bytes<'c>),
     Comment(Bytes<'c>),
 
-    // NOTE: start tag is a special case since it contains attribute
-    // collection that requires allocation, and, in order to make this
-    // allocation lazy, we need intermidiate structure for this enum variant.
-    StartTag(StartTagToken<'c>),
+    StartTag {
+        name: Bytes<'c>,
+        attributes: AttributeList<'c>,
+        self_closing: bool,
+    },
 
     EndTag {
         name: Bytes<'c>,

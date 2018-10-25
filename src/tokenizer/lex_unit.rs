@@ -54,12 +54,11 @@ impl<'c> LexUnit<'c> {
                         ref attributes,
                         self_closing,
                         ..
-                    } => Token::StartTag(StartTagToken::new(
-                        self.input,
-                        self.input.slice(name),
-                        attributes,
+                    } => Token::StartTag {
+                        name: self.input.slice(name),
+                        attributes: AttributeList::new(self.input, attributes),
                         self_closing,
-                    )),
+                    },
 
                     &TokenView::EndTag { name, .. } => Token::EndTag {
                         name: self.input.slice(name),

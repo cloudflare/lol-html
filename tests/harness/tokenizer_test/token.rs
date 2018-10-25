@@ -63,26 +63,30 @@ impl TestToken {
         match token {
             Token::Character(data) => TestToken::Character(data.as_string()),
 
-            Token::Comment(ref data) => TestToken::Comment(to_null_decoded(data)),
+            Token::Comment(data) => TestToken::Comment(to_null_decoded(data)),
 
-            Token::StartTag(tag) => TestToken::StartTag {
-                name: to_lower_null_decoded(&tag.name),
+            Token::StartTag {
+                name,
+                attributes,
+                self_closing,
+            } => TestToken::StartTag {
+                name: to_lower_null_decoded(name),
                 name_hash: match lex_unit.get_token_view() {
                     Some(&TokenView::StartTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
 
-                attributes: HashMap::from_iter(tag.get_attributes().iter().rev().map(|attr| {
+                attributes: HashMap::from_iter(attributes.iter().rev().map(|a| {
                     (
-                        to_lower_null_decoded(&attr.name),
-                        Decoder::new(attr.value.as_str())
+                        to_lower_null_decoded(&a.name),
+                        Decoder::new(a.value.as_str())
                             .unsafe_null()
                             .attr_entities()
                             .run(),
                     )
                 })),
 
-                self_closing: tag.self_closing,
+                self_closing: *self_closing,
             },
 
             Token::EndTag { name } => TestToken::EndTag {
