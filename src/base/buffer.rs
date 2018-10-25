@@ -2,7 +2,6 @@ use base::Input;
 use errors::Error;
 use safemem::copy_over;
 
-#[derive(Debug)]
 pub struct Buffer {
     data: Box<[u8]>,
     capacity: usize,

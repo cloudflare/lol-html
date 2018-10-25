@@ -1,6 +1,5 @@
 use base::Input;
 
-#[derive(Debug)]
 pub struct Chunk<'b> {
     data: &'b [u8],
     last: bool,

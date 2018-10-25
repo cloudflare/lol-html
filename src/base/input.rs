@@ -1,7 +1,6 @@
 use base::{Bytes, Range};
-use std::fmt::Debug;
 
-pub trait Input<'b>: Debug + 'b {
+pub trait Input<'b>: 'b {
     fn get_data(&self) -> &[u8];
     fn is_last(&self) -> bool;
 

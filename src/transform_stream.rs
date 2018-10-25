@@ -35,7 +35,6 @@ impl<H: LexUnitHandler> TransformStream<H> {
             if self.has_buffered_data {
                 // TODO: trace for buffering
                 // TODO: debug for input can be removed after debug for starttag
-                // TODO: debug for StartTag
                 self.buffer.shrink_to_last(blocked_byte_count);
             } else {
                 let blocked_bytes = &data[data.len() - blocked_byte_count..];

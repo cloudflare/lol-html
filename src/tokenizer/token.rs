@@ -1,6 +1,7 @@
 use base::{Align, Bytes, Input, Range};
 use lazycell::LazyCell;
 use std::cell::RefCell;
+use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 #[derive(Debug, Default)]
@@ -76,7 +77,6 @@ pub struct Attribute<'c> {
     pub value: Bytes<'c>,
 }
 
-#[derive(Debug)]
 pub struct StartTagToken<'c> {
     input: &'c dyn Input<'c>,
     pub name: Bytes<'c>,
@@ -111,6 +111,16 @@ impl<'c> StartTagToken<'c> {
                     value: self.input.slice(a.value),
                 }).collect()
         })
+    }
+}
+
+impl<'c> Debug for StartTagToken<'c> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "StartTagToken {{")?;
+        writeln!(f, "   name: {:?}", self.name)?;
+        writeln!(f, "   attributes: {:?}", self.get_attributes())?;
+        writeln!(f, "   self_closing: {}", self.self_closing)?;
+        write!(f, "}}")
     }
 }
 
