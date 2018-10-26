@@ -41,8 +41,7 @@ pub enum ParsingLoopDirective {
     Continue,
 }
 
-pub type TokenizerState<H> =
-    fn(&mut Tokenizer<H>, &Chunk, Option<u8>) -> Result<ParsingLoopDirective, Error>;
+pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Chunk) -> Result<ParsingLoopDirective, Error>;
 
 pub struct Tokenizer<H> {
     next_pos: usize,
@@ -91,8 +90,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
 
     pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
         loop {
-            let ch = input!(@consume_ch self, input);
-            let directive = (self.state)(self, input, ch)?;
+            let directive = (self.state)(self, input)?;
 
             if let ParsingLoopDirective::Break = directive {
                 break;
