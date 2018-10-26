@@ -166,7 +166,7 @@ macro_rules! action {
         if let Some(ch) = $ch {
             action_helper!(@update_tag_part |$self|> name_hash,
                 {
-                    *name_hash = TagName::update_hash(*name_hash, ch);
+                    TagName::update_hash(name_hash, ch);
                 }
             );
         }

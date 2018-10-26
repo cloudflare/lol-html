@@ -114,16 +114,14 @@ impl PartialEq<TagName> for u64 {
 
 impl TagName {
     #[inline]
-    pub fn update_hash(hash: Option<u64>, ch: u8) -> Option<u64> {
-        let mut hash = hash;
-
-        if let Some(h) = hash {
+    pub fn update_hash(hash: &mut Option<u64>, ch: u8) {
+        if let Some(h) = *hash {
             // NOTE: check if we still have space for yet another
             // character and if not then invalidate the hash.
             // Note, that we can't have `1` (which is encoded as 0b00000) as
             // a first character of a tag name, so it's safe to perform
             // check this way.
-            hash = if h >> (64 - 5) == 0 {
+            *hash = if h >> (64 - 5) == 0 {
                 match ch {
                     // NOTE: apply 0x1F mask on ASCII alpha to convert it to the
                     // number from 1 to 26 (character case is controlled by one of
@@ -145,15 +143,13 @@ impl TagName {
                 None
             };
         }
-
-        hash
     }
 
     pub fn get_hash(name: &str) -> Option<u64> {
         let mut hash = Some(0);
 
         for ch in name.bytes() {
-            hash = TagName::update_hash(hash, ch);
+            TagName::update_hash(&mut hash, ch);
         }
 
         hash
