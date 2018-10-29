@@ -43,7 +43,7 @@ pub enum ParsingLoopDirective {
 
 pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Chunk) -> Result<ParsingLoopDirective, Error>;
 
-pub struct Tokenizer<H> {
+pub struct Tokenizer<H: LexUnitHandler> {
     next_pos: usize,
     lex_unit_start: usize,
     token_part_start: usize,
@@ -61,8 +61,6 @@ pub struct Tokenizer<H> {
     #[cfg(feature = "testing_api")]
     text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
 }
-
-define_state_machine!();
 
 impl<H: LexUnitHandler> Tokenizer<H> {
     pub fn new(lex_unit_handler: H) -> Self {
@@ -88,6 +86,8 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
+    define_state_machine!();
+
     pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
         loop {
             let directive = (self.state)(self, input)?;
@@ -97,24 +97,16 @@ impl<H: LexUnitHandler> Tokenizer<H> {
             }
         }
 
-        let blocked_byte_count = input.len() - self.lex_unit_start;
-
-        if !input.is_last() {
-            self.adjust_for_next_input();
-        }
-
-        Ok(blocked_byte_count)
+        Ok(input.len() - self.lex_unit_start)
     }
 
-    fn adjust_for_next_input(&mut self) {
-        let offset = self.lex_unit_start;
+    pub fn align_offsets_to_blocked_bytes_start(&mut self) {
+        self.next_pos.align(self.lex_unit_start + 1);
+        self.token_part_start.align(self.lex_unit_start);
+        self.current_token.align(self.lex_unit_start);
+        self.current_attr.align(self.lex_unit_start);
 
         self.lex_unit_start = 0;
-
-        self.next_pos.align(offset + 1);
-        self.token_part_start.align(offset);
-        self.current_token.align(offset);
-        self.current_attr.align(offset);
     }
 
     #[cfg(feature = "testing_api")]

@@ -14,9 +14,9 @@ macro_rules! action_list {
 
     ( | $self:tt, $input:ident, $ch:ident |> { $($code_block:tt)* } ) => ( $($code_block)* );
 
-    ( | $self:tt, $input:ident, $ch:ident |> $action:ident $($args:expr)*; $($rest:tt)* ) => {
+    ( | $self:tt, $input:ident, $ch:ident |> $action:ident $($args:expr),*; $($rest:tt)* ) => {
         trace!(@actions $action $($args:expr)*);
-        action!(| $self, $input, $ch |> $action $($args)*);
+        action!(| $self, $input, $ch |> $action $($args),*);
         action_list!(| $self, $input, $ch |> $($rest)*);
     };
 

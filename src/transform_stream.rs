@@ -2,7 +2,7 @@ use base::{Buffer, Chunk};
 use errors::Error;
 use tokenizer::{LexUnitHandler, Tokenizer};
 
-pub struct TransformStream<H> {
+pub struct TransformStream<H: LexUnitHandler> {
     tokenizer: Tokenizer<H>,
     buffer: Buffer,
     has_buffered_data: bool,
@@ -60,6 +60,8 @@ impl<H: LexUnitHandler> TransformStream<H> {
         } else {
             self.has_buffered_data = false;
         }
+
+        self.tokenizer.align_offsets_to_blocked_bytes_start();
 
         Ok(())
     }

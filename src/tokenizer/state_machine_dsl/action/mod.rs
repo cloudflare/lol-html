@@ -7,6 +7,18 @@ mod state_transition;
 #[macro_use]
 mod emit_tag;
 
+macro_rules! action1 {
+    (| $self:tt, $input:ident, $ch:ident | > $action_fn:ident? $($args:expr),* ) => {
+        if let Some(loop_directive) = $self.$action_fn($input, $ch $(,$args),*)? {
+            return Ok(loop_directive);
+        }
+    };
+
+    (| $self:tt, $input:ident, $ch:ident | > $action_fn:ident $($args:expr),* ) => {
+        $self.$action_fn($input, $ch $(,$args),*);
+    };
+}
+
 macro_rules! action {
     // Lex result emission
     //--------------------------------------------------------------------
