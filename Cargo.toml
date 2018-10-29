@@ -41,4 +41,3 @@ fmt = "cargo fmt && git add -u"
 
 [dev-dependencies.rustc-test]
 version = "0.2.0"
-
