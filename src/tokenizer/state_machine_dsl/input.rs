@@ -1,3 +1,4 @@
+// TODO move to Tokenizer trait
 macro_rules! input {
     ( @pos $self:tt ) => {
         $self.next_pos - 1

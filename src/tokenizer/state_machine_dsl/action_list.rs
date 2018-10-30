@@ -20,10 +20,16 @@ macro_rules! action_list {
         action_list!(| $self, $input, $ch |> $($rest)*);
     };
 
+     ( | $self:tt, $input:ident, $ch:ident |> $action:ident ? $($args:expr),*; $($rest:tt)* ) => {
+        trace!(@actions $action $($args:expr)*);
+        action!(| $self, $input, $ch |> $action ? $($args),*);
+        action_list!(| $self, $input, $ch |> $($rest)*);
+    };
+
     // NOTE: state transition should always be in the end of the action list
     ( | $self:tt, $input:ident, $ch:ident |> $($transition:tt)+ ) => {
         trace!(@actions $($transition)+);
-        state_transition_action!(| $self, $input |> $($transition)+);
+        action!(@state_transition | $self |> $($transition)+);
     };
 
     // NOTE: end of the action list

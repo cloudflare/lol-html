@@ -21,12 +21,14 @@ pub mod transform_stream;
 // 5. Don't emit character immidiately, extend existing
 // 6. State embedding
 
-// We can use fast skip if:
+// 7. We can use fast skip if:
 // there is _ => () branch
 // there are no consequent range or sequence branches
-
 // If there is only one character branch except _, eof or eoc the use memchr
 // Otherwise find the biggest char in the seq of skippable chars, use bit vector
 // for skippable chars and compare that it less than 64.
-
 // Try single loop
+
+// 8.Lazily initialize buffer
+// 9.Use smaller buffer for attributes (default?), it will grow proportional to
+// to the buffer size, add the comment.

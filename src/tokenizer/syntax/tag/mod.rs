@@ -37,13 +37,13 @@ define_state_group!(tag_states_group = {
     tag_name_state {
         whitespace => ( finish_tag_name; --> before_attribute_name_state )
         b'/'       => ( finish_tag_name; --> self_closing_start_tag_state )
-        b'>'       => ( finish_tag_name; emit_tag; --> data_state )
+        b'>'       => ( finish_tag_name; emit_tag?; --> data_state )
         eof        => ( emit_raw_without_token_and_eof; )
         _          => ( update_tag_name_hash; )
     }
 
     self_closing_start_tag_state {
-        b'>' => ( mark_as_self_closing; emit_tag; --> data_state )
+        b'>' => ( mark_as_self_closing; emit_tag?; --> data_state )
         eof  => ( emit_raw_without_token_and_eof; )
         _    => ( reconsume in before_attribute_name_state )
     }
