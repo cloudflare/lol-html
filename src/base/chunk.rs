@@ -46,15 +46,9 @@ impl<'b> Chunk<'b> {
         range.map(|range| self.slice(range))
     }
 
-    // NOTE: slice's get() is too generic and returns a borrowed
-    // value which doesn't work for us due to ownership issues
     #[inline]
     pub fn get(&self, pos: usize) -> Option<u8> {
-        if pos < self.data.len() {
-            Some(*unsafe { self.data.get_unchecked(pos) })
-        } else {
-            None
-        }
+        self.data.get(pos).cloned()
     }
 
     pub fn as_string(&self) -> String {
