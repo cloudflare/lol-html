@@ -1,5 +1,6 @@
 #[macro_use]
 mod actions;
+mod conditions;
 
 use base::{Align, Chunk, Range};
 use errors::Error;
@@ -120,7 +121,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     fn handle_tree_builder_feedback(
         &mut self,
         feedback: TreeBuilderFeedback,
-        lex_unit: LexUnit,
+        lex_unit: &LexUnit,
     ) -> Option<ParsingLoopDirective> {
         let mut feedback = feedback;
 

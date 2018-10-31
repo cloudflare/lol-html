@@ -14,9 +14,6 @@ mod state;
 mod arm_pattern;
 
 #[macro_use]
-mod condition;
-
-#[macro_use]
 mod input;
 
 macro_rules! define_state_group {

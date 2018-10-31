@@ -75,7 +75,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
 
         let lex_unit = self.emit_lex_unit_with_raw_inclusive(input, token);
 
-        Ok(self.handle_tree_builder_feedback(feedback, lex_unit))
+        Ok(self.handle_tree_builder_feedback(feedback, &lex_unit))
     }
 
     #[inline]
@@ -184,7 +184,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn finish_doctype_public_id(&mut self, input: &Chunk, _ch: Option<u8>) {
+    pub(super) fn finish_doctype_public_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::Doctype {
             ref mut public_id, ..
         }) = self.current_token
@@ -194,7 +194,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn finish_doctype_system_id(&mut self, input: &Chunk, _ch: Option<u8>) {
+    pub(super) fn finish_doctype_system_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::Doctype {
             ref mut system_id, ..
         }) = self.current_token
@@ -206,7 +206,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     // Tag parts
     //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn finish_tag_name(&mut self, input: &Chunk, _ch: Option<u8>) {
+    pub(super) fn finish_tag_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
         match self.current_token {
             Some(TokenView::StartTag { ref mut name, .. })
             | Some(TokenView::EndTag { ref mut name, .. }) => *name = get_token_part_range!(self),
@@ -288,6 +288,8 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     // Testing related
     //--------------------------------------------------------------------
     #[inline]
+    // NOTE: prevent compiler from complaining about unused `mode` in release builds.
+    #[allow(unused_variables)]
     pub(super) fn notify_text_parsing_mode_change(
         &mut self,
         _input: &Chunk,

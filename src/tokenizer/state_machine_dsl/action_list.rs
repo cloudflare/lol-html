@@ -5,7 +5,7 @@ macro_rules! action_list {
         else
             ( $($else_actions:tt)* )
     ) => {
-        if condition!(|$self|> $cond) {
+        if $self.$cond() {
             action_list!(| $self, $input, $ch |> $($if_actions)*);
         } else {
             action_list!(| $self, $input, $ch |> $($else_actions)*);

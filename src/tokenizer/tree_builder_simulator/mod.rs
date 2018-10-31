@@ -32,6 +32,7 @@ pub enum StartTagTokenRequestReason {
     IntegrationPointCheck,
 }
 
+#[derive(Copy, Clone)]
 pub enum TokenizerAdjustment {
     SwitchTextParsingMode(TextParsingMode),
     SetAllowCdata(bool),
