@@ -2,7 +2,7 @@
 mod actions;
 mod conditions;
 
-use base::{Align, Chunk, Range};
+use base::{Align, Chunk, Cursor, Range};
 use errors::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -35,7 +35,7 @@ pub enum ParsingLoopDirective {
 pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Chunk) -> Result<ParsingLoopDirective, Error>;
 
 pub struct Tokenizer<H: LexUnitHandler> {
-    next_pos: usize,
+    input_cursor: Cursor,
     lex_unit_start: usize,
     token_part_start: usize,
     state_enter: bool,
@@ -54,9 +54,11 @@ pub struct Tokenizer<H: LexUnitHandler> {
 }
 
 impl<H: LexUnitHandler> Tokenizer<H> {
+    define_state_machine!();
+
     pub fn new(lex_unit_handler: H) -> Self {
         Tokenizer {
-            next_pos: 0,
+            input_cursor: Cursor::default(),
             lex_unit_start: 0,
             token_part_start: 0,
             state_enter: true,
@@ -77,8 +79,6 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    define_state_machine!();
-
     pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
         loop {
             let directive = (self.state)(self, input)?;
@@ -92,7 +92,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     pub fn align_offsets_to_blocked_bytes_start(&mut self) {
-        self.next_pos.align(self.lex_unit_start + 1);
+        self.input_cursor.align(self.lex_unit_start);
         self.token_part_start.align(self.lex_unit_start);
         self.current_token.align(self.lex_unit_start);
         self.current_attr.align(self.lex_unit_start);
@@ -223,7 +223,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         input: &'c Chunk,
         token: Option<TokenView>,
     ) -> LexUnit<'c> {
-        let raw_end = input!(@pos self) + 1;
+        let raw_end = self.input_cursor.pos() + 1;
 
         self.emit_lex_unit_with_raw(input, token, raw_end)
     }
@@ -234,7 +234,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         input: &'c Chunk,
         token: Option<TokenView>,
     ) -> LexUnit<'c> {
-        let raw_end = input!(@pos self);
+        let raw_end = self.input_cursor.pos();
 
         self.emit_lex_unit_with_raw(input, token, raw_end)
     }

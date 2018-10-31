@@ -13,9 +13,6 @@ mod state;
 #[macro_use]
 mod arm_pattern;
 
-#[macro_use]
-mod input;
-
 macro_rules! define_state_group {
     ( $name:ident = { $($states:tt)+ } ) => {
         macro_rules! $name {

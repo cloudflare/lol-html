@@ -10,7 +10,7 @@ macro_rules! action {
     };
 
     ( @state_transition | $self:tt | > reconsume in $state:ident) => {
-        input!(@unconsume_ch $self);
+        $self.input_cursor.unconsume_ch();
         action!(@state_transition | $self | > --> $state);
     };
 

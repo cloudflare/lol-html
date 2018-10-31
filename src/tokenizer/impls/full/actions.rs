@@ -5,7 +5,7 @@ macro_rules! get_token_part_range {
     ($self:tt) => {
         Range {
             start: $self.token_part_start,
-            end: input!(@pos $self),
+            end: $self.input_cursor.pos(),
         }
     };
 }
@@ -36,7 +36,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
 
     #[inline]
     pub(super) fn emit_chars(&mut self, input: &Chunk, _ch: Option<u8>) {
-        if input!(@pos self) > self.lex_unit_start {
+        if self.input_cursor.pos() > self.lex_unit_start {
             // NOTE: unlike any other tokens, character tokens don't have
             // any lexical symbols that determine their bounds. Therefore,
             // representation of character token content is the raw slice.
@@ -139,7 +139,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     //--------------------------------------------------------------------
     #[inline]
     pub(super) fn start_token_part(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.token_part_start = input!(@pos self);
+        self.token_part_start = self.input_cursor.pos();
     }
 
     // Comment parts
