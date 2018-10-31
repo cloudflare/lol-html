@@ -1,31 +1,22 @@
 #[macro_use]
 mod actions;
 mod conditions;
+mod lex_unit;
+mod token;
 
+pub use self::lex_unit::*;
+pub use self::token::*;
 use base::{Align, Chunk, Cursor, Range};
 use errors::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
-pub use tokenizer::lex_unit::LexUnit;
 pub use tokenizer::tag_name::TagName;
-pub use tokenizer::token::*;
 use tokenizer::tree_builder_simulator::*;
 
 #[cfg(feature = "testing_api")]
 pub use tokenizer::tree_builder_simulator::{TextParsingMode, TextParsingModeSnapshot};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
-
-pub trait LexUnitHandler {
-    fn handle(&mut self, lex_unit: &LexUnit);
-}
-
-#[cfg(feature = "testing_api")]
-impl<F: FnMut(&LexUnit)> LexUnitHandler for F {
-    fn handle(&mut self, lex_unit: &LexUnit) {
-        self(lex_unit);
-    }
-}
 
 pub enum ParsingLoopDirective {
     Break,

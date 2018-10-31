@@ -7,9 +7,7 @@ mod syntax;
 #[macro_use]
 mod tag_name;
 
-mod impls;
-mod lex_unit;
-mod token;
+mod full;
 mod tree_builder_simulator;
 
-pub use self::impls::full::*;
+pub use self::full::*;

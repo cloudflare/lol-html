@@ -1,7 +1,7 @@
+use super::token::*;
 use base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
 use std::fmt::{self, Debug, Write};
-pub use tokenizer::token::*;
 
 pub struct LexUnit<'c> {
     input: &'c Chunk<'c>,
@@ -107,5 +107,16 @@ impl<'c> Debug for LexUnit<'c> {
         }
 
         builder.finish()
+    }
+}
+
+pub trait LexUnitHandler {
+    fn handle(&mut self, lex_unit: &LexUnit);
+}
+
+#[cfg(feature = "testing_api")]
+impl<F: FnMut(&LexUnit)> LexUnitHandler for F {
+    fn handle(&mut self, lex_unit: &LexUnit) {
+        self(lex_unit);
     }
 }
