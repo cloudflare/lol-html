@@ -79,10 +79,16 @@ impl<H: LexUnitHandler> Tokenizer<H> {
             }
         }
 
-        Ok(input.len() - self.lex_unit_start)
+        let blocked_byte_count = input.len() - self.lex_unit_start;
+
+        if !input.is_last() {
+            self.adjust_for_next_input()
+        }
+
+        Ok(blocked_byte_count)
     }
 
-    pub fn align_offsets_to_blocked_bytes_start(&mut self) {
+    fn adjust_for_next_input(&mut self) {
         self.input_cursor.align(self.lex_unit_start);
         self.token_part_start.align(self.lex_unit_start);
         self.current_token.align(self.lex_unit_start);

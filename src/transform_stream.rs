@@ -61,8 +61,6 @@ impl<H: LexUnitHandler> TransformStream<H> {
             self.has_buffered_data = false;
         }
 
-        self.tokenizer.align_offsets_to_blocked_bytes_start();
-
         Ok(())
     }
 
