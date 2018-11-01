@@ -10,22 +10,22 @@ use base::{Align, Chunk, Cursor, Range};
 use errors::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
-pub use tokenizer::tag_name::TagName;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::ParsingLoopDirective;
+use tokenizer::{ParsingLoopDirective, StateMachine, TagName};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Chunk) -> Result<ParsingLoopDirective, Error>;
+pub type FullStateMachineState<H> =
+    fn(&mut FullStateMachine<H>, &Chunk) -> Result<ParsingLoopDirective, Error>;
 
-pub struct Tokenizer<H: LexUnitHandler> {
+pub struct FullStateMachine<H: LexUnitHandler> {
     input_cursor: Cursor,
     lex_unit_start: usize,
     token_part_start: usize,
     state_enter: bool,
     allow_cdata: bool,
     lex_unit_handler: H,
-    state: TokenizerState<H>,
+    state: FullStateMachineState<H>,
     current_token: Option<TokenView>,
     current_attr: Option<AttributeView>,
     last_start_tag_name_hash: Option<u64>,
@@ -37,18 +37,16 @@ pub struct Tokenizer<H: LexUnitHandler> {
     text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
 }
 
-impl<H: LexUnitHandler> Tokenizer<H> {
-    define_states!();
-
+impl<H: LexUnitHandler> FullStateMachine<H> {
     pub fn new(lex_unit_handler: H) -> Self {
-        Tokenizer {
+        FullStateMachine {
             input_cursor: Cursor::default(),
             lex_unit_start: 0,
             token_part_start: 0,
             state_enter: true,
             allow_cdata: false,
             lex_unit_handler,
-            state: Tokenizer::data_state,
+            state: FullStateMachine::data_state,
             current_token: None,
             current_attr: None,
             last_start_tag_name_hash: None,
@@ -61,58 +59,6 @@ impl<H: LexUnitHandler> Tokenizer<H> {
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
         }
-    }
-
-    pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
-        loop {
-            let directive = (self.state)(self, input)?;
-
-            if let ParsingLoopDirective::Break = directive {
-                break;
-            }
-        }
-
-        let blocked_byte_count = input.len() - self.lex_unit_start;
-
-        if !input.is_last() {
-            self.adjust_for_next_input()
-        }
-
-        Ok(blocked_byte_count)
-    }
-
-    fn adjust_for_next_input(&mut self) {
-        self.input_cursor.align(self.lex_unit_start);
-        self.token_part_start.align(self.lex_unit_start);
-        self.current_token.align(self.lex_unit_start);
-        self.current_attr.align(self.lex_unit_start);
-
-        self.lex_unit_start = 0;
-    }
-
-    #[inline]
-    pub fn set_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        self.switch_state(match mode {
-            TextParsingMode::Data => Tokenizer::data_state,
-            TextParsingMode::PlainText => Tokenizer::plaintext_state,
-            TextParsingMode::RCData => Tokenizer::rcdata_state,
-            TextParsingMode::RawText => Tokenizer::rawtext_state,
-            TextParsingMode::ScriptData => Tokenizer::script_data_state,
-            TextParsingMode::CDataSection => Tokenizer::cdata_section_state,
-        });
-    }
-
-    #[cfg(feature = "testing_api")]
-    pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
-        self.last_start_tag_name_hash = name_hash;
-    }
-
-    #[cfg(feature = "testing_api")]
-    pub fn set_text_parsing_mode_change_handler(
-        &mut self,
-        handler: Box<dyn TextParsingModeChangeHandler>,
-    ) {
-        self.text_parsing_mode_change_handler = Some(handler);
     }
 
     fn handle_tree_builder_feedback(
@@ -178,32 +124,6 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    fn set_is_state_enter(&mut self, val: bool) {
-        self.state_enter = val;
-    }
-
-    #[inline]
-    fn is_state_enter(&self) -> bool {
-        self.state_enter
-    }
-
-    #[inline]
-    fn get_input_cursor(&mut self) -> &mut Cursor {
-        &mut self.input_cursor
-    }
-
-    #[inline]
-    fn set_state(&mut self, state: TokenizerState<H>) {
-        self.state = state;
-    }
-
-    #[inline]
-    fn switch_state(&mut self, state: TokenizerState<H>) {
-        self.set_state(state);
-        self.set_is_state_enter(true);
-    }
-
-    #[inline]
     fn emit_lex_unit<'c>(
         &mut self,
         input: &'c Chunk,
@@ -254,5 +174,71 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         let raw_end = self.input_cursor.pos();
 
         self.emit_lex_unit_with_raw(input, token, raw_end)
+    }
+}
+
+impl<H: LexUnitHandler> StateMachine for FullStateMachine<H> {
+    #[inline]
+    fn set_state(&mut self, state: FullStateMachineState<H>) {
+        self.state = state;
+    }
+
+    #[inline]
+    fn get_state(&self) -> FullStateMachineState<H> {
+        self.state
+    }
+
+    #[inline]
+    fn get_input_cursor(&mut self) -> &mut Cursor {
+        &mut self.input_cursor
+    }
+
+    #[inline]
+    fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
+        input.len() - self.lex_unit_start
+    }
+
+    fn adjust_for_next_input(&mut self) {
+        self.input_cursor.align(self.lex_unit_start);
+        self.token_part_start.align(self.lex_unit_start);
+        self.current_token.align(self.lex_unit_start);
+        self.current_attr.align(self.lex_unit_start);
+
+        self.lex_unit_start = 0;
+    }
+
+    #[inline]
+    fn set_is_state_enter(&mut self, val: bool) {
+        self.state_enter = val;
+    }
+
+    #[inline]
+    fn is_state_enter(&self) -> bool {
+        self.state_enter
+    }
+
+    #[inline]
+    fn set_text_parsing_mode(&mut self, mode: TextParsingMode) {
+        self.switch_state(match mode {
+            TextParsingMode::Data => FullStateMachine::data_state,
+            TextParsingMode::PlainText => FullStateMachine::plaintext_state,
+            TextParsingMode::RCData => FullStateMachine::rcdata_state,
+            TextParsingMode::RawText => FullStateMachine::rawtext_state,
+            TextParsingMode::ScriptData => FullStateMachine::script_data_state,
+            TextParsingMode::CDataSection => FullStateMachine::cdata_section_state,
+        });
+    }
+
+    #[cfg(feature = "testing_api")]
+    fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
+        self.last_start_tag_name_hash = name_hash;
+    }
+
+    #[cfg(feature = "testing_api")]
+    fn set_text_parsing_mode_change_handler(
+        &mut self,
+        handler: Box<dyn TextParsingModeChangeHandler>,
+    ) {
+        self.text_parsing_mode_change_handler = Some(handler);
     }
 }

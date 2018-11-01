@@ -1,9 +1,9 @@
 use base::{Buffer, Chunk};
 use errors::Error;
-use tokenizer::{LexUnitHandler, Tokenizer};
+use tokenizer::{FullTokenizer, LexUnitHandler};
 
 pub struct TransformStream<H: LexUnitHandler> {
-    tokenizer: Tokenizer<H>,
+    tokenizer: FullTokenizer<H>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
@@ -12,7 +12,7 @@ pub struct TransformStream<H: LexUnitHandler> {
 impl<H: LexUnitHandler> TransformStream<H> {
     pub fn new(buffer_capacity: usize, lex_unit_handler: H) -> Self {
         TransformStream {
-            tokenizer: Tokenizer::new(lex_unit_handler),
+            tokenizer: FullTokenizer::new(lex_unit_handler),
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
@@ -84,7 +84,7 @@ impl<H: LexUnitHandler> TransformStream<H> {
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn get_tokenizer(&mut self) -> &mut Tokenizer<H> {
+    pub fn get_tokenizer(&mut self) -> &mut FullTokenizer<H> {
         &mut self.tokenizer
     }
 }

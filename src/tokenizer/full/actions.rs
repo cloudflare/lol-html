@@ -1,5 +1,6 @@
 use super::*;
 use base::Chunk;
+use tokenizer::StateMachineActions;
 
 macro_rules! get_token_part_range {
     ($self:tt) => {
@@ -26,16 +27,14 @@ macro_rules! notify_text_parsing_mode_change {
     };
 }
 
-impl<H: LexUnitHandler> Tokenizer<H> {
-    // Lex unit emission
-    //--------------------------------------------------------------------
+impl<H: LexUnitHandler> StateMachineActions for FullStateMachine<H> {
     #[inline]
-    pub(super) fn emit_eof(&mut self, input: &Chunk, _ch: Option<u8>) {
+    fn emit_eof(&mut self, input: &Chunk, _ch: Option<u8>) {
         self.emit_lex_unit(input, Some(TokenView::Eof), None);
     }
 
     #[inline]
-    pub(super) fn emit_chars(&mut self, input: &Chunk, _ch: Option<u8>) {
+    fn emit_chars(&mut self, input: &Chunk, _ch: Option<u8>) {
         if self.input_cursor.pos() > self.lex_unit_start {
             // NOTE: unlike any other tokens, character tokens don't have
             // any lexical symbols that determine their bounds. Therefore,
@@ -47,14 +46,14 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn emit_current_token(&mut self, input: &Chunk, _ch: Option<u8>) {
+    fn emit_current_token(&mut self, input: &Chunk, _ch: Option<u8>) {
         let token = self.current_token.take();
 
         self.emit_lex_unit_with_raw_inclusive(input, token);
     }
 
     #[inline]
-    pub(super) fn emit_tag(
+    fn emit_tag(
         &mut self,
         input: &Chunk,
         _ch: Option<u8>,
@@ -79,7 +78,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
+    fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
         let token = self.current_token.take();
 
         self.emit_lex_unit_with_raw_exclusive(input, token);
@@ -87,21 +86,19 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn emit_raw_without_token(&mut self, input: &Chunk, _ch: Option<u8>) {
+    fn emit_raw_without_token(&mut self, input: &Chunk, _ch: Option<u8>) {
         self.emit_lex_unit_with_raw_inclusive(input, None);
     }
 
     #[inline]
-    pub(super) fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
+    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
         // NOTE: since we are at EOF we use exclusive range for token's raw.
         self.emit_lex_unit_with_raw_exclusive(input, None);
         self.emit_eof(input, ch);
     }
 
-    // Token creation
-    //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.attr_buffer.borrow_mut().clear();
 
         self.current_token = Some(TokenView::StartTag {
@@ -113,7 +110,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn create_end_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn create_end_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.current_token = Some(TokenView::EndTag {
             name: Range::default(),
             name_hash: Some(0),
@@ -121,7 +118,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn create_doctype(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn create_doctype(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.current_token = Some(TokenView::Doctype {
             name: None,
             public_id: None,
@@ -131,42 +128,31 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn create_comment(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn create_comment(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.current_token = Some(TokenView::Comment(Range::default()));
     }
 
-    // Token part
-    //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn start_token_part(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn start_token_part(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.token_part_start = self.input_cursor.pos();
     }
 
-    // Comment parts
-    //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn mark_comment_text_end(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn mark_comment_text_end(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::Comment(ref mut text)) = self.current_token {
             *text = get_token_part_range!(self);
         }
     }
 
     #[inline]
-    pub(super) fn shift_comment_text_end_by(
-        &mut self,
-        _input: &Chunk,
-        _ch: Option<u8>,
-        offset: usize,
-    ) {
+    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, offset: usize) {
         if let Some(TokenView::Comment(ref mut text)) = self.current_token {
             text.end += offset;
         }
     }
 
-    // Doctype parts
-    //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn set_force_quirks(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn set_force_quirks(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::Doctype {
             ref mut force_quirks,
             ..
@@ -177,14 +163,14 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn finish_doctype_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_doctype_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::Doctype { ref mut name, .. }) = self.current_token {
             *name = Some(get_token_part_range!(self));
         }
     }
 
     #[inline]
-    pub(super) fn finish_doctype_public_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_doctype_public_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::Doctype {
             ref mut public_id, ..
         }) = self.current_token
@@ -194,7 +180,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn finish_doctype_system_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_doctype_system_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::Doctype {
             ref mut system_id, ..
         }) = self.current_token
@@ -203,10 +189,8 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    // Tag parts
-    //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn finish_tag_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_tag_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
         match self.current_token {
             Some(TokenView::StartTag { ref mut name, .. })
             | Some(TokenView::EndTag { ref mut name, .. }) => *name = get_token_part_range!(self),
@@ -215,7 +199,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn update_tag_name_hash(&mut self, _input: &Chunk, ch: Option<u8>) {
+    fn update_tag_name_hash(&mut self, _input: &Chunk, ch: Option<u8>) {
         if let Some(ch) = ch {
             match self.current_token {
                 Some(TokenView::StartTag {
@@ -230,7 +214,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn mark_as_self_closing(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn mark_as_self_closing(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(TokenView::StartTag {
             ref mut self_closing,
             ..
@@ -240,10 +224,8 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         }
     }
 
-    // Attributes
-    //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn start_attr(&mut self, input: &Chunk, ch: Option<u8>) {
+    fn start_attr(&mut self, input: &Chunk, ch: Option<u8>) {
         // NOTE: create attribute only if we are parsing a start tag
         if let Some(TokenView::StartTag { .. }) = self.current_token {
             self.current_attr = Some(AttributeView::default());
@@ -253,44 +235,40 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn finish_attr_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_attr_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(AttributeView { ref mut name, .. }) = self.current_attr {
             *name = get_token_part_range!(self);
         }
     }
 
     #[inline]
-    pub(super) fn finish_attr_value(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_attr_value(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(AttributeView { ref mut value, .. }) = self.current_attr {
             *value = get_token_part_range!(self);
         }
     }
 
     #[inline]
-    pub(super) fn finish_attr(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_attr(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(attr) = self.current_attr.take() {
             self.attr_buffer.borrow_mut().push(attr);
         }
     }
 
-    // Quotes
-    //--------------------------------------------------------------------
     #[inline]
-    pub(super) fn set_closing_quote_to_double(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn set_closing_quote_to_double(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.closing_quote = b'"';
     }
 
     #[inline]
-    pub(super) fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.closing_quote = b'\'';
     }
 
-    // Testing related
-    //--------------------------------------------------------------------
     #[inline]
     // NOTE: prevent compiler from complaining about unused `mode` in release builds.
     #[allow(unused_variables)]
-    pub(super) fn notify_text_parsing_mode_change(
+    fn notify_text_parsing_mode_change(
         &mut self,
         _input: &Chunk,
         _ch: Option<u8>,
