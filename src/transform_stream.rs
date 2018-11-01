@@ -1,5 +1,5 @@
 use base::{Buffer, Chunk};
-use errors::Error;
+use crate::Error;
 use tokenizer::{FullTokenizer, LexUnitHandler};
 
 pub struct TransformStream<H: LexUnitHandler> {

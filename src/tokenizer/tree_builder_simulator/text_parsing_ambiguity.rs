@@ -34,7 +34,7 @@
 //! construction state. Though, current assumption is that markup that can
 //! trigger this bailout case should be seen quite rarely in the wild.
 
-use errors::Error;
+use crate::Error;
 use tokenizer::TagName;
 
 #[derive(Copy, Clone)]

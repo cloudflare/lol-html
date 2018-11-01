@@ -1,4 +1,4 @@
-use errors::Error;
+use crate::Error;
 use safemem::copy_over;
 
 pub struct Buffer {

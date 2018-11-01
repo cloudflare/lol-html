@@ -12,9 +12,9 @@
 mod text_parsing_ambiguity;
 
 use self::text_parsing_ambiguity::TextParsingAmbiguityTracker;
-use errors::Error;
-pub use tokenizer::text_parsing_mode::*;
-use tokenizer::{Attribute, TagName, Token};
+use crate::Error;
+use tokenizer::outputs::{Attribute, Token};
+use tokenizer::{TagName, TextParsingMode};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 

@@ -5,13 +5,18 @@ extern crate safemem;
 mod debug_trace;
 
 pub mod base;
-pub mod errors;
 pub mod tokenizer;
 pub mod transform_stream;
 
+#[derive(Debug, Copy, Clone)]
+pub enum Error {
+    BufferCapacityExceeded,
+    TextParsingAmbiguity,
+    MaxTagNestingReached,
+}
+
 // TODO
 // -- Functionality
-// 1. Extract methods for actions
 // 2. TokenizerQuery
 // 3. Eager tokenizer
 // 4. Tokenizer driver

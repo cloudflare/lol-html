@@ -1,17 +1,17 @@
 #[macro_use]
 mod actions;
 mod conditions;
-mod lex_unit;
-mod token;
 
-pub use self::lex_unit::*;
-pub use self::token::*;
 use base::{Align, Chunk, Cursor, Range};
-use errors::Error;
+use crate::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{ParsingLoopDirective, StateMachine, TagName};
+use tokenizer::{ParsingLoopDirective, StateMachine, TagName, TextParsingMode};
+
+#[cfg(feature = "testing_api")]
+use tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
@@ -215,18 +215,6 @@ impl<H: LexUnitHandler> StateMachine for FullStateMachine<H> {
     #[inline]
     fn is_state_enter(&self) -> bool {
         self.state_enter
-    }
-
-    #[inline]
-    fn set_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        self.switch_state(match mode {
-            TextParsingMode::Data => FullStateMachine::data_state,
-            TextParsingMode::PlainText => FullStateMachine::plaintext_state,
-            TextParsingMode::RCData => FullStateMachine::rcdata_state,
-            TextParsingMode::RawText => FullStateMachine::rawtext_state,
-            TextParsingMode::ScriptData => FullStateMachine::script_data_state,
-            TextParsingMode::CDataSection => FullStateMachine::cdata_section_state,
-        });
     }
 
     #[cfg(feature = "testing_api")]
