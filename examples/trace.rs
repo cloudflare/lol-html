@@ -62,9 +62,9 @@ fn main() {
     {
         let tokenizer = transform_stream.get_tokenizer();
 
-        tokenizer.set_state(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
-            None => Tokenizer::data_state,
-            Some(state) => TextParsingMode::from(state).into(),
+        tokenizer.set_text_parsing_mode(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
+            None => TextParsingMode::Data,
+            Some(state) => TextParsingMode::from(state),
         });
 
         if let Some(ref tag_name) = matches.opt_str("t") {

@@ -1,5 +1,3 @@
-use tokenizer::{LexUnitHandler, Tokenizer, TokenizerState};
-
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TextParsingMode {
     PlainText,
@@ -24,19 +22,6 @@ impl TextParsingMode {
 
     pub fn allows_text_entitites(self) -> bool {
         self == TextParsingMode::Data || self == TextParsingMode::RCData
-    }
-}
-
-impl<H: LexUnitHandler> Into<TokenizerState<H>> for TextParsingMode {
-    fn into(self) -> TokenizerState<H> {
-        match self {
-            TextParsingMode::Data => Tokenizer::data_state,
-            TextParsingMode::PlainText => Tokenizer::plaintext_state,
-            TextParsingMode::RCData => Tokenizer::rcdata_state,
-            TextParsingMode::RawText => Tokenizer::rawtext_state,
-            TextParsingMode::ScriptData => Tokenizer::script_data_state,
-            TextParsingMode::CDataSection => Tokenizer::cdata_section_state,
-        }
     }
 }
 

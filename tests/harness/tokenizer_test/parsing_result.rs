@@ -9,14 +9,14 @@ use itertools::izip;
 use std::cell::Cell;
 use std::rc::Rc;
 
-fn decode_text(text: &mut str, initial_state: TextParsingMode) -> String {
+fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
 
-    if initial_state.should_replace_unsafe_null_in_text() {
+    if text_parsing_mode.should_replace_unsafe_null_in_text() {
         decoder = decoder.unsafe_null();
     }
 
-    if initial_state.allows_text_entitites() {
+    if text_parsing_mode.allows_text_entitites() {
         decoder = decoder.text_entities();
     }
 
@@ -70,7 +70,7 @@ impl ParsingResult {
             let tokenizer = transform_stream.get_tokenizer();
 
             tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
-            tokenizer.set_state(initial_mode_snapshot.mode.into());
+            tokenizer.set_text_parsing_mode(initial_mode_snapshot.mode);
             tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
         }
 

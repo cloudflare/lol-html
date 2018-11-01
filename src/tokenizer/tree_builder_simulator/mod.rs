@@ -10,11 +10,10 @@
 //! in such a case (see `TextParsingAmbiguityTracker` for the details).
 
 mod text_parsing_ambiguity;
-mod text_parsing_mode;
 
 use self::text_parsing_ambiguity::TextParsingAmbiguityTracker;
-pub use self::text_parsing_mode::*;
 use errors::Error;
+pub use tokenizer::text_parsing_mode::*;
 use tokenizer::{Attribute, TagName, Token};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;

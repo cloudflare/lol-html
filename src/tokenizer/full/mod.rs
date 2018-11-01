@@ -13,9 +13,6 @@ use std::rc::Rc;
 pub use tokenizer::tag_name::TagName;
 use tokenizer::tree_builder_simulator::*;
 
-#[cfg(feature = "testing_api")]
-pub use tokenizer::tree_builder_simulator::{TextParsingMode, TextParsingModeSnapshot};
-
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 pub enum ParsingLoopDirective {
@@ -97,9 +94,16 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         self.lex_unit_start = 0;
     }
 
-    #[cfg(feature = "testing_api")]
-    pub fn set_state(&mut self, state: TokenizerState<H>) {
-        self.state = state;
+    #[inline]
+    pub fn set_text_parsing_mode(&mut self, mode: TextParsingMode) {
+        self.switch_state(match mode {
+            TextParsingMode::Data => Tokenizer::data_state,
+            TextParsingMode::PlainText => Tokenizer::plaintext_state,
+            TextParsingMode::RCData => Tokenizer::rcdata_state,
+            TextParsingMode::RawText => Tokenizer::rawtext_state,
+            TextParsingMode::ScriptData => Tokenizer::script_data_state,
+            TextParsingMode::CDataSection => Tokenizer::cdata_section_state,
+        });
     }
 
     #[cfg(feature = "testing_api")]
@@ -167,7 +171,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
         match adjustment {
             TokenizerAdjustment::SwitchTextParsingMode(mode) => {
                 notify_text_parsing_mode_change!(self, mode);
-                self.switch_state(mode.into());
+                self.set_text_parsing_mode(mode);
                 Some(ParsingLoopDirective::Continue)
             }
             TokenizerAdjustment::SetAllowCdata(allow_cdata) => {
@@ -178,13 +182,13 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn switch_state(&mut self, state: TokenizerState<H>) {
+    fn switch_state(&mut self, state: TokenizerState<H>) {
         self.state = state;
         self.state_enter = true;
     }
 
     #[inline]
-    pub(super) fn emit_lex_unit<'c>(
+    fn emit_lex_unit<'c>(
         &mut self,
         input: &'c Chunk,
         token: Option<TokenView>,
@@ -215,7 +219,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn emit_lex_unit_with_raw_inclusive<'c>(
+    fn emit_lex_unit_with_raw_inclusive<'c>(
         &mut self,
         input: &'c Chunk,
         token: Option<TokenView>,
@@ -226,7 +230,7 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    pub(super) fn emit_lex_unit_with_raw_exclusive<'c>(
+    fn emit_lex_unit_with_raw_exclusive<'c>(
         &mut self,
         input: &'c Chunk,
         token: Option<TokenView>,

@@ -8,10 +8,11 @@ mod syntax;
 mod tag_name;
 
 mod full;
+mod text_parsing_mode;
 mod tree_builder_simulator;
 
 pub use self::full::*;
-use self::tree_builder_simulator::TextParsingMode;
+pub use self::text_parsing_mode::*;
 use base::Chunk;
 use errors::Error;
 
