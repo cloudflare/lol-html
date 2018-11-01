@@ -1,6 +1,6 @@
 define_state_group!(rcdata_states_group = {
 
-    pub rcdata_state <-- ( notify_text_parsing_mode_change TextParsingMode::RCData; ) {
+    rcdata_state <-- ( notify_text_parsing_mode_change TextParsingMode::RCData; ) {
         b'<' => ( emit_chars; --> rcdata_less_than_sign_state )
         eoc  => ( emit_chars; )
         eof  => ( emit_chars; emit_eof; )

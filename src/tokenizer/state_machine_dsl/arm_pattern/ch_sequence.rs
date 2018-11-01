@@ -84,7 +84,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input:ident, $ch:ident] |>
         $depth:expr, [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {{
-        let ch = $self.input_cursor.lookahead($input, $depth);
+        let ch = $self.get_input_cursor().lookahead($input, $depth);
 
         ch_sequence_arm_pattern!(@match_block $input, ch, $exp_ch, {
             ch_sequence_arm_pattern!(
@@ -97,10 +97,10 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input:ident, $ch:ident] |>
         $depth:expr, [$exp_ch:expr], ( $($actions:tt)* ), $($case_mod:ident)*
     ) => {{
-        let ch = $self.input_cursor.lookahead($input, $depth);
+        let ch = $self.get_input_cursor().lookahead($input, $depth);
 
         ch_sequence_arm_pattern!(@match_block $input, ch, $exp_ch, {
-            $self.input_cursor.consume_several($depth);
+            $self.get_input_cursor().consume_several($depth);
             action_list!(|$self, $input, $ch|> $($actions)*);
 
             // NOTE: this may be unreachable on expansion, e.g. if

@@ -17,14 +17,6 @@ macro_rules! arm_pattern {
     };
 
     ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
-        closing_quote => $actions:tt
-    ) => {
-        state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
-            Some(ch) if ch == $self.closing_quote => $actions
-        );
-    };
-
-    ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         eoc => ( $($actions:tt)* )
     ) => {
         state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>

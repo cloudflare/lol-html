@@ -67,17 +67,27 @@ define_state_group!(doctype_states_group = {
     }
 
     doctype_public_identifier_state <-- ( start_token_part; ) {
-        closing_quote => ( finish_doctype_public_id; --> after_doctype_public_identifier_state )
         b'>'          => ( finish_doctype_public_id; set_force_quirks; emit_current_token; --> data_state )
         eof           => ( finish_doctype_public_id; set_force_quirks; emit_current_token_and_eof; )
-        _             => ()
+
+        _ => (
+            if is_closing_quote
+                ( finish_doctype_public_id; --> after_doctype_public_identifier_state )
+            else
+                ()
+        )
     }
 
     doctype_system_identifier_state <-- ( start_token_part; ) {
-        closing_quote => ( finish_doctype_system_id; --> after_doctype_system_identifier_state )
         b'>'          => ( finish_doctype_system_id; set_force_quirks; emit_current_token; --> data_state )
         eof           => ( finish_doctype_system_id; set_force_quirks; emit_current_token_and_eof; )
-        _             => ()
+
+        _ => (
+            if is_closing_quote
+                ( finish_doctype_system_id; --> after_doctype_system_identifier_state )
+            else
+                ()
+        )
     }
 
     after_doctype_public_identifier_state {

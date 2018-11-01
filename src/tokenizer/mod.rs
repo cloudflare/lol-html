@@ -13,10 +13,15 @@ mod tree_builder_simulator;
 
 pub use self::full::*;
 pub use self::text_parsing_mode::*;
-use base::Chunk;
+use base::{Chunk, Cursor};
 use errors::Error;
 
-pub(self) trait StateMachineActions {
+pub enum ParsingLoopDirective {
+    Break,
+    Continue,
+}
+
+pub trait StateMachineActions {
     // Lex unit emission
     //--------------------------------------------------------------------
     fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
@@ -84,11 +89,51 @@ pub(self) trait StateMachineActions {
     );
 }
 
-pub(self) trait StateMachineConditions {
-    fn is_appropriate_end_tag(&self) -> bool;
-    fn cdata_allowed(&self) -> bool;
+pub trait StateMachineConditions {
+    fn is_appropriate_end_tag(&self, ch: Option<u8>) -> bool;
+    fn cdata_allowed(&self, ch: Option<u8>) -> bool;
+    fn is_closing_quote(&self, ch: Option<u8>) -> bool;
 }
 
-pub(self) trait StateMachine: StateMachineActions + StateMachineConditions {
-    //define_state_machine!();
+pub trait StateMachine: StateMachineActions + StateMachineConditions {
+    define_states!();
+
+    #[inline]
+    fn switch_state(
+        &mut self,
+        state: fn(&mut Self, &Chunk) -> Result<ParsingLoopDirective, Error>,
+    ) {
+        self.set_state(state);
+        self.set_is_state_enter(true);
+    }
+
+    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> Result<ParsingLoopDirective, Error>);
+    fn exec_state(&mut self, input: &Chunk) -> Result<ParsingLoopDirective, Error>;
+    fn get_input_cursor(&mut self) -> &mut Cursor;
+    fn get_blocked_byte_count(&self, input: &Chunk) -> usize;
+    fn adjust_for_next_input(&mut self);
+    fn is_state_enter(&self) -> bool;
+    fn set_is_state_enter(&mut self, val: bool);
+}
+
+pub struct Tokenizer1<S: StateMachine>(S);
+
+impl<S: StateMachine> Tokenizer1<S> {
+    pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
+        loop {
+            let directive = self.0.exec_state(input)?;
+
+            if let ParsingLoopDirective::Break = directive {
+                break;
+            }
+        }
+
+        let blocked_byte_count = self.0.get_blocked_byte_count(input);
+
+        if !input.is_last() {
+            self.0.adjust_for_next_input()
+        }
+
+        Ok(blocked_byte_count)
+    }
 }

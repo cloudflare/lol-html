@@ -12,13 +12,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 pub use tokenizer::tag_name::TagName;
 use tokenizer::tree_builder_simulator::*;
+use tokenizer::ParsingLoopDirective;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
-
-pub enum ParsingLoopDirective {
-    Break,
-    Continue,
-}
 
 pub type TokenizerState<H> = fn(&mut Tokenizer<H>, &Chunk) -> Result<ParsingLoopDirective, Error>;
 
@@ -42,7 +38,7 @@ pub struct Tokenizer<H: LexUnitHandler> {
 }
 
 impl<H: LexUnitHandler> Tokenizer<H> {
-    define_state_machine!();
+    define_states!();
 
     pub fn new(lex_unit_handler: H) -> Self {
         Tokenizer {
@@ -182,9 +178,29 @@ impl<H: LexUnitHandler> Tokenizer<H> {
     }
 
     #[inline]
-    fn switch_state(&mut self, state: TokenizerState<H>) {
+    fn set_is_state_enter(&mut self, val: bool) {
+        self.state_enter = val;
+    }
+
+    #[inline]
+    fn is_state_enter(&self) -> bool {
+        self.state_enter
+    }
+
+    #[inline]
+    fn get_input_cursor(&mut self) -> &mut Cursor {
+        &mut self.input_cursor
+    }
+
+    #[inline]
+    fn set_state(&mut self, state: TokenizerState<H>) {
         self.state = state;
-        self.state_enter = true;
+    }
+
+    #[inline]
+    fn switch_state(&mut self, state: TokenizerState<H>) {
+        self.set_state(state);
+        self.set_is_state_enter(true);
     }
 
     #[inline]

@@ -10,12 +10,12 @@ macro_rules! action {
     };
 
     ( @state_transition | $self:tt | > reconsume in $state:ident) => {
-        $self.input_cursor.unconsume_ch();
+        $self.get_input_cursor().unconsume_ch();
         action!(@state_transition | $self | > --> $state);
     };
 
     ( @state_transition | $self:tt | > - -> $state:ident) => {
-        $self.switch_state(Tokenizer::$state);
+        $self.switch_state(Self::$state);
 
         return Ok(ParsingLoopDirective::Continue);
     };

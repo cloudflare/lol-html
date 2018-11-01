@@ -10,7 +10,7 @@ mod comment;
 #[macro_use]
 mod doctype;
 
-macro_rules! define_state_machine {
+macro_rules! define_states {
     () => {
         cdata_section_states_group!();
         data_states_group!();

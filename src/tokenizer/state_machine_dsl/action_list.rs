@@ -5,7 +5,7 @@ macro_rules! action_list {
         else
             ( $($else_actions:tt)* )
     ) => {
-        if $self.$cond() {
+        if $self.$cond($ch) {
             action_list!(| $self, $input, $ch |> $($if_actions)*);
         } else {
             action_list!(| $self, $input, $ch |> $($else_actions)*);
@@ -39,9 +39,9 @@ macro_rules! action_list {
     // State enter action list
     //--------------------------------------------------------------------
     ( @state_enter | $self:tt, $input:ident, $ch:ident |> $($actions:tt)+ ) => {
-        if $self.state_enter {
+        if $self.is_state_enter() {
             action_list!(|$self, $input, $ch|> $($actions)*);
-            $self.state_enter = false;
+            $self.set_is_state_enter(false);
         }
     };
 

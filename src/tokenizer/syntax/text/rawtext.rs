@@ -1,6 +1,6 @@
 define_state_group!(rawtext_states_group = {
 
-    pub rawtext_state <-- ( notify_text_parsing_mode_change TextParsingMode::RawText; ) {
+    rawtext_state <-- ( notify_text_parsing_mode_change TextParsingMode::RawText; ) {
         b'<' => ( emit_chars; --> rawtext_less_than_sign_state )
         eoc  => ( emit_chars; )
         eof  => ( emit_chars; emit_eof; )
