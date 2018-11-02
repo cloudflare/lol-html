@@ -64,7 +64,6 @@ pub trait StateMachineActions {
 pub trait StateMachineConditions {
     fn is_appropriate_end_tag(&self, ch: Option<u8>) -> bool;
     fn cdata_allowed(&self, ch: Option<u8>) -> bool;
-    fn is_closing_quote(&self, ch: Option<u8>) -> bool;
 }
 
 pub type StateResult = Result<ParsingLoopDirective, Error>;
@@ -79,6 +78,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn adjust_for_next_input(&mut self);
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
+    fn get_closing_quote(&self) -> u8;
 
     #[cfg(feature = "testing_api")]
     fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);

@@ -216,6 +216,11 @@ impl<H: LexUnitHandler> StateMachine for FullStateMachine<H> {
         self.state_enter
     }
 
+    #[inline]
+    fn get_closing_quote(&self) -> u8 {
+        self.closing_quote
+    }
+
     #[cfg(feature = "testing_api")]
     fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
         self.last_start_tag_name_hash = name_hash;

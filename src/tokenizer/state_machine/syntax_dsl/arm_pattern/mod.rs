@@ -16,6 +16,15 @@ macro_rules! arm_pattern {
         );
     };
 
+    ( | [ [$self:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+        closing_quote => $actions:tt
+    ) => {
+        state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
+            Some(ch) if ch == $self.get_closing_quote() => $actions
+        );
+    };
+
+
     ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         eoc => ( $($actions:tt)* )
     ) => {

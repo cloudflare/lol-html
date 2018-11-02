@@ -14,12 +14,4 @@ impl<H: LexUnitHandler> StateMachineConditions for FullStateMachine<H> {
     fn cdata_allowed(&self, _ch: Option<u8>) -> bool {
         self.allow_cdata
     }
-
-    #[inline]
-    fn is_closing_quote(&self, ch: Option<u8>) -> bool {
-        match ch {
-            Some(ch) if ch == self.closing_quote => true,
-            _ => false,
-        }
-    }
 }

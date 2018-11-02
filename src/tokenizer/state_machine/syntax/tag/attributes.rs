@@ -36,14 +36,9 @@ define_state_group!(attributes_states_group = {
     }
 
     attribute_value_quoted_state <-- ( start_token_part; ) {
-        eof => ( emit_raw_without_token_and_eof; )
-
-        _ => (
-            if is_closing_quote
-                ( finish_attr_value; finish_attr; --> after_attribute_value_quoted_state )
-            else
-                ()
-        )
+        closing_quote => ( finish_attr_value; finish_attr; --> after_attribute_value_quoted_state )
+        eof           => ( emit_raw_without_token_and_eof; )
+        _             => ()
     }
 
     after_attribute_value_quoted_state {
