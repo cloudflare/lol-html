@@ -1,11 +1,13 @@
 mod chunked_input;
 mod decoder;
 mod parsing_result;
+mod tag_preview;
 mod token;
 mod unescape;
 
 use self::chunked_input::ChunkedInput;
 use self::parsing_result::ParsingResult;
+use self::tag_preview::TestTagPreview;
 pub use self::token::TestToken;
 use self::unescape::Unescape;
 use cool_thing::tokenizer::{TagName, TextParsingMode, TextParsingModeSnapshot};
@@ -64,6 +66,9 @@ pub struct TokenizerTest {
 
     #[serde(skip)]
     pub expected_bailout: Option<Bailout>,
+
+    #[serde(skip)]
+    pub expected_tag_previews: Vec<TestTagPreview>,
 }
 
 impl Unescape for TokenizerTest {
@@ -87,6 +92,12 @@ impl TokenizerTest {
 
         // NOTE: tokenizer should always produce EOF token
         self.expected_tokens.push(TestToken::Eof);
+
+        self.expected_tag_previews = self
+            .expected_tokens
+            .iter()
+            .filter_map(|t| TestTagPreview::try_from_test_token(t))
+            .collect();
 
         let mut new_descr = String::new();
 
