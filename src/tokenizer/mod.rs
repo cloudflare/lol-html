@@ -9,7 +9,7 @@ mod state_machine_impls;
 mod text_parsing_mode;
 mod tree_builder_simulator;
 
-use self::state_machine::{StateMachine, StateMachineActions, StateMachineConditions};
+use self::state_machine::*;
 use self::state_machine_impls::full::FullStateMachine;
 use base::Chunk;
 use crate::Error;

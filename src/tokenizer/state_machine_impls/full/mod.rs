@@ -8,15 +8,14 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{ParsingLoopDirective, StateMachine, TagName, TextParsingMode};
+use tokenizer::{ParsingLoopDirective, StateMachine, StateResult, TagName, TextParsingMode};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub type FullStateMachineState<H> =
-    fn(&mut FullStateMachine<H>, &Chunk) -> Result<ParsingLoopDirective, Error>;
+pub type FullStateMachineState<H> = fn(&mut FullStateMachine<H>, &Chunk) -> StateResult;
 
 pub struct FullStateMachine<H: LexUnitHandler> {
     input_cursor: Cursor,

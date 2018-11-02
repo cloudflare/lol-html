@@ -67,11 +67,13 @@ pub trait StateMachineConditions {
     fn is_closing_quote(&self, ch: Option<u8>) -> bool;
 }
 
+pub type StateResult = Result<ParsingLoopDirective, Error>;
+
 pub trait StateMachine: StateMachineActions + StateMachineConditions {
     define_states!();
 
-    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> Result<ParsingLoopDirective, Error>);
-    fn get_state(&self) -> fn(&mut Self, &Chunk) -> Result<ParsingLoopDirective, Error>;
+    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult);
+    fn get_state(&self) -> fn(&mut Self, &Chunk) -> StateResult;
     fn get_input_cursor(&mut self) -> &mut Cursor;
     fn get_blocked_byte_count(&self, input: &Chunk) -> usize;
     fn adjust_for_next_input(&mut self);
@@ -88,10 +90,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     );
 
     #[inline]
-    fn switch_state(
-        &mut self,
-        state: fn(&mut Self, &Chunk) -> Result<ParsingLoopDirective, Error>,
-    ) {
+    fn switch_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult) {
         self.set_state(state);
         self.set_is_state_enter(true);
     }
