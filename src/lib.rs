@@ -4,7 +4,9 @@ extern crate safemem;
 #[macro_use]
 mod debug_trace;
 
+#[macro_use]
 pub mod base;
+
 pub mod tokenizer;
 pub mod transform_stream;
 
