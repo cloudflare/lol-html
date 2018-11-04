@@ -65,60 +65,22 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
         feedback: TreeBuilderFeedback,
         lex_unit: &LexUnit,
     ) -> Option<ParsingLoopDirective> {
-        let mut feedback = feedback;
-
-        loop {
-            match feedback {
-                TreeBuilderFeedback::Adjust(adjustment) => {
-                    return self.apply_adjustment(adjustment);
-                }
-                TreeBuilderFeedback::RequestStartTagToken(reason) => {
-                    let token = lex_unit
-                        .get_token()
-                        .expect("There should be a token at this point");
-
-                    feedback = self
-                        .tree_builder_simulator
-                        .fulfill_start_tag_token_request(&token, reason);
-                }
-                TreeBuilderFeedback::RequestEndTagToken => {
-                    let token = lex_unit
-                        .get_token()
-                        .expect("There should be a token at this point");
-
-                    feedback = self
-                        .tree_builder_simulator
-                        .fulfill_end_tag_token_request(&token);
-                }
-                TreeBuilderFeedback::RequestSelfClosingFlag => match lex_unit.get_token_view() {
-                    Some(&TokenView::StartTag { self_closing, .. }) => {
-                        feedback = self
-                            .tree_builder_simulator
-                            .fulfill_self_closing_flag_request(self_closing);
-                    }
-                    _ => unreachable!("Token should be a start tag at this point"),
-                },
-                TreeBuilderFeedback::None => break,
-            }
-        }
-
-        None
-    }
-
-    fn apply_adjustment(
-        &mut self,
-        adjustment: TokenizerAdjustment,
-    ) -> Option<ParsingLoopDirective> {
-        match adjustment {
-            TokenizerAdjustment::SwitchTextParsingMode(mode) => {
+        match feedback {
+            TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
                 notify_text_parsing_mode_change!(self, mode);
                 self.set_text_parsing_mode(mode);
                 Some(ParsingLoopDirective::Continue)
             }
-            TokenizerAdjustment::SetAllowCdata(allow_cdata) => {
+            TreeBuilderFeedback::SetAllowCdata(allow_cdata) => {
                 self.allow_cdata = allow_cdata;
                 None
             }
+            TreeBuilderFeedback::RequestLexUnit(callback) => {
+                let feedback = callback(&mut self.tree_builder_simulator, &lex_unit);
+
+                self.handle_tree_builder_feedback(feedback, lex_unit)
+            }
+            TreeBuilderFeedback::None => None,
         }
     }
 

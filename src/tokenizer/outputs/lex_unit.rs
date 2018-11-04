@@ -5,7 +5,7 @@ use lazycell::LazyCell;
 use std::fmt::{self, Debug, Write};
 
 declare_handler! {
-    LexUnitHandler(LexUnit)
+    LexUnitHandler(&LexUnit)
 }
 
 pub struct LexUnit<'c> {

@@ -13,7 +13,7 @@ mod text_parsing_ambiguity;
 
 use self::text_parsing_ambiguity::TextParsingAmbiguityTracker;
 use crate::Error;
-use tokenizer::outputs::{Attribute, Token};
+use tokenizer::outputs::{Attribute, LexUnit, Token, TokenView};
 use tokenizer::{TagName, TextParsingMode};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
@@ -25,34 +25,13 @@ enum Namespace {
     MathML,
 }
 
+#[must_use]
 #[derive(Copy, Clone)]
-pub enum StartTagTokenRequestReason {
-    ForeignContentExitCheck,
-    IntegrationPointCheck,
-}
-
-#[derive(Copy, Clone)]
-pub enum TokenizerAdjustment {
+pub enum TreeBuilderFeedback {
     SwitchTextParsingMode(TextParsingMode),
     SetAllowCdata(bool),
-}
-
-pub enum TreeBuilderFeedback {
-    Adjust(TokenizerAdjustment),
-    RequestStartTagToken(StartTagTokenRequestReason),
-    RequestEndTagToken,
-    RequestSelfClosingFlag,
+    RequestLexUnit(fn(&mut TreeBuilderSimulator, &LexUnit) -> TreeBuilderFeedback),
     None,
-}
-
-impl TreeBuilderFeedback {
-    pub fn set_allow_cdata(allow_cdata: bool) -> Self {
-        TreeBuilderFeedback::Adjust(TokenizerAdjustment::SetAllowCdata(allow_cdata))
-    }
-
-    pub fn switch_text_parsing_mode(mode: TextParsingMode) -> Self {
-        TreeBuilderFeedback::Adjust(TokenizerAdjustment::SwitchTextParsingMode(mode))
-    }
 }
 
 #[inline]
@@ -73,16 +52,16 @@ fn eq_case_ins(actual: &[u8], expected: &[u8]) -> bool {
 #[inline]
 fn get_text_parsing_mode_adjustment(tag_name_hash: u64) -> TreeBuilderFeedback {
     if tag_is_one_of!(tag_name_hash, [Textarea, Title]) {
-        TreeBuilderFeedback::switch_text_parsing_mode(TextParsingMode::RCData)
+        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::RCData)
     } else if tag_name_hash == TagName::Plaintext {
-        TreeBuilderFeedback::switch_text_parsing_mode(TextParsingMode::PlainText)
+        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::PlainText)
     } else if tag_name_hash == TagName::Script {
-        TreeBuilderFeedback::switch_text_parsing_mode(TextParsingMode::ScriptData)
+        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::ScriptData)
     } else if tag_is_one_of!(
         tag_name_hash,
         [Style, Iframe, Xmp, Noembed, Noframes, Noscript]
     ) {
-        TreeBuilderFeedback::switch_text_parsing_mode(TextParsingMode::RawText)
+        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::RawText)
     } else {
         TreeBuilderFeedback::None
     }
@@ -107,6 +86,14 @@ fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
     tag_is_one_of!(tag_name_hash, [Desc, Title, ForeignObject])
 }
 
+macro_rules! expect_token {
+    ($lex_unit: ident) => {
+        $lex_unit
+            .get_token()
+            .expect("There should be a token at this point")
+    };
+}
+
 // TODO limit ns stack
 pub struct TreeBuilderSimulator {
     ns_stack: Vec<Namespace>,
@@ -129,75 +116,6 @@ impl Default for TreeBuilderSimulator {
 }
 
 impl TreeBuilderSimulator {
-    fn enter_ns(&mut self, ns: Namespace) -> TreeBuilderFeedback {
-        self.ns_stack.push(ns);
-        self.current_ns = ns;
-        TreeBuilderFeedback::set_allow_cdata(ns != Namespace::Html)
-    }
-
-    fn leave_ns(&mut self) -> TreeBuilderFeedback {
-        self.ns_stack.pop();
-
-        self.current_ns = *self
-            .ns_stack
-            .last()
-            .expect("Namespace stack should always have at least one item");
-
-        TreeBuilderFeedback::set_allow_cdata(self.current_ns != Namespace::Html)
-    }
-
-    fn is_integration_point_enter(&self, tag_name_hash: u64) -> bool {
-        self.current_ns == Namespace::Svg && is_html_integration_point_in_svg(tag_name_hash)
-            || self.current_ns == Namespace::MathML
-                && is_text_integration_point_in_math_ml(tag_name_hash)
-    }
-
-    fn check_integration_point_exit(&mut self, tag_name_hash: Option<u64>) -> TreeBuilderFeedback {
-        let ns_stack_len = self.ns_stack.len();
-
-        if ns_stack_len < 2 {
-            return TreeBuilderFeedback::None;
-        }
-
-        let prev_ns = self.ns_stack[ns_stack_len - 2];
-
-        match tag_name_hash {
-            Some(t)
-                if prev_ns == Namespace::MathML && is_text_integration_point_in_math_ml(t)
-                    || prev_ns == Namespace::Svg && is_html_integration_point_in_svg(t) =>
-            {
-                self.leave_ns()
-            }
-            // NOTE: <annotation-xml> case
-            None if prev_ns == Namespace::MathML => TreeBuilderFeedback::RequestEndTagToken,
-            _ => TreeBuilderFeedback::None,
-        }
-    }
-
-    fn get_feedback_for_start_tag_in_foreign_content(
-        &mut self,
-        tag_name_hash: Option<u64>,
-    ) -> TreeBuilderFeedback {
-        match tag_name_hash {
-            Some(t) if causes_foreign_content_exit(t) => self.leave_ns(),
-            // NOTE: <font> tag special case requires attributes
-            // to decide on foreign context exit
-            Some(t) if t == TagName::Font => TreeBuilderFeedback::RequestStartTagToken(
-                StartTagTokenRequestReason::ForeignContentExitCheck,
-            ),
-            Some(t) if self.is_integration_point_enter(t) => {
-                TreeBuilderFeedback::RequestSelfClosingFlag
-            }
-            // NOTE: integration point check <annotation-xml> case
-            None if self.current_ns == Namespace::MathML => {
-                TreeBuilderFeedback::RequestStartTagToken(
-                    StartTagTokenRequestReason::IntegrationPointCheck,
-                )
-            }
-            _ => TreeBuilderFeedback::None,
-        }
-    }
-
     pub fn get_feedback_for_start_tag_name(
         &mut self,
         tag_name_hash: Option<u64>,
@@ -235,21 +153,100 @@ impl TreeBuilderSimulator {
         }
     }
 
-    pub fn fulfill_self_closing_flag_request(&mut self, self_closing: bool) -> TreeBuilderFeedback {
-        // NOTE: we request self-closing flag only for HTML integration point check.
-        if self_closing {
-            TreeBuilderFeedback::None
-        } else {
-            self.enter_ns(Namespace::Html)
+    fn enter_ns(&mut self, ns: Namespace) -> TreeBuilderFeedback {
+        self.ns_stack.push(ns);
+        self.current_ns = ns;
+        TreeBuilderFeedback::SetAllowCdata(ns != Namespace::Html)
+    }
+
+    fn leave_ns(&mut self) -> TreeBuilderFeedback {
+        self.ns_stack.pop();
+
+        self.current_ns = *self
+            .ns_stack
+            .last()
+            .expect("Namespace stack should always have at least one item");
+
+        TreeBuilderFeedback::SetAllowCdata(self.current_ns != Namespace::Html)
+    }
+
+    fn is_integration_point_enter(&self, tag_name_hash: u64) -> bool {
+        self.current_ns == Namespace::Svg && is_html_integration_point_in_svg(tag_name_hash)
+            || self.current_ns == Namespace::MathML
+                && is_text_integration_point_in_math_ml(tag_name_hash)
+    }
+
+    fn check_integration_point_exit(&mut self, tag_name_hash: Option<u64>) -> TreeBuilderFeedback {
+        let ns_stack_len = self.ns_stack.len();
+
+        if ns_stack_len < 2 {
+            return TreeBuilderFeedback::None;
+        }
+
+        let prev_ns = self.ns_stack[ns_stack_len - 2];
+
+        match tag_name_hash {
+            Some(t)
+                if prev_ns == Namespace::MathML && is_text_integration_point_in_math_ml(t)
+                    || prev_ns == Namespace::Svg && is_html_integration_point_in_svg(t) =>
+            {
+                self.leave_ns()
+            }
+            // NOTE: <annotation-xml> case
+            None if prev_ns == Namespace::MathML =>TreeBuilderFeedback::RequestLexUnit(
+                TreeBuilderSimulator::check_for_annotation_xml_end_tag_for_integration_point_exit_check,
+            ),
+            _ => TreeBuilderFeedback::None,
         }
     }
 
-    pub fn fulfill_end_tag_token_request(&mut self, token: &Token) -> TreeBuilderFeedback {
-        match token {
+    fn get_feedback_for_start_tag_in_foreign_content(
+        &mut self,
+        tag_name_hash: Option<u64>,
+    ) -> TreeBuilderFeedback {
+        match tag_name_hash {
+            Some(t) if causes_foreign_content_exit(t) => self.leave_ns(),
+            // NOTE: <font> tag special case requires attributes
+            // to decide on foreign context exit
+            Some(t) if t == TagName::Font => TreeBuilderFeedback::RequestLexUnit(
+                TreeBuilderSimulator::check_font_start_tag_token_for_foreign_content_exit,
+            ),
+            Some(t) if self.is_integration_point_enter(t) => TreeBuilderFeedback::RequestLexUnit(
+                TreeBuilderSimulator::check_tag_self_closing_flag_for_integration_point_check
+            ),
+            // NOTE: integration point check <annotation-xml> case
+            None if self.current_ns == Namespace::MathML => TreeBuilderFeedback::RequestLexUnit(
+                TreeBuilderSimulator::check_for_annotation_xml_start_tag_for_integration_point_check,
+            ),
+            _ => TreeBuilderFeedback::None,
+        }
+    }
+
+    fn check_tag_self_closing_flag_for_integration_point_check(
+        &mut self,
+        lex_unit: &LexUnit,
+    ) -> TreeBuilderFeedback {
+        match lex_unit
+            .get_token_view()
+            .expect("There should be a token at this point")
+        {
+            TokenView::StartTag { self_closing, .. } => {
+                if *self_closing {
+                    TreeBuilderFeedback::None
+                } else {
+                    self.enter_ns(Namespace::Html)
+                }
+            }
+            _ => unreachable!("Token should be a start tag at this point"),
+        }
+    }
+
+    fn check_for_annotation_xml_end_tag_for_integration_point_exit_check(
+        &mut self,
+        lex_unit: &LexUnit,
+    ) -> TreeBuilderFeedback {
+        match expect_token!(lex_unit) {
             Token::EndTag { name, .. } => {
-                // NOTE: we request end tag token only when we
-                // need attribute for `<annotation-xml>` tag in HTML
-                // integration point in MathMl.
                 if eq_case_ins(name, b"annotation-xml") {
                     self.leave_ns()
                 } else {
@@ -260,45 +257,49 @@ impl TreeBuilderSimulator {
         }
     }
 
-    pub fn fulfill_start_tag_token_request(
+    fn check_for_annotation_xml_start_tag_for_integration_point_check(
         &mut self,
-        token: &Token,
-        request_reason: StartTagTokenRequestReason,
+        lex_unit: &LexUnit,
     ) -> TreeBuilderFeedback {
-        match token {
+        match expect_token!(lex_unit) {
             Token::StartTag {
                 name,
                 attributes,
                 self_closing,
             } => {
-                match request_reason {
-                    StartTagTokenRequestReason::ForeignContentExitCheck => {
-                        // NOTE: for foreign content exit we request token only if
-                        // we saw <font> tag and we need to check its attributes.
-                        for Attribute { ref name, .. } in attributes.iter() {
-                            if eq_case_ins(name, b"color")
-                                || eq_case_ins(name, b"size")
-                                || eq_case_ins(name, b"face")
-                            {
-                                return self.leave_ns();
-                            }
+                if !self_closing && eq_case_ins(name, b"annotation-xml") {
+                    for Attribute {
+                        ref name,
+                        ref value,
+                    } in attributes.iter()
+                    {
+                        if eq_case_ins(name, b"encoding")
+                            && (eq_case_ins(value, b"text/html")
+                                || eq_case_ins(value, b"application/xhtml+xml"))
+                        {
+                            return self.enter_ns(Namespace::Html);
                         }
                     }
-                    StartTagTokenRequestReason::IntegrationPointCheck => {
-                        if !self_closing && eq_case_ins(name, b"annotation-xml") {
-                            for Attribute {
-                                ref name,
-                                ref value,
-                            } in attributes.iter()
-                            {
-                                if eq_case_ins(name, b"encoding")
-                                    && (eq_case_ins(value, b"text/html")
-                                        || eq_case_ins(value, b"application/xhtml+xml"))
-                                {
-                                    return self.enter_ns(Namespace::Html);
-                                }
-                            }
-                        }
+                }
+            }
+            _ => unreachable!("Token should be a start tag at this point"),
+        }
+
+        TreeBuilderFeedback::None
+    }
+
+    fn check_font_start_tag_token_for_foreign_content_exit(
+        &mut self,
+        lex_unit: &LexUnit,
+    ) -> TreeBuilderFeedback {
+        match expect_token!(lex_unit) {
+            Token::StartTag { attributes, .. } => {
+                for Attribute { ref name, .. } in attributes.iter() {
+                    if eq_case_ins(name, b"color")
+                        || eq_case_ins(name, b"size")
+                        || eq_case_ins(name, b"face")
+                    {
+                        return self.leave_ns();
                     }
                 }
             }

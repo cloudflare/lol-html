@@ -2,7 +2,7 @@ use base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
 
 declare_handler! {
-    TagPreviewHandler(TagPreview)
+    TagPreviewHandler(&TagPreview)
 }
 
 pub struct TagNameInfo<'c> {
