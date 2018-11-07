@@ -1,18 +1,26 @@
 use base::{Buffer, Chunk};
 use crate::Error;
-use tokenizer::{FullTokenizer, LexUnitHandler};
+use tokenizer::{LexUnitHandler, TagPreviewHandler, Tokenizer};
 
-pub struct TransformStream<H: LexUnitHandler> {
-    tokenizer: FullTokenizer<H>,
+pub struct TransformStream<LH, TH>
+where
+    LH: LexUnitHandler,
+    TH: TagPreviewHandler,
+{
+    tokenizer: Tokenizer<LH, TH>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
 }
 
-impl<H: LexUnitHandler> TransformStream<H> {
-    pub fn new(buffer_capacity: usize, lex_unit_handler: H) -> Self {
+impl<LH, TH> TransformStream<LH, TH>
+where
+    LH: LexUnitHandler,
+    TH: TagPreviewHandler,
+{
+    pub fn new(buffer_capacity: usize, lex_unit_handler: LH, tag_preview_handler: TH) -> Self {
         TransformStream {
-            tokenizer: FullTokenizer::new(lex_unit_handler),
+            tokenizer: Tokenizer::new(lex_unit_handler, tag_preview_handler),
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
@@ -84,7 +92,7 @@ impl<H: LexUnitHandler> TransformStream<H> {
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn get_tokenizer(&mut self) -> &mut FullTokenizer<H> {
+    pub fn get_tokenizer(&mut self) -> &mut Tokenizer<LH, TH> {
         &mut self.tokenizer
     }
 }

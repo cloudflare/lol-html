@@ -2,7 +2,9 @@ use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
 use super::token::TestToken;
 use super::Bailout;
-use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView};
+use cool_thing::tokenizer::{
+    LexUnit, TagPreview, TextParsingMode, TextParsingModeSnapshot, TokenView,
+};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
 use itertools::izip;
@@ -62,13 +64,16 @@ impl ParsingResult {
         let mode_snapshot_rc = Rc::clone(&mode_snapshot);
         let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc.set(s));
 
-        let mut transform_stream = TransformStream::new(2048, |lex_unit: &LexUnit| {
-            self.add_lex_unit(lex_unit, mode_snapshot.get())
-        });
+        let mut transform_stream = TransformStream::new(
+            2048,
+            |lex_unit: &LexUnit| self.add_lex_unit(lex_unit, mode_snapshot.get()),
+            |_tag_preview: &TagPreview| {},
+        );
 
         {
             let tokenizer = transform_stream.get_tokenizer();
 
+            tokenizer.tag_preview_mode(false);
             tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
             tokenizer.set_text_parsing_mode(initial_mode_snapshot.mode);
             tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);

@@ -53,11 +53,15 @@ fn main() {
 
     let html = matches.free.first().unwrap();
 
-    let mut transform_stream = TransformStream::new(2048, |lex_unit: &LexUnit| {
-        println!();
-        println!("{:#?}", lex_unit);
-        println!();
-    });
+    let mut transform_stream = TransformStream::new(
+        2048,
+        |lex_unit: &LexUnit| {
+            println!();
+            println!("{:#?}", lex_unit);
+            println!();
+        },
+        |_tag_preview: &TagPreview| {},
+    );
 
     {
         let tokenizer = transform_stream.get_tokenizer();

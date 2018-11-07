@@ -6,10 +6,15 @@ mod syntax;
 
 use base::{Chunk, Cursor};
 use crate::Error;
-use tokenizer::{ParsingLoopDirective, TextParsingMode};
+use tokenizer::TextParsingMode;
 
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
+
+pub enum ParsingLoopDirective {
+    Break,
+    Continue,
+}
 
 pub trait StateMachineActions {
     fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
@@ -79,6 +84,25 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
     fn get_closing_quote(&self) -> u8;
+
+    fn run_parsing_loop(&mut self, input: &Chunk) -> Result<usize, Error> {
+        loop {
+            let state = self.get_state();
+            let directive = state(self, input)?;
+
+            if let ParsingLoopDirective::Break = directive {
+                break;
+            }
+        }
+
+        let blocked_byte_count = self.get_blocked_byte_count(input);
+
+        if !input.is_last() {
+            self.adjust_for_next_input()
+        }
+
+        Ok(blocked_byte_count)
+    }
 
     #[cfg(feature = "testing_api")]
     fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);
