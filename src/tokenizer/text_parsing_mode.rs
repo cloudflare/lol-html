@@ -14,6 +14,7 @@ pub enum TextParsingMode {
     CDataSection,
 }
 
+// TODO move to the mod testing_api
 #[cfg(feature = "testing_api")]
 impl TextParsingMode {
     pub fn should_replace_unsafe_null_in_text(self) -> bool {
@@ -48,13 +49,16 @@ pub struct TextParsingModeSnapshot {
 }
 
 #[cfg(feature = "testing_api")]
-pub trait TextParsingModeChangeHandler {
-    fn handle(&mut self, mode_snapshot: TextParsingModeSnapshot);
+impl Default for TextParsingModeSnapshot {
+    fn default() -> Self {
+        TextParsingModeSnapshot {
+            mode: TextParsingMode::Data,
+            last_start_tag_name_hash: None,
+        }
+    }
 }
 
 #[cfg(feature = "testing_api")]
-impl<H: FnMut(TextParsingModeSnapshot)> TextParsingModeChangeHandler for H {
-    fn handle(&mut self, mode_snapshot: TextParsingModeSnapshot) {
-        self(mode_snapshot);
-    }
+declare_handler! {
+    TextParsingModeChangeHandler(TextParsingModeSnapshot)
 }

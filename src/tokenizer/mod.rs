@@ -19,7 +19,8 @@ pub use self::tag_name::TagName;
 pub use self::text_parsing_mode::*;
 
 // NOTE: dynamic dispatch can't be used for the StateMachine trait
-// because it uses `Self`, so we use this macro instead.
+// because it's not object-safe due to the usage of `Self` in function
+// signatures, so we use this macro instead.
 macro_rules! with_current_sm {
     ($self:tt, { sm.$fn:ident($($args:tt)*) }) => {
         if $self.tag_preview_mode {

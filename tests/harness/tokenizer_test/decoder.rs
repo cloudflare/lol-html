@@ -1,7 +1,20 @@
+use cool_thing::base::Bytes;
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
 use std::iter::Peekable;
 use std::str::Chars;
+
+pub fn to_null_decoded(bytes: &Bytes) -> String {
+    Decoder::new(bytes.as_str()).unsafe_null().run()
+}
+
+pub fn to_lower_null_decoded(bytes: &Bytes) -> String {
+    let mut string = to_null_decoded(bytes);
+
+    string.make_ascii_lowercase();
+
+    string
+}
 
 #[derive(PartialEq, Eq)]
 enum Entities {

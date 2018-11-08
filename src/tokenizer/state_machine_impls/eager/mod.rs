@@ -2,20 +2,25 @@
 mod actions;
 mod conditions;
 
-use base::{Align, Chunk, Cursor};
+use base::{Align, Chunk, Cursor, Range};
 use crate::Error;
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{ParsingLoopDirective, StateMachine, StateResult, TextParsingMode};
+use tokenizer::{ParsingLoopDirective, StateMachine, StateResult, TagName, TextParsingMode};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
 
 pub type EagerStateMachineState<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
 
+// TODO
+// 1. Tag confirmation
+// 2. Set tag_start to None after preview emission
 pub struct EagerStateMachine<H: TagPreviewHandler> {
     input_cursor: Cursor,
+    tag_start: usize,
     tag_name_start: usize,
+    is_in_end_tag: bool,
     tag_name_hash: Option<u64>,
     last_start_tag_name_hash: Option<u64>,
     state_enter: bool,
@@ -30,7 +35,9 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
     pub fn new(tag_preview_handler: H) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
+            tag_start: 0,
             tag_name_start: 0,
+            is_in_end_tag: false,
             tag_name_hash: None,
             last_start_tag_name_hash: None,
             state_enter: true,
@@ -61,12 +68,13 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
 
     #[inline]
     fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
-        input.len() - self.tag_name_start
+        input.len() - self.tag_start
     }
 
     fn adjust_for_next_input(&mut self) {
-        self.input_cursor.align(self.tag_name_start);
-        self.tag_name_start = 0;
+        self.input_cursor.align(self.tag_start);
+        self.tag_name_start.align(self.tag_start);
+        self.tag_start = 0;
     }
 
     #[inline]

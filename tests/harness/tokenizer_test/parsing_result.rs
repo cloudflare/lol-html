@@ -1,5 +1,6 @@
 use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
+use super::tag_preview::TestTagPreview;
 use super::token::TestToken;
 use super::Bailout;
 use cool_thing::tokenizer::{
@@ -8,7 +9,7 @@ use cool_thing::tokenizer::{
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
 use itertools::izip;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
@@ -28,6 +29,7 @@ fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
 #[derive(Default)]
 pub struct ParsingResult {
     tokens: Vec<TestToken>,
+    tag_previews: Vec<TestTagPreview>,
     text_parsing_mode_snapshots: Vec<TextParsingModeSnapshot>,
     raw_slices: Vec<Vec<u8>>,
     bailout: Option<Bailout>,
@@ -38,14 +40,21 @@ impl ParsingResult {
     pub fn new(input: &ChunkedInput, initial_mode_snapshot: TextParsingModeSnapshot) -> Self {
         let mut result = ParsingResult {
             tokens: Vec::new(),
+            tag_previews: Vec::new(),
             text_parsing_mode_snapshots: Vec::new(),
             raw_slices: Vec::new(),
             bailout: None,
             buffered_chars: None,
         };
 
-        if let Err(e) = result.parse(input, initial_mode_snapshot) {
+        if let Err(e) = result.parse(input, initial_mode_snapshot, false) {
             result.add_bailout(e);
+        }
+
+        // TODO bailouts for tag preview
+        #[allow(unused_must_use)]
+        {
+            result.parse(input, initial_mode_snapshot, true);
         }
 
         result
@@ -55,25 +64,34 @@ impl ParsingResult {
         &mut self,
         input: &ChunkedInput,
         initial_mode_snapshot: TextParsingModeSnapshot,
+        with_eager_sm: bool,
     ) -> Result<(), Error> {
-        let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot {
-            mode: TextParsingMode::Data,
-            last_start_tag_name_hash: None,
-        }));
-
+        let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot::default()));
         let mode_snapshot_rc = Rc::clone(&mode_snapshot);
         let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc.set(s));
+        let result = Rc::new(RefCell::new(self));
+        let result_rc1 = Rc::clone(&result);
+        let result_rc2 = Rc::clone(&result);
 
         let mut transform_stream = TransformStream::new(
             2048,
-            |lex_unit: &LexUnit| self.add_lex_unit(lex_unit, mode_snapshot.get()),
-            |_tag_preview: &TagPreview| {},
+            move |lex_unit: &LexUnit| {
+                result_rc1
+                    .borrow_mut()
+                    .add_lex_unit(lex_unit, mode_snapshot.get())
+            },
+            move |tag_preview: &TagPreview| {
+                result_rc2
+                    .borrow_mut()
+                    .tag_previews
+                    .push(TestTagPreview::from_tag_preview(tag_preview))
+            },
         );
 
         {
             let tokenizer = transform_stream.get_tokenizer();
 
-            tokenizer.tag_preview_mode(false);
+            tokenizer.tag_preview_mode(with_eager_sm);
             tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
             tokenizer.set_text_parsing_mode(initial_mode_snapshot.mode);
             tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
@@ -145,6 +163,10 @@ impl ParsingResult {
 
     pub fn get_tokens(&self) -> &Vec<TestToken> {
         &self.tokens
+    }
+
+    pub fn get_tag_previews(&self) -> &Vec<TestTagPreview> {
+        &self.tag_previews
     }
 
     pub fn get_bailout(&self) -> &Option<Bailout> {

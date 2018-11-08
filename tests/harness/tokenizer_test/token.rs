@@ -1,24 +1,11 @@
-use super::decoder::Decoder;
+use super::decoder::{to_lower_null_decoded, to_null_decoded, Decoder};
 use super::unescape::Unescape;
-use cool_thing::base::Bytes;
 use cool_thing::tokenizer::{LexUnit, TagName, Token, TokenView};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
 use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
-
-fn to_null_decoded(bytes: &Bytes) -> String {
-    Decoder::new(bytes.as_str()).unsafe_null().run()
-}
-
-fn to_lower_null_decoded(bytes: &Bytes) -> String {
-    let mut string = to_null_decoded(bytes);
-
-    string.make_ascii_lowercase();
-
-    string
-}
 
 #[derive(Clone, Copy, Deserialize)]
 enum TokenKind {

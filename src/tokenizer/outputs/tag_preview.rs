@@ -13,7 +13,7 @@ pub struct TagNameInfo<'c> {
 }
 
 impl<'c> TagNameInfo<'c> {
-    fn new(input: &'c Chunk<'c>, name_range: Range, name_hash: Option<u64>) -> Self {
+    pub fn new(input: &'c Chunk<'c>, name_range: Range, name_hash: Option<u64>) -> Self {
         TagNameInfo {
             input,
             name_range,

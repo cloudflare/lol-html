@@ -148,6 +148,14 @@ impl TokenizerTest {
                 "Tokenizer bailout error mismatch"
             );
 
+            /*     assert_eql!(
+                *actual.get_tag_previews(),
+                self.expected_tag_previews,
+                self.input,
+                cs,
+                "Tag preview mismatch"
+            );
+ */
             if actual.get_bailout().is_none() {
                 assert_eql!(
                     *actual.get_tokens(),
