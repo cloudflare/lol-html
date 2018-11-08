@@ -18,7 +18,7 @@
 //! if we use numbers from 0 to 25 for ASCII alphas we'll have an
 //! ambiguity for repetitative `a` characters: both `a`,
 //! `aaa` and even `aaaaa` will give us 0 as a hash. It's still a case
-//! for digits, but considering that tag name can't start from digit
+//! for digits, but considering that tag name can't start with a digit
 //! we are safe here, since we'll just get first character shifted left
 //! by zeroes as repetitave 1 digits get added to the hash.
 
@@ -130,7 +130,7 @@ impl TagName {
                     // Aftwerards put result as 5 lower bits of the hash.
                     b'a'...b'z' | b'A'...b'Z' => Some((h << 5) | ((u64::from(ch) & 0x1F) + 5)),
 
-                    // NOTE: apply 0x0F on ASCII digit to convert it to number
+                    // NOTE: apply 0x0F mask on ASCII digit to convert it to number
                     // from 1 to 6. Then substract 1 to make it zero-based.
                     // Afterwards, put result as lower bits of the hash.
                     b'1'...b'6' => Some((h << 5) | ((u64::from(ch) & 0x0F) - 1)),
