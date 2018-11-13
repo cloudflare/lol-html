@@ -47,11 +47,18 @@ where
     TH: TagPreviewHandler,
 {
     pub fn new(lex_unit_handler: LH, tag_preview_handler: TH) -> Self {
-        Tokenizer {
-            full_sm: FullStateMachine::new(lex_unit_handler),
-            eager_sm: EagerStateMachine::new(tag_preview_handler),
+        let mut tokenizer = Tokenizer {
+            full_sm: FullStateMachine::new(),
+            eager_sm: EagerStateMachine::new(),
             tag_preview_mode: true,
-        }
+        };
+
+        tokenizer.full_sm.set_lex_unit_handler(lex_unit_handler);
+        tokenizer
+            .eager_sm
+            .set_tag_preview_handler(tag_preview_handler);
+
+        tokenizer
     }
 
     #[inline]

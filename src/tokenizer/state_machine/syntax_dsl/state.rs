@@ -14,10 +14,6 @@ macro_rules! state {
 
                 state_body!(|[self, input, ch]|> [$($arms)*], [$($($enter_actions)*)*]);
             }
-
-            // NOTE: this can be unreachable if all state body
-            // arms expand into state transitions.
-            #[allow(unreachable_code)] { return Ok(ParsingLoopDirective::Continue); }
         }
 
         state!($($rest)*);

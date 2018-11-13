@@ -23,7 +23,7 @@ pub struct FullStateMachine<H: LexUnitHandler> {
     token_part_start: usize,
     state_enter: bool,
     allow_cdata: bool,
-    lex_unit_handler: H,
+    lex_unit_handler: Option<H>,
     state: FullStateMachineState<H>,
     current_token: Option<TokenView>,
     current_attr: Option<AttributeView>,
@@ -37,14 +37,14 @@ pub struct FullStateMachine<H: LexUnitHandler> {
 }
 
 impl<H: LexUnitHandler> FullStateMachine<H> {
-    pub fn new(lex_unit_handler: H) -> Self {
+    pub fn new() -> Self {
         FullStateMachine {
             input_cursor: Cursor::default(),
             lex_unit_start: 0,
             token_part_start: 0,
             state_enter: true,
             allow_cdata: false,
-            lex_unit_handler,
+            lex_unit_handler: None,
             state: FullStateMachine::data_state,
             current_token: None,
             current_attr: None,
@@ -58,6 +58,10 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
         }
+    }
+
+    pub fn set_lex_unit_handler(&mut self, lex_unit_handler: H) {
+        self.lex_unit_handler = Some(lex_unit_handler);
     }
 
     fn handle_tree_builder_feedback(
@@ -93,7 +97,9 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
     ) -> LexUnit<'c> {
         let lex_unit = LexUnit::new(input, token, raw_range);
 
-        self.lex_unit_handler.handle(&lex_unit);
+        if let Some(ref mut lex_unit_handler) = self.lex_unit_handler {
+            lex_unit_handler.handle(&lex_unit);
+        }
 
         lex_unit
     }
@@ -127,14 +133,10 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
     }
 
     #[inline]
-    fn emit_lex_unit_with_raw_exclusive<'c>(
-        &mut self,
-        input: &'c Chunk,
-        token: Option<TokenView>,
-    ) -> LexUnit<'c> {
+    fn emit_lex_unit_with_raw_exclusive(&mut self, input: &Chunk, token: Option<TokenView>) {
         let raw_end = self.input_cursor.pos();
 
-        self.emit_lex_unit_with_raw(input, token, raw_end)
+        self.emit_lex_unit_with_raw(input, token, raw_end);
     }
 }
 

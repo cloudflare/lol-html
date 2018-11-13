@@ -25,14 +25,14 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     last_start_tag_name_hash: Option<u64>,
     state_enter: bool,
     allow_cdata: bool,
-    tag_preview_handler: H,
+    tag_preview_handler: Option<H>,
     state: EagerStateMachineState<H>,
     closing_quote: u8,
     tree_builder_simulator: TreeBuilderSimulator,
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
-    pub fn new(tag_preview_handler: H) -> Self {
+    pub fn new() -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
             tag_start: 0,
@@ -42,11 +42,15 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             last_start_tag_name_hash: None,
             state_enter: true,
             allow_cdata: false,
-            tag_preview_handler,
+            tag_preview_handler: None,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
             tree_builder_simulator: TreeBuilderSimulator::default(),
         }
+    }
+
+    pub fn set_tag_preview_handler(&mut self, tag_preview_handler: H) {
+        self.tag_preview_handler = Some(tag_preview_handler);
     }
 }
 
