@@ -4,10 +4,6 @@ use base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
 use std::fmt::{self, Debug, Write};
 
-declare_handler! {
-    LexUnitHandler(&LexUnit)
-}
-
 pub struct LexUnit<'c> {
     input: &'c Chunk<'c>,
     raw_range: Option<Range>,

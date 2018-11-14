@@ -3,28 +3,35 @@ mod actions;
 mod conditions;
 
 use base::{Align, Chunk, Cursor, Range};
-use crate::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{ParsingLoopDirective, StateMachine, StateResult, TagName, TextParsingMode};
+use tokenizer::{
+    LexUnitHandler, ParsingLoopDirective, StateMachine, StateResult, TagLexUnitHandler,
+    TagLexUnitResponse, TagName, TextParsingMode,
+};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub type FullStateMachineState<H> = fn(&mut FullStateMachine<H>, &Chunk) -> StateResult;
+pub type FullStateMachineState<LH, TH> = fn(&mut FullStateMachine<LH, TH>, &Chunk) -> StateResult;
 
-pub struct FullStateMachine<H: LexUnitHandler> {
+pub struct FullStateMachine<LH, TH>
+where
+    LH: LexUnitHandler,
+    TH: TagLexUnitHandler,
+{
     input_cursor: Cursor,
     lex_unit_start: usize,
     token_part_start: usize,
     state_enter: bool,
     allow_cdata: bool,
-    lex_unit_handler: Option<H>,
-    state: FullStateMachineState<H>,
+    lex_unit_handler: LH,
+    tag_lex_unit_handler: TH,
+    state: FullStateMachineState<LH, TH>,
     current_token: Option<TokenView>,
     current_attr: Option<AttributeView>,
     last_start_tag_name_hash: Option<u64>,
@@ -36,15 +43,20 @@ pub struct FullStateMachine<H: LexUnitHandler> {
     text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
 }
 
-impl<H: LexUnitHandler> FullStateMachine<H> {
-    pub fn new() -> Self {
+impl<LH, TH> FullStateMachine<LH, TH>
+where
+    LH: LexUnitHandler,
+    TH: TagLexUnitHandler,
+{
+    pub fn new(lex_unit_handler: LH, tag_lex_unit_handler: TH) -> Self {
         FullStateMachine {
             input_cursor: Cursor::default(),
             lex_unit_start: 0,
             token_part_start: 0,
             state_enter: true,
             allow_cdata: false,
-            lex_unit_handler: None,
+            lex_unit_handler,
+            tag_lex_unit_handler,
             state: FullStateMachine::data_state,
             current_token: None,
             current_attr: None,
@@ -58,10 +70,6 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
         }
-    }
-
-    pub fn set_lex_unit_handler(&mut self, lex_unit_handler: H) {
-        self.lex_unit_handler = Some(lex_unit_handler);
     }
 
     fn handle_tree_builder_feedback(
@@ -89,28 +97,14 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
     }
 
     #[inline]
-    fn emit_lex_unit<'c>(
-        &mut self,
-        input: &'c Chunk,
-        token: Option<TokenView>,
-        raw_range: Option<Range>,
-    ) -> LexUnit<'c> {
+    fn emit_lex_unit(&mut self, input: &Chunk, token: Option<TokenView>, raw_range: Option<Range>) {
         let lex_unit = LexUnit::new(input, token, raw_range);
 
-        if let Some(ref mut lex_unit_handler) = self.lex_unit_handler {
-            lex_unit_handler.handle(&lex_unit);
-        }
-
-        lex_unit
+        self.lex_unit_handler.handle(&lex_unit);
     }
 
     #[inline]
-    fn emit_lex_unit_with_raw<'c>(
-        &mut self,
-        input: &'c Chunk,
-        token: Option<TokenView>,
-        raw_end: usize,
-    ) -> LexUnit<'c> {
+    fn emit_lex_unit_with_raw(&mut self, input: &Chunk, token: Option<TokenView>, raw_end: usize) {
         let raw_range = Some(Range {
             start: self.lex_unit_start,
             end: raw_end,
@@ -118,18 +112,14 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
 
         self.lex_unit_start = raw_end;
 
-        self.emit_lex_unit(input, token, raw_range)
+        self.emit_lex_unit(input, token, raw_range);
     }
 
     #[inline]
-    fn emit_lex_unit_with_raw_inclusive<'c>(
-        &mut self,
-        input: &'c Chunk,
-        token: Option<TokenView>,
-    ) -> LexUnit<'c> {
+    fn emit_lex_unit_with_raw_inclusive(&mut self, input: &Chunk, token: Option<TokenView>) {
         let raw_end = self.input_cursor.pos() + 1;
 
-        self.emit_lex_unit_with_raw(input, token, raw_end)
+        self.emit_lex_unit_with_raw(input, token, raw_end);
     }
 
     #[inline]
@@ -138,16 +128,42 @@ impl<H: LexUnitHandler> FullStateMachine<H> {
 
         self.emit_lex_unit_with_raw(input, token, raw_end);
     }
+
+    #[inline]
+    fn emit_tag_lex_unit<'c>(
+        &mut self,
+        input: &'c Chunk,
+        token: Option<TokenView>,
+    ) -> (LexUnit<'c>, TagLexUnitResponse) {
+        let raw_end = self.input_cursor.pos() + 1;
+
+        let raw_range = Some(Range {
+            start: self.lex_unit_start,
+            end: raw_end,
+        });
+
+        let lex_unit = LexUnit::new(input, token, raw_range);
+
+        self.lex_unit_start = raw_end;
+
+        let response = self.tag_lex_unit_handler.handle(&lex_unit);
+
+        (lex_unit, response)
+    }
 }
 
-impl<H: LexUnitHandler> StateMachine for FullStateMachine<H> {
+impl<LH, TH> StateMachine for FullStateMachine<LH, TH>
+where
+    LH: LexUnitHandler,
+    TH: TagLexUnitHandler,
+{
     #[inline]
-    fn set_state(&mut self, state: FullStateMachineState<H>) {
+    fn set_state(&mut self, state: FullStateMachineState<LH, TH>) {
         self.state = state;
     }
 
     #[inline]
-    fn get_state(&self) -> FullStateMachineState<H> {
+    fn get_state(&self) -> FullStateMachineState<LH, TH> {
         self.state
     }
 

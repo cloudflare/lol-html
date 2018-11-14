@@ -60,11 +60,20 @@ fn main() {
             println!("{:#?}", lex_unit);
             println!();
         },
-        |_tag_preview: &TagPreview| {},
+        |lex_unit: &LexUnit| {
+            println!();
+            println!("{:#?}", lex_unit);
+            println!();
+
+            TagLexUnitResponse::None
+        },
+        |_tag_preview: &TagPreview| TagPreviewResponse::None,
     );
 
     {
         let tokenizer = transform_stream.get_tokenizer();
+
+        tokenizer.set_output_mode(TokenizerOutputMode::LexUnits);
 
         tokenizer.set_text_parsing_mode(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
             None => TextParsingMode::Data,

@@ -1,6 +1,6 @@
 use super::*;
 use base::Chunk;
-use tokenizer::StateMachineActions;
+use tokenizer::{OutputResponseResult, StateMachineActions};
 
 macro_rules! get_token_part_range {
     ($self:tt) => {
@@ -27,7 +27,11 @@ macro_rules! notify_text_parsing_mode_change {
     };
 }
 
-impl<H: LexUnitHandler> StateMachineActions for FullStateMachine<H> {
+impl<LH, TH> StateMachineActions for FullStateMachine<LH, TH>
+where
+    LH: LexUnitHandler,
+    TH: TagLexUnitHandler,
+{
     #[inline]
     fn emit_eof(&mut self, input: &Chunk, _ch: Option<u8>) {
         self.emit_lex_unit(input, Some(TokenView::Eof), None);
@@ -53,11 +57,7 @@ impl<H: LexUnitHandler> StateMachineActions for FullStateMachine<H> {
     }
 
     #[inline]
-    fn emit_tag(
-        &mut self,
-        input: &Chunk,
-        _ch: Option<u8>,
-    ) -> Result<Option<ParsingLoopDirective>, Error> {
+    fn emit_tag(&mut self, input: &Chunk, _ch: Option<u8>) -> OutputResponseResult {
         let token = self.current_token.take();
 
         let feedback = match token {
@@ -72,7 +72,7 @@ impl<H: LexUnitHandler> StateMachineActions for FullStateMachine<H> {
             _ => unreachable!("Token should be a start or an end tag at this point"),
         };
 
-        let lex_unit = self.emit_lex_unit_with_raw_inclusive(input, token);
+        let (lex_unit, _response) = self.emit_tag_lex_unit(input, token);
 
         Ok(self.handle_tree_builder_feedback(feedback, &lex_unit))
     }

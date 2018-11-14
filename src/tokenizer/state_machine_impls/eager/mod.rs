@@ -3,10 +3,9 @@ mod actions;
 mod conditions;
 
 use base::{Align, Chunk, Cursor, Range};
-use crate::Error;
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{ParsingLoopDirective, StateMachine, StateResult, TagName, TextParsingMode};
+use tokenizer::{StateMachine, StateResult, TagName, TagPreviewHandler, TextParsingMode};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
@@ -25,14 +24,14 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     last_start_tag_name_hash: Option<u64>,
     state_enter: bool,
     allow_cdata: bool,
-    tag_preview_handler: Option<H>,
+    tag_preview_handler: H,
     state: EagerStateMachineState<H>,
     closing_quote: u8,
     tree_builder_simulator: TreeBuilderSimulator,
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
-    pub fn new() -> Self {
+    pub fn new(tag_preview_handler: H) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
             tag_start: 0,
@@ -42,15 +41,11 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             last_start_tag_name_hash: None,
             state_enter: true,
             allow_cdata: false,
-            tag_preview_handler: None,
+            tag_preview_handler,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
             tree_builder_simulator: TreeBuilderSimulator::default(),
         }
-    }
-
-    pub fn set_tag_preview_handler(&mut self, tag_preview_handler: H) {
-        self.tag_preview_handler = Some(tag_preview_handler);
     }
 }
 

@@ -4,7 +4,8 @@ use super::tag_preview::TestTagPreview;
 use super::token::TestToken;
 use super::Bailout;
 use cool_thing::tokenizer::{
-    LexUnit, TagPreview, TextParsingMode, TextParsingModeSnapshot, TokenView,
+    LexUnit, TagLexUnitResponse, TagPreview, TagPreviewResponse, TextParsingMode,
+    TextParsingModeSnapshot, TokenView, TokenizerOutputMode,
 };
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
@@ -47,14 +48,18 @@ impl ParsingResult {
             buffered_chars: None,
         };
 
-        if let Err(e) = result.parse(input, initial_mode_snapshot, false) {
+        if let Err(e) = result.parse(input, initial_mode_snapshot, TokenizerOutputMode::LexUnits) {
             result.add_bailout(e);
         }
 
         // TODO bailouts for tag preview
         #[allow(unused_must_use)]
         {
-            result.parse(input, initial_mode_snapshot, true);
+            result.parse(
+                input,
+                initial_mode_snapshot,
+                TokenizerOutputMode::TagPreviews,
+            );
         }
 
         result
@@ -64,34 +69,46 @@ impl ParsingResult {
         &mut self,
         input: &ChunkedInput,
         initial_mode_snapshot: TextParsingModeSnapshot,
-        with_eager_sm: bool,
+        output_mode: TokenizerOutputMode,
     ) -> Result<(), Error> {
-        let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot::default()));
-        let mode_snapshot_rc = Rc::clone(&mode_snapshot);
-        let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc.set(s));
-        let result = Rc::new(RefCell::new(self));
-        let result_rc1 = Rc::clone(&result);
-        let result_rc2 = Rc::clone(&result);
+        let result_rc1 = Rc::new(RefCell::new(self));
+        let result_rc2 = Rc::clone(&result_rc1);
+        let result_rc3 = Rc::clone(&result_rc1);
+
+        let mode_snapshot_rc1 = Rc::new(Cell::new(TextParsingModeSnapshot::default()));
+        let mode_snapshot_rc2 = Rc::clone(&mode_snapshot_rc1);
+        let mode_snapshot_rc3 = Rc::clone(&mode_snapshot_rc1);
+
+        let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc1.set(s));
 
         let mut transform_stream = TransformStream::new(
             2048,
             move |lex_unit: &LexUnit| {
                 result_rc1
                     .borrow_mut()
-                    .add_lex_unit(lex_unit, mode_snapshot.get())
+                    .add_lex_unit(lex_unit, mode_snapshot_rc2.get());
             },
-            move |tag_preview: &TagPreview| {
+            move |lex_unit: &LexUnit| {
                 result_rc2
                     .borrow_mut()
+                    .add_lex_unit(lex_unit, mode_snapshot_rc3.get());
+
+                TagLexUnitResponse::None
+            },
+            move |tag_preview: &TagPreview| {
+                result_rc3
+                    .borrow_mut()
                     .tag_previews
-                    .push(TestTagPreview::from_tag_preview(tag_preview))
+                    .push(TestTagPreview::from_tag_preview(tag_preview));
+
+                TagPreviewResponse::None
             },
         );
 
         {
             let tokenizer = transform_stream.get_tokenizer();
 
-            tokenizer.tag_preview_mode(with_eager_sm);
+            tokenizer.set_output_mode(output_mode);
             tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
             tokenizer.set_text_parsing_mode(initial_mode_snapshot.mode);
             tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);

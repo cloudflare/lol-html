@@ -1,7 +1,11 @@
 use super::*;
 use tokenizer::StateMachineConditions;
 
-impl<H: LexUnitHandler> StateMachineConditions for FullStateMachine<H> {
+impl<LH, TH> StateMachineConditions for FullStateMachine<LH, TH>
+where
+    LH: LexUnitHandler,
+    TH: TagLexUnitHandler,
+{
     #[inline]
     fn is_appropriate_end_tag(&self, _ch: Option<u8>) -> bool {
         match self.current_token {

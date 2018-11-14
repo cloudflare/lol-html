@@ -16,17 +16,15 @@ pub enum ParsingLoopDirective {
     Continue,
 }
 
+pub type StateResult = Result<ParsingLoopDirective, Error>;
+pub type OutputResponseResult = Result<Option<ParsingLoopDirective>, Error>;
+
 pub trait StateMachineActions {
     fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_chars(&mut self, input: &Chunk, _ch: Option<u8>);
     fn emit_current_token(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn emit_tag(
-        &mut self,
-        input: &Chunk,
-        ch: Option<u8>,
-    ) -> Result<Option<ParsingLoopDirective>, Error>;
-
+    fn emit_tag(&mut self, input: &Chunk, ch: Option<u8>) -> OutputResponseResult;
     fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_raw_without_token(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
@@ -70,8 +68,6 @@ pub trait StateMachineConditions {
     fn is_appropriate_end_tag(&self, ch: Option<u8>) -> bool;
     fn cdata_allowed(&self, ch: Option<u8>) -> bool;
 }
-
-pub type StateResult = Result<ParsingLoopDirective, Error>;
 
 pub trait StateMachine: StateMachineActions + StateMachineConditions {
     define_states!();

@@ -1,26 +1,33 @@
 use base::{Buffer, Chunk};
 use crate::Error;
-use tokenizer::{LexUnitHandler, TagPreviewHandler, Tokenizer};
+use tokenizer::{LexUnitHandler, TagLexUnitHandler, TagPreviewHandler, Tokenizer};
 
-pub struct TransformStream<LH, TH>
+pub struct TransformStream<LH, TH, PH>
 where
     LH: LexUnitHandler,
-    TH: TagPreviewHandler,
+    TH: TagLexUnitHandler,
+    PH: TagPreviewHandler,
 {
-    tokenizer: Tokenizer<LH, TH>,
+    tokenizer: Tokenizer<LH, TH, PH>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
 }
 
-impl<LH, TH> TransformStream<LH, TH>
+impl<LH, TH, PH> TransformStream<LH, TH, PH>
 where
     LH: LexUnitHandler,
-    TH: TagPreviewHandler,
+    TH: TagLexUnitHandler,
+    PH: TagPreviewHandler,
 {
-    pub fn new(buffer_capacity: usize, lex_unit_handler: LH, tag_preview_handler: TH) -> Self {
+    pub fn new(
+        buffer_capacity: usize,
+        lex_unit_handler: LH,
+        tag_lex_unit_handler: TH,
+        tag_preview_handler: PH,
+    ) -> Self {
         TransformStream {
-            tokenizer: Tokenizer::new(lex_unit_handler, tag_preview_handler),
+            tokenizer: Tokenizer::new(lex_unit_handler, tag_lex_unit_handler, tag_preview_handler),
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
@@ -92,7 +99,7 @@ where
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn get_tokenizer(&mut self) -> &mut Tokenizer<LH, TH> {
+    pub fn get_tokenizer(&mut self) -> &mut Tokenizer<LH, TH, PH> {
         &mut self.tokenizer
     }
 }
