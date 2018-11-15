@@ -51,7 +51,7 @@ fn get_inputs() -> Vec<Input> {
 fn cool_thing_tokenizer_bench() -> impl FnMut(&mut Bencher, &Input) {
     |b, i: &Input| {
         use cool_thing::tokenizer::{
-            LexUnit, TagLexUnitResponse, TagPreview, TagPreviewResponse, TokenizerOutputMode,
+            LexUnit, OutputMode, TagLexUnitResponse, TagPreview, TagPreviewResponse,
         };
         use cool_thing::transform_stream::TransformStream;
 
@@ -71,7 +71,7 @@ fn cool_thing_tokenizer_bench() -> impl FnMut(&mut Bencher, &Input) {
 
             transform_stream
                 .get_tokenizer()
-                .set_output_mode(TokenizerOutputMode::LexUnits);
+                .set_output_mode(OutputMode::LexUnits);
 
             for chunk in &i.chunks {
                 transform_stream.write(chunk.as_bytes()).unwrap();

@@ -29,7 +29,7 @@ pub enum TagPreviewResponse {
     None,
 }
 
-pub enum TokenizerOutputMode {
+pub enum OutputMode {
     LexUnits,
     TagPreviews,
     //NextLexUnitThenTagPreviews
@@ -39,7 +39,6 @@ declare_handler! {
     LexUnitHandler(&LexUnit)
 }
 
-// NOTE: we can switch between tokenizer modes on tags
 declare_handler! {
     TagLexUnitHandler(&LexUnit) -> TagLexUnitResponse
 }
@@ -56,17 +55,18 @@ where
 {
     full_sm: FullStateMachine<LH, TH>,
     eager_sm: EagerStateMachine<PH>,
-    output_mode: TokenizerOutputMode,
+    output_mode: OutputMode,
 }
 
 // NOTE: dynamic dispatch can't be used for the StateMachine trait
 // because it's not object-safe due to the usage of `Self` in function
 // signatures, so we use this macro instead.
+#[cfg(feature = "testing_api")]
 macro_rules! with_current_sm {
     ($self:tt, { sm.$fn:ident($($args:tt)*) }) => {
         match $self.output_mode {
-            TokenizerOutputMode::TagPreviews => $self.eager_sm.$fn($($args)*),
-            TokenizerOutputMode::LexUnits => $self.full_sm.$fn($($args)*),
+            OutputMode::TagPreviews => $self.eager_sm.$fn($($args)*),
+            OutputMode::LexUnits => $self.full_sm.$fn($($args)*),
         }
     };
 }
@@ -81,17 +81,40 @@ where
         Tokenizer {
             full_sm: FullStateMachine::new(lex_unit_handler, tag_lex_unit_handler),
             eager_sm: EagerStateMachine::new(tag_preview_handler),
-            output_mode: TokenizerOutputMode::TagPreviews,
+            output_mode: OutputMode::TagPreviews,
         }
     }
 
     #[inline]
     pub fn tokenize(&mut self, chunk: &Chunk) -> Result<usize, Error> {
-        with_current_sm!(self, { sm.run_parsing_loop(chunk) })
+        match self.output_mode {
+            OutputMode::LexUnits => {
+                let termination_reason = self.full_sm.run_parsing_loop(chunk)?;
+
+                match termination_reason {
+                    ParsingLoopTerminationReason::OutputResponse(_) => (),
+                    ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
+                        return Ok(blocked_byte_count);
+                    }
+                }
+            }
+            OutputMode::TagPreviews => {
+                let termination_reason = self.eager_sm.run_parsing_loop(chunk)?;
+
+                match termination_reason {
+                    ParsingLoopTerminationReason::OutputResponse(_) => (),
+                    ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
+                        return Ok(blocked_byte_count);
+                    }
+                }
+            }
+        }
+
+        Ok(0)
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn set_output_mode(&mut self, mode: TokenizerOutputMode) {
+    pub fn set_output_mode(&mut self, mode: OutputMode) {
         self.output_mode = mode;
     }
 

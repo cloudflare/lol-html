@@ -1,6 +1,6 @@
 use super::*;
 use base::Chunk;
-use tokenizer::{OutputResponseResult, StateMachineActions};
+use tokenizer::{ParsingLoopDirective, StateMachineActions, StateResult};
 
 macro_rules! noop {
     ($($fn_name:ident),*) => {
@@ -11,7 +11,10 @@ macro_rules! noop {
     };
 }
 
-impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
+impl<H> StateMachineActions<TagPreviewResponse> for EagerStateMachine<H>
+where
+    H: TagPreviewHandler,
+{
     #[inline]
     fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
@@ -93,8 +96,8 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     );
 
     #[inline]
-    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> OutputResponseResult {
-        Ok(None)
+    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult<TagPreviewResponse> {
+        Ok(ParsingLoopDirective::None)
     }
 
     #[inline]

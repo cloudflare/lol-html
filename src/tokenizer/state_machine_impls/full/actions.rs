@@ -1,6 +1,6 @@
 use super::*;
 use base::Chunk;
-use tokenizer::{OutputResponseResult, StateMachineActions};
+use tokenizer::StateMachineActions;
 
 macro_rules! get_token_part_range {
     ($self:tt) => {
@@ -27,14 +27,16 @@ macro_rules! notify_text_parsing_mode_change {
     };
 }
 
-impl<LH, TH> StateMachineActions for FullStateMachine<LH, TH>
+impl<LH, TH> StateMachineActions<TagLexUnitResponse> for FullStateMachine<LH, TH>
 where
     LH: LexUnitHandler,
     TH: TagLexUnitHandler,
 {
     #[inline]
     fn emit_eof(&mut self, input: &Chunk, _ch: Option<u8>) {
-        self.emit_lex_unit(input, Some(TokenView::Eof), None);
+        let lex_unit = LexUnit::new(input, Some(TokenView::Eof), None);
+
+        self.emit_lex_unit(&lex_unit);
     }
 
     #[inline]
@@ -45,19 +47,23 @@ where
             // representation of character token content is the raw slice.
             // Also, we always emit characters if we encounter some other bounded
             // lexical structure and, thus, we use exclusive range for the raw slice.
-            self.emit_lex_unit_with_raw_exclusive(input, Some(TokenView::Character));
+            let lex_unit =
+                self.create_lex_unit_with_raw_exclusive(input, Some(TokenView::Character));
+
+            self.emit_lex_unit(&lex_unit);
         }
     }
 
     #[inline]
     fn emit_current_token(&mut self, input: &Chunk, _ch: Option<u8>) {
         let token = self.current_token.take();
+        let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
 
-        self.emit_lex_unit_with_raw_inclusive(input, token);
+        self.emit_lex_unit(&lex_unit);
     }
 
     #[inline]
-    fn emit_tag(&mut self, input: &Chunk, _ch: Option<u8>) -> OutputResponseResult {
+    fn emit_tag(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult<TagLexUnitResponse> {
         let token = self.current_token.take();
 
         let feedback = match token {
@@ -72,28 +78,38 @@ where
             _ => unreachable!("Token should be a start or an end tag at this point"),
         };
 
-        let (lex_unit, _response) = self.emit_tag_lex_unit(input, token);
+        let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
+        let tag_response = self.emit_tag_lex_unit(&lex_unit);
+        let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
 
-        Ok(self.handle_tree_builder_feedback(feedback, &lex_unit))
+        Ok(match tag_response {
+            TagLexUnitResponse::None => loop_directive_from_feedback,
+            _ => ParsingLoopDirective::BreakOnOutputResponse(tag_response),
+        })
     }
 
     #[inline]
     fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
         let token = self.current_token.take();
+        let lex_unit = self.create_lex_unit_with_raw_exclusive(input, token);
 
-        self.emit_lex_unit_with_raw_exclusive(input, token);
+        self.emit_lex_unit(&lex_unit);
         self.emit_eof(input, ch);
     }
 
     #[inline]
     fn emit_raw_without_token(&mut self, input: &Chunk, _ch: Option<u8>) {
-        self.emit_lex_unit_with_raw_inclusive(input, None);
+        let lex_unit = self.create_lex_unit_with_raw_inclusive(input, None);
+
+        self.emit_lex_unit(&lex_unit);
     }
 
     #[inline]
     fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
         // NOTE: since we are at EOF we use exclusive range for token's raw.
-        self.emit_lex_unit_with_raw_exclusive(input, None);
+        let lex_unit = self.create_lex_unit_with_raw_exclusive(input, None);
+
+        self.emit_lex_unit(&lex_unit);
         self.emit_eof(input, ch);
     }
 

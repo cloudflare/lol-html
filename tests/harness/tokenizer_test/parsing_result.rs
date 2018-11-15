@@ -4,8 +4,8 @@ use super::tag_preview::TestTagPreview;
 use super::token::TestToken;
 use super::Bailout;
 use cool_thing::tokenizer::{
-    LexUnit, TagLexUnitResponse, TagPreview, TagPreviewResponse, TextParsingMode,
-    TextParsingModeSnapshot, TokenView, TokenizerOutputMode,
+    LexUnit, OutputMode, TagLexUnitResponse, TagPreview, TagPreviewResponse, TextParsingMode,
+    TextParsingModeSnapshot, TokenView,
 };
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
@@ -48,18 +48,14 @@ impl ParsingResult {
             buffered_chars: None,
         };
 
-        if let Err(e) = result.parse(input, initial_mode_snapshot, TokenizerOutputMode::LexUnits) {
+        if let Err(e) = result.parse(input, initial_mode_snapshot, OutputMode::LexUnits) {
             result.add_bailout(e);
         }
 
         // TODO bailouts for tag preview
         #[allow(unused_must_use)]
         {
-            result.parse(
-                input,
-                initial_mode_snapshot,
-                TokenizerOutputMode::TagPreviews,
-            );
+            result.parse(input, initial_mode_snapshot, OutputMode::TagPreviews);
         }
 
         result
@@ -69,7 +65,7 @@ impl ParsingResult {
         &mut self,
         input: &ChunkedInput,
         initial_mode_snapshot: TextParsingModeSnapshot,
-        output_mode: TokenizerOutputMode,
+        output_mode: OutputMode,
     ) -> Result<(), Error> {
         let result_rc1 = Rc::new(RefCell::new(self));
         let result_rc2 = Rc::clone(&result_rc1);

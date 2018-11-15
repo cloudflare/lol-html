@@ -1,7 +1,12 @@
 macro_rules! action {
     (| $self:tt, $input:ident, $ch:ident | > $action_fn:ident ? $($args:expr),* ) => {
-        if let Some(loop_directive) = $self.$action_fn($input, $ch $(,$args),*)? {
-            return Ok(loop_directive);
+        let loop_directive = $self.$action_fn($input, $ch $(,$args),*)?;
+
+        match loop_directive {
+            ParsingLoopDirective::None => (),
+            _ => {
+                return Ok(loop_directive);
+            },
         }
     };
 

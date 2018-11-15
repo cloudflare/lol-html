@@ -11,20 +11,30 @@ use tokenizer::TextParsingMode;
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
 
-pub enum ParsingLoopDirective {
+pub enum ParsingLoopDirective<OutputResponse> {
     Break,
+    BreakOnOutputResponse(OutputResponse),
     Continue,
+    None,
 }
 
-pub type StateResult = Result<ParsingLoopDirective, Error>;
-pub type OutputResponseResult = Result<Option<ParsingLoopDirective>, Error>;
+pub enum ParsingLoopTerminationReason<OutputResponse> {
+    OutputResponse(OutputResponse),
+    EndOfInput { blocked_byte_count: usize },
+}
 
-pub trait StateMachineActions {
+pub type StateResult<OutputResponse> = Result<ParsingLoopDirective<OutputResponse>, Error>;
+
+pub type ParsingLoopResult<OutputResponse> =
+    Result<ParsingLoopTerminationReason<OutputResponse>, Error>;
+
+pub trait StateMachineActions<OutputResponse> {
     fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_chars(&mut self, input: &Chunk, _ch: Option<u8>);
     fn emit_current_token(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn emit_tag(&mut self, input: &Chunk, ch: Option<u8>) -> OutputResponseResult;
+    fn emit_tag(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult<OutputResponse>;
+
     fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_raw_without_token(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
@@ -69,11 +79,13 @@ pub trait StateMachineConditions {
     fn cdata_allowed(&self, ch: Option<u8>) -> bool;
 }
 
-pub trait StateMachine: StateMachineActions + StateMachineConditions {
+pub trait StateMachine<OutputResponse>:
+    StateMachineActions<OutputResponse> + StateMachineConditions
+{
     define_states!();
 
-    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult);
-    fn get_state(&self) -> fn(&mut Self, &Chunk) -> StateResult;
+    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult<OutputResponse>);
+    fn get_state(&self) -> fn(&mut Self, &Chunk) -> StateResult<OutputResponse>;
     fn get_input_cursor(&mut self) -> &mut Cursor;
     fn get_blocked_byte_count(&self, input: &Chunk) -> usize;
     fn adjust_for_next_input(&mut self);
@@ -81,23 +93,26 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn set_is_state_enter(&mut self, val: bool);
     fn get_closing_quote(&self) -> u8;
 
-    fn run_parsing_loop(&mut self, input: &Chunk) -> Result<usize, Error> {
+    fn run_parsing_loop(&mut self, input: &Chunk) -> ParsingLoopResult<OutputResponse> {
         loop {
             let state = self.get_state();
-            let directive = state(self, input)?;
 
-            if let ParsingLoopDirective::Break = directive {
-                break;
+            match state(self, input)? {
+                ParsingLoopDirective::Break => {
+                    let blocked_byte_count = self.get_blocked_byte_count(input);
+
+                    if !input.is_last() {
+                        self.adjust_for_next_input()
+                    }
+
+                    return Ok(ParsingLoopTerminationReason::EndOfInput { blocked_byte_count });
+                }
+                ParsingLoopDirective::BreakOnOutputResponse(response) => {
+                    return Ok(ParsingLoopTerminationReason::OutputResponse(response));
+                }
+                _ => (),
             }
         }
-
-        let blocked_byte_count = self.get_blocked_byte_count(input);
-
-        if !input.is_last() {
-            self.adjust_for_next_input()
-        }
-
-        Ok(blocked_byte_count)
     }
 
     #[cfg(feature = "testing_api")]
@@ -110,7 +125,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     );
 
     #[inline]
-    fn switch_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult) {
+    fn switch_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult<OutputResponse>) {
         self.set_state(state);
         self.set_is_state_enter(true);
     }

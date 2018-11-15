@@ -5,15 +5,16 @@ mod conditions;
 use base::{Align, Chunk, Cursor, Range};
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{StateMachine, StateResult, TagName, TagPreviewHandler, TextParsingMode};
+use tokenizer::{
+    StateMachine, StateResult, TagName, TagPreviewHandler, TagPreviewResponse, TextParsingMode,
+};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
 
-pub type EagerStateMachineState<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
+pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult<TagPreviewResponse>;
 
 // TODO
-// 1. Tag confirmation
 // 2. Set tag_start to None after preview emission
 pub struct EagerStateMachine<H: TagPreviewHandler> {
     input_cursor: Cursor,
@@ -25,7 +26,7 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     state_enter: bool,
     allow_cdata: bool,
     tag_preview_handler: H,
-    state: EagerStateMachineState<H>,
+    state: State<H>,
     closing_quote: u8,
     tree_builder_simulator: TreeBuilderSimulator,
 }
@@ -49,14 +50,17 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
     }
 }
 
-impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
+impl<H> StateMachine<TagPreviewResponse> for EagerStateMachine<H>
+where
+    H: TagPreviewHandler,
+{
     #[inline]
-    fn set_state(&mut self, state: EagerStateMachineState<H>) {
+    fn set_state(&mut self, state: State<H>) {
         self.state = state;
     }
 
     #[inline]
-    fn get_state(&self) -> EagerStateMachineState<H> {
+    fn get_state(&self) -> State<H> {
         self.state
     }
 
