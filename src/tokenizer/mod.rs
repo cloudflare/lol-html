@@ -11,8 +11,11 @@ mod tree_builder_simulator;
 
 use self::state_machine::*;
 use self::state_machine_impls::*;
+use self::tree_builder_simulator::TreeBuilderSimulator;
 use base::Chunk;
 use crate::Error;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub use self::outputs::*;
 pub use self::tag_name::TagName;
@@ -78,9 +81,15 @@ where
     PH: TagPreviewHandler,
 {
     pub fn new(lex_unit_handler: LH, tag_lex_unit_handler: TH, tag_preview_handler: PH) -> Self {
+        let tree_builder_simulator = Rc::new(RefCell::new(TreeBuilderSimulator::default()));
+
         Tokenizer {
-            full_sm: FullStateMachine::new(lex_unit_handler, tag_lex_unit_handler),
-            eager_sm: EagerStateMachine::new(tag_preview_handler),
+            full_sm: FullStateMachine::new(
+                lex_unit_handler,
+                tag_lex_unit_handler,
+                &tree_builder_simulator,
+            ),
+            eager_sm: EagerStateMachine::new(tag_preview_handler, &tree_builder_simulator),
             output_mode: OutputMode::TagPreviews,
         }
     }

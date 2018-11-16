@@ -38,7 +38,7 @@ where
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
-    tree_builder_simulator: TreeBuilderSimulator,
+    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
 
     #[cfg(feature = "testing_api")]
     text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
@@ -49,7 +49,11 @@ where
     LH: LexUnitHandler,
     TH: TagLexUnitHandler,
 {
-    pub fn new(lex_unit_handler: LH, tag_lex_unit_handler: TH) -> Self {
+    pub fn new(
+        lex_unit_handler: LH,
+        tag_lex_unit_handler: TH,
+        tree_builder_simulator: &Rc<RefCell<TreeBuilderSimulator>>,
+    ) -> Self {
         FullStateMachine {
             input_cursor: Cursor::default(),
             lex_unit_start: 0,
@@ -66,7 +70,7 @@ where
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
-            tree_builder_simulator: TreeBuilderSimulator::default(),
+            tree_builder_simulator: Rc::clone(tree_builder_simulator),
 
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
@@ -89,7 +93,7 @@ where
                 ParsingLoopDirective::None
             }
             TreeBuilderFeedback::RequestLexUnit(callback) => {
-                let feedback = callback(&mut self.tree_builder_simulator, &lex_unit);
+                let feedback = callback(&mut self.tree_builder_simulator.borrow_mut(), &lex_unit);
 
                 self.handle_tree_builder_feedback(feedback, lex_unit)
             }

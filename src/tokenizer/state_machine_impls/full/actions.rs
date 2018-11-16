@@ -70,10 +70,12 @@ where
             Some(TokenView::StartTag { name_hash, .. }) => {
                 self.last_start_tag_name_hash = name_hash;
                 self.tree_builder_simulator
+                    .borrow_mut()
                     .get_feedback_for_start_tag_name(name_hash)?
             }
             Some(TokenView::EndTag { name_hash, .. }) => self
                 .tree_builder_simulator
+                .borrow_mut()
                 .get_feedback_for_end_tag_name(name_hash),
             _ => unreachable!("Token should be a start or an end tag at this point"),
         };

@@ -3,6 +3,8 @@ mod actions;
 mod conditions;
 
 use base::{Align, Chunk, Cursor, Range};
+use std::cell::RefCell;
+use std::rc::Rc;
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{
@@ -28,11 +30,14 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     tag_preview_handler: H,
     state: State<H>,
     closing_quote: u8,
-    tree_builder_simulator: TreeBuilderSimulator,
+    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
-    pub fn new(tag_preview_handler: H) -> Self {
+    pub fn new(
+        tag_preview_handler: H,
+        tree_builder_simulator: &Rc<RefCell<TreeBuilderSimulator>>,
+    ) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
             tag_start: 0,
@@ -45,7 +50,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             tag_preview_handler,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
-            tree_builder_simulator: TreeBuilderSimulator::default(),
+            tree_builder_simulator: Rc::clone(tree_builder_simulator),
         }
     }
 }
