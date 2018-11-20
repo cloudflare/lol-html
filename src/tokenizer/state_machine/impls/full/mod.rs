@@ -6,10 +6,11 @@ use base::{Align, Chunk, Cursor, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
+use tokenizer::state_machine::{ParsingLoopDirective, StateMachine, StateResult};
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{
-    LexUnitHandler, NextOutputType, ParsingLoopDirective, ParsingLoopTerminationReason,
-    StateMachine, StateResult, TagLexUnitHandler, TagName, TextParsingMode,
+    LexUnitHandler, NextOutputType, ParsingLoopTerminationReason, TagLexUnitHandler, TagName,
+    TextParsingMode,
 };
 
 #[cfg(feature = "testing_api")]

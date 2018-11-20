@@ -1,6 +1,6 @@
 use super::*;
 use base::Chunk;
-use tokenizer::StateMachineActions;
+use tokenizer::state_machine::StateMachineActions;
 
 macro_rules! get_token_part_range {
     ($self:tt) => {

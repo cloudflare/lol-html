@@ -1,6 +1,6 @@
 use super::*;
 use base::Chunk;
-use tokenizer::{ParsingLoopDirective, StateMachineActions, StateResult};
+use tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
 macro_rules! noop {
     ($($fn_name:ident),*) => {

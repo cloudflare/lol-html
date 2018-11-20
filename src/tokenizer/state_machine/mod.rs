@@ -4,6 +4,10 @@ mod syntax_dsl;
 #[macro_use]
 mod syntax;
 
+mod impls;
+
+pub use self::impls::*;
+
 use base::{Chunk, Cursor};
 use crate::Error;
 use tokenizer::TextParsingMode;

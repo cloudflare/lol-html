@@ -5,12 +5,12 @@ mod tag_name;
 mod state_machine;
 
 mod outputs;
-mod state_machine_impls;
 mod text_parsing_mode;
 mod tree_builder_simulator;
 
-use self::state_machine::*;
-use self::state_machine_impls::*;
+use self::state_machine::{
+    EagerStateMachine, FullStateMachine, ParsingLoopTerminationReason, StateMachine,
+};
 use self::tree_builder_simulator::TreeBuilderSimulator;
 use base::Chunk;
 use crate::Error;

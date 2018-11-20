@@ -6,8 +6,9 @@ use base::{Align, Chunk, Cursor, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
+use tokenizer::state_machine::{StateMachine, StateResult};
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{StateMachine, StateResult, TagName, TagPreviewHandler, TextParsingMode};
+use tokenizer::{TagName, TagPreviewHandler, TextParsingMode};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
