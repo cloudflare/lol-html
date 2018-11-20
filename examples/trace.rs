@@ -65,15 +65,15 @@ fn main() {
             println!("{:#?}", lex_unit);
             println!();
 
-            TagLexUnitResponse::None
+            NextOutputType::LexUnit
         },
-        |_tag_preview: &TagPreview| TagPreviewResponse::None,
+        |_tag_preview: &TagPreview| NextOutputType::TagPreview,
     );
 
     {
         let tokenizer = transform_stream.get_tokenizer();
 
-        tokenizer.set_output_mode(OutputMode::LexUnits);
+        tokenizer.set_next_output_type(NextOutputType::LexUnit);
 
         tokenizer.set_text_parsing_mode(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
             None => TextParsingMode::Data,

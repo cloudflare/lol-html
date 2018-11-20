@@ -32,7 +32,7 @@ macro_rules! arm_pattern {
             None if !$input.is_last() => ({
                 action_list!(|$self, $input, $ch|> $($actions)* );
 
-                return Ok(ParsingLoopDirective::Break);
+                return $self.break_on_end_of_input($input);
             })
         );
     };
@@ -50,7 +50,7 @@ macro_rules! arm_pattern {
                     action_list!(|$self, $input, $ch|> $($actions)* );
                 }
 
-                return Ok(ParsingLoopDirective::Break);
+                return $self.break_on_end_of_input($input);
             })
         );
     };

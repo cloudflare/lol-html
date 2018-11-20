@@ -53,14 +53,14 @@ macro_rules! ch_sequence_arm_pattern {
     // Match block expansion
     //--------------------------------------------------------------------
     ( @match_block
-        $input:ident, $ch:expr, $exp_ch:expr, $body:tt, $($case_mod:ident)*
+        | [$self:tt, $input:ident, $ch:ident] |> $exp_ch:expr, $body:tt, $($case_mod:ident)*
     ) => {
         match $ch {
             Some(ch) if ch_sequence_arm_pattern!(@cmp_exp ch, $exp_ch $(, $case_mod)*) => {
                $body
             },
             None if !$input.is_last() => {
-                return Ok(ParsingLoopDirective::Break);
+                return $self.break_on_end_of_input($input);
             },
             _ => ()
         }
@@ -71,7 +71,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @first | [$self:tt, $input:ident, $ch:ident] |>
         [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {
-        ch_sequence_arm_pattern!(@match_block $input, $ch, $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block |[$self, $input, $ch]|> $exp_ch, {
             ch_sequence_arm_pattern!(
                 @iter |[$self, $input, $ch]|> 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
@@ -86,7 +86,7 @@ macro_rules! ch_sequence_arm_pattern {
     ) => {{
         let ch = $self.get_input_cursor().lookahead($input, $depth);
 
-        ch_sequence_arm_pattern!(@match_block $input, ch, $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block |[$self, $input, ch]|> $exp_ch, {
             ch_sequence_arm_pattern!(
                 @iter |[$self, $input, $ch]|> $depth + 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
@@ -99,7 +99,7 @@ macro_rules! ch_sequence_arm_pattern {
     ) => {{
         let ch = $self.get_input_cursor().lookahead($input, $depth);
 
-        ch_sequence_arm_pattern!(@match_block $input, ch, $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block |[$self, $input, ch]|> $exp_ch, {
             $self.get_input_cursor().consume_several($depth);
             action_list!(|$self, $input, $ch|> $($actions)*);
 

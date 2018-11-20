@@ -6,7 +6,7 @@ macro_rules! state {
 
         $($rest:tt)*
     ) => {
-        fn $name(&mut self, input: &Chunk) -> StateResult<OutputResponse> {
+        fn $name(&mut self, input: &Chunk) -> StateResult {
             // NOTE: clippy complains about some states that break the loop in each match arm
             #[cfg_attr(feature = "cargo-clippy", allow(never_loop))]
             loop {

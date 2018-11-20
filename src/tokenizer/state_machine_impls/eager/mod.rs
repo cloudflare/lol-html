@@ -7,14 +7,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{
-    StateMachine, StateResult, TagName, TagPreviewHandler, TagPreviewResponse, TextParsingMode,
-};
+use tokenizer::{StateMachine, StateResult, TagName, TagPreviewHandler, TextParsingMode};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
 
-pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult<TagPreviewResponse>;
+pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
 
 // TODO
 // 2. Set tag_start to None after preview emission
@@ -55,10 +53,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
     }
 }
 
-impl<H> StateMachine<TagPreviewResponse> for EagerStateMachine<H>
-where
-    H: TagPreviewHandler,
-{
+impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     #[inline]
     fn set_state(&mut self, state: State<H>) {
         self.state = state;

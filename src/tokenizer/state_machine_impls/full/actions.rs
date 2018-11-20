@@ -27,7 +27,7 @@ macro_rules! notify_text_parsing_mode_change {
     };
 }
 
-impl<LH, TH> StateMachineActions<TagLexUnitResponse> for FullStateMachine<LH, TH>
+impl<LH, TH> StateMachineActions for FullStateMachine<LH, TH>
 where
     LH: LexUnitHandler,
     TH: TagLexUnitHandler,
@@ -63,7 +63,7 @@ where
     }
 
     #[inline]
-    fn emit_tag(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult<TagLexUnitResponse> {
+    fn emit_tag(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
         let token = self.current_token.take();
 
         let feedback = match token {
@@ -81,12 +81,14 @@ where
         };
 
         let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
-        let tag_response = self.emit_tag_lex_unit(&lex_unit);
+        let next_output_type = self.emit_tag_lex_unit(&lex_unit);
         let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
 
-        Ok(match tag_response {
-            TagLexUnitResponse::None => loop_directive_from_feedback,
-            _ => ParsingLoopDirective::BreakOnOutputResponse(tag_response),
+        Ok(match next_output_type {
+            NextOutputType::LexUnit => loop_directive_from_feedback,
+            NextOutputType::TagPreview => {
+                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch)
+            }
         })
     }
 

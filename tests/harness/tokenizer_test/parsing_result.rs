@@ -4,8 +4,7 @@ use super::tag_preview::TestTagPreview;
 use super::token::TestToken;
 use super::Bailout;
 use cool_thing::tokenizer::{
-    LexUnit, OutputMode, TagLexUnitResponse, TagPreview, TagPreviewResponse, TextParsingMode,
-    TextParsingModeSnapshot, TokenView,
+    LexUnit, NextOutputType, TagPreview, TextParsingMode, TextParsingModeSnapshot, TokenView,
 };
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
@@ -48,14 +47,8 @@ impl ParsingResult {
             buffered_chars: None,
         };
 
-        if let Err(e) = result.parse(input, initial_mode_snapshot, OutputMode::LexUnits) {
+        if let Err(e) = result.parse(input, initial_mode_snapshot) {
             result.add_bailout(e);
-        }
-
-        // TODO bailouts for tag preview
-        #[allow(unused_must_use)]
-        {
-            result.parse(input, initial_mode_snapshot, OutputMode::TagPreviews);
         }
 
         result
@@ -65,7 +58,6 @@ impl ParsingResult {
         &mut self,
         input: &ChunkedInput,
         initial_mode_snapshot: TextParsingModeSnapshot,
-        output_mode: OutputMode,
     ) -> Result<(), Error> {
         let result_rc1 = Rc::new(RefCell::new(self));
         let result_rc2 = Rc::clone(&result_rc1);
@@ -89,7 +81,7 @@ impl ParsingResult {
                     .borrow_mut()
                     .add_lex_unit(lex_unit, mode_snapshot_rc3.get());
 
-                TagLexUnitResponse::None
+                NextOutputType::LexUnit
             },
             move |tag_preview: &TagPreview| {
                 result_rc3
@@ -97,14 +89,14 @@ impl ParsingResult {
                     .tag_previews
                     .push(TestTagPreview::from_tag_preview(tag_preview));
 
-                TagPreviewResponse::None
+                NextOutputType::TagPreview
             },
         );
 
         {
             let tokenizer = transform_stream.get_tokenizer();
 
-            tokenizer.set_output_mode(output_mode);
+            tokenizer.set_next_output_type(NextOutputType::LexUnit);
             tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
             tokenizer.set_text_parsing_mode(initial_mode_snapshot.mode);
             tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);

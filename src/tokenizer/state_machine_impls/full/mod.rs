@@ -8,8 +8,8 @@ use std::rc::Rc;
 use tokenizer::outputs::*;
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{
-    LexUnitHandler, ParsingLoopDirective, StateMachine, StateResult, TagLexUnitHandler,
-    TagLexUnitResponse, TagName, TextParsingMode,
+    LexUnitHandler, NextOutputType, ParsingLoopDirective, ParsingLoopTerminationReason,
+    StateMachine, StateResult, TagLexUnitHandler, TagName, TextParsingMode,
 };
 
 #[cfg(feature = "testing_api")]
@@ -17,8 +17,7 @@ use tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub type State<LH, TH> =
-    fn(&mut FullStateMachine<LH, TH>, &Chunk) -> StateResult<TagLexUnitResponse>;
+pub type State<LH, TH> = fn(&mut FullStateMachine<LH, TH>, &Chunk) -> StateResult;
 
 pub struct FullStateMachine<LH, TH>
 where
@@ -81,7 +80,7 @@ where
         &mut self,
         feedback: TreeBuilderFeedback,
         lex_unit: &LexUnit,
-    ) -> ParsingLoopDirective<TagLexUnitResponse> {
+    ) -> ParsingLoopDirective {
         match feedback {
             TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
                 notify_text_parsing_mode_change!(self, mode);
@@ -115,7 +114,7 @@ where
     }
 
     #[inline]
-    fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit) -> TagLexUnitResponse {
+    fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit) -> NextOutputType {
         self.set_next_lex_unit_start(lex_unit);
         self.tag_lex_unit_handler.handle(lex_unit)
     }
@@ -158,7 +157,7 @@ where
     }
 }
 
-impl<LH, TH> StateMachine<TagLexUnitResponse> for FullStateMachine<LH, TH>
+impl<LH, TH> StateMachine for FullStateMachine<LH, TH>
 where
     LH: LexUnitHandler,
     TH: TagLexUnitHandler,

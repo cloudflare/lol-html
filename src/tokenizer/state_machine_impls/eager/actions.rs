@@ -11,10 +11,7 @@ macro_rules! noop {
     };
 }
 
-impl<H> StateMachineActions<TagPreviewResponse> for EagerStateMachine<H>
-where
-    H: TagPreviewHandler,
-{
+impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     #[inline]
     fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
@@ -96,7 +93,7 @@ where
     );
 
     #[inline]
-    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult<TagPreviewResponse> {
+    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
         Ok(ParsingLoopDirective::None)
     }
 
