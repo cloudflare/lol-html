@@ -19,9 +19,6 @@ pub enum Error {
 
 // TODO
 // -- Functionality
-// 2. TokenizerQuery
-// 3. Eager tokenizer
-// 4. Tokenizer driver
 // 5. Adjustable limits
 //
 // -- Performance

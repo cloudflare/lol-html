@@ -81,7 +81,6 @@ where
         }
     }
 
-    #[inline]
     pub fn tokenize(&mut self, chunk: &Chunk) -> Result<usize, Error> {
         let mut loop_termination_reason = with_current_sm!(self, { sm.run_parsing_loop(chunk) })?;
 
@@ -102,23 +101,27 @@ where
             }
         }
     }
+}
 
-    #[cfg(feature = "testing_api")]
+#[cfg(feature = "testing_api")]
+impl<LH, TH, PH> Tokenizer<LH, TH, PH>
+where
+    LH: LexUnitHandler,
+    TH: TagLexUnitHandler,
+    PH: TagPreviewHandler,
+{
     pub fn set_next_output_type(&mut self, ty: NextOutputType) {
         self.next_output_type = ty;
     }
 
-    #[cfg(feature = "testing_api")]
     pub fn set_text_parsing_mode(&mut self, mode: TextParsingMode) {
         with_current_sm!(self, { sm.set_text_parsing_mode(mode) });
     }
 
-    #[cfg(feature = "testing_api")]
     pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
         with_current_sm!(self, { sm.set_last_start_tag_name_hash(name_hash) });
     }
 
-    #[cfg(feature = "testing_api")]
     pub fn set_text_parsing_mode_change_handler(
         &mut self,
         handler: Box<dyn TextParsingModeChangeHandler>,
