@@ -6,10 +6,7 @@ use base::{Align, Chunk, Cursor, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
-use tokenizer::state_machine::{
-    ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateMachineBookmark,
-    StateResult,
-};
+use tokenizer::state_machine::{ParsingLoopTerminationReason, StateMachine, StateResult};
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{NextOutputType, TagName, TagPreviewHandler, TextParsingMode};
 
@@ -52,18 +49,6 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             closing_quote: b'"',
             tree_builder_simulator: Rc::clone(tree_builder_simulator),
         }
-    }
-
-    // TODO move to trait and rename to create bookmark
-    fn create_output_type_switch_loop_directive(&self, pos: usize) -> ParsingLoopDirective {
-        let bookmark = StateMachineBookmark {
-            allow_cdata: self.allow_cdata,
-            text_parsing_mode: TextParsingMode::Data, // TODO
-            last_start_tag_name_hash: self.last_start_tag_name_hash,
-            pos,
-        };
-
-        ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(bookmark))
     }
 }
 
@@ -109,6 +94,17 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     #[inline]
     fn get_closing_quote(&self) -> u8 {
         self.closing_quote
+    }
+
+    #[inline]
+    // TODO
+    fn get_text_parsing_mode(&self) -> TextParsingMode {
+        TextParsingMode::Data
+    }
+
+    #[inline]
+    fn get_last_start_tag_name_hash(&self) -> Option<u64> {
+        self.last_start_tag_name_hash
     }
 
     #[cfg(feature = "testing_api")]

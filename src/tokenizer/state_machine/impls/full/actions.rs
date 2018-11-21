@@ -72,9 +72,11 @@ where
                     ParsingLoopDirective::None
                 }
             }
-            NextOutputType::TagPreview => self.create_output_type_switch_loop_directive(
-                new_text_parsing_mode.unwrap_or(TextParsingMode::Data),
-            ),
+            NextOutputType::TagPreview => {
+                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(
+                    self.create_bookmark(self.lex_unit_start),
+                ))
+            }
         })
     }
 
@@ -282,6 +284,8 @@ where
         _ch: Option<u8>,
         mode: TextParsingMode,
     ) {
+        self.text_parsing_mode = mode;
+
         #[cfg(feature = "testing_api")]
         {
             if let Some(ref mut text_parsing_mode_change_handler) =

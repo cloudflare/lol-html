@@ -96,6 +96,8 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
     fn get_closing_quote(&self) -> u8;
+    fn get_text_parsing_mode(&self) -> TextParsingMode;
+    fn get_last_start_tag_name_hash(&self) -> Option<u64>;
 
     fn run_parsing_loop(&mut self, input: &Chunk) -> ParsingLoopResult {
         loop {
@@ -117,6 +119,15 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         Ok(ParsingLoopDirective::Break(
             ParsingLoopTerminationReason::EndOfInput { blocked_byte_count },
         ))
+    }
+
+    fn create_bookmark(&self, pos: usize) -> StateMachineBookmark {
+        StateMachineBookmark {
+            allow_cdata: self.cdata_allowed(None),
+            text_parsing_mode: self.get_text_parsing_mode(),
+            last_start_tag_name_hash: self.get_last_start_tag_name_hash(),
+            pos,
+        }
     }
 
     #[cfg(feature = "testing_api")]

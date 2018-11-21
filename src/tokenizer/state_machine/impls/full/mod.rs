@@ -7,9 +7,7 @@ use crate::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
-use tokenizer::state_machine::{
-    ParsingLoopDirective, StateMachine, StateMachineBookmark, StateResult,
-};
+use tokenizer::state_machine::{ParsingLoopDirective, StateMachine, StateResult};
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{
     LexUnitHandler, NextOutputType, ParsingLoopTerminationReason, TagLexUnitHandler, TagName,
@@ -42,6 +40,7 @@ where
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    text_parsing_mode: TextParsingMode,
 
     #[cfg(feature = "testing_api")]
     text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
@@ -74,9 +73,27 @@ where
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
             tree_builder_simulator: Rc::clone(tree_builder_simulator),
+            text_parsing_mode: TextParsingMode::Data,
 
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
+        }
+    }
+
+    fn get_feedback_for_tag(
+        &mut self,
+        token: &Option<TokenView>,
+    ) -> Result<TreeBuilderFeedback, Error> {
+        let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
+
+        match *token {
+            Some(TokenView::StartTag { name_hash, .. }) => {
+                tree_builder_simulator.get_feedback_for_start_tag_name(name_hash)
+            }
+            Some(TokenView::EndTag { name_hash, .. }) => {
+                Ok(tree_builder_simulator.get_feedback_for_end_tag_name(name_hash))
+            }
+            _ => unreachable!("Token should be a start or an end tag at this point"),
         }
     }
 
@@ -155,37 +172,6 @@ where
 
         self.create_lex_unit_with_raw(input, token, raw_end)
     }
-
-    fn get_feedback_for_tag(
-        &mut self,
-        token: &Option<TokenView>,
-    ) -> Result<TreeBuilderFeedback, Error> {
-        let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
-
-        match *token {
-            Some(TokenView::StartTag { name_hash, .. }) => {
-                tree_builder_simulator.get_feedback_for_start_tag_name(name_hash)
-            }
-            Some(TokenView::EndTag { name_hash, .. }) => {
-                Ok(tree_builder_simulator.get_feedback_for_end_tag_name(name_hash))
-            }
-            _ => unreachable!("Token should be a start or an end tag at this point"),
-        }
-    }
-
-    fn create_output_type_switch_loop_directive(
-        &self,
-        text_parsing_mode: TextParsingMode,
-    ) -> ParsingLoopDirective {
-        let bookmark = StateMachineBookmark {
-            allow_cdata: self.allow_cdata,
-            text_parsing_mode, // TODO store text parsing mode
-            last_start_tag_name_hash: self.last_start_tag_name_hash,
-            pos: self.lex_unit_start,
-        };
-
-        ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(bookmark))
-    }
 }
 
 impl<LH, TH> StateMachine for FullStateMachine<LH, TH>
@@ -235,6 +221,16 @@ where
     #[inline]
     fn get_closing_quote(&self) -> u8 {
         self.closing_quote
+    }
+
+    #[inline]
+    fn get_text_parsing_mode(&self) -> TextParsingMode {
+        self.text_parsing_mode
+    }
+
+    #[inline]
+    fn get_last_start_tag_name_hash(&self) -> Option<u64> {
+        self.last_start_tag_name_hash
     }
 
     #[cfg(feature = "testing_api")]
