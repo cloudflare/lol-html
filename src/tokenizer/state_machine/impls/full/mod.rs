@@ -3,10 +3,13 @@ mod actions;
 mod conditions;
 
 use base::{Align, Chunk, Cursor, Range};
+use crate::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
-use tokenizer::state_machine::{ParsingLoopDirective, StateMachine, StateResult};
+use tokenizer::state_machine::{
+    ParsingLoopDirective, StateMachine, StateMachineBookmark, StateResult,
+};
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{
     LexUnitHandler, NextOutputType, ParsingLoopTerminationReason, TagLexUnitHandler, TagName,
@@ -81,23 +84,19 @@ where
         &mut self,
         feedback: TreeBuilderFeedback,
         lex_unit: &LexUnit,
-    ) -> ParsingLoopDirective {
+    ) -> Option<TextParsingMode> {
         match feedback {
-            TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
-                notify_text_parsing_mode_change!(self, mode);
-                self.set_text_parsing_mode(mode);
-                ParsingLoopDirective::Continue
-            }
+            TreeBuilderFeedback::SwitchTextParsingMode(mode) => Some(mode),
             TreeBuilderFeedback::SetAllowCdata(allow_cdata) => {
                 self.allow_cdata = allow_cdata;
-                ParsingLoopDirective::None
+                None
             }
             TreeBuilderFeedback::RequestLexUnit(callback) => {
                 let feedback = callback(&mut self.tree_builder_simulator.borrow_mut(), &lex_unit);
 
                 self.handle_tree_builder_feedback(feedback, lex_unit)
             }
-            TreeBuilderFeedback::None => ParsingLoopDirective::None,
+            TreeBuilderFeedback::None => None,
         }
     }
 
@@ -155,6 +154,37 @@ where
         let raw_end = self.input_cursor.pos();
 
         self.create_lex_unit_with_raw(input, token, raw_end)
+    }
+
+    fn get_feedback_for_tag(
+        &mut self,
+        token: &Option<TokenView>,
+    ) -> Result<TreeBuilderFeedback, Error> {
+        let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
+
+        match *token {
+            Some(TokenView::StartTag { name_hash, .. }) => {
+                tree_builder_simulator.get_feedback_for_start_tag_name(name_hash)
+            }
+            Some(TokenView::EndTag { name_hash, .. }) => {
+                Ok(tree_builder_simulator.get_feedback_for_end_tag_name(name_hash))
+            }
+            _ => unreachable!("Token should be a start or an end tag at this point"),
+        }
+    }
+
+    fn create_output_type_switch_loop_directive(
+        &self,
+        text_parsing_mode: TextParsingMode,
+    ) -> ParsingLoopDirective {
+        let bookmark = StateMachineBookmark {
+            allow_cdata: self.allow_cdata,
+            text_parsing_mode, // TODO store text parsing mode
+            last_start_tag_name_hash: self.last_start_tag_name_hash,
+            pos: self.lex_unit_start,
+        };
+
+        ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(bookmark))
     }
 }
 

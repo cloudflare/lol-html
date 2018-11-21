@@ -18,7 +18,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
         // NOTE: we are in the beginning of the start tag name.
         // The start of the tag is one byte behind ('<').
-        self.tag_start = self.tag_name_start - 1;
+        self.tag_start = Some(self.tag_name_start - 1);
         self.tag_name_hash = Some(0);
     }
 
@@ -29,7 +29,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
         // NOTE: we are in the beginning of the end tag name.
         // The start of the tag is two bytes behind ('</').
-        self.tag_start = self.tag_name_start - 2;
+        self.tag_start = Some(self.tag_name_start - 2);
         self.tag_name_hash = Some(0);
     }
 
@@ -41,7 +41,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, input: &Chunk, _ch: Option<u8>) {
+    fn finish_tag_name(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.input_cursor.pos(),
@@ -57,7 +57,18 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
             TagPreview::StartTag(tag_name_info)
         };
 
-        self.tag_preview_handler.handle(&tag_preview);
+        let tag_start = self
+            .tag_start
+            .expect("Tag start should be set at this point");
+
+        self.tag_start = None;
+
+        let next_output_type = self.tag_preview_handler.handle(&tag_preview);
+
+        Ok(match next_output_type {
+            NextOutputType::TagPreview => ParsingLoopDirective::None,
+            NextOutputType::LexUnit => self.create_output_type_switch_loop_directive(tag_start),
+        })
     }
 
     #[inline]

@@ -4,12 +4,10 @@ pub enum TextParsingMode {
     RCData,
     RawText,
     ScriptData,
-
-    // NOTE: these two can be constructed only in the test code.
-    // Prevent rustc from complaining on release builds.
-    #[allow(dead_code)]
     Data,
 
+    // NOTE: this state can be constructed only in the test code.
+    // Prevent rustc from complaining on release builds.
     #[allow(dead_code)]
     CDataSection,
 }

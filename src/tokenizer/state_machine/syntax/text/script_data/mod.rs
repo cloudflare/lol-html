@@ -29,21 +29,21 @@ define_state_group!(script_data_states_group = {
     script_data_end_tag_name_state {
         whitespace => (
             if is_appropriate_end_tag
-                ( finish_tag_name; --> before_attribute_name_state )
+                ( finish_tag_name?; --> before_attribute_name_state )
             else
                 ( emit_chars; reconsume in script_data_state )
         )
 
         b'/' => (
             if is_appropriate_end_tag
-                ( finish_tag_name; --> self_closing_start_tag_state )
+                ( finish_tag_name?; --> self_closing_start_tag_state )
             else
                 ( emit_chars; reconsume in script_data_state )
         )
 
         b'>' => (
             if is_appropriate_end_tag
-                ( finish_tag_name; emit_current_token; --> data_state )
+                ( finish_tag_name?; emit_current_token; --> data_state )
             else
                 ( emit_chars; reconsume in script_data_state )
         )

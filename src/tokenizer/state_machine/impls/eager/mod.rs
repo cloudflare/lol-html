@@ -6,20 +6,21 @@ use base::{Align, Chunk, Cursor, Range};
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
-use tokenizer::state_machine::{StateMachine, StateResult};
+use tokenizer::state_machine::{
+    ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateMachineBookmark,
+    StateResult,
+};
 use tokenizer::tree_builder_simulator::*;
-use tokenizer::{TagName, TagPreviewHandler, TextParsingMode};
+use tokenizer::{NextOutputType, TagName, TagPreviewHandler, TextParsingMode};
 
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
 
 pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
 
-// TODO
-// 2. Set tag_start to None after preview emission
 pub struct EagerStateMachine<H: TagPreviewHandler> {
     input_cursor: Cursor,
-    tag_start: usize,
+    tag_start: Option<usize>,
     tag_name_start: usize,
     is_in_end_tag: bool,
     tag_name_hash: Option<u64>,
@@ -39,7 +40,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
     ) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
-            tag_start: 0,
+            tag_start: None,
             tag_name_start: 0,
             is_in_end_tag: false,
             tag_name_hash: None,
@@ -51,6 +52,18 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             closing_quote: b'"',
             tree_builder_simulator: Rc::clone(tree_builder_simulator),
         }
+    }
+
+    // TODO move to trait and rename to create bookmark
+    fn create_output_type_switch_loop_directive(&self, pos: usize) -> ParsingLoopDirective {
+        let bookmark = StateMachineBookmark {
+            allow_cdata: self.allow_cdata,
+            text_parsing_mode: TextParsingMode::Data, // TODO
+            last_start_tag_name_hash: self.last_start_tag_name_hash,
+            pos,
+        };
+
+        ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(bookmark))
     }
 }
 
@@ -72,13 +85,15 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
 
     #[inline]
     fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
-        input.len() - self.tag_start
+        input.len() - self.tag_start.unwrap_or(0)
     }
 
     fn adjust_for_next_input(&mut self) {
-        self.input_cursor.align(self.tag_start);
-        self.tag_name_start.align(self.tag_start);
-        self.tag_start = 0;
+        if let Some(tag_start) = self.tag_start {
+            self.input_cursor.align(tag_start);
+            self.tag_name_start.align(tag_start);
+            self.tag_start = Some(0);
+        }
     }
 
     #[inline]

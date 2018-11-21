@@ -87,7 +87,7 @@ where
             ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
                 Ok(blocked_byte_count)
             }
-            ParsingLoopTerminationReason::OutputTypeSwitch => Ok(0),
+            ParsingLoopTerminationReason::OutputTypeSwitch(_) => Ok(0),
         }
     }
 

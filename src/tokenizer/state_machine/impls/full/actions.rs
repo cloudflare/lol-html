@@ -11,22 +11,6 @@ macro_rules! get_token_part_range {
     };
 }
 
-macro_rules! notify_text_parsing_mode_change {
-    ($self:tt, $mode:ident) => {
-        #[cfg(feature = "testing_api")]
-        {
-            if let Some(ref mut text_parsing_mode_change_handler) =
-                $self.text_parsing_mode_change_handler
-            {
-                text_parsing_mode_change_handler.handle(TextParsingModeSnapshot {
-                    mode: $mode,
-                    last_start_tag_name_hash: $self.last_start_tag_name_hash,
-                });
-            }
-        }
-    };
-}
-
 impl<LH, TH> StateMachineActions for FullStateMachine<LH, TH>
 where
     LH: LexUnitHandler,
@@ -66,29 +50,31 @@ where
     fn emit_tag(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
         let token = self.current_token.take();
 
-        let feedback = match token {
-            Some(TokenView::StartTag { name_hash, .. }) => {
-                self.last_start_tag_name_hash = name_hash;
-                self.tree_builder_simulator
-                    .borrow_mut()
-                    .get_feedback_for_start_tag_name(name_hash)?
-            }
-            Some(TokenView::EndTag { name_hash, .. }) => self
-                .tree_builder_simulator
-                .borrow_mut()
-                .get_feedback_for_end_tag_name(name_hash),
-            _ => unreachable!("Token should be a start or an end tag at this point"),
-        };
+        if let Some(TokenView::StartTag { name_hash, .. }) = token {
+            self.last_start_tag_name_hash = name_hash;
+        }
 
+        let feedback = self.get_feedback_for_tag(&token)?;
         let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
         let next_output_type = self.emit_tag_lex_unit(&lex_unit);
-        let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
+        let new_text_parsing_mode = self.handle_tree_builder_feedback(feedback, &lex_unit);
+
+        if let Some(mode) = new_text_parsing_mode {
+            self.notify_text_parsing_mode_change(input, _ch, mode);
+            self.set_text_parsing_mode(mode);
+        }
 
         Ok(match next_output_type {
-            NextOutputType::LexUnit => loop_directive_from_feedback,
-            NextOutputType::TagPreview => {
-                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch)
+            NextOutputType::LexUnit => {
+                if new_text_parsing_mode.is_some() {
+                    ParsingLoopDirective::Continue
+                } else {
+                    ParsingLoopDirective::None
+                }
             }
+            NextOutputType::TagPreview => self.create_output_type_switch_loop_directive(
+                new_text_parsing_mode.unwrap_or(TextParsingMode::Data),
+            ),
         })
     }
 
@@ -210,12 +196,14 @@ where
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn finish_tag_name(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
         match self.current_token {
             Some(TokenView::StartTag { ref mut name, .. })
             | Some(TokenView::EndTag { ref mut name, .. }) => *name = get_token_part_range!(self),
             _ => unreachable!("Current token should be a start or an end tag at this point"),
         }
+
+        Ok(ParsingLoopDirective::None)
     }
 
     #[inline]
@@ -294,6 +282,16 @@ where
         _ch: Option<u8>,
         mode: TextParsingMode,
     ) {
-        notify_text_parsing_mode_change!(self, mode);
+        #[cfg(feature = "testing_api")]
+        {
+            if let Some(ref mut text_parsing_mode_change_handler) =
+                self.text_parsing_mode_change_handler
+            {
+                text_parsing_mode_change_handler.handle(TextParsingModeSnapshot {
+                    mode,
+                    last_start_tag_name_hash: self.last_start_tag_name_hash,
+                });
+            }
+        }
     }
 }

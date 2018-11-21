@@ -21,6 +21,11 @@ impl<'c> TagNameInfo<'c> {
     pub fn get_name(&self) -> &Bytes<'c> {
         self.name.borrow_with(|| self.input.slice(self.name_range))
     }
+
+    #[inline]
+    pub fn get_name_range(&self) -> Range {
+        self.name_range
+    }
 }
 
 pub enum TagPreview<'c> {

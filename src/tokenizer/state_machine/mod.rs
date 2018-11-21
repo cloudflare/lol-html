@@ -15,8 +15,15 @@ use tokenizer::TextParsingMode;
 #[cfg(feature = "testing_api")]
 use tokenizer::TextParsingModeChangeHandler;
 
+pub struct StateMachineBookmark {
+    pub allow_cdata: bool,
+    pub text_parsing_mode: TextParsingMode,
+    pub last_start_tag_name_hash: Option<u64>,
+    pub pos: usize,
+}
+
 pub enum ParsingLoopTerminationReason {
-    OutputTypeSwitch,
+    OutputTypeSwitch(StateMachineBookmark),
     EndOfInput { blocked_byte_count: usize },
 }
 
@@ -33,9 +40,7 @@ pub trait StateMachineActions {
     fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_chars(&mut self, input: &Chunk, _ch: Option<u8>);
     fn emit_current_token(&mut self, input: &Chunk, ch: Option<u8>);
-
     fn emit_tag(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
-
     fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_raw_without_token(&mut self, input: &Chunk, ch: Option<u8>);
     fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
@@ -55,7 +60,7 @@ pub trait StateMachineActions {
     fn finish_doctype_public_id(&mut self, input: &Chunk, ch: Option<u8>);
     fn finish_doctype_system_id(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn finish_tag_name(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_tag_name(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
     fn update_tag_name_hash(&mut self, input: &Chunk, ch: Option<u8>);
     fn mark_as_self_closing(&mut self, input: &Chunk, ch: Option<u8>);
 
