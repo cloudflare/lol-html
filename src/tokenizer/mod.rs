@@ -83,11 +83,23 @@ where
 
     #[inline]
     pub fn tokenize(&mut self, chunk: &Chunk) -> Result<usize, Error> {
-        match with_current_sm!(self, { sm.run_parsing_loop(chunk) })? {
-            ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
-                Ok(blocked_byte_count)
+        let mut loop_termination_reason = with_current_sm!(self, { sm.run_parsing_loop(chunk) })?;
+
+        loop {
+            match loop_termination_reason {
+                ParsingLoopTerminationReason::OutputTypeSwitch {
+                    next_type,
+                    sm_bookmark,
+                } => {
+                    self.next_output_type = next_type;
+
+                    loop_termination_reason =
+                        with_current_sm!(self, { sm.continue_from_bookmark(chunk, &sm_bookmark) })?;
+                }
+                ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
+                    return Ok(blocked_byte_count)
+                }
             }
-            ParsingLoopTerminationReason::OutputTypeSwitch(_) => Ok(0),
         }
     }
 
@@ -111,6 +123,6 @@ where
         &mut self,
         handler: Box<dyn TextParsingModeChangeHandler>,
     ) {
-        with_current_sm!(self, { sm.set_text_parsing_mode_change_handler(handler) });
+        self.full_sm.set_text_parsing_mode_change_handler(handler);
     }
 }

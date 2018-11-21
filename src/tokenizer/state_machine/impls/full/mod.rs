@@ -172,6 +172,14 @@ where
 
         self.create_lex_unit_with_raw(input, token, raw_end)
     }
+
+    #[cfg(feature = "testing_api")]
+    pub fn set_text_parsing_mode_change_handler(
+        &mut self,
+        handler: Box<dyn TextParsingModeChangeHandler>,
+    ) {
+        self.text_parsing_mode_change_handler = Some(handler);
+    }
 }
 
 impl<LH, TH> StateMachine for FullStateMachine<LH, TH>
@@ -179,6 +187,8 @@ where
     LH: LexUnitHandler,
     TH: TagLexUnitHandler,
 {
+    impl_common_sm_accessors!();
+
     #[inline]
     fn set_state(&mut self, state: State<LH, TH>) {
         self.state = state;
@@ -187,11 +197,6 @@ where
     #[inline]
     fn get_state(&self) -> State<LH, TH> {
         self.state
-    }
-
-    #[inline]
-    fn get_input_cursor(&mut self) -> &mut Cursor {
-        &mut self.input_cursor
     }
 
     #[inline]
@@ -209,40 +214,7 @@ where
     }
 
     #[inline]
-    fn set_is_state_enter(&mut self, val: bool) {
-        self.state_enter = val;
-    }
-
-    #[inline]
-    fn is_state_enter(&self) -> bool {
-        self.state_enter
-    }
-
-    #[inline]
-    fn get_closing_quote(&self) -> u8 {
-        self.closing_quote
-    }
-
-    #[inline]
-    fn get_text_parsing_mode(&self) -> TextParsingMode {
-        self.text_parsing_mode
-    }
-
-    #[inline]
-    fn get_last_start_tag_name_hash(&self) -> Option<u64> {
-        self.last_start_tag_name_hash
-    }
-
-    #[cfg(feature = "testing_api")]
-    fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
-        self.last_start_tag_name_hash = name_hash;
-    }
-
-    #[cfg(feature = "testing_api")]
-    fn set_text_parsing_mode_change_handler(
-        &mut self,
-        handler: Box<dyn TextParsingModeChangeHandler>,
-    ) {
-        self.text_parsing_mode_change_handler = Some(handler);
+    fn adjust_to_bookmark(&mut self, pos: usize) {
+        self.lex_unit_start = pos;
     }
 }

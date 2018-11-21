@@ -10,10 +10,7 @@ pub use self::impls::*;
 
 use base::{Chunk, Cursor};
 use crate::Error;
-use tokenizer::TextParsingMode;
-
-#[cfg(feature = "testing_api")]
-use tokenizer::TextParsingModeChangeHandler;
+use tokenizer::{NextOutputType, TextParsingMode};
 
 pub struct StateMachineBookmark {
     pub allow_cdata: bool,
@@ -23,8 +20,13 @@ pub struct StateMachineBookmark {
 }
 
 pub enum ParsingLoopTerminationReason {
-    OutputTypeSwitch(StateMachineBookmark),
-    EndOfInput { blocked_byte_count: usize },
+    OutputTypeSwitch {
+        next_type: NextOutputType,
+        sm_bookmark: StateMachineBookmark,
+    },
+    EndOfInput {
+        blocked_byte_count: usize,
+    },
 }
 
 pub enum ParsingLoopDirective {
@@ -98,6 +100,10 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn get_closing_quote(&self) -> u8;
     fn get_text_parsing_mode(&self) -> TextParsingMode;
     fn get_last_start_tag_name_hash(&self) -> Option<u64>;
+    fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);
+    fn adjust_to_bookmark(&mut self, pos: usize);
+    fn set_allow_cdata(&mut self, allow_cdata: bool);
+    fn set_input_cursor(&mut self, input_cursor: Cursor);
 
     fn run_parsing_loop(&mut self, input: &Chunk) -> ParsingLoopResult {
         loop {
@@ -107,6 +113,23 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
                 return Ok(reason);
             }
         }
+    }
+
+    fn continue_from_bookmark(
+        &mut self,
+        input: &Chunk,
+        bookmark: &StateMachineBookmark,
+    ) -> ParsingLoopResult {
+        self.set_allow_cdata(bookmark.allow_cdata);
+
+        // TODO we should update mode here as well.
+        // Rename set_text_parsing_mode to switch text_parsing_mode
+        self.set_text_parsing_mode(bookmark.text_parsing_mode);
+        self.set_last_start_tag_name_hash(bookmark.last_start_tag_name_hash);
+        self.adjust_to_bookmark(bookmark.pos);
+        self.set_input_cursor(Cursor::new(bookmark.pos));
+
+        self.run_parsing_loop(input)
     }
 
     fn break_on_end_of_input(&mut self, input: &Chunk) -> StateResult {
@@ -129,15 +152,6 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
             pos,
         }
     }
-
-    #[cfg(feature = "testing_api")]
-    fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);
-
-    #[cfg(feature = "testing_api")]
-    fn set_text_parsing_mode_change_handler(
-        &mut self,
-        handler: Box<dyn TextParsingModeChangeHandler>,
-    );
 
     #[inline]
     fn switch_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult) {

@@ -10,9 +10,6 @@ use tokenizer::state_machine::{ParsingLoopTerminationReason, StateMachine, State
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{NextOutputType, TagName, TagPreviewHandler, TextParsingMode};
 
-#[cfg(feature = "testing_api")]
-use tokenizer::TextParsingModeChangeHandler;
-
 pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
 
 pub struct EagerStateMachine<H: TagPreviewHandler> {
@@ -28,6 +25,7 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     state: State<H>,
     closing_quote: u8,
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    text_parsing_mode: TextParsingMode,
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
@@ -48,11 +46,14 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
             tree_builder_simulator: Rc::clone(tree_builder_simulator),
+            text_parsing_mode: TextParsingMode::Data,
         }
     }
 }
 
 impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
+    impl_common_sm_accessors!();
+
     #[inline]
     fn set_state(&mut self, state: State<H>) {
         self.state = state;
@@ -61,11 +62,6 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     #[inline]
     fn get_state(&self) -> State<H> {
         self.state
-    }
-
-    #[inline]
-    fn get_input_cursor(&mut self) -> &mut Cursor {
-        &mut self.input_cursor
     }
 
     #[inline]
@@ -82,41 +78,7 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     }
 
     #[inline]
-    fn set_is_state_enter(&mut self, val: bool) {
-        self.state_enter = val;
-    }
-
-    #[inline]
-    fn is_state_enter(&self) -> bool {
-        self.state_enter
-    }
-
-    #[inline]
-    fn get_closing_quote(&self) -> u8 {
-        self.closing_quote
-    }
-
-    #[inline]
-    // TODO
-    fn get_text_parsing_mode(&self) -> TextParsingMode {
-        TextParsingMode::Data
-    }
-
-    #[inline]
-    fn get_last_start_tag_name_hash(&self) -> Option<u64> {
-        self.last_start_tag_name_hash
-    }
-
-    #[cfg(feature = "testing_api")]
-    fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
-        self.last_start_tag_name_hash = name_hash;
-    }
-
-    #[cfg(feature = "testing_api")]
-    fn set_text_parsing_mode_change_handler(
-        &mut self,
-        _handler: Box<dyn TextParsingModeChangeHandler>,
-    ) {
+    fn adjust_to_bookmark(&mut self, _pos: usize) {
         // Noop
     }
 }

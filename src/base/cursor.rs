@@ -6,6 +6,10 @@ pub struct Cursor {
 }
 
 impl Cursor {
+    pub fn new(next_pos: usize) -> Self {
+        Cursor { next_pos }
+    }
+
     #[inline]
     pub fn pos(&self) -> usize {
         self.next_pos - 1

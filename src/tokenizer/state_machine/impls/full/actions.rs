@@ -73,9 +73,10 @@ where
                 }
             }
             NextOutputType::TagPreview => {
-                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(
-                    self.create_bookmark(self.lex_unit_start),
-                ))
+                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch {
+                    next_type: NextOutputType::TagPreview,
+                    sm_bookmark: self.create_bookmark(self.lex_unit_start),
+                })
             }
         })
     }

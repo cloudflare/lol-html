@@ -67,9 +67,12 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
         Ok(match next_output_type {
             NextOutputType::TagPreview => ParsingLoopDirective::None,
-            NextOutputType::LexUnit => ParsingLoopDirective::Break(
-                ParsingLoopTerminationReason::OutputTypeSwitch(self.create_bookmark(tag_start)),
-            ),
+            NextOutputType::LexUnit => {
+                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch {
+                    next_type: NextOutputType::LexUnit,
+                    sm_bookmark: self.create_bookmark(tag_start),
+                })
+            }
         })
     }
 

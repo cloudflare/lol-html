@@ -1,3 +1,6 @@
+#[macro_use]
+mod common;
+
 pub mod eager;
 pub mod full;
 
