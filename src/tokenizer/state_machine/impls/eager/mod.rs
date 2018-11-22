@@ -25,7 +25,7 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     state: State<H>,
     closing_quote: u8,
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
-    text_parsing_mode: TextParsingMode,
+    last_text_parsing_mode_change: TextParsingMode,
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
@@ -46,7 +46,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
             tree_builder_simulator: Rc::clone(tree_builder_simulator),
-            text_parsing_mode: TextParsingMode::Data,
+            last_text_parsing_mode_change: TextParsingMode::Data,
         }
     }
 }
@@ -80,5 +80,10 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     #[inline]
     fn adjust_to_bookmark(&mut self, _pos: usize) {
         // Noop
+    }
+
+    #[inline]
+    fn store_last_text_parsing_mode_change(&mut self, mode: TextParsingMode) {
+        self.last_text_parsing_mode_change = mode;
     }
 }

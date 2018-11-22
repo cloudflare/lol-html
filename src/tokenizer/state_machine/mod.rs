@@ -73,13 +73,6 @@ pub trait StateMachineActions {
 
     fn set_closing_quote_to_double(&mut self, input: &Chunk, ch: Option<u8>);
     fn set_closing_quote_to_single(&mut self, input: &Chunk, ch: Option<u8>);
-
-    fn notify_text_parsing_mode_change(
-        &mut self,
-        input: &Chunk,
-        ch: Option<u8>,
-        mode: TextParsingMode,
-    );
 }
 
 pub trait StateMachineConditions {
@@ -98,12 +91,13 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
     fn get_closing_quote(&self) -> u8;
-    fn get_text_parsing_mode(&self) -> TextParsingMode;
     fn get_last_start_tag_name_hash(&self) -> Option<u64>;
     fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);
     fn adjust_to_bookmark(&mut self, pos: usize);
     fn set_allow_cdata(&mut self, allow_cdata: bool);
     fn set_input_cursor(&mut self, input_cursor: Cursor);
+    fn store_last_text_parsing_mode_change(&mut self, mode: TextParsingMode);
+    fn get_last_text_parsing_mode(&self) -> TextParsingMode;
 
     fn run_parsing_loop(&mut self, input: &Chunk) -> ParsingLoopResult {
         loop {
@@ -121,10 +115,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         bookmark: &StateMachineBookmark,
     ) -> ParsingLoopResult {
         self.set_allow_cdata(bookmark.allow_cdata);
-
-        // TODO we should update mode here as well.
-        // Rename set_text_parsing_mode to switch text_parsing_mode
-        self.set_text_parsing_mode(bookmark.text_parsing_mode);
+        self.switch_text_parsing_mode(bookmark.text_parsing_mode);
         self.set_last_start_tag_name_hash(bookmark.last_start_tag_name_hash);
         self.adjust_to_bookmark(bookmark.pos);
         self.set_input_cursor(Cursor::new(bookmark.pos));
@@ -147,10 +138,15 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn create_bookmark(&self, pos: usize) -> StateMachineBookmark {
         StateMachineBookmark {
             allow_cdata: self.cdata_allowed(None),
-            text_parsing_mode: self.get_text_parsing_mode(),
+            text_parsing_mode: self.get_last_text_parsing_mode(),
             last_start_tag_name_hash: self.get_last_start_tag_name_hash(),
             pos,
         }
+    }
+
+    #[inline]
+    fn enter_initial_text_parsing_mode(&mut self, _input: &Chunk, _ch: Option<u8>) {
+        self.store_last_text_parsing_mode_change(TextParsingMode::Data);
     }
 
     #[inline]
@@ -160,7 +156,9 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn set_text_parsing_mode(&mut self, mode: TextParsingMode) {
+    fn switch_text_parsing_mode(&mut self, mode: TextParsingMode) {
+        self.store_last_text_parsing_mode_change(mode);
+
         self.switch_state(match mode {
             TextParsingMode::Data => Self::data_state,
             TextParsingMode::PlainText => Self::plaintext_state,

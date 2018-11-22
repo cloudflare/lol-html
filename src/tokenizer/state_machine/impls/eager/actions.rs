@@ -114,16 +114,6 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     }
 
     #[inline]
-    fn notify_text_parsing_mode_change(
-        &mut self,
-        _input: &Chunk,
-        _ch: Option<u8>,
-        _mode: TextParsingMode,
-    ) {
-        // Noop
-    }
-
-    #[inline]
     fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {
         // Noop
     }

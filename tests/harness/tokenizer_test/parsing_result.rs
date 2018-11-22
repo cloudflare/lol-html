@@ -96,10 +96,13 @@ impl ParsingResult {
         {
             let tokenizer = transform_stream.get_tokenizer();
 
+            tokenizer
+                .get_full_sm()
+                .set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
+
             tokenizer.set_next_output_type(NextOutputType::LexUnit);
-            tokenizer.set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
-            tokenizer.set_text_parsing_mode(initial_mode_snapshot.mode);
             tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+            tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
         }
 
         for chunk in input.get_chunks() {

@@ -114,18 +114,15 @@ where
         self.next_output_type = ty;
     }
 
-    pub fn set_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        with_current_sm!(self, { sm.set_text_parsing_mode(mode) });
+    pub fn switch_text_parsing_mode(&mut self, mode: TextParsingMode) {
+        with_current_sm!(self, { sm.switch_text_parsing_mode(mode) });
     }
 
     pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
         with_current_sm!(self, { sm.set_last_start_tag_name_hash(name_hash) });
     }
 
-    pub fn set_text_parsing_mode_change_handler(
-        &mut self,
-        handler: Box<dyn TextParsingModeChangeHandler>,
-    ) {
-        self.full_sm.set_text_parsing_mode_change_handler(handler);
+    pub fn get_full_sm(&mut self) -> &mut FullStateMachine<LH, TH> {
+        &mut self.full_sm
     }
 }

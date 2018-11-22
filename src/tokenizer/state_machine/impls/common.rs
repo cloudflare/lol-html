@@ -18,8 +18,8 @@ macro_rules! impl_common_sm_accessors {
         }
 
         #[inline]
-        fn get_text_parsing_mode(&self) -> TextParsingMode {
-            self.text_parsing_mode
+        fn get_last_text_parsing_mode(&self) -> TextParsingMode {
+            self.last_text_parsing_mode_change
         }
 
         #[inline]

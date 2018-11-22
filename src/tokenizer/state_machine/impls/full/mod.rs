@@ -40,7 +40,7 @@ where
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
-    text_parsing_mode: TextParsingMode,
+    last_text_parsing_mode_change: TextParsingMode,
 
     #[cfg(feature = "testing_api")]
     text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
@@ -73,7 +73,7 @@ where
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
             tree_builder_simulator: Rc::clone(tree_builder_simulator),
-            text_parsing_mode: TextParsingMode::Data,
+            last_text_parsing_mode_change: TextParsingMode::Data,
 
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
@@ -216,5 +216,24 @@ where
     #[inline]
     fn adjust_to_bookmark(&mut self, pos: usize) {
         self.lex_unit_start = pos;
+    }
+
+    #[inline]
+    fn store_last_text_parsing_mode_change(&mut self, mode: TextParsingMode) {
+        self.last_text_parsing_mode_change = mode;
+
+        #[cfg(feature = "testing_api")]
+        {
+            if let Some(ref mut text_parsing_mode_change_handler) =
+                self.text_parsing_mode_change_handler
+            {
+                let snapshot = TextParsingModeSnapshot {
+                    mode,
+                    last_start_tag_name_hash: self.last_start_tag_name_hash,
+                };
+
+                text_parsing_mode_change_handler.handle(snapshot);
+            }
+        }
     }
 }

@@ -6,7 +6,7 @@ mod double_escaped;
 
 define_state_group!(script_data_states_group = {
 
-    script_data_state <-- ( notify_text_parsing_mode_change TextParsingMode::ScriptData; ) {
+    script_data_state {
         b'<' => ( emit_chars; --> script_data_less_than_sign_state )
         eoc  => ( emit_chars; )
         eof  => ( emit_chars; emit_eof; )

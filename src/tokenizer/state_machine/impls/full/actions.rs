@@ -60,8 +60,7 @@ where
         let new_text_parsing_mode = self.handle_tree_builder_feedback(feedback, &lex_unit);
 
         if let Some(mode) = new_text_parsing_mode {
-            self.notify_text_parsing_mode_change(input, _ch, mode);
-            self.set_text_parsing_mode(mode);
+            self.switch_text_parsing_mode(mode);
         }
 
         Ok(match next_output_type {
@@ -274,29 +273,5 @@ where
     #[inline]
     fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.closing_quote = b'\'';
-    }
-
-    #[inline]
-    // NOTE: prevent compiler from complaining about unused `mode` in release builds.
-    #[allow(unused_variables)]
-    fn notify_text_parsing_mode_change(
-        &mut self,
-        _input: &Chunk,
-        _ch: Option<u8>,
-        mode: TextParsingMode,
-    ) {
-        self.text_parsing_mode = mode;
-
-        #[cfg(feature = "testing_api")]
-        {
-            if let Some(ref mut text_parsing_mode_change_handler) =
-                self.text_parsing_mode_change_handler
-            {
-                text_parsing_mode_change_handler.handle(TextParsingModeSnapshot {
-                    mode,
-                    last_start_tag_name_hash: self.last_start_tag_name_hash,
-                });
-            }
-        }
     }
 }
