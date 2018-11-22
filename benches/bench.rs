@@ -48,8 +48,8 @@ fn get_inputs() -> Vec<Input> {
         }).collect()
 }
 
-fn cool_thing_tokenizer_bench() -> impl FnMut(&mut Bencher, &Input) {
-    |b, i: &Input| {
+fn cool_thing_tokenizer_bench(with_full_sm: bool) -> impl FnMut(&mut Bencher, &Input) {
+    move |b, i: &Input| {
         use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview};
         use cool_thing::transform_stream::TransformStream;
 
@@ -64,12 +64,20 @@ fn cool_thing_tokenizer_bench() -> impl FnMut(&mut Bencher, &Input) {
 
                     NextOutputType::LexUnit
                 },
-                |_tag_preview: &TagPreview| NextOutputType::TagPreview,
+                |tag_preview: &TagPreview| {
+                    black_box(tag_preview);
+
+                    NextOutputType::TagPreview
+                },
             );
 
             transform_stream
                 .get_tokenizer()
-                .set_next_output_type(NextOutputType::LexUnit);
+                .set_next_output_type(if with_full_sm {
+                    NextOutputType::LexUnit
+                } else {
+                    NextOutputType::TagPreview
+                });
 
             for chunk in &i.chunks {
                 transform_stream.write(chunk.as_bytes()).unwrap();
@@ -150,10 +158,16 @@ fn tokenization_benchmark(c: &mut Criterion) {
 
     c.bench(
         "Tokenizer",
-        ParameterizedBenchmark::new("cool_thing", cool_thing_tokenizer_bench(), inputs)
-            .with_function("lazyhtml", lazyhtml_tokenizer_bench())
-            .with_function("html5ever", html5ever_tokenizer_bench())
-            .throughput(|i| Throughput::Bytes(i.chunks.iter().fold(0, |s, c| s + c.len() as u32))),
+        ParameterizedBenchmark::new(
+            "cool_thing - Eager state machine",
+            cool_thing_tokenizer_bench(false),
+            inputs,
+        ).with_function(
+            "cool_thing - Full state machine",
+            cool_thing_tokenizer_bench(true),
+        ).with_function("lazyhtml", lazyhtml_tokenizer_bench())
+        .with_function("html5ever", html5ever_tokenizer_bench())
+        .throughput(|i| Throughput::Bytes(i.chunks.iter().fold(0, |s, c| s + c.len() as u32))),
     );
 }
 

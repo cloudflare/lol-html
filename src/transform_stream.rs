@@ -86,9 +86,7 @@ where
         self.finished = true;
 
         let chunk = if self.has_buffered_data {
-            let bytes = self.buffer.bytes();
-
-            Chunk::last(bytes)
+            Chunk::last(self.buffer.bytes())
         } else {
             Chunk::last_empty()
         };

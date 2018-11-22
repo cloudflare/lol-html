@@ -4,7 +4,6 @@ use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde_json::error::Error;
 use std::env;
 use std::fmt::{self, Formatter};
-use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct ChunkedInput {
@@ -53,14 +52,6 @@ impl ChunkedInput {
                 }
             }
         };
-    }
-}
-
-impl Deref for ChunkedInput {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        &self.input
     }
 }
 
