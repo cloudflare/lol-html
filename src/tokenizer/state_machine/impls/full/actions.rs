@@ -57,20 +57,10 @@ where
         let feedback = self.get_feedback_for_tag(&token)?;
         let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
         let next_output_type = self.emit_tag_lex_unit(&lex_unit);
-        let new_text_parsing_mode = self.handle_tree_builder_feedback(feedback, &lex_unit);
-
-        if let Some(mode) = new_text_parsing_mode {
-            self.switch_text_parsing_mode(mode);
-        }
+        let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
 
         Ok(match next_output_type {
-            NextOutputType::LexUnit => {
-                if new_text_parsing_mode.is_some() {
-                    ParsingLoopDirective::Continue
-                } else {
-                    ParsingLoopDirective::None
-                }
-            }
+            NextOutputType::LexUnit => loop_directive_from_feedback,
             NextOutputType::TagPreview => {
                 ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch {
                     next_type: NextOutputType::TagPreview,
@@ -274,4 +264,6 @@ where
     fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.closing_quote = b'\'';
     }
+
+    noop_action!(mark_tag_start);
 }

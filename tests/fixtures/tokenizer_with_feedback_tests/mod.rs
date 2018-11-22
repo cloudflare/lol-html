@@ -67,7 +67,6 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
                     last_start_tag: String::new(),
                     ignored: false,
                     expected_bailout,
-                    expected_tag_previews: Vec::default(),
                 }
             }));
         }

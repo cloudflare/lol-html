@@ -1,5 +1,6 @@
 use base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
+use std::fmt::{self, Debug};
 
 pub struct TagNameInfo<'c> {
     input: &'c Chunk<'c>,
@@ -21,13 +22,18 @@ impl<'c> TagNameInfo<'c> {
     pub fn get_name(&self) -> &Bytes<'c> {
         self.name.borrow_with(|| self.input.slice(self.name_range))
     }
+}
 
-    #[inline]
-    pub fn get_name_range(&self) -> Range {
-        self.name_range
+impl<'c> Debug for TagNameInfo<'c> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("TagNameInfo")
+            .field("name", self.get_name())
+            .field("name_hash", &self.name_hash)
+            .finish()
     }
 }
 
+#[derive(Debug)]
 pub enum TagPreview<'c> {
     StartTag(TagNameInfo<'c>),
     EndTag(TagNameInfo<'c>),

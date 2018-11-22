@@ -66,7 +66,11 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
 
     #[inline]
     fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
-        input.len() - self.tag_start.unwrap_or(0)
+        if let Some(tag_start) = self.tag_start {
+            input.len() - tag_start
+        } else {
+            0
+        }
     }
 
     fn adjust_for_next_input(&mut self) {
@@ -74,6 +78,8 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
             self.input_cursor.align(tag_start);
             self.tag_name_start.align(tag_start);
             self.tag_start = Some(0);
+        } else {
+            self.input_cursor = Cursor::default();
         }
     }
 

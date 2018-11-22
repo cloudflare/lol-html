@@ -2,35 +2,23 @@ use super::*;
 use base::Chunk;
 use tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
-macro_rules! noop {
-    ($($fn_name:ident),*) => {
-        $(
-            #[inline]
-            fn $fn_name(&mut self, _input: &Chunk, _ch: Option<u8>) { }
-        )*
-    };
-}
-
 impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     #[inline]
     fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
-
-        // NOTE: we are in the beginning of the start tag name.
-        // The start of the tag is one byte behind ('<').
-        self.tag_start = Some(self.tag_name_start - 1);
         self.tag_name_hash = Some(0);
     }
 
     #[inline]
     fn create_end_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
-        self.is_in_end_tag = true;
-
-        // NOTE: we are in the beginning of the end tag name.
-        // The start of the tag is two bytes behind ('</').
-        self.tag_start = Some(self.tag_name_start - 2);
         self.tag_name_hash = Some(0);
+        self.is_in_end_tag = true;
+    }
+
+    #[inline]
+    fn mark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
+        self.tag_start = Some(self.input_cursor.pos());
     }
 
     #[inline]
@@ -86,7 +74,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
         self.closing_quote = b'\'';
     }
 
-    noop!(
+    noop_action!(
         emit_eof,
         emit_chars,
         emit_current_token,

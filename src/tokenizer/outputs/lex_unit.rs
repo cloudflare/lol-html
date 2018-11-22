@@ -6,7 +6,7 @@ use std::fmt::{self, Debug, Write};
 
 pub struct LexUnit<'c> {
     input: &'c Chunk<'c>,
-    pub raw_range: Option<Range>,
+    raw_range: Option<Range>,
     token_view: Option<TokenView>,
     raw: LazyCell<Option<Bytes<'c>>>,
     token: LazyCell<Option<Token<'c>>>,
@@ -33,8 +33,14 @@ impl<'c> LexUnit<'c> {
             .as_ref()
     }
 
+    #[inline]
     pub fn get_token_view(&self) -> Option<&TokenView> {
         self.token_view.as_ref()
+    }
+
+    #[inline]
+    pub fn get_raw_range(&self) -> Option<Range> {
+        self.raw_range
     }
 
     pub fn get_token(&self) -> Option<&Token<'c>> {

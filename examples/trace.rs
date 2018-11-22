@@ -18,7 +18,7 @@ fn parse_options() -> Option<Matches> {
 
     opts.optopt("t", "last_start_tag", "Last start tag name", "-t");
     opts.optopt("c", "chunk_size", "Chunk size", "-c");
-
+    opts.optflag("p", "tag_preview", "Trace in tag preview mode");
     opts.optflag("h", "help", "Show this help");
 
     let matches = match opts.parse(args().skip(1)) {
@@ -53,27 +53,39 @@ fn main() {
 
     let html = matches.free.first().unwrap();
 
+    macro_rules! print_output {
+        ($output:ident) => {
+            println!();
+            println!("{:#?}", $output);
+            println!();
+        };
+    }
+
     let mut transform_stream = TransformStream::new(
         2048,
         |lex_unit: &LexUnit| {
-            println!();
-            println!("{:#?}", lex_unit);
-            println!();
+            print_output!(lex_unit);
         },
         |lex_unit: &LexUnit| {
-            println!();
-            println!("{:#?}", lex_unit);
-            println!();
+            print_output!(lex_unit);
 
             NextOutputType::LexUnit
         },
-        |_tag_preview: &TagPreview| NextOutputType::TagPreview,
+        |tag_preview: &TagPreview| {
+            print_output!(tag_preview);
+
+            NextOutputType::TagPreview
+        },
     );
 
     {
         let tokenizer = transform_stream.get_tokenizer();
 
-        tokenizer.set_next_output_type(NextOutputType::LexUnit);
+        tokenizer.set_next_output_type(if matches.opt_present("p") {
+            NextOutputType::TagPreview
+        } else {
+            NextOutputType::LexUnit
+        });
 
         tokenizer.switch_text_parsing_mode(
             match matches.opt_str("s").as_ref().map(|s| s.as_str()) {

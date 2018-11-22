@@ -1,7 +1,6 @@
 use super::chunked_input::ChunkedInput;
 use super::decoder::Decoder;
-use super::tag_preview::TestTagPreview;
-use super::token::TestToken;
+use super::test_outputs::{TestTagPreview, TestToken};
 use super::Bailout;
 use cool_thing::tokenizer::{
     LexUnit, NextOutputType, TagPreview, TextParsingMode, TextParsingModeSnapshot, TokenView,
@@ -27,12 +26,95 @@ fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
 }
 
 #[derive(Default)]
+pub struct TagPreviewParsingResult {
+    // NOTE: preview don't guarantee that token will actually exist,
+    // it just provides a hint for the matcher. This happens
+    // when we see a tag that is not closed before EOF: we
+    // get preview in this case, but not token. Luckily, this
+    // case is not important for matching purposes.
+    // Therefore, we store only those previews that result into token,
+    // so we can compare them later against expected token list.
+    pub previews: Vec<TestTagPreview>,
+    pub tokens_from_preview: Vec<TestToken>,
+    pub has_bailout: bool,
+    pending_tag_preview: Option<TestTagPreview>,
+}
+
+impl TagPreviewParsingResult {
+    pub fn new(input: &ChunkedInput, initial_mode_snapshot: TextParsingModeSnapshot) -> Self {
+        let mut result = TagPreviewParsingResult {
+            previews: Vec::new(),
+            tokens_from_preview: Vec::new(),
+            has_bailout: false,
+            pending_tag_preview: None,
+        };
+
+        // TODO
+        result.has_bailout = result.parse(input, initial_mode_snapshot).is_err();
+
+        result
+    }
+
+    fn parse(
+        &mut self,
+        input: &ChunkedInput,
+        initial_mode_snapshot: TextParsingModeSnapshot,
+    ) -> Result<(), Error> {
+        let result_rc1 = Rc::new(RefCell::new(self));
+        let result_rc2 = Rc::clone(&result_rc1);
+
+        let mut transform_stream = TransformStream::new(
+            2048,
+            move |_lex_unit: &LexUnit| {},
+            move |lex_unit: &LexUnit| {
+                let mut result = result_rc1.borrow_mut();
+
+                result.tokens_from_preview.push(TestToken::new(
+                    lex_unit.get_token().expect("Tag should have a token"),
+                    lex_unit,
+                ));
+
+                let pending_preview = result
+                    .pending_tag_preview
+                    .take()
+                    .expect("Tag should have a preview");
+
+                result.previews.push(pending_preview);
+
+                NextOutputType::TagPreview
+            },
+            move |tag_preview: &TagPreview| {
+                result_rc2.borrow_mut().pending_tag_preview =
+                    Some(TestTagPreview::new(tag_preview));
+
+                NextOutputType::LexUnit
+            },
+        );
+
+        {
+            let tokenizer = transform_stream.get_tokenizer();
+
+            tokenizer.set_next_output_type(NextOutputType::TagPreview);
+            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+            tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
+        }
+
+        for chunk in input.get_chunks() {
+            transform_stream.write(chunk)?;
+        }
+
+        transform_stream.end()?;
+
+        Ok(())
+    }
+}
+
+#[derive(Default)]
 pub struct ParsingResult {
-    tokens: Vec<TestToken>,
-    tag_previews: Vec<TestTagPreview>,
+    pub tokens: Vec<TestToken>,
+    pub bailout: Option<Bailout>,
     text_parsing_mode_snapshots: Vec<TextParsingModeSnapshot>,
     raw_slices: Vec<Vec<u8>>,
-    bailout: Option<Bailout>,
     buffered_chars: Option<Vec<u8>>,
 }
 
@@ -40,13 +122,13 @@ impl ParsingResult {
     pub fn new(input: &ChunkedInput, initial_mode_snapshot: TextParsingModeSnapshot) -> Self {
         let mut result = ParsingResult {
             tokens: Vec::new(),
-            tag_previews: Vec::new(),
+            bailout: None,
             text_parsing_mode_snapshots: Vec::new(),
             raw_slices: Vec::new(),
-            bailout: None,
             buffered_chars: None,
         };
 
+        // TODO use bailout handler later with substitution and test eager state machine as well.
         if let Err(e) = result.parse(input, initial_mode_snapshot) {
             result.add_bailout(e);
         }
@@ -61,7 +143,6 @@ impl ParsingResult {
     ) -> Result<(), Error> {
         let result_rc1 = Rc::new(RefCell::new(self));
         let result_rc2 = Rc::clone(&result_rc1);
-        let result_rc3 = Rc::clone(&result_rc1);
 
         let mode_snapshot_rc1 = Rc::new(Cell::new(TextParsingModeSnapshot::default()));
         let mode_snapshot_rc2 = Rc::clone(&mode_snapshot_rc1);
@@ -83,14 +164,7 @@ impl ParsingResult {
 
                 NextOutputType::LexUnit
             },
-            move |tag_preview: &TagPreview| {
-                result_rc3
-                    .borrow_mut()
-                    .tag_previews
-                    .push(TestTagPreview::from_tag_preview(tag_preview));
-
-                NextOutputType::TagPreview
-            },
+            move |_tag_preview: &TagPreview| NextOutputType::TagPreview,
         );
 
         {
@@ -137,6 +211,13 @@ impl ParsingResult {
         }
     }
 
+    fn add_bailout(&mut self, reason: Error) {
+        self.bailout = Some(Bailout {
+            reason: format!("{:?}", reason),
+            parsed_chunk: self.get_cumulative_raw_string(),
+        });
+    }
+
     fn add_lex_unit(&mut self, lex_unit: &LexUnit, mode_snapshot: TextParsingModeSnapshot) {
         if let (Some(TokenView::Character), Some(raw)) =
             (lex_unit.get_token_view(), lex_unit.get_raw())
@@ -155,30 +236,11 @@ impl ParsingResult {
         }
     }
 
-    fn add_bailout(&mut self, reason: Error) {
-        self.bailout = Some(Bailout {
-            reason: format!("{:?}", reason),
-            parsed_chunk: self.get_cumulative_raw_string(),
-        });
-    }
-
     pub fn get_cumulative_raw_string(&self) -> String {
         String::from_utf8(self.raw_slices.iter().fold(Vec::new(), |mut c, s| {
             c.extend_from_slice(s);
             c
         })).unwrap()
-    }
-
-    pub fn get_tokens(&self) -> &Vec<TestToken> {
-        &self.tokens
-    }
-
-    pub fn get_tag_previews(&self) -> &Vec<TestTagPreview> {
-        &self.tag_previews
-    }
-
-    pub fn get_bailout(&self) -> &Option<Bailout> {
-        &self.bailout
     }
 
     pub fn into_token_raw_pairs(

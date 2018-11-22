@@ -48,3 +48,12 @@ macro_rules! impl_common_sm_accessors {
         }
     };
 }
+
+macro_rules! noop_action {
+    ($($fn_name:ident),*) => {
+        $(
+            #[inline]
+            fn $fn_name(&mut self, _input: &Chunk, _ch: Option<u8>) { }
+        )*
+    };
+}

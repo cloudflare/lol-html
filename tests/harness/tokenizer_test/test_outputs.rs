@@ -1,6 +1,6 @@
 use super::decoder::{to_lower_null_decoded, to_null_decoded, Decoder};
 use super::unescape::Unescape;
-use cool_thing::tokenizer::{LexUnit, TagName, Token, TokenView};
+use cool_thing::tokenizer::{LexUnit, TagName, TagPreview, Token, TokenView};
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -240,5 +240,58 @@ impl Unescape for TestToken {
             TestToken::Eof => (),
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum TagType {
+    StartTag,
+    EndTag,
+}
+
+#[derive(Debug)]
+pub struct TestTagPreview {
+    name: String,
+    name_hash: Option<u64>,
+    tag_type: TagType,
+}
+
+impl TestTagPreview {
+    pub fn new(tag_preview: &TagPreview) -> Self {
+        let mut tag_type = TagType::StartTag;
+
+        let tag_name_info = match tag_preview {
+            TagPreview::StartTag(name_info) => name_info,
+            TagPreview::EndTag(name_info) => {
+                tag_type = TagType::EndTag;
+                name_info
+            }
+        };
+
+        TestTagPreview {
+            name: to_lower_null_decoded(tag_name_info.get_name()),
+            name_hash: tag_name_info.name_hash,
+            tag_type,
+        }
+    }
+}
+
+impl PartialEq<TestToken> for TestTagPreview {
+    fn eq(&self, token: &TestToken) -> bool {
+        match (self.tag_type, token) {
+            (
+                TagType::StartTag,
+                TestToken::StartTag {
+                    name, name_hash, ..
+                },
+            )
+            | (
+                TagType::EndTag,
+                TestToken::EndTag {
+                    name, name_hash, ..
+                },
+            ) => self.name == *name && self.name_hash == *name_hash,
+            _ => false,
+        }
     }
 }

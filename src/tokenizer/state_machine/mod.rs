@@ -73,6 +73,8 @@ pub trait StateMachineActions {
 
     fn set_closing_quote_to_double(&mut self, input: &Chunk, ch: Option<u8>);
     fn set_closing_quote_to_single(&mut self, input: &Chunk, ch: Option<u8>);
+
+    fn mark_tag_start(&mut self, input: &Chunk, ch: Option<u8>);
 }
 
 pub trait StateMachineConditions {

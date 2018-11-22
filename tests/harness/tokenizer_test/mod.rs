@@ -1,14 +1,12 @@
 mod chunked_input;
 mod decoder;
 mod parsing_result;
-mod tag_preview;
-mod token;
+mod test_outputs;
 mod unescape;
 
 use self::chunked_input::ChunkedInput;
-use self::parsing_result::ParsingResult;
-use self::tag_preview::TestTagPreview;
-pub use self::token::TestToken;
+use self::parsing_result::{ParsingResult, TagPreviewParsingResult};
+pub use self::test_outputs::TestToken;
 use self::unescape::Unescape;
 use cool_thing::tokenizer::{TagName, TextParsingMode, TextParsingModeSnapshot};
 use serde_json;
@@ -66,9 +64,6 @@ pub struct TokenizerTest {
 
     #[serde(skip)]
     pub expected_bailout: Option<Bailout>,
-
-    #[serde(skip)]
-    pub expected_tag_previews: Vec<TestTagPreview>,
 }
 
 impl Unescape for TokenizerTest {
@@ -93,12 +88,6 @@ impl TokenizerTest {
         // NOTE: tokenizer should always produce EOF token
         self.expected_tokens.push(TestToken::Eof);
 
-        self.expected_tag_previews = self
-            .expected_tokens
-            .iter()
-            .filter_map(|t| TestTagPreview::try_from_test_token(t))
-            .collect();
-
         let mut new_descr = String::new();
 
         write!(
@@ -118,7 +107,7 @@ impl TokenizerTest {
                 let mut actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
 
                 assert_eql!(
-                    *actual.get_tokens(),
+                    actual.tokens,
                     vec![token.to_owned(), TestToken::Eof],
                     raw,
                     text_parsing_mode_snapshot,
@@ -128,53 +117,78 @@ impl TokenizerTest {
         }
     }
 
-    pub fn run(&self) {
-        for cs in &self.initial_states {
-            let cs = TextParsingMode::from(cs.as_str());
+    fn test_full_sm(&self, initial_mode_snapshot: TextParsingModeSnapshot) {
+        let actual = ParsingResult::new(&self.input, initial_mode_snapshot);
 
-            let actual = ParsingResult::new(
-                &self.input,
-                TextParsingModeSnapshot {
-                    mode: cs,
-                    last_start_tag_name_hash: TagName::get_hash(&self.last_start_tag),
-                },
+        assert_eql!(
+            actual.bailout,
+            self.expected_bailout,
+            self.input,
+            initial_mode_snapshot,
+            "Tokenizer bailout error mismatch"
+        );
+
+        if actual.bailout.is_none() {
+            assert_eql!(
+                actual.tokens,
+                self.expected_tokens,
+                self.input,
+                initial_mode_snapshot,
+                "Token mismatch"
             );
 
             assert_eql!(
-                *actual.get_bailout(),
-                self.expected_bailout,
+                actual.get_cumulative_raw_string(),
                 self.input,
-                cs,
-                "Tokenizer bailout error mismatch"
+                self.input,
+                initial_mode_snapshot,
+                "Cumulative raw strings mismatch"
             );
 
-            /*  assert_eql!(
-                *actual.get_tag_previews(),
-                self.expected_tag_previews,
+            self.assert_tokens_have_correct_raw_strings(actual);
+        }
+    }
+
+    fn test_eager_sm(&self, initial_mode_snapshot: TextParsingModeSnapshot) {
+        let actual = TagPreviewParsingResult::new(&self.input, initial_mode_snapshot);
+
+        let expected_tag_tokens = self
+            .expected_tokens
+            .to_owned()
+            .into_iter()
+            .filter(|t| match t {
+                TestToken::StartTag { .. } | TestToken::EndTag { .. } => true,
+                _ => false,
+            }).collect::<Vec<_>>();
+
+        if !actual.has_bailout {
+            assert_eql!(
+                actual.previews,
+                expected_tag_tokens,
                 self.input,
-                cs,
-                "Tag preview mismatch"
-            ); */
+                initial_mode_snapshot,
+                "Previews and tokens mismatch"
+            );
 
-            if actual.get_bailout().is_none() {
-                assert_eql!(
-                    *actual.get_tokens(),
-                    self.expected_tokens,
-                    self.input,
-                    cs,
-                    "Token mismatch"
-                );
+            assert_eql!(
+                actual.tokens_from_preview,
+                expected_tag_tokens,
+                self.input,
+                initial_mode_snapshot,
+                "Tokens from preview mismatch"
+            );
+        }
+    }
 
-                assert_eql!(
-                    actual.get_cumulative_raw_string(),
-                    self.input,
-                    self.input,
-                    cs,
-                    "Cumulative raw strings mismatch"
-                );
+    pub fn run(&self) {
+        for cs in &self.initial_states {
+            let initial_mode_snapshot = TextParsingModeSnapshot {
+                mode: TextParsingMode::from(cs.as_str()),
+                last_start_tag_name_hash: TagName::get_hash(&self.last_start_tag),
+            };
 
-                self.assert_tokens_have_correct_raw_strings(actual);
-            }
+            self.test_full_sm(initial_mode_snapshot);
+            self.test_eager_sm(initial_mode_snapshot);
         }
     }
 }

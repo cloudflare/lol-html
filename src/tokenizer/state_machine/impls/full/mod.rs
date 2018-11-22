@@ -101,25 +101,28 @@ where
         &mut self,
         feedback: TreeBuilderFeedback,
         lex_unit: &LexUnit,
-    ) -> Option<TextParsingMode> {
+    ) -> ParsingLoopDirective {
         match feedback {
-            TreeBuilderFeedback::SwitchTextParsingMode(mode) => Some(mode),
+            TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
+                self.switch_text_parsing_mode(mode);
+                ParsingLoopDirective::Continue
+            }
             TreeBuilderFeedback::SetAllowCdata(allow_cdata) => {
                 self.allow_cdata = allow_cdata;
-                None
+                ParsingLoopDirective::None
             }
             TreeBuilderFeedback::RequestLexUnit(callback) => {
                 let feedback = callback(&mut self.tree_builder_simulator.borrow_mut(), &lex_unit);
 
                 self.handle_tree_builder_feedback(feedback, lex_unit)
             }
-            TreeBuilderFeedback::None => None,
+            TreeBuilderFeedback::None => ParsingLoopDirective::None,
         }
     }
 
     #[inline]
     fn set_next_lex_unit_start(&mut self, curr_lex_unit: &LexUnit) {
-        if let Some(Range { end, .. }) = curr_lex_unit.raw_range {
+        if let Some(Range { end, .. }) = curr_lex_unit.get_raw_range() {
             self.lex_unit_start = end;
         }
     }
