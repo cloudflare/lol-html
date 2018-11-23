@@ -67,7 +67,9 @@ macro_rules! noop_action {
     ($($fn_name:ident),*) => {
         $(
             #[inline]
-            fn $fn_name(&mut self, _input: &Chunk, _ch: Option<u8>) { }
+            fn $fn_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
+                trace!(@noop);
+            }
         )*
     };
 }

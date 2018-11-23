@@ -56,9 +56,13 @@ where
             self.last_start_tag_name_hash = name_hash;
         }
 
-        let feedback = self.get_feedback_for_tag(&token)?;
+        let feedback = self.get_tree_builder_feedback_for_tag(&token)?;
         let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
         let next_output_type = self.emit_tag_lex_unit(&lex_unit);
+
+        // NOTE: exit from any non-initial text parsing mode always happens on tag emission.
+        self.store_last_text_parsing_mode_change(TextParsingMode::Data);
+
         let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
 
         Ok(match next_output_type {
@@ -257,5 +261,5 @@ where
         }
     }
 
-    noop_action!(mark_tag_start);
+    noop_action!(mark_tag_start, unmark_tag_start);
 }

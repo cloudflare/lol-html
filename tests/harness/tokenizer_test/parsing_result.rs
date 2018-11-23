@@ -11,6 +11,8 @@ use itertools::izip;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+const BUFFER_SIZE: usize = 2048;
+
 fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
 
@@ -24,6 +26,13 @@ fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
 
     decoder.run()
 }
+
+// TODO make a module with 3 submodules:
+// 1.FullStateMachineParsingResult
+// 2.EagerStateMachineParsingResult
+// 3.TagScanParsingResult
+// Share parse fn
+// Create individual tests for each type
 
 #[derive(Default)]
 pub struct TagPreviewParsingResult {
@@ -64,7 +73,7 @@ impl TagPreviewParsingResult {
         let result_rc2 = Rc::clone(&result_rc1);
 
         let mut transform_stream = TransformStream::new(
-            2048,
+            BUFFER_SIZE,
             move |_lex_unit: &LexUnit| {},
             move |lex_unit: &LexUnit| {
                 let mut result = result_rc1.borrow_mut();
@@ -151,7 +160,7 @@ impl ParsingResult {
         let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc1.set(s));
 
         let mut transform_stream = TransformStream::new(
-            2048,
+            BUFFER_SIZE,
             move |lex_unit: &LexUnit| {
                 result_rc1
                     .borrow_mut()

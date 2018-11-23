@@ -21,6 +21,7 @@ pub use self::outputs::*;
 pub use self::tag_name::TagName;
 pub use self::text_parsing_mode::*;
 
+#[derive(Debug)]
 pub enum NextOutputType {
     TagPreview,
     LexUnit,
@@ -90,6 +91,8 @@ where
                     next_type,
                     sm_bookmark,
                 } => {
+                    trace!(@continue_from_bookmark sm_bookmark, next_type, chunk);
+
                     self.next_output_type = next_type;
 
                     loop_termination_reason =

@@ -10,15 +10,20 @@ fn parse_options() -> Option<Matches> {
     let mut opts = Options::new();
 
     opts.optopt(
-        "s",
-        "state",
-        "Initial state",
+        "m",
+        "text_parsing_mode",
+        "Initial text parsing mode",
         "-s (Data state|PLAINTEXT state|RCDATA state|RAWTEXT state|Script data state|CDATA section state)",
     );
 
     opts.optopt("t", "last_start_tag", "Last start tag name", "-t");
     opts.optopt("c", "chunk_size", "Chunk size", "-c");
-    opts.optflag("p", "tag_preview", "Trace in tag preview mode");
+    opts.optflag("p", "tag_preview_mode", "Trace in tag preview mode");
+    opts.optflag(
+        "s",
+        "tag_scan_mode",
+        "Trace in tag scan mode: emit tag previews and corresponding lex units",
+    );
     opts.optflag("h", "help", "Show this help");
 
     let matches = match opts.parse(args().skip(1)) {
@@ -52,36 +57,31 @@ fn main() {
     };
 
     let html = matches.free.first().unwrap();
-
-    macro_rules! print_output {
-        ($output:ident) => {
-            println!();
-            println!("{:#?}", $output);
-            println!();
-        };
-    }
+    let tag_scan_mode = matches.opt_present("s");
 
     let mut transform_stream = TransformStream::new(
         2048,
-        |lex_unit: &LexUnit| {
-            print_output!(lex_unit);
+        |_lex_unit: &LexUnit| {},
+        |_lex_unit: &LexUnit| {
+            if tag_scan_mode {
+                NextOutputType::TagPreview
+            } else {
+                NextOutputType::LexUnit
+            }
         },
-        |lex_unit: &LexUnit| {
-            print_output!(lex_unit);
-
-            NextOutputType::LexUnit
-        },
-        |tag_preview: &TagPreview| {
-            print_output!(tag_preview);
-
-            NextOutputType::TagPreview
+        |_tag_preview: &TagPreview| {
+            if tag_scan_mode {
+                NextOutputType::LexUnit
+            } else {
+                NextOutputType::TagPreview
+            }
         },
     );
 
     {
         let tokenizer = transform_stream.get_tokenizer();
 
-        tokenizer.set_next_output_type(if matches.opt_present("p") {
+        tokenizer.set_next_output_type(if tag_scan_mode || matches.opt_present("p") {
             NextOutputType::TagPreview
         } else {
             NextOutputType::LexUnit

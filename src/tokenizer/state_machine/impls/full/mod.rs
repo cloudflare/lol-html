@@ -80,7 +80,7 @@ where
         }
     }
 
-    fn get_feedback_for_tag(
+    fn get_tree_builder_feedback_for_tag(
         &mut self,
         token: &Option<TokenView>,
     ) -> Result<TreeBuilderFeedback, Error> {
@@ -129,6 +129,8 @@ where
 
     #[inline]
     fn emit_lex_unit(&mut self, lex_unit: &LexUnit) {
+        trace!(@output lex_unit);
+
         self.set_next_lex_unit_start(lex_unit);
         self.lex_unit_handler.handle(lex_unit);
     }
@@ -238,5 +240,15 @@ where
                 text_parsing_mode_change_handler.handle(snapshot);
             }
         }
+    }
+
+    #[inline]
+    fn enter_ch_sequence_matching(&mut self) {
+        trace!(@noop);
+    }
+
+    #[inline]
+    fn leave_ch_sequence_matching(&mut self) {
+        trace!(@noop);
     }
 }

@@ -24,6 +24,11 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     }
 
     #[inline]
+    fn unmark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
+        self.tag_start = None;
+    }
+
+    #[inline]
     fn update_tag_name_hash(&mut self, _input: &Chunk, ch: Option<u8>) {
         if let Some(ch) = ch {
             TagName::update_hash(&mut self.tag_name_hash, ch);
@@ -32,32 +37,23 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
     #[inline]
     fn finish_tag_name(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
-        let name_range = Range {
-            start: self.tag_name_start,
-            end: self.input_cursor.pos(),
-        };
+        let tag_preview = self.create_tag_preview(input);
+        let next_output_type = self.tag_preview_handler.handle(&tag_preview);
 
-        let tag_name_info = TagNameInfo::new(input, name_range, self.tag_name_hash);
-
-        let tag_preview = if self.is_in_end_tag {
-            self.is_in_end_tag = false;
-            TagPreview::EndTag(tag_name_info)
-        } else {
-            self.last_start_tag_name_hash = self.tag_name_hash;
-            TagPreview::StartTag(tag_name_info)
-        };
+        trace!(@output tag_preview);
 
         let tag_start = self
             .tag_start
+            .take()
             .expect("Tag start should be set at this point");
 
-        self.tag_start = None;
-
-        let next_output_type = self.tag_preview_handler.handle(&tag_preview);
-
         Ok(match next_output_type {
-            NextOutputType::TagPreview => ParsingLoopDirective::None,
+            NextOutputType::TagPreview => {
+                self.get_and_handle_tree_builder_feedback(&tag_preview)?
+            }
             NextOutputType::LexUnit => {
+                // NOTE: we don't need to take feedback from tree builder simulator
+                // here because tag will re-parsed by the full state machine anyway.
                 ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch {
                     next_type: NextOutputType::LexUnit,
                     sm_bookmark: self.create_bookmark(tag_start),
@@ -68,7 +64,18 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
     #[inline]
     fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
-        Ok(ParsingLoopDirective::None)
+        Ok(
+            if let Some(mode) = self.pending_text_parsing_mode_change.take() {
+                self.switch_text_parsing_mode(mode);
+
+                ParsingLoopDirective::Continue
+            } else {
+                // NOTE: exit from any non-initial text parsing mode always happens on tag emission.
+                self.store_last_text_parsing_mode_change(TextParsingMode::Data);
+
+                ParsingLoopDirective::None
+            },
+        )
     }
 
     noop_action!(
@@ -93,7 +100,8 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
         finish_attr
     );
 
-    // NOTE: Noop
     #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {}
+    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {
+        trace!(@noop);
+    }
 }
