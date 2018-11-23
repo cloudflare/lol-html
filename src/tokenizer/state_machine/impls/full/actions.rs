@@ -16,6 +16,8 @@ where
     LH: LexUnitHandler,
     TH: TagLexUnitHandler,
 {
+    impl_common_sm_actions!();
+
     #[inline]
     fn emit_eof(&mut self, input: &Chunk, _ch: Option<u8>) {
         let lex_unit = LexUnit::new(input, Some(TokenView::Eof), None);
@@ -253,16 +255,6 @@ where
         if let Some(attr) = self.current_attr.take() {
             self.attr_buffer.borrow_mut().push(attr);
         }
-    }
-
-    #[inline]
-    fn set_closing_quote_to_double(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.closing_quote = b'"';
-    }
-
-    #[inline]
-    fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.closing_quote = b'\'';
     }
 
     noop_action!(mark_tag_start);

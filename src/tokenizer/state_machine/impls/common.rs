@@ -49,6 +49,20 @@ macro_rules! impl_common_sm_accessors {
     };
 }
 
+macro_rules! impl_common_sm_actions {
+    () => {
+        #[inline]
+        fn set_closing_quote_to_double(&mut self, _input: &Chunk, _ch: Option<u8>) {
+            self.closing_quote = b'"';
+        }
+
+        #[inline]
+        fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
+            self.closing_quote = b'\'';
+        }
+    };
+}
+
 macro_rules! noop_action {
     ($($fn_name:ident),*) => {
         $(

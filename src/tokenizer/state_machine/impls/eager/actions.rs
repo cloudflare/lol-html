@@ -3,6 +3,8 @@ use base::Chunk;
 use tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
 impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
+    impl_common_sm_actions!();
+
     #[inline]
     fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
@@ -65,13 +67,8 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     }
 
     #[inline]
-    fn set_closing_quote_to_double(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.closing_quote = b'"';
-    }
-
-    #[inline]
-    fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.closing_quote = b'\'';
+    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
+        Ok(ParsingLoopDirective::None)
     }
 
     noop_action!(
@@ -96,13 +93,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
         finish_attr
     );
 
+    // NOTE: Noop
     #[inline]
-    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
-        Ok(ParsingLoopDirective::None)
-    }
-
-    #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {
-        // Noop
-    }
+    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {}
 }

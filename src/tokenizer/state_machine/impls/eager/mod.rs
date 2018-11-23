@@ -83,10 +83,9 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
         }
     }
 
+    // NOTE: Noop
     #[inline]
-    fn adjust_to_bookmark(&mut self, _pos: usize) {
-        // Noop
-    }
+    fn adjust_to_bookmark(&mut self, _pos: usize) {}
 
     #[inline]
     fn store_last_text_parsing_mode_change(&mut self, mode: TextParsingMode) {
