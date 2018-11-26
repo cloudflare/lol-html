@@ -1,11 +1,16 @@
 use super::Unescape;
+use cool_thing::tokenizer::{
+    LexUnitHandler, NextOutputType, TagLexUnitHandler, TagPreviewHandler, TextParsingModeSnapshot,
+};
+use cool_thing::transform_stream::TransformStream;
+use cool_thing::Error;
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
-use serde_json::error::Error;
+use serde_json::error::Error as SerdeError;
 use std::env;
 use std::fmt::{self, Formatter};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChunkedInput {
     input: String,
     chunk_size: usize,
@@ -25,7 +30,39 @@ impl From<String> for ChunkedInput {
 }
 
 impl ChunkedInput {
-    pub fn get_chunks(&self) -> Vec<&[u8]> {
+    pub fn get_chunk_size(&self) -> usize {
+        self.chunk_size
+    }
+
+    pub fn parse<LH, TH, PH>(
+        &self,
+        mut transform_stream: TransformStream<LH, TH, PH>,
+        initial_mode_snapshot: TextParsingModeSnapshot,
+        initial_output_type: NextOutputType,
+    ) -> Result<(), Error>
+    where
+        LH: LexUnitHandler,
+        TH: TagLexUnitHandler,
+        PH: TagPreviewHandler,
+    {
+        {
+            let tokenizer = transform_stream.get_tokenizer();
+
+            tokenizer.set_next_output_type(initial_output_type);
+            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+            tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
+        }
+
+        for chunk in self.get_chunks() {
+            transform_stream.write(chunk)?;
+        }
+
+        transform_stream.end()?;
+
+        Ok(())
+    }
+
+    fn get_chunks(&self) -> Vec<&[u8]> {
         let bytes = self.input.as_bytes();
 
         if self.chunk_size > 0 {
@@ -33,10 +70,6 @@ impl ChunkedInput {
         } else {
             vec![bytes]
         }
-    }
-
-    pub fn get_chunk_size(&self) -> usize {
-        self.chunk_size
     }
 
     fn set_chunk_size(&mut self) {
@@ -82,7 +115,7 @@ impl<'de> Deserialize<'de> for ChunkedInput {
 }
 
 impl Unescape for ChunkedInput {
-    fn unescape(&mut self) -> Result<(), Error> {
+    fn unescape(&mut self) -> Result<(), SerdeError> {
         self.input.unescape()?;
         self.set_chunk_size();
 

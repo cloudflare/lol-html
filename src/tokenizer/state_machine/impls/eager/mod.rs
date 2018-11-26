@@ -3,6 +3,7 @@ mod actions;
 mod conditions;
 
 use base::{Align, Chunk, Cursor, Range};
+
 use crate::Error;
 use std::cell::RefCell;
 use std::cmp::min;
@@ -16,6 +17,17 @@ use tokenizer::{NextOutputType, TagName, TagPreviewHandler, TextParsingMode};
 
 pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
 
+/// Eager state machine skips the majority of full state machine operations and, thus,
+/// is faster. It also has much less requirements for buffering which makes it more
+/// prone to bailouts caused by buffer exhaustion (actually it buffers only tag names).
+///
+/// Eager state machine produces tag previews as an output which serve as a hint for
+/// the matcher which can then switch to the full state machine if required.
+///
+/// It's not guaranteed that tag preview will actually produce the token in the end
+/// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
+/// it's not a concern for our use case as no content will be erroneously captured
+/// in this case.
 pub struct EagerStateMachine<H: TagPreviewHandler> {
     input_cursor: Cursor,
     tag_start: Option<usize>,
@@ -32,6 +44,9 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     pending_text_parsing_mode_change: Option<TextParsingMode>,
     last_text_parsing_mode_change: TextParsingMode,
+
+    #[cfg(feature = "testing_api")]
+    tag_confirmation_handler: Option<Box<dyn FnMut()>>,
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
@@ -55,6 +70,9 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             tree_builder_simulator: Rc::clone(tree_builder_simulator),
             pending_text_parsing_mode_change: None,
             last_text_parsing_mode_change: TextParsingMode::Data,
+
+            #[cfg(feature = "testing_api")]
+            tag_confirmation_handler: None,
         }
     }
 
@@ -110,6 +128,11 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             }
             TreeBuilderFeedback::None => ParsingLoopDirective::None,
         })
+    }
+
+    #[cfg(feature = "testing_api")]
+    pub fn set_tag_confirmation_handler(&mut self, handler: Box<dyn FnMut()>) {
+        self.tag_confirmation_handler = Some(handler);
     }
 }
 

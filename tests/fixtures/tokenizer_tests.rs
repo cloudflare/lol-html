@@ -16,5 +16,5 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
         tests.extend(from_reader::<_, Suite>(file).unwrap().tests);
     }
 
-    convert_tokenizer_tests!(tests)
+    tokenizer_tests!(tests)
 }

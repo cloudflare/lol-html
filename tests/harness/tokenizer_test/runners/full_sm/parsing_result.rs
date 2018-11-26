@@ -1,17 +1,16 @@
-use super::chunked_input::ChunkedInput;
-use super::decoder::Decoder;
-use super::test_outputs::{TestTagPreview, TestToken};
-use super::Bailout;
 use cool_thing::tokenizer::{
     LexUnit, NextOutputType, TagPreview, TextParsingMode, TextParsingModeSnapshot, TokenView,
 };
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
+use harness::tokenizer_test::chunked_input::ChunkedInput;
+use harness::tokenizer_test::decoder::Decoder;
+use harness::tokenizer_test::runners::BUFFER_SIZE;
+use harness::tokenizer_test::test_outputs::TestToken;
+use harness::tokenizer_test::Bailout;
 use itertools::izip;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-
-const BUFFER_SIZE: usize = 2048;
 
 fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
@@ -25,97 +24,6 @@ fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
     }
 
     decoder.run()
-}
-
-// TODO make a module with 3 submodules:
-// 1.FullStateMachineParsingResult
-// 2.EagerStateMachineParsingResult
-// 3.TagScanParsingResult
-// Share parse fn
-// Create individual tests for each type
-
-#[derive(Default)]
-pub struct TagPreviewParsingResult {
-    // NOTE: preview don't guarantee that token will actually exist,
-    // it just provides a hint for the matcher. This happens
-    // when we see a tag that is not closed before EOF: we
-    // get preview in this case, but not token. Luckily, this
-    // case is not important for matching purposes.
-    // Therefore, we store only those previews that result into token,
-    // so we can compare them later against expected token list.
-    pub previews: Vec<TestTagPreview>,
-    pub tokens_from_preview: Vec<TestToken>,
-    pub has_bailout: bool,
-    pending_tag_preview: Option<TestTagPreview>,
-}
-
-impl TagPreviewParsingResult {
-    pub fn new(input: &ChunkedInput, initial_mode_snapshot: TextParsingModeSnapshot) -> Self {
-        let mut result = TagPreviewParsingResult {
-            previews: Vec::new(),
-            tokens_from_preview: Vec::new(),
-            has_bailout: false,
-            pending_tag_preview: None,
-        };
-
-        // TODO
-        result.has_bailout = result.parse(input, initial_mode_snapshot).is_err();
-
-        result
-    }
-
-    fn parse(
-        &mut self,
-        input: &ChunkedInput,
-        initial_mode_snapshot: TextParsingModeSnapshot,
-    ) -> Result<(), Error> {
-        let result_rc1 = Rc::new(RefCell::new(self));
-        let result_rc2 = Rc::clone(&result_rc1);
-
-        let mut transform_stream = TransformStream::new(
-            BUFFER_SIZE,
-            move |_lex_unit: &LexUnit| {},
-            move |lex_unit: &LexUnit| {
-                let mut result = result_rc1.borrow_mut();
-
-                result.tokens_from_preview.push(TestToken::new(
-                    lex_unit.get_token().expect("Tag should have a token"),
-                    lex_unit,
-                ));
-
-                let pending_preview = result
-                    .pending_tag_preview
-                    .take()
-                    .expect("Tag should have a preview");
-
-                result.previews.push(pending_preview);
-
-                NextOutputType::TagPreview
-            },
-            move |tag_preview: &TagPreview| {
-                result_rc2.borrow_mut().pending_tag_preview =
-                    Some(TestTagPreview::new(tag_preview));
-
-                NextOutputType::LexUnit
-            },
-        );
-
-        {
-            let tokenizer = transform_stream.get_tokenizer();
-
-            tokenizer.set_next_output_type(NextOutputType::TagPreview);
-            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
-            tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
-        }
-
-        for chunk in input.get_chunks() {
-            transform_stream.write(chunk)?;
-        }
-
-        transform_stream.end()?;
-
-        Ok(())
-    }
 }
 
 #[derive(Default)]
@@ -150,51 +58,56 @@ impl ParsingResult {
         input: &ChunkedInput,
         initial_mode_snapshot: TextParsingModeSnapshot,
     ) -> Result<(), Error> {
-        let result_rc1 = Rc::new(RefCell::new(self));
-        let result_rc2 = Rc::clone(&result_rc1);
+        let result = Rc::new(RefCell::new(self));
+        let mode_snapshot = Rc::new(Cell::new(TextParsingModeSnapshot::default()));
 
-        let mode_snapshot_rc1 = Rc::new(Cell::new(TextParsingModeSnapshot::default()));
-        let mode_snapshot_rc2 = Rc::clone(&mode_snapshot_rc1);
-        let mode_snapshot_rc3 = Rc::clone(&mode_snapshot_rc1);
+        let lex_unit_handler = {
+            let result = Rc::clone(&result);
+            let mode_snapshot = Rc::clone(&mode_snapshot);
 
-        let text_parsing_mode_change_handler = Box::new(move |s| mode_snapshot_rc1.set(s));
+            move |lex_unit: &LexUnit| {
+                result
+                    .borrow_mut()
+                    .add_lex_unit(lex_unit, mode_snapshot.get());
+            }
+        };
+
+        let tag_lex_unit_handler = {
+            let result = Rc::clone(&result);
+            let mode_snapshot = Rc::clone(&mode_snapshot);
+
+            move |lex_unit: &LexUnit| {
+                result
+                    .borrow_mut()
+                    .add_lex_unit(lex_unit, mode_snapshot.get());
+
+                NextOutputType::LexUnit
+            }
+        };
+
+        let tag_preview_handler = |_: &TagPreview| NextOutputType::TagPreview;
 
         let mut transform_stream = TransformStream::new(
             BUFFER_SIZE,
-            move |lex_unit: &LexUnit| {
-                result_rc1
-                    .borrow_mut()
-                    .add_lex_unit(lex_unit, mode_snapshot_rc2.get());
-            },
-            move |lex_unit: &LexUnit| {
-                result_rc2
-                    .borrow_mut()
-                    .add_lex_unit(lex_unit, mode_snapshot_rc3.get());
-
-                NextOutputType::LexUnit
-            },
-            move |_tag_preview: &TagPreview| NextOutputType::TagPreview,
+            lex_unit_handler,
+            tag_lex_unit_handler,
+            tag_preview_handler,
         );
 
-        {
-            let tokenizer = transform_stream.get_tokenizer();
+        transform_stream
+            .get_tokenizer()
+            .get_full_sm()
+            .set_text_parsing_mode_change_handler({
+                let mode_snapshot = Rc::clone(&mode_snapshot);
 
-            tokenizer
-                .get_full_sm()
-                .set_text_parsing_mode_change_handler(text_parsing_mode_change_handler);
+                Box::new(move |s| mode_snapshot.set(s))
+            });
 
-            tokenizer.set_next_output_type(NextOutputType::LexUnit);
-            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
-            tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
-        }
-
-        for chunk in input.get_chunks() {
-            transform_stream.write(chunk)?;
-        }
-
-        transform_stream.end()?;
-
-        Ok(())
+        input.parse(
+            transform_stream,
+            initial_mode_snapshot,
+            NextOutputType::LexUnit,
+        )
     }
 
     fn add_buffered_chars(&mut self, mode_snapshot: TextParsingModeSnapshot) {

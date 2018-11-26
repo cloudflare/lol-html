@@ -1,34 +1,19 @@
 mod chunked_input;
 mod decoder;
-mod parsing_result;
+mod runners;
 mod test_outputs;
 mod unescape;
 
 use self::chunked_input::ChunkedInput;
-use self::parsing_result::{ParsingResult, TagPreviewParsingResult};
-pub use self::test_outputs::TestToken;
 use self::unescape::Unescape;
-use cool_thing::tokenizer::{TagName, TextParsingMode, TextParsingModeSnapshot};
 use serde_json;
 use std::fmt::Write;
 
-macro_rules! assert_eql {
-    ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
-        assert!(
-            $actual == $expected,
-            "{}\n\
-             state: {:?}\n\
-             input: {:?}\n\
-             actual: {:#?}\n\
-             expected: {:#?}",
-            $msg,
-            $input,
-            $cs,
-            $actual,
-            $expected
-        );
-    };
-}
+pub use self::runners::{
+    EagerStateMachineTestRunner, FullStateMachineTestRunner, StateMachineSwitchTestRunner,
+    TokenizerTestRunner,
+};
+pub use self::test_outputs::TestToken;
 
 pub fn default_initial_states() -> Vec<String> {
     vec![String::from("Data state")]
@@ -41,7 +26,7 @@ pub struct Bailout {
     pub parsed_chunk: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenizerTest {
     pub description: String,
@@ -58,6 +43,9 @@ pub struct TokenizerTest {
 
     #[serde(default)]
     pub last_start_tag: String,
+
+    #[serde(default)]
+    pub expected_tag_tokens: Vec<TestToken>,
 
     #[serde(skip)]
     pub ignored: bool,
@@ -98,61 +86,8 @@ impl TokenizerTest {
         ).unwrap();
 
         self.description = new_descr;
-    }
 
-    fn assert_tokens_have_correct_raw_strings(&self, actual: ParsingResult) {
-        if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
-            for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
-                let raw = raw.into();
-                let mut actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
-
-                assert_eql!(
-                    actual.tokens,
-                    vec![token.to_owned(), TestToken::Eof],
-                    raw,
-                    text_parsing_mode_snapshot,
-                    "Token's raw string doesn't produce the same token"
-                );
-            }
-        }
-    }
-
-    fn test_full_sm(&self, initial_mode_snapshot: TextParsingModeSnapshot) {
-        let actual = ParsingResult::new(&self.input, initial_mode_snapshot);
-
-        assert_eql!(
-            actual.bailout,
-            self.expected_bailout,
-            self.input,
-            initial_mode_snapshot,
-            "Tokenizer bailout error mismatch"
-        );
-
-        if actual.bailout.is_none() {
-            assert_eql!(
-                actual.tokens,
-                self.expected_tokens,
-                self.input,
-                initial_mode_snapshot,
-                "Token mismatch"
-            );
-
-            assert_eql!(
-                actual.get_cumulative_raw_string(),
-                self.input,
-                self.input,
-                initial_mode_snapshot,
-                "Cumulative raw strings mismatch"
-            );
-
-            self.assert_tokens_have_correct_raw_strings(actual);
-        }
-    }
-
-    fn test_eager_sm(&self, initial_mode_snapshot: TextParsingModeSnapshot) {
-        let actual = TagPreviewParsingResult::new(&self.input, initial_mode_snapshot);
-
-        let expected_tag_tokens = self
+        self.expected_tag_tokens = self
             .expected_tokens
             .to_owned()
             .into_iter()
@@ -160,35 +95,42 @@ impl TokenizerTest {
                 TestToken::StartTag { .. } | TestToken::EndTag { .. } => true,
                 _ => false,
             }).collect::<Vec<_>>();
-
-        if !actual.has_bailout {
-            assert_eql!(
-                actual.previews,
-                expected_tag_tokens,
-                self.input,
-                initial_mode_snapshot,
-                "Previews and tokens mismatch"
-            );
-
-            assert_eql!(
-                actual.tokens_from_preview,
-                expected_tag_tokens,
-                self.input,
-                initial_mode_snapshot,
-                "Tokens from preview mismatch"
-            );
-        }
     }
+}
 
-    pub fn run(&self) {
-        for cs in &self.initial_states {
-            let initial_mode_snapshot = TextParsingModeSnapshot {
-                mode: TextParsingMode::from(cs.as_str()),
-                last_start_tag_name_hash: TagName::get_hash(&self.last_start_tag),
-            };
+macro_rules! add_test {
+    ($tests:ident, $t:ident, $runner:ident) => {{
+        let t = $t.clone();
 
-            self.test_full_sm(initial_mode_snapshot);
-            self.test_eager_sm(initial_mode_snapshot);
-        }
-    }
+        $tests.push(create_test!(
+            $runner::get_test_description(&t),
+            t.ignored,
+            {
+                $runner::run(&t);
+            }
+        ))
+    }};
+}
+
+macro_rules! tokenizer_tests {
+    ($tests:expr) => {{
+        use harness::tokenizer_test::{
+            EagerStateMachineTestRunner, FullStateMachineTestRunner, StateMachineSwitchTestRunner,
+            TokenizerTestRunner,
+        };
+
+        $tests.into_iter().fold(Vec::new(), |mut tests, mut t| {
+            t.init();
+
+            if t.ignored {
+                println!("Ignoring test: `{}`", t.description);
+            }
+
+            add_test!(tests, t, EagerStateMachineTestRunner);
+            add_test!(tests, t, FullStateMachineTestRunner);
+            add_test!(tests, t, StateMachineSwitchTestRunner);
+
+            tests
+        })
+    }};
 }

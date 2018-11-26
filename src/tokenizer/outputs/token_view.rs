@@ -15,6 +15,8 @@ impl Align for AttributeView {
     }
 }
 
+// TODO create shortcuts for id and class attributes
+// without necessity to iterate over attributes vector.
 #[derive(Debug)]
 pub enum TokenView {
     Character,

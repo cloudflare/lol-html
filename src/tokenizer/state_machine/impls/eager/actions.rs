@@ -64,6 +64,13 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
     #[inline]
     fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
+        #[cfg(feature = "testing_api")]
+        {
+            if let Some(ref mut tag_confirmation_handler) = self.tag_confirmation_handler {
+                tag_confirmation_handler();
+            }
+        }
+
         Ok(
             if let Some(mode) = self.pending_text_parsing_mode_change.take() {
                 self.switch_text_parsing_mode(mode);

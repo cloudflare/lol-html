@@ -128,4 +128,8 @@ where
     pub fn get_full_sm(&mut self) -> &mut FullStateMachine<LH, TH> {
         &mut self.full_sm
     }
+
+    pub fn get_eager_sm(&mut self) -> &mut EagerStateMachine<PH> {
+        &mut self.eager_sm
+    }
 }

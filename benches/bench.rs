@@ -16,6 +16,7 @@ const CHUNK_SIZE: usize = 1024;
 
 struct Input {
     pub name: String,
+    pub length: usize,
     pub chunks: Vec<String>,
 }
 
@@ -39,6 +40,7 @@ fn get_inputs() -> Vec<Input> {
 
             Input {
                 name: path.file_name().unwrap().to_string_lossy().to_string(),
+                length: data.as_bytes().len(),
                 chunks: data
                     .into_bytes()
                     .chunks(CHUNK_SIZE)
@@ -167,7 +169,7 @@ fn tokenization_benchmark(c: &mut Criterion) {
             cool_thing_tokenizer_bench(true),
         ).with_function("lazyhtml", lazyhtml_tokenizer_bench())
         .with_function("html5ever", html5ever_tokenizer_bench())
-        .throughput(|i| Throughput::Bytes(i.chunks.iter().fold(0, |s, c| s + c.len() as u32))),
+        .throughput(|i| Throughput::Bytes(i.length as u32)),
     );
 }
 

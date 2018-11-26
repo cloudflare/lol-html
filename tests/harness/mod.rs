@@ -1,3 +1,4 @@
+#[macro_use]
 pub mod tokenizer_test;
 
 macro_rules! read_test_data {
@@ -16,10 +17,6 @@ macro_rules! create_test {
     ($name:expr, $ignored:expr, $body:tt) => {{
         use test::{ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};
 
-        if $ignored {
-            println!("Ignoring test: `{}`", $name);
-        }
-
         TestDescAndFn {
             desc: TestDesc {
                 name: TestName::DynTestName($name),
@@ -30,20 +27,6 @@ macro_rules! create_test {
             testfn: TestFn::DynTestFn(Box::new(move || $body)),
         }
     }};
-}
-
-macro_rules! convert_tokenizer_tests {
-    ($tests:expr) => {
-        $tests
-            .into_iter()
-            .map(|mut t| {
-                t.init();
-
-                create_test!(t.description.to_owned(), t.ignored, {
-                    t.run();
-                })
-            }).collect()
-    };
 }
 
 macro_rules! test_fixture {
