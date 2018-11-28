@@ -1,3 +1,5 @@
+use cfg_if::cfg_if;
+
 /// Macro that implements accesors required by the StateMachine
 /// trait and that are common for both implementations.
 macro_rules! impl_common_sm_accessors {
@@ -72,4 +74,25 @@ macro_rules! noop_action {
             }
         )*
     };
+}
+
+cfg_if! {
+    if #[cfg(feature = "testing_api")] {
+        use std::rc::Rc;
+        use std::cell::RefCell;
+
+        pub type SharedTagConfirmationHandler = Rc<RefCell<Box<dyn FnMut()>>>;
+
+        macro_rules! confirm_tag {
+            ($self:tt) => {
+                if let Some(ref tag_confirmation_handler) = $self.tag_confirmation_handler {
+                    let handler = &mut *tag_confirmation_handler.borrow_mut();
+
+                    handler();
+                }
+            };
+        }
+    } else {
+        macro_rules! confirm_tag { ($self:tt) => (); }
+    }
 }

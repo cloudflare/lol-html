@@ -62,7 +62,6 @@ impl ParsingResult {
 
         transform_stream
             .get_tokenizer()
-            .get_eager_sm()
             .set_tag_confirmation_handler({
                 let pending_preview_confirmed = Rc::clone(&pending_preview_confirmed);
 

@@ -1,3 +1,4 @@
+extern crate cfg_if;
 extern crate lazycell;
 extern crate safemem;
 

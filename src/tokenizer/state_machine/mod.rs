@@ -12,7 +12,7 @@ use base::{Chunk, Cursor};
 use crate::Error;
 use tokenizer::{NextOutputType, TextParsingMode};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct StateMachineBookmark {
     pub allow_cdata: bool,
     pub text_parsing_mode: TextParsingMode,
@@ -23,6 +23,9 @@ pub struct StateMachineBookmark {
 pub enum ParsingLoopTerminationReason {
     OutputTypeSwitch {
         next_type: NextOutputType,
+        sm_bookmark: StateMachineBookmark,
+    },
+    LexUnitRequiredForAdjustment {
         sm_bookmark: StateMachineBookmark,
     },
     EndOfInput {
@@ -118,7 +121,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn continue_from_bookmark(
         &mut self,
         input: &Chunk,
-        bookmark: &StateMachineBookmark,
+        bookmark: StateMachineBookmark,
     ) -> ParsingLoopResult {
         self.set_allow_cdata(bookmark.allow_cdata);
         self.switch_text_parsing_mode(bookmark.text_parsing_mode);

@@ -49,7 +49,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
         Ok(match next_output_type {
             NextOutputType::TagPreview => {
-                self.get_and_handle_tree_builder_feedback(&tag_preview)?
+                self.get_and_handle_tree_builder_feedback(&tag_preview, tag_start)?
             }
             NextOutputType::LexUnit => {
                 // NOTE: we don't need to take feedback from tree builder simulator
@@ -64,12 +64,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
     #[inline]
     fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
-        #[cfg(feature = "testing_api")]
-        {
-            if let Some(ref mut tag_confirmation_handler) = self.tag_confirmation_handler {
-                tag_confirmation_handler();
-            }
-        }
+        confirm_tag!(self);
 
         Ok(
             if let Some(mode) = self.pending_text_parsing_mode_change.take() {

@@ -3,19 +3,26 @@ mod actions;
 mod conditions;
 
 use base::{Align, Chunk, Cursor, Range};
+use cfg_if::cfg_if;
 use crate::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokenizer::outputs::*;
-use tokenizer::state_machine::{ParsingLoopDirective, StateMachine, StateResult};
+use tokenizer::state_machine::{
+    ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
+};
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{
     LexUnitHandler, NextOutputType, ParsingLoopTerminationReason, TagLexUnitHandler, TagName,
     TextParsingMode,
 };
 
-#[cfg(feature = "testing_api")]
-use tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
+cfg_if! {
+    if #[cfg(feature = "testing_api")] {
+        use tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
+        use super::common::SharedTagConfirmationHandler;
+    }
+}
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
@@ -41,9 +48,13 @@ where
     attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     last_text_parsing_mode_change: TextParsingMode,
+    should_silently_consume_current_tag_only: bool,
 
     #[cfg(feature = "testing_api")]
-    text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
+    pub text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
+
+    #[cfg(feature = "testing_api")]
+    pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
 }
 
 impl<LH, TH> FullStateMachine<LH, TH>
@@ -54,7 +65,7 @@ where
     pub fn new(
         lex_unit_handler: LH,
         tag_lex_unit_handler: TH,
-        tree_builder_simulator: &Rc<RefCell<TreeBuilderSimulator>>,
+        tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     ) -> Self {
         FullStateMachine {
             input_cursor: Cursor::default(),
@@ -72,12 +83,27 @@ where
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
-            tree_builder_simulator: Rc::clone(tree_builder_simulator),
+            tree_builder_simulator,
             last_text_parsing_mode_change: TextParsingMode::Data,
+            should_silently_consume_current_tag_only: false,
 
             #[cfg(feature = "testing_api")]
             text_parsing_mode_change_handler: None,
+
+            #[cfg(feature = "testing_api")]
+            tag_confirmation_handler: None,
         }
+    }
+
+    #[inline]
+    pub fn silently_consume_current_tag_only(
+        &mut self,
+        input: &Chunk,
+        bookmark: StateMachineBookmark,
+    ) -> ParsingLoopResult {
+        self.should_silently_consume_current_tag_only = true;
+
+        self.continue_from_bookmark(input, bookmark)
     }
 
     fn get_tree_builder_feedback_for_tag(
@@ -137,8 +163,18 @@ where
 
     #[inline]
     fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit) -> NextOutputType {
+        trace!(@output lex_unit);
+
         self.set_next_lex_unit_start(lex_unit);
-        self.tag_lex_unit_handler.handle(lex_unit)
+
+        // TODO tracker called twice for same tags
+        if self.should_silently_consume_current_tag_only {
+            confirm_tag!(self);
+            self.should_silently_consume_current_tag_only = false;
+            NextOutputType::TagPreview
+        } else {
+            self.tag_lex_unit_handler.handle(lex_unit)
+        }
     }
 
     #[inline]
@@ -176,14 +212,6 @@ where
         let raw_end = self.input_cursor.pos();
 
         self.create_lex_unit_with_raw(input, token, raw_end)
-    }
-
-    #[cfg(feature = "testing_api")]
-    pub fn set_text_parsing_mode_change_handler(
-        &mut self,
-        handler: Box<dyn TextParsingModeChangeHandler>,
-    ) {
-        self.text_parsing_mode_change_handler = Some(handler);
     }
 }
 

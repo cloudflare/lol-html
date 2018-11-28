@@ -15,6 +15,9 @@ use tokenizer::state_machine::{
 use tokenizer::tree_builder_simulator::*;
 use tokenizer::{NextOutputType, TagName, TagPreviewHandler, TextParsingMode};
 
+#[cfg(feature = "testing_api")]
+use super::common::SharedTagConfirmationHandler;
+
 pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
 
 /// Eager state machine skips the majority of full state machine operations and, thus,
@@ -46,13 +49,13 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     last_text_parsing_mode_change: TextParsingMode,
 
     #[cfg(feature = "testing_api")]
-    tag_confirmation_handler: Option<Box<dyn FnMut()>>,
+    pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
     pub fn new(
         tag_preview_handler: H,
-        tree_builder_simulator: &Rc<RefCell<TreeBuilderSimulator>>,
+        tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     ) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
@@ -67,7 +70,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             tag_preview_handler,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
-            tree_builder_simulator: Rc::clone(tree_builder_simulator),
+            tree_builder_simulator,
             pending_text_parsing_mode_change: None,
             last_text_parsing_mode_change: TextParsingMode::Data,
 
@@ -93,11 +96,10 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
         }
     }
 
-    // TODO due to the nature of testing - feedback not tested
-    // TODO 7a68e35446cb5c044d50c7cf80a651b487488b64 - slowdown
     fn get_and_handle_tree_builder_feedback(
         &mut self,
         tag_preview: &TagPreview,
+        tag_start: usize,
     ) -> Result<ParsingLoopDirective, Error> {
         let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
 
@@ -122,17 +124,13 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
                 self.allow_cdata = allow_cdata;
                 ParsingLoopDirective::None
             }
-            TreeBuilderFeedback::RequestLexUnit(_) => {
-                // TODO
-                ParsingLoopDirective::None
-            }
+            TreeBuilderFeedback::RequestLexUnit(_) => ParsingLoopDirective::Break(
+                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment {
+                    sm_bookmark: self.create_bookmark(tag_start),
+                },
+            ),
             TreeBuilderFeedback::None => ParsingLoopDirective::None,
         })
-    }
-
-    #[cfg(feature = "testing_api")]
-    pub fn set_tag_confirmation_handler(&mut self, handler: Box<dyn FnMut()>) {
-        self.tag_confirmation_handler = Some(handler);
     }
 }
 

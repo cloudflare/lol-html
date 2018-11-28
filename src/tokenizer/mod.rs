@@ -75,15 +75,18 @@ where
             full_sm: FullStateMachine::new(
                 lex_unit_handler,
                 tag_lex_unit_handler,
-                &tree_builder_simulator,
+                Rc::clone(&tree_builder_simulator),
             ),
-            eager_sm: EagerStateMachine::new(tag_preview_handler, &tree_builder_simulator),
+            eager_sm: EagerStateMachine::new(
+                tag_preview_handler,
+                Rc::clone(&tree_builder_simulator),
+            ),
             next_output_type: NextOutputType::TagPreview,
         }
     }
 
-    pub fn tokenize(&mut self, chunk: &Chunk) -> Result<usize, Error> {
-        let mut loop_termination_reason = with_current_sm!(self, { sm.run_parsing_loop(chunk) })?;
+    pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
+        let mut loop_termination_reason = with_current_sm!(self, { sm.run_parsing_loop(input) })?;
 
         loop {
             match loop_termination_reason {
@@ -91,12 +94,25 @@ where
                     next_type,
                     sm_bookmark,
                 } => {
-                    trace!(@continue_from_bookmark sm_bookmark, next_type, chunk);
-
                     self.next_output_type = next_type;
 
+                    trace!(@continue_from_bookmark sm_bookmark, self.next_output_type, input);
+
                     loop_termination_reason =
-                        with_current_sm!(self, { sm.continue_from_bookmark(chunk, &sm_bookmark) })?;
+                        with_current_sm!(self, { sm.continue_from_bookmark(input, sm_bookmark) })?;
+                }
+                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment { sm_bookmark } => {
+                    // NOTE: lex unit was required to get tree builder feedback for eager
+                    // tokenizer. So we need to spin full state machine and consume lex unit
+                    // for the tag, but without emitting it to consumers as they don't expect
+                    // lex units at this point.
+                    self.next_output_type = NextOutputType::LexUnit;
+
+                    trace!(@continue_from_bookmark sm_bookmark, self.next_output_type, input);
+
+                    loop_termination_reason = self
+                        .full_sm
+                        .silently_consume_current_tag_only(input, sm_bookmark)?;
                 }
                 ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
                     return Ok(blocked_byte_count)
@@ -129,7 +145,10 @@ where
         &mut self.full_sm
     }
 
-    pub fn get_eager_sm(&mut self) -> &mut EagerStateMachine<PH> {
-        &mut self.eager_sm
+    pub fn set_tag_confirmation_handler(&mut self, handler: Box<dyn FnMut()>) {
+        let handler = Rc::new(RefCell::new(handler));
+
+        self.full_sm.tag_confirmation_handler = Some(Rc::clone(&handler));
+        self.eager_sm.tag_confirmation_handler = Some(Rc::clone(&handler));
     }
 }

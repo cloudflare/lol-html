@@ -3,6 +3,7 @@ use super::token_view::*;
 use base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
 use std::fmt::{self, Debug, Write};
+use std::rc::Rc;
 
 pub struct LexUnit<'c> {
     input: &'c Chunk<'c>,
@@ -63,7 +64,7 @@ impl<'c> LexUnit<'c> {
                         ..
                     } => Token::StartTag {
                         name: self.input.slice(name),
-                        attributes: AttributeList::new(self.input, attributes),
+                        attributes: AttributeList::new(self.input, Rc::clone(&attributes)),
                         self_closing,
                     },
 

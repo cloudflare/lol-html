@@ -19,10 +19,10 @@ pub struct AttributeList<'c> {
 }
 
 impl<'c> AttributeList<'c> {
-    pub fn new(input: &'c Chunk, attribute_views: &Rc<RefCell<Vec<AttributeView>>>) -> Self {
+    pub fn new(input: &'c Chunk, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
         AttributeList {
             input,
-            attribute_views: Rc::clone(&attribute_views),
+            attribute_views,
             attributes: LazyCell::new(),
         }
     }

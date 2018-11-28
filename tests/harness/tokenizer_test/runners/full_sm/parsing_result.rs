@@ -97,11 +97,11 @@ impl ParsingResult {
         transform_stream
             .get_tokenizer()
             .get_full_sm()
-            .set_text_parsing_mode_change_handler({
-                let mode_snapshot = Rc::clone(&mode_snapshot);
+            .text_parsing_mode_change_handler = Some(Box::new({
+            let mode_snapshot = Rc::clone(&mode_snapshot);
 
-                Box::new(move |s| mode_snapshot.set(s))
-            });
+            move |s| mode_snapshot.set(s)
+        }));
 
         input.parse(
             transform_stream,
