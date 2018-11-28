@@ -12,8 +12,10 @@ use tokenizer::outputs::*;
 use tokenizer::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
-use tokenizer::tree_builder_simulator::*;
-use tokenizer::{NextOutputType, TagName, TagPreviewHandler, TextParsingMode};
+use tokenizer::{
+    FeedbackProviders, NextOutputType, TagName, TagPreviewHandler, TextParsingMode,
+    TreeBuilderFeedback,
+};
 
 #[cfg(feature = "testing_api")]
 use super::common::SharedTagConfirmationHandler;
@@ -44,7 +46,7 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     tag_preview_handler: H,
     state: State<H>,
     closing_quote: u8,
-    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    feedback_providers: Rc<RefCell<FeedbackProviders>>,
     pending_text_parsing_mode_change: Option<TextParsingMode>,
     last_text_parsing_mode_change: TextParsingMode,
 
@@ -53,10 +55,7 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
 }
 
 impl<H: TagPreviewHandler> EagerStateMachine<H> {
-    pub fn new(
-        tag_preview_handler: H,
-        tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
-    ) -> Self {
+    pub fn new(tag_preview_handler: H, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
             tag_start: None,
@@ -70,7 +69,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             tag_preview_handler,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
-            tree_builder_simulator,
+            feedback_providers,
             pending_text_parsing_mode_change: None,
             last_text_parsing_mode_change: TextParsingMode::Data,
 
@@ -96,23 +95,38 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
         }
     }
 
-    fn get_and_handle_tree_builder_feedback(
+    fn get_feedback_for_tag(
         &mut self,
         tag_preview: &TagPreview,
-        tag_start: usize,
-    ) -> Result<ParsingLoopDirective, Error> {
-        let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
+    ) -> Result<TreeBuilderFeedback, Error> {
+        let mut feedback_providers = self.feedback_providers.borrow_mut();
 
-        let feedback = match *tag_preview {
+        match *tag_preview {
             TagPreview::StartTag(TagNameInfo { name_hash, .. }) => {
-                tree_builder_simulator.get_feedback_for_start_tag_name(name_hash)?
+                feedback_providers
+                    .ambiguity_guard
+                    .track_start_tag(name_hash)?;
+
+                Ok(feedback_providers
+                    .tree_builder_simulator
+                    .get_feedback_for_start_tag_name(name_hash))
             }
             TagPreview::EndTag(TagNameInfo { name_hash, .. }) => {
-                tree_builder_simulator.get_feedback_for_end_tag_name(name_hash)
-            }
-        };
+                feedback_providers.ambiguity_guard.track_end_tag(name_hash);
 
-        Ok(match feedback {
+                Ok(feedback_providers
+                    .tree_builder_simulator
+                    .get_feedback_for_end_tag_name(name_hash))
+            }
+        }
+    }
+
+    fn handle_tree_builder_feedback(
+        &mut self,
+        feedback: TreeBuilderFeedback,
+        tag_start: usize,
+    ) -> ParsingLoopDirective {
+        match feedback {
             TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
                 // NOTE: we can't switch mode immediately as we
                 // are in the middle of tag parsing. So, we need
@@ -130,7 +144,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
                 },
             ),
             TreeBuilderFeedback::None => ParsingLoopDirective::None,
-        })
+        }
     }
 }
 

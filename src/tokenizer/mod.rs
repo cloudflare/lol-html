@@ -4,14 +4,14 @@ mod tag_name;
 #[macro_use]
 mod state_machine;
 
+mod feedback_providers;
 mod outputs;
 mod text_parsing_mode;
-mod tree_builder_simulator;
 
+use self::feedback_providers::*;
 use self::state_machine::{
     EagerStateMachine, FullStateMachine, ParsingLoopTerminationReason, StateMachine,
 };
-use self::tree_builder_simulator::TreeBuilderSimulator;
 use base::Chunk;
 use crate::Error;
 use std::cell::RefCell;
@@ -19,6 +19,8 @@ use std::rc::Rc;
 
 pub use self::outputs::*;
 pub use self::tag_name::TagName;
+
+// TODO why it should be pub?
 pub use self::text_parsing_mode::*;
 
 #[derive(Debug)]
@@ -69,18 +71,15 @@ where
     PH: TagPreviewHandler,
 {
     pub fn new(lex_unit_handler: LH, tag_lex_unit_handler: TH, tag_preview_handler: PH) -> Self {
-        let tree_builder_simulator = Rc::new(RefCell::new(TreeBuilderSimulator::default()));
+        let feedback_providers = Rc::new(RefCell::new(FeedbackProviders::default()));
 
         Tokenizer {
             full_sm: FullStateMachine::new(
                 lex_unit_handler,
                 tag_lex_unit_handler,
-                Rc::clone(&tree_builder_simulator),
+                Rc::clone(&feedback_providers),
             ),
-            eager_sm: EagerStateMachine::new(
-                tag_preview_handler,
-                Rc::clone(&tree_builder_simulator),
-            ),
+            eager_sm: EagerStateMachine::new(tag_preview_handler, Rc::clone(&feedback_providers)),
             next_output_type: NextOutputType::TagPreview,
         }
     }

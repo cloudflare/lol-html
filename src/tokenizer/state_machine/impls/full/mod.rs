@@ -11,10 +11,9 @@ use tokenizer::outputs::*;
 use tokenizer::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
-use tokenizer::tree_builder_simulator::*;
 use tokenizer::{
-    LexUnitHandler, NextOutputType, ParsingLoopTerminationReason, TagLexUnitHandler, TagName,
-    TextParsingMode,
+    FeedbackProviders, LexUnitHandler, NextOutputType, ParsingLoopTerminationReason,
+    TagLexUnitHandler, TagName, TextParsingMode, TreeBuilderFeedback,
 };
 
 cfg_if! {
@@ -46,7 +45,7 @@ where
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
-    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    feedback_providers: Rc<RefCell<FeedbackProviders>>,
     last_text_parsing_mode_change: TextParsingMode,
     should_silently_consume_current_tag_only: bool,
 
@@ -65,7 +64,7 @@ where
     pub fn new(
         lex_unit_handler: LH,
         tag_lex_unit_handler: TH,
-        tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+        feedback_providers: Rc<RefCell<FeedbackProviders>>,
     ) -> Self {
         FullStateMachine {
             input_cursor: Cursor::default(),
@@ -83,7 +82,7 @@ where
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
-            tree_builder_simulator,
+            feedback_providers,
             last_text_parsing_mode_change: TextParsingMode::Data,
             should_silently_consume_current_tag_only: false,
 
@@ -106,18 +105,38 @@ where
         self.continue_from_bookmark(input, bookmark)
     }
 
-    fn get_tree_builder_feedback_for_tag(
+    fn get_feedback_for_tag(
         &mut self,
         token: &Option<TokenView>,
     ) -> Result<TreeBuilderFeedback, Error> {
-        let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
+        let mut feedback_providers = self.feedback_providers.borrow_mut();
 
         match *token {
             Some(TokenView::StartTag { name_hash, .. }) => {
-                tree_builder_simulator.get_feedback_for_start_tag_name(name_hash)
+                // NOTE: if we are silently parsing the tag to get tree builder
+                // feedback for the eager tokenizer then guard check has been
+                // already activated by the eager tokenizer.
+                if !self.should_silently_consume_current_tag_only {
+                    feedback_providers
+                        .ambiguity_guard
+                        .track_start_tag(name_hash)?;
+                }
+
+                Ok(feedback_providers
+                    .tree_builder_simulator
+                    .get_feedback_for_start_tag_name(name_hash))
             }
             Some(TokenView::EndTag { name_hash, .. }) => {
-                Ok(tree_builder_simulator.get_feedback_for_end_tag_name(name_hash))
+                // NOTE: if we are silently parsing the tag to get tree builder
+                // feedback for the eager tokenizer then guard check has been
+                // already activated by the eager tokenizer.
+                if !self.should_silently_consume_current_tag_only {
+                    feedback_providers.ambiguity_guard.track_end_tag(name_hash);
+                }
+
+                Ok(feedback_providers
+                    .tree_builder_simulator
+                    .get_feedback_for_end_tag_name(name_hash))
             }
             _ => unreachable!("Token should be a start or an end tag at this point"),
         }
@@ -138,7 +157,12 @@ where
                 ParsingLoopDirective::None
             }
             TreeBuilderFeedback::RequestLexUnit(callback) => {
-                let feedback = callback(&mut self.tree_builder_simulator.borrow_mut(), &lex_unit);
+                let feedback = {
+                    let tree_builder_simulator =
+                        &mut self.feedback_providers.borrow_mut().tree_builder_simulator;
+
+                    callback(tree_builder_simulator, &lex_unit)
+                };
 
                 self.handle_tree_builder_feedback(feedback, lex_unit)
             }

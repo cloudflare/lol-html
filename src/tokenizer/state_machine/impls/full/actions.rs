@@ -56,7 +56,7 @@ where
             self.last_start_tag_name_hash = name_hash;
         }
 
-        let feedback = self.get_tree_builder_feedback_for_tag(&token)?;
+        let feedback = self.get_feedback_for_tag(&token)?;
         let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
         let next_output_type = self.emit_tag_lex_unit(&lex_unit);
 

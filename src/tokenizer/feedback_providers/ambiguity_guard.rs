@@ -38,7 +38,7 @@ use crate::Error;
 use tokenizer::TagName;
 
 #[derive(Copy, Clone)]
-enum TrackerState {
+enum State {
     Default,
     InSelect,
     InTemplateInSelect(u8),
@@ -57,54 +57,55 @@ fn assert_not_ambigious_mode_switch(tag_name_hash: u64) -> Result<(), Error> {
     }
 }
 
-pub struct TextParsingAmbiguityTracker {
-    state: TrackerState,
+pub struct AmbiguityGuard {
+    state: State,
 }
 
-impl Default for TextParsingAmbiguityTracker {
+impl Default for AmbiguityGuard {
     fn default() -> Self {
-        TextParsingAmbiguityTracker {
-            state: TrackerState::Default,
+        AmbiguityGuard {
+            state: State::Default,
         }
     }
 }
 
-impl TextParsingAmbiguityTracker {
+impl AmbiguityGuard {
     pub fn track_start_tag(&mut self, tag_name_hash: Option<u64>) -> Result<(), Error> {
         if let Some(t) = tag_name_hash {
             match self.state {
-                TrackerState::Default => {
+                State::Default => {
                     if t == TagName::Select {
-                        self.state = TrackerState::InSelect;
+                        self.state = State::InSelect;
                     } else if t == TagName::Frameset {
-                        self.state = TrackerState::InOrAfterFrameset;
+                        self.state = State::InOrAfterFrameset;
                     }
                 }
-                TrackerState::InSelect => {
+                State::InSelect => {
                     // NOTE: these start tags cause premature exit
                     // from "in select" insertion mode.
                     if tag_is_one_of!(t, [Select, Textarea, Input, Keygen]) {
-                        self.state = TrackerState::Default;
+                        self.state = State::Default;
                     } else if t == TagName::Template {
-                        self.state = TrackerState::InTemplateInSelect(1);
+                        self.state = State::InTemplateInSelect(1);
                     }
                     // NOTE: <script> is allowed in "in select" insertion mode.
                     else if t != TagName::Script {
                         assert_not_ambigious_mode_switch(t)?;
                     }
                 }
-                TrackerState::InTemplateInSelect(depth) => {
+                State::InTemplateInSelect(depth) => {
                     if t == TagName::Template {
+                        // TODO: make depth limit adjustable
                         if depth == u8::max_value() {
                             return Err(Error::MaxTagNestingReached);
                         }
 
-                        self.state = TrackerState::InTemplateInSelect(depth + 1);
+                        self.state = State::InTemplateInSelect(depth + 1);
                     } else {
                         assert_not_ambigious_mode_switch(t)?;
                     }
                 }
-                TrackerState::InOrAfterFrameset => {
+                State::InOrAfterFrameset => {
                     // NOTE: <noframes> is allowed in and after <frameset>.
                     if t != TagName::Noframes {
                         assert_not_ambigious_mode_switch(t)?
@@ -119,14 +120,14 @@ impl TextParsingAmbiguityTracker {
     pub fn track_end_tag(&mut self, tag_name_hash: Option<u64>) {
         if let Some(t) = tag_name_hash {
             match self.state {
-                TrackerState::InSelect if t == TagName::Select => {
-                    self.state = TrackerState::Default;
+                State::InSelect if t == TagName::Select => {
+                    self.state = State::Default;
                 }
-                TrackerState::InTemplateInSelect(depth) if t == TagName::Template => {
+                State::InTemplateInSelect(depth) if t == TagName::Template => {
                     self.state = if depth == 1 {
-                        TrackerState::InSelect
+                        State::InSelect
                     } else {
-                        TrackerState::InTemplateInSelect(depth - 1)
+                        State::InTemplateInSelect(depth - 1)
                     }
                 }
                 _ => (),

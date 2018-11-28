@@ -49,7 +49,9 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
         Ok(match next_output_type {
             NextOutputType::TagPreview => {
-                self.get_and_handle_tree_builder_feedback(&tag_preview, tag_start)?
+                let feedback = self.get_feedback_for_tag(&tag_preview)?;
+
+                self.handle_tree_builder_feedback(feedback, tag_start)
             }
             NextOutputType::LexUnit => {
                 // NOTE: we don't need to take feedback from tree builder simulator
