@@ -61,15 +61,15 @@ fn main() {
 
     let mut transform_stream = TransformStream::new(
         2048,
-        |_lex_unit: &LexUnit| {},
-        |_lex_unit: &LexUnit| {
+        |_: &LexUnit<'_>| {},
+        |_: &LexUnit<'_>| {
             if tag_scan_mode {
                 NextOutputType::TagPreview
             } else {
                 NextOutputType::LexUnit
             }
         },
-        |_tag_preview: &TagPreview| {
+        |_: &TagPreview<'_>| {
             if tag_scan_mode {
                 NextOutputType::LexUnit
             } else {

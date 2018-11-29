@@ -1,7 +1,7 @@
 mod parsing_result;
 
 use self::parsing_result::ParsingResult;
-use super::TokenizerTestRunner;
+use super::{get_tag_tokens, TokenizerTestRunner};
 use cool_thing::tokenizer::TextParsingModeSnapshot;
 use harness::tokenizer_test::TokenizerTest;
 
@@ -16,11 +16,12 @@ impl TokenizerTestRunner for StateMachineSwitchTestRunner {
 
     fn run_test_case(test: &TokenizerTest, initial_mode_snapshot: TextParsingModeSnapshot) {
         let actual = ParsingResult::new(&test.input, initial_mode_snapshot);
+        let expected_tokens = get_tag_tokens(&test.expected_tokens);
 
         if !actual.has_bailout {
             assert_eql!(
                 actual.previews,
-                test.expected_tag_tokens,
+                expected_tokens,
                 test.input,
                 initial_mode_snapshot,
                 "Previews and tokens mismatch"
@@ -28,7 +29,7 @@ impl TokenizerTestRunner for StateMachineSwitchTestRunner {
 
             assert_eql!(
                 actual.tokens_from_preview,
-                test.expected_tag_tokens,
+                expected_tokens,
                 test.input,
                 initial_mode_snapshot,
                 "Tokens from preview mismatch"

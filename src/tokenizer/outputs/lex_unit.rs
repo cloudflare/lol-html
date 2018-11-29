@@ -91,7 +91,7 @@ impl<'c> LexUnit<'c> {
 }
 
 impl<'c> Debug for LexUnit<'c> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut builder = f.debug_struct("LexUnit");
 
         if let Some(raw_range) = self.raw_range {

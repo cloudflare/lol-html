@@ -1,4 +1,5 @@
 use cool_thing::tokenizer::{TagName, TextParsingMode, TextParsingModeSnapshot};
+use harness::tokenizer_test::TestToken;
 use harness::tokenizer_test::TokenizerTest;
 use std::fmt::Write;
 
@@ -22,13 +23,25 @@ macro_rules! assert_eql {
     };
 }
 
+mod content_capturing;
 mod eager_sm;
 mod full_sm;
 mod sm_switch;
 
+pub use self::content_capturing::ContentCapturingTestRunner;
 pub use self::eager_sm::EagerStateMachineTestRunner;
 pub use self::full_sm::FullStateMachineTestRunner;
 pub use self::sm_switch::StateMachineSwitchTestRunner;
+
+fn get_tag_tokens(tokens: &[TestToken]) -> Vec<TestToken> {
+    tokens
+        .to_owned()
+        .into_iter()
+        .filter(|t| match t {
+            TestToken::StartTag { .. } | TestToken::EndTag { .. } => true,
+            _ => false,
+        }).collect::<Vec<_>>()
+}
 
 pub trait TokenizerTestRunner {
     fn get_test_description_suffix() -> &'static str;

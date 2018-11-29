@@ -20,7 +20,7 @@ use tokenizer::{
 #[cfg(feature = "testing_api")]
 use super::common::SharedTagConfirmationHandler;
 
-pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk) -> StateResult;
+pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk<'_>) -> StateResult;
 
 /// Eager state machine skips the majority of full state machine operations and, thus,
 /// is faster. It also has much less requirements for buffering which makes it more
@@ -97,7 +97,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
 
     fn get_feedback_for_tag(
         &mut self,
-        tag_preview: &TagPreview,
+        tag_preview: &TagPreview<'_>,
     ) -> Result<TreeBuilderFeedback, Error> {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
 
@@ -139,9 +139,9 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
                 ParsingLoopDirective::None
             }
             TreeBuilderFeedback::RequestLexUnit(_) => ParsingLoopDirective::Break(
-                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment {
-                    sm_bookmark: self.create_bookmark(tag_start),
-                },
+                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment(
+                    self.create_bookmark(tag_start),
+                ),
             ),
             TreeBuilderFeedback::None => ParsingLoopDirective::None,
         }
@@ -162,7 +162,7 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     }
 
     #[inline]
-    fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
+    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize {
         // NOTE: if we are in character sequence matching we need
         // to block from the position where matching starts. We don't
         // need to do that manually in full state machine because it

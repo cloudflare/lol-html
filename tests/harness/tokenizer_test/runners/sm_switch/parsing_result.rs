@@ -7,7 +7,6 @@ use harness::tokenizer_test::test_outputs::{TestTagPreview, TestToken};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[derive(Default)]
 pub struct ParsingResult {
     pub previews: Vec<TestTagPreview>,
     pub tokens_from_preview: Vec<TestToken>,
@@ -37,12 +36,12 @@ impl ParsingResult {
     ) -> Result<(), Error> {
         let result = Rc::new(RefCell::new(self));
 
-        let lex_unit_handler = |_: &LexUnit| {};
+        let lex_unit_handler = |_: &LexUnit<'_>| {};
 
         let tag_lex_unit_handler = {
             let result = Rc::clone(&result);
 
-            move |lex_unit: &LexUnit| {
+            move |lex_unit: &LexUnit<'_>| {
                 result.borrow_mut().add_lex_unit(lex_unit);
 
                 NextOutputType::TagPreview
@@ -52,7 +51,7 @@ impl ParsingResult {
         let tag_preview_handler = {
             let result = Rc::clone(&result);
 
-            move |tag_preview: &TagPreview| {
+            move |tag_preview: &TagPreview<'_>| {
                 result.borrow_mut().add_tag_preview(tag_preview);
 
                 NextOutputType::LexUnit
@@ -73,7 +72,7 @@ impl ParsingResult {
         )
     }
 
-    fn add_lex_unit(&mut self, lex_unit: &LexUnit) {
+    fn add_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
         self.tokens_from_preview.push(TestToken::new(
             lex_unit.get_token().expect("Tag should have a token"),
             lex_unit,
@@ -87,7 +86,7 @@ impl ParsingResult {
         self.previews.push(pending_preview);
     }
 
-    fn add_tag_preview(&mut self, tag_preview: &TagPreview) {
+    fn add_tag_preview(&mut self, tag_preview: &TagPreview<'_>) {
         // NOTE: it's not guaranteed that tag preview will produce
         // a tag at the end on input, it just gives matcher a hint
         // that there might be one (e.g. `<div` will not produce a

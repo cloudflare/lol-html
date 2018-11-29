@@ -65,7 +65,6 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
                     initial_states: default_initial_states(),
                     double_escaped: false,
                     last_start_tag: String::new(),
-                    expected_tag_tokens: Vec::new(),
                     ignored: false,
                     expected_bailout,
                 }

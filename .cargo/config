@@ -1,0 +1,2 @@
+[build]
+rustflags = ["-Wrust_2018_idioms"]

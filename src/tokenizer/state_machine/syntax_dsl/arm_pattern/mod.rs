@@ -5,7 +5,7 @@ macro_rules! arm_pattern {
     ( | $cb_args:tt |>
          alpha => $actions:tt
     ) => {
-        state_body!(@callback | $cb_args |> Some(b'a'...b'z') | Some(b'A'...b'Z') => $actions);
+        state_body!(@callback | $cb_args |> Some(b'a'..=b'z') | Some(b'A'..=b'Z') => $actions);
     };
 
     ( | $cb_args:tt |>

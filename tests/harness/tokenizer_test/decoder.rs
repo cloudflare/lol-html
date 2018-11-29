@@ -4,11 +4,11 @@ use std::char;
 use std::iter::Peekable;
 use std::str::Chars;
 
-pub fn to_null_decoded(bytes: &Bytes) -> String {
+pub fn to_null_decoded(bytes: &Bytes<'_>) -> String {
     Decoder::new(bytes.as_str()).unsafe_null().run()
 }
 
-pub fn to_lower_null_decoded(bytes: &Bytes) -> String {
+pub fn to_lower_null_decoded(bytes: &Bytes<'_>) -> String {
     let mut string = to_null_decoded(bytes);
 
     string.make_ascii_lowercase();
@@ -57,7 +57,7 @@ impl<'a> Decoder<'a> {
             self.result.push(
                 match code {
                     0x00 => None,
-                    0x80...0x9F => {
+                    0x80..=0x9F => {
                         C1_REPLACEMENTS[(code - 0x80) as usize].or_else(|| char::from_u32(code))
                     }
                     _ => char::from_u32(code),
@@ -82,7 +82,7 @@ impl<'a> Decoder<'a> {
                     if c != ';' && self.entities == Entities::Attribute {
                         if let Some(&c) = self.chars.peek() {
                             match c {
-                                'A'...'Z' | 'a'...'z' | '0'...'9' | '=' => {
+                                'A'..='Z' | 'a'..='z' | '0'..='9' | '=' => {
                                     continue;
                                 }
                                 _ => {}

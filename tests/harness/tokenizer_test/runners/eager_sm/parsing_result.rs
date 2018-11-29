@@ -7,7 +7,6 @@ use harness::tokenizer_test::test_outputs::TestTagPreview;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-#[derive(Default)]
 pub struct ParsingResult {
     pub previews: Vec<TestTagPreview>,
     pub has_bailout: bool,
@@ -35,14 +34,14 @@ impl ParsingResult {
     ) -> Result<(), Error> {
         let result = Rc::new(RefCell::new(self));
         let pending_preview_confirmed = Rc::new(Cell::new(false));
-        let lex_unit_handler = |_: &LexUnit| {};
-        let tag_lex_unit_handler = |_: &LexUnit| NextOutputType::TagPreview;
+        let lex_unit_handler = |_: &LexUnit<'_>| {};
+        let tag_lex_unit_handler = |_: &LexUnit<'_>| NextOutputType::TagPreview;
 
         let tag_preview_handler = {
             let result = Rc::clone(&result);
             let pending_preview_confirmed = Rc::clone(&pending_preview_confirmed);
 
-            move |tag_preview: &TagPreview| {
+            move |tag_preview: &TagPreview<'_>| {
                 result
                     .borrow_mut()
                     .add_tag_preview(tag_preview, pending_preview_confirmed.get());
@@ -90,7 +89,7 @@ impl ParsingResult {
         self.previews.push(pending_preview);
     }
 
-    fn add_tag_preview(&mut self, tag_preview: &TagPreview, pending_preview_confirmed: bool) {
+    fn add_tag_preview(&mut self, tag_preview: &TagPreview<'_>, pending_preview_confirmed: bool) {
         if pending_preview_confirmed {
             self.store_pending_preview();
         }

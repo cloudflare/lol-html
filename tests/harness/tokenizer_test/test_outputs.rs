@@ -46,7 +46,7 @@ pub enum TestToken {
 }
 
 impl TestToken {
-    pub fn new(token: &Token, lex_unit: &LexUnit) -> Self {
+    pub fn new(token: &Token<'_>, lex_unit: &LexUnit<'_>) -> Self {
         match token {
             Token::Character(data) => TestToken::Character(data.as_string()),
 
@@ -111,7 +111,7 @@ impl<'de> Deserialize<'de> for TestToken {
         impl<'de> ::serde::de::Visitor<'de> for Visitor {
             type Value = TestToken;
 
-            fn expecting(&self, f: &mut Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("['TokenKind', ...]")
             }
 
@@ -257,7 +257,7 @@ pub struct TestTagPreview {
 }
 
 impl TestTagPreview {
-    pub fn new(tag_preview: &TagPreview) -> Self {
+    pub fn new(tag_preview: &TagPreview<'_>) -> Self {
         let mut tag_type = TagType::StartTag;
 
         let tag_name_info = match tag_preview {

@@ -1,5 +1,6 @@
 mod chunked_input;
 mod decoder;
+mod lex_unit_sink;
 mod runners;
 mod test_outputs;
 mod unescape;
@@ -10,8 +11,8 @@ use serde_json;
 use std::fmt::Write;
 
 pub use self::runners::{
-    EagerStateMachineTestRunner, FullStateMachineTestRunner, StateMachineSwitchTestRunner,
-    TokenizerTestRunner,
+    ContentCapturingTestRunner, EagerStateMachineTestRunner, FullStateMachineTestRunner,
+    StateMachineSwitchTestRunner, TokenizerTestRunner,
 };
 pub use self::test_outputs::TestToken;
 
@@ -43,9 +44,6 @@ pub struct TokenizerTest {
 
     #[serde(default)]
     pub last_start_tag: String,
-
-    #[serde(default)]
-    pub expected_tag_tokens: Vec<TestToken>,
 
     #[serde(skip)]
     pub ignored: bool,
@@ -86,15 +84,6 @@ impl TokenizerTest {
         ).unwrap();
 
         self.description = new_descr;
-
-        self.expected_tag_tokens = self
-            .expected_tokens
-            .to_owned()
-            .into_iter()
-            .filter(|t| match t {
-                TestToken::StartTag { .. } | TestToken::EndTag { .. } => true,
-                _ => false,
-            }).collect::<Vec<_>>();
     }
 }
 
@@ -115,8 +104,8 @@ macro_rules! add_test {
 macro_rules! tokenizer_tests {
     ($tests:expr) => {{
         use harness::tokenizer_test::{
-            EagerStateMachineTestRunner, FullStateMachineTestRunner, StateMachineSwitchTestRunner,
-            TokenizerTestRunner,
+            ContentCapturingTestRunner, EagerStateMachineTestRunner, FullStateMachineTestRunner,
+            StateMachineSwitchTestRunner, TokenizerTestRunner,
         };
 
         $tests.into_iter().fold(Vec::new(), |mut tests, mut t| {
@@ -129,6 +118,7 @@ macro_rules! tokenizer_tests {
             add_test!(tests, t, EagerStateMachineTestRunner);
             add_test!(tests, t, FullStateMachineTestRunner);
             add_test!(tests, t, StateMachineSwitchTestRunner);
+            add_test!(tests, t, ContentCapturingTestRunner);
 
             tests
         })

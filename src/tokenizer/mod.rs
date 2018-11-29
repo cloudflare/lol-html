@@ -19,8 +19,6 @@ use std::rc::Rc;
 
 pub use self::outputs::*;
 pub use self::tag_name::TagName;
-
-// TODO why it should be pub?
 pub use self::text_parsing_mode::*;
 
 #[derive(Debug)]
@@ -30,15 +28,15 @@ pub enum NextOutputType {
 }
 
 declare_handler! {
-    LexUnitHandler(&LexUnit)
+    LexUnitHandler(&LexUnit<'_>)
 }
 
 declare_handler! {
-    TagLexUnitHandler(&LexUnit) -> NextOutputType
+    TagLexUnitHandler(&LexUnit<'_>) -> NextOutputType
 }
 
 declare_handler! {
-    TagPreviewHandler(&TagPreview) -> NextOutputType
+    TagPreviewHandler(&TagPreview<'_>) -> NextOutputType
 }
 
 pub struct Tokenizer<LH, TH, PH>
@@ -84,15 +82,12 @@ where
         }
     }
 
-    pub fn tokenize(&mut self, input: &Chunk) -> Result<usize, Error> {
+    pub fn tokenize(&mut self, input: &Chunk<'_>) -> Result<usize, Error> {
         let mut loop_termination_reason = with_current_sm!(self, { sm.run_parsing_loop(input) })?;
 
         loop {
             match loop_termination_reason {
-                ParsingLoopTerminationReason::OutputTypeSwitch {
-                    next_type,
-                    sm_bookmark,
-                } => {
+                ParsingLoopTerminationReason::OutputTypeSwitch(next_type, sm_bookmark) => {
                     self.next_output_type = next_type;
 
                     trace!(@continue_from_bookmark sm_bookmark, self.next_output_type, input);
@@ -100,7 +95,7 @@ where
                     loop_termination_reason =
                         with_current_sm!(self, { sm.continue_from_bookmark(input, sm_bookmark) })?;
                 }
-                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment { sm_bookmark } => {
+                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment(sm_bookmark) => {
                     // NOTE: lex unit was required to get tree builder feedback for eager
                     // tokenizer. So we need to spin full state machine and consume lex unit
                     // for the tag, but without emitting it to consumers as they don't expect

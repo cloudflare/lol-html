@@ -19,7 +19,7 @@ pub struct AttributeList<'c> {
 }
 
 impl<'c> AttributeList<'c> {
-    pub fn new(input: &'c Chunk, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
+    pub fn new(input: &'c Chunk<'c>, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
         AttributeList {
             input,
             attribute_views,
@@ -45,7 +45,7 @@ impl<'c> Deref for AttributeList<'c> {
 }
 
 impl<'c> Debug for AttributeList<'c> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.deref().fmt(f)
     }
 }

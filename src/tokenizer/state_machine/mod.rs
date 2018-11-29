@@ -21,16 +21,9 @@ pub struct StateMachineBookmark {
 }
 
 pub enum ParsingLoopTerminationReason {
-    OutputTypeSwitch {
-        next_type: NextOutputType,
-        sm_bookmark: StateMachineBookmark,
-    },
-    LexUnitRequiredForAdjustment {
-        sm_bookmark: StateMachineBookmark,
-    },
-    EndOfInput {
-        blocked_byte_count: usize,
-    },
+    OutputTypeSwitch(NextOutputType, StateMachineBookmark),
+    LexUnitRequiredForAdjustment(StateMachineBookmark),
+    EndOfInput { blocked_byte_count: usize },
 }
 
 pub enum ParsingLoopDirective {
@@ -43,43 +36,43 @@ pub type StateResult = Result<ParsingLoopDirective, Error>;
 pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, Error>;
 
 pub trait StateMachineActions {
-    fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
-    fn emit_chars(&mut self, input: &Chunk, _ch: Option<u8>);
-    fn emit_current_token(&mut self, input: &Chunk, ch: Option<u8>);
-    fn emit_tag(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
-    fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
-    fn emit_raw_without_token(&mut self, input: &Chunk, ch: Option<u8>);
-    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
+    fn emit_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn emit_chars(&mut self, input: &Chunk<'_>, _ch: Option<u8>);
+    fn emit_current_token(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn emit_tag(&mut self, input: &Chunk<'_>, ch: Option<u8>) -> StateResult;
+    fn emit_current_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn emit_raw_without_token(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 
-    fn create_start_tag(&mut self, input: &Chunk, ch: Option<u8>);
-    fn create_end_tag(&mut self, input: &Chunk, ch: Option<u8>);
-    fn create_doctype(&mut self, input: &Chunk, ch: Option<u8>);
-    fn create_comment(&mut self, input: &Chunk, ch: Option<u8>);
+    fn create_start_tag(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn create_end_tag(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn create_doctype(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn create_comment(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 
-    fn start_token_part(&mut self, input: &Chunk, ch: Option<u8>);
+    fn start_token_part(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 
-    fn mark_comment_text_end(&mut self, input: &Chunk, ch: Option<u8>);
-    fn shift_comment_text_end_by(&mut self, input: &Chunk, ch: Option<u8>, offset: usize);
+    fn mark_comment_text_end(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn shift_comment_text_end_by(&mut self, input: &Chunk<'_>, ch: Option<u8>, offset: usize);
 
-    fn set_force_quirks(&mut self, input: &Chunk, ch: Option<u8>);
-    fn finish_doctype_name(&mut self, input: &Chunk, ch: Option<u8>);
-    fn finish_doctype_public_id(&mut self, input: &Chunk, ch: Option<u8>);
-    fn finish_doctype_system_id(&mut self, input: &Chunk, ch: Option<u8>);
+    fn set_force_quirks(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn finish_doctype_name(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn finish_doctype_public_id(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn finish_doctype_system_id(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 
-    fn finish_tag_name(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
-    fn update_tag_name_hash(&mut self, input: &Chunk, ch: Option<u8>);
-    fn mark_as_self_closing(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_tag_name(&mut self, input: &Chunk<'_>, ch: Option<u8>) -> StateResult;
+    fn update_tag_name_hash(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn mark_as_self_closing(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 
-    fn start_attr(&mut self, input: &Chunk, ch: Option<u8>);
-    fn finish_attr_name(&mut self, input: &Chunk, ch: Option<u8>);
-    fn finish_attr_value(&mut self, input: &Chunk, ch: Option<u8>);
-    fn finish_attr(&mut self, input: &Chunk, ch: Option<u8>);
+    fn start_attr(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn finish_attr_name(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn finish_attr_value(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn finish_attr(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 
-    fn set_closing_quote_to_double(&mut self, input: &Chunk, ch: Option<u8>);
-    fn set_closing_quote_to_single(&mut self, input: &Chunk, ch: Option<u8>);
+    fn set_closing_quote_to_double(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn set_closing_quote_to_single(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 
-    fn mark_tag_start(&mut self, input: &Chunk, ch: Option<u8>);
-    fn unmark_tag_start(&mut self, input: &Chunk, ch: Option<u8>);
+    fn mark_tag_start(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn unmark_tag_start(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 }
 
 pub trait StateMachineConditions {
@@ -90,10 +83,10 @@ pub trait StateMachineConditions {
 pub trait StateMachine: StateMachineActions + StateMachineConditions {
     define_states!();
 
-    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult);
-    fn get_state(&self) -> fn(&mut Self, &Chunk) -> StateResult;
+    fn set_state(&mut self, state: fn(&mut Self, &Chunk<'_>) -> StateResult);
+    fn get_state(&self) -> fn(&mut Self, &Chunk<'_>) -> StateResult;
     fn get_input_cursor(&mut self) -> &mut Cursor;
-    fn get_blocked_byte_count(&self, input: &Chunk) -> usize;
+    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize;
     fn adjust_for_next_input(&mut self);
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
@@ -108,7 +101,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn enter_ch_sequence_matching(&mut self);
     fn leave_ch_sequence_matching(&mut self);
 
-    fn run_parsing_loop(&mut self, input: &Chunk) -> ParsingLoopResult {
+    fn run_parsing_loop(&mut self, input: &Chunk<'_>) -> ParsingLoopResult {
         loop {
             let state = self.get_state();
 
@@ -120,7 +113,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
 
     fn continue_from_bookmark(
         &mut self,
-        input: &Chunk,
+        input: &Chunk<'_>,
         bookmark: StateMachineBookmark,
     ) -> ParsingLoopResult {
         self.set_allow_cdata(bookmark.allow_cdata);
@@ -133,7 +126,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn break_on_end_of_input(&mut self, input: &Chunk) -> StateResult {
+    fn break_on_end_of_input(&mut self, input: &Chunk<'_>) -> StateResult {
         let blocked_byte_count = self.get_blocked_byte_count(input);
 
         if !input.is_last() {
@@ -156,7 +149,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn switch_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult) {
+    fn switch_state(&mut self, state: fn(&mut Self, &Chunk<'_>) -> StateResult) {
         self.set_state(state);
         self.set_is_state_enter(true);
     }

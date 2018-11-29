@@ -25,7 +25,7 @@ cfg_if! {
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub type State<LH, TH> = fn(&mut FullStateMachine<LH, TH>, &Chunk) -> StateResult;
+pub type State<LH, TH> = fn(&mut FullStateMachine<LH, TH>, &Chunk<'_>) -> StateResult;
 
 pub struct FullStateMachine<LH, TH>
 where
@@ -97,7 +97,7 @@ where
     #[inline]
     pub fn silently_consume_current_tag_only(
         &mut self,
-        input: &Chunk,
+        input: &Chunk<'_>,
         bookmark: StateMachineBookmark,
     ) -> ParsingLoopResult {
         self.should_silently_consume_current_tag_only = true;
@@ -114,8 +114,8 @@ where
         match *token {
             Some(TokenView::StartTag { name_hash, .. }) => {
                 // NOTE: if we are silently parsing the tag to get tree builder
-                // feedback for the eager tokenizer then guard check has been
-                // already activated by the eager tokenizer.
+                // feedback for the eager state machine then guard check has been
+                // already activated by the eager state machine.
                 if !self.should_silently_consume_current_tag_only {
                     feedback_providers
                         .ambiguity_guard
@@ -128,8 +128,8 @@ where
             }
             Some(TokenView::EndTag { name_hash, .. }) => {
                 // NOTE: if we are silently parsing the tag to get tree builder
-                // feedback for the eager tokenizer then guard check has been
-                // already activated by the eager tokenizer.
+                // feedback for the eager state machine then guard check has been
+                // already activated by the eager state machine.
                 if !self.should_silently_consume_current_tag_only {
                     feedback_providers.ambiguity_guard.track_end_tag(name_hash);
                 }
@@ -145,7 +145,7 @@ where
     fn handle_tree_builder_feedback(
         &mut self,
         feedback: TreeBuilderFeedback,
-        lex_unit: &LexUnit,
+        lex_unit: &LexUnit<'_>,
     ) -> ParsingLoopDirective {
         match feedback {
             TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
@@ -171,14 +171,14 @@ where
     }
 
     #[inline]
-    fn set_next_lex_unit_start(&mut self, curr_lex_unit: &LexUnit) {
+    fn set_next_lex_unit_start(&mut self, curr_lex_unit: &LexUnit<'_>) {
         if let Some(Range { end, .. }) = curr_lex_unit.get_raw_range() {
             self.lex_unit_start = end;
         }
     }
 
     #[inline]
-    fn emit_lex_unit(&mut self, lex_unit: &LexUnit) {
+    fn emit_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
         trace!(@output lex_unit);
 
         self.set_next_lex_unit_start(lex_unit);
@@ -186,12 +186,11 @@ where
     }
 
     #[inline]
-    fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit) -> NextOutputType {
+    fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
         trace!(@output lex_unit);
 
         self.set_next_lex_unit_start(lex_unit);
 
-        // TODO tracker called twice for same tags
         if self.should_silently_consume_current_tag_only {
             confirm_tag!(self);
             self.should_silently_consume_current_tag_only = false;
@@ -204,7 +203,7 @@ where
     #[inline]
     fn create_lex_unit_with_raw<'c>(
         &mut self,
-        input: &'c Chunk,
+        input: &'c Chunk<'c>,
         token: Option<TokenView>,
         raw_end: usize,
     ) -> LexUnit<'c> {
@@ -219,7 +218,7 @@ where
     #[inline]
     fn create_lex_unit_with_raw_inclusive<'c>(
         &mut self,
-        input: &'c Chunk,
+        input: &'c Chunk<'c>,
         token: Option<TokenView>,
     ) -> LexUnit<'c> {
         let raw_end = self.input_cursor.pos() + 1;
@@ -230,7 +229,7 @@ where
     #[inline]
     fn create_lex_unit_with_raw_exclusive<'c>(
         &mut self,
-        input: &'c Chunk,
+        input: &'c Chunk<'c>,
         token: Option<TokenView>,
     ) -> LexUnit<'c> {
         let raw_end = self.input_cursor.pos();
@@ -257,7 +256,7 @@ where
     }
 
     #[inline]
-    fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
+    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize {
         input.len() - self.lex_unit_start
     }
 

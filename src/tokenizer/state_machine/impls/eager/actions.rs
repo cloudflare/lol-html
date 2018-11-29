@@ -6,37 +6,37 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     impl_common_sm_actions!();
 
     #[inline]
-    fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn create_start_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
         self.tag_name_hash = Some(0);
     }
 
     #[inline]
-    fn create_end_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn create_end_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
         self.tag_name_hash = Some(0);
         self.is_in_end_tag = true;
     }
 
     #[inline]
-    fn mark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn mark_tag_start(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.tag_start = Some(self.input_cursor.pos());
     }
 
     #[inline]
-    fn unmark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn unmark_tag_start(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.tag_start = None;
     }
 
     #[inline]
-    fn update_tag_name_hash(&mut self, _input: &Chunk, ch: Option<u8>) {
+    fn update_tag_name_hash(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
         if let Some(ch) = ch {
             TagName::update_hash(&mut self.tag_name_hash, ch);
         }
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
+    fn finish_tag_name(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
         let tag_preview = self.create_tag_preview(input);
         let next_output_type = self.tag_preview_handler.handle(&tag_preview);
 
@@ -55,17 +55,17 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
             }
             NextOutputType::LexUnit => {
                 // NOTE: we don't need to take feedback from tree builder simulator
-                // here because tag will re-parsed by the full state machine anyway.
-                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch {
-                    next_type: NextOutputType::LexUnit,
-                    sm_bookmark: self.create_bookmark(tag_start),
-                })
+                // here because tag will be re-parsed by the full state machine anyway.
+                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(
+                    NextOutputType::LexUnit,
+                    self.create_bookmark(tag_start),
+                ))
             }
         })
     }
 
     #[inline]
-    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
+    fn emit_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
         confirm_tag!(self);
 
         Ok(
@@ -105,7 +105,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     );
 
     #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {
+    fn shift_comment_text_end_by(&mut self, _input: &Chunk<'_>, _ch: Option<u8>, _offset: usize) {
         trace!(@noop);
     }
 }

@@ -16,7 +16,7 @@ impl FullStateMachineTestRunner {
                 let mut actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
 
                 assert_eql!(
-                    actual.tokens,
+                    actual.lex_unit_sink.tokens,
                     vec![token.to_owned(), TestToken::Eof],
                     raw,
                     text_parsing_mode_snapshot,
@@ -45,7 +45,7 @@ impl TokenizerTestRunner for FullStateMachineTestRunner {
 
         if actual.bailout.is_none() {
             assert_eql!(
-                actual.tokens,
+                actual.lex_unit_sink.tokens,
                 test.expected_tokens,
                 test.input,
                 initial_mode_snapshot,

@@ -98,7 +98,7 @@ impl<'de> Deserialize<'de> for ChunkedInput {
         impl<'de> Visitor<'de> for StringVisitor {
             type Value = ChunkedInput;
 
-            fn expecting(&self, f: &mut Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a string")
             }
 

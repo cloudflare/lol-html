@@ -29,12 +29,12 @@ enum Namespace {
 pub enum TreeBuilderFeedback {
     SwitchTextParsingMode(TextParsingMode),
     SetAllowCdata(bool),
-    RequestLexUnit(fn(&mut TreeBuilderSimulator, &LexUnit) -> TreeBuilderFeedback),
+    RequestLexUnit(fn(&mut TreeBuilderSimulator, &LexUnit<'_>) -> TreeBuilderFeedback),
     None,
 }
 
 #[inline]
-fn eq_case_ins(actual: &[u8], expected: &[u8]) -> bool {
+fn eq_case_insensitive(actual: &[u8], expected: &[u8]) -> bool {
     if actual.len() != expected.len() {
         return false;
     }
@@ -215,7 +215,7 @@ impl TreeBuilderSimulator {
 
     fn check_tag_self_closing_flag_for_integration_point_check(
         &mut self,
-        lex_unit: &LexUnit,
+        lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match lex_unit
             .get_token_view()
@@ -234,11 +234,11 @@ impl TreeBuilderSimulator {
 
     fn check_for_annotation_xml_end_tag_for_integration_point_exit_check(
         &mut self,
-        lex_unit: &LexUnit,
+        lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
             Token::EndTag { name, .. } => {
-                if eq_case_ins(name, b"annotation-xml") {
+                if eq_case_insensitive(name, b"annotation-xml") {
                     self.leave_ns()
                 } else {
                     TreeBuilderFeedback::None
@@ -250,7 +250,7 @@ impl TreeBuilderSimulator {
 
     fn check_for_annotation_xml_start_tag_for_integration_point_check(
         &mut self,
-        lex_unit: &LexUnit,
+        lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
             Token::StartTag {
@@ -258,15 +258,15 @@ impl TreeBuilderSimulator {
                 attributes,
                 self_closing,
             } => {
-                if !self_closing && eq_case_ins(name, b"annotation-xml") {
+                if !self_closing && eq_case_insensitive(name, b"annotation-xml") {
                     for Attribute {
                         ref name,
                         ref value,
                     } in attributes.iter()
                     {
-                        if eq_case_ins(name, b"encoding")
-                            && (eq_case_ins(value, b"text/html")
-                                || eq_case_ins(value, b"application/xhtml+xml"))
+                        if eq_case_insensitive(name, b"encoding")
+                            && (eq_case_insensitive(value, b"text/html")
+                                || eq_case_insensitive(value, b"application/xhtml+xml"))
                         {
                             return self.enter_ns(Namespace::Html);
                         }
@@ -281,14 +281,14 @@ impl TreeBuilderSimulator {
 
     fn check_font_start_tag_token_for_foreign_content_exit(
         &mut self,
-        lex_unit: &LexUnit,
+        lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
             Token::StartTag { attributes, .. } => {
                 for Attribute { ref name, .. } in attributes.iter() {
-                    if eq_case_ins(name, b"color")
-                        || eq_case_ins(name, b"size")
-                        || eq_case_ins(name, b"face")
+                    if eq_case_insensitive(name, b"color")
+                        || eq_case_insensitive(name, b"size")
+                        || eq_case_insensitive(name, b"face")
                     {
                         return self.leave_ns();
                     }

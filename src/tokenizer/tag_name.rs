@@ -128,12 +128,12 @@ impl TagName {
                     // upper bits which we eliminate with the mask). Then add
                     // 5, since numbers from 0 to 5 are reserved for digits.
                     // Aftwerards put result as 5 lower bits of the hash.
-                    b'a'...b'z' | b'A'...b'Z' => Some((h << 5) | ((u64::from(ch) & 0x1F) + 5)),
+                    b'a'..=b'z' | b'A'..=b'Z' => Some((h << 5) | ((u64::from(ch) & 0x1F) + 5)),
 
                     // NOTE: apply 0x0F mask on ASCII digit to convert it to number
                     // from 1 to 6. Then substract 1 to make it zero-based.
                     // Afterwards, put result as lower bits of the hash.
-                    b'1'...b'6' => Some((h << 5) | ((u64::from(ch) & 0x0F) - 1)),
+                    b'1'..=b'6' => Some((h << 5) | ((u64::from(ch) & 0x0F) - 1)),
 
                     // NOTE: for any other characters hash function is not
                     // applicable, so we completely invalidate the hash.

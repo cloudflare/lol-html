@@ -21,7 +21,7 @@ struct Input {
 }
 
 impl Debug for Input {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
 }
@@ -58,15 +58,15 @@ fn cool_thing_tokenizer_bench(with_full_sm: bool) -> impl FnMut(&mut Bencher, &I
         b.iter(|| {
             let mut transform_stream = TransformStream::new(
                 2048,
-                |lex_unit: &LexUnit| {
+                |lex_unit: &LexUnit<'_>| {
                     black_box(lex_unit);
                 },
-                |lex_unit: &LexUnit| {
+                |lex_unit: &LexUnit<'_>| {
                     black_box(lex_unit);
 
                     NextOutputType::LexUnit
                 },
-                |tag_preview: &TagPreview| {
+                |tag_preview: &TagPreview<'_>| {
                     black_box(tag_preview);
 
                     NextOutputType::TagPreview
