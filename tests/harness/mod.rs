@@ -1,18 +1,6 @@
 #[macro_use]
 pub mod tokenizer_test;
 
-macro_rules! read_test_data {
-    ($path:expr) => {{
-        use std::fs::File;
-        use std::io::BufReader;
-
-        glob::glob(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/", $path))
-            .unwrap()
-            .map(|path| BufReader::new(File::open(path.unwrap()).unwrap()))
-            .collect::<Vec<BufReader<File>>>()
-    }};
-}
-
 macro_rules! create_test {
     ($name:expr, $ignored:expr, $body:tt) => {{
         use test::{ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};
@@ -30,7 +18,7 @@ macro_rules! create_test {
 }
 
 macro_rules! test_fixture {
-    ($fixture_name:expr, { $(test($name:expr, $body:tt);)+}) => (
+    ($fixture_name:expr, { $(test($name:expr, $body:tt);)+}) => {
         use test::TestDescAndFn;
         use std::fmt::Write;
 
@@ -47,5 +35,5 @@ macro_rules! test_fixture {
 
             tests
         }
-    );
+    };
 }

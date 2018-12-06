@@ -1,126 +1,94 @@
 mod chunked_input;
 mod decoder;
 mod lex_unit_sink;
-mod runners;
+mod suits;
+mod test_case;
 mod test_outputs;
 mod unescape;
 
-use self::chunked_input::ChunkedInput;
 use self::unescape::Unescape;
-use serde_json;
+use cool_thing::tokenizer::{TagName, TextParsingMode, TextParsingModeSnapshot};
 use std::fmt::Write;
 
-pub use self::runners::{
-    ContentCapturingTestRunner, EagerStateMachineTestRunner, FullStateMachineTestRunner,
-    StateMachineSwitchTestRunner, TokenizerTestRunner,
-};
-pub use self::test_outputs::TestToken;
+pub use self::chunked_input::ChunkedInput;
+pub use self::lex_unit_sink::LexUnitSink;
+pub use self::suits::TEST_CASES;
+pub use self::test_case::*;
+pub use self::test_outputs::*;
 
-pub fn default_initial_states() -> Vec<String> {
-    vec![String::from("Data state")]
+pub const BUFFER_SIZE: usize = 2048;
+
+pub fn get_tag_tokens(tokens: &[TestToken]) -> Vec<TestToken> {
+    tokens
+        .to_owned()
+        .into_iter()
+        .filter(|t| match t {
+            TestToken::StartTag { .. } | TestToken::EndTag { .. } => true,
+            _ => false,
+        }).collect::<Vec<_>>()
 }
 
-#[derive(Deserialize, Default, Clone, PartialEq, Eq, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Bailout {
-    pub reason: String,
-    pub parsed_chunk: String,
-}
+pub trait TestFixture {
+    fn get_test_description_suffix() -> &'static str;
+    fn run_test_case(test: &TestCase, initial_mode_snapshot: TextParsingModeSnapshot);
 
-#[derive(Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct TokenizerTest {
-    pub description: String,
-    pub input: ChunkedInput,
-
-    #[serde(rename = "output")]
-    pub expected_tokens: Vec<TestToken>,
-
-    #[serde(default = "default_initial_states")]
-    pub initial_states: Vec<String>,
-
-    #[serde(default)]
-    pub double_escaped: bool,
-
-    #[serde(default)]
-    pub last_start_tag: String,
-
-    #[serde(skip)]
-    pub ignored: bool,
-
-    #[serde(skip)]
-    pub expected_bailout: Option<Bailout>,
-}
-
-impl Unescape for TokenizerTest {
-    fn unescape(&mut self) -> Result<(), serde_json::error::Error> {
-        if self.double_escaped {
-            self.double_escaped = false;
-            self.input.unescape()?;
-
-            for token in &mut self.expected_tokens {
-                token.unescape()?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
-impl TokenizerTest {
-    pub fn init(&mut self) {
-        self.ignored = self.unescape().is_err();
-
-        // NOTE: tokenizer should always produce EOF token
-        self.expected_tokens.push(TestToken::Eof);
-
-        let mut new_descr = String::new();
+    fn get_test_description(test: &TestCase) -> String {
+        let mut descr = String::new();
 
         write!(
-            &mut new_descr,
-            "`{}` (chunk size: {})",
-            self.description,
-            self.input.get_chunk_size()
+            &mut descr,
+            "{} - {}",
+            test.description,
+            Self::get_test_description_suffix()
         ).unwrap();
 
-        self.description = new_descr;
+        descr
+    }
+
+    fn run(test: &TestCase) {
+        for cs in &test.initial_states {
+            let initial_mode_snapshot = TextParsingModeSnapshot {
+                mode: TextParsingMode::from(cs.as_str()),
+                last_start_tag_name_hash: TagName::get_hash(&test.last_start_tag),
+            };
+
+            Self::run_test_case(test, initial_mode_snapshot);
+        }
     }
 }
 
-macro_rules! add_test {
-    ($tests:ident, $t:ident, $runner:ident) => {{
-        let t = $t.clone();
-
-        $tests.push(create_test!(
-            $runner::get_test_description(&t),
-            t.ignored,
-            {
-                $runner::run(&t);
-            }
-        ))
-    }};
+macro_rules! assert_eql {
+    ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
+        assert!(
+            $actual == $expected,
+            "{}\n\
+             state: {:?}\n\
+             input: {:?}\n\
+             actual: {:#?}\n\
+             expected: {:#?}",
+            $msg,
+            $input,
+            $cs,
+            $actual,
+            $expected
+        );
+    };
 }
 
-macro_rules! tokenizer_tests {
-    ($tests:expr) => {{
-        use harness::tokenizer_test::{
-            ContentCapturingTestRunner, EagerStateMachineTestRunner, FullStateMachineTestRunner,
-            StateMachineSwitchTestRunner, TokenizerTestRunner,
-        };
+macro_rules! tokenizer_test_fixture {
+    ($fixture:ident) => {
+        use harness::tokenizer_test::TEST_CASES;
+        use test::TestDescAndFn;
 
-        $tests.into_iter().fold(Vec::new(), |mut tests, mut t| {
-            t.init();
-
-            if t.ignored {
-                println!("Ignoring test: `{}`", t.description);
-            }
-
-            add_test!(tests, t, EagerStateMachineTestRunner);
-            add_test!(tests, t, FullStateMachineTestRunner);
-            add_test!(tests, t, StateMachineSwitchTestRunner);
-            add_test!(tests, t, ContentCapturingTestRunner);
-
-            tests
-        })
-    }};
+        pub fn get_tests() -> Vec<TestDescAndFn> {
+            TEST_CASES
+                .iter()
+                .cloned()
+                .map(|t| {
+                    create_test!($fixture::get_test_description(&t), t.ignored, {
+                        $fixture::run(&t);
+                    })
+                }).collect()
+        }
+    };
 }

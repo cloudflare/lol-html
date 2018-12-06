@@ -1,20 +1,19 @@
 use glob;
-use harness::tokenizer_test::TokenizerTest;
+use harness::tokenizer_test::TestCase;
 use serde_json::from_reader;
-use test::TestDescAndFn;
 
 #[derive(Deserialize)]
 struct Suite {
     #[serde(default)]
-    pub tests: Vec<TokenizerTest>,
+    pub tests: Vec<TestCase>,
 }
 
-pub fn get_tests() -> Vec<TestDescAndFn> {
+pub fn get_test_cases() -> Vec<TestCase> {
     let mut tests = Vec::new();
 
     for file in read_test_data!("html5lib-tests/tokenizer/*.test") {
         tests.extend(from_reader::<_, Suite>(file).unwrap().tests);
     }
 
-    tokenizer_tests!(tests)
+    tests
 }

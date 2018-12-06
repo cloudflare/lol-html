@@ -2,6 +2,7 @@ extern crate cool_thing;
 extern crate glob;
 extern crate html5ever;
 extern crate itertools;
+extern crate lazy_static;
 extern crate rand;
 extern crate serde;
 extern crate serde_json;

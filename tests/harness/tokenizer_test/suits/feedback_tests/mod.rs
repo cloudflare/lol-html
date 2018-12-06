@@ -2,12 +2,11 @@ mod feedback_tokens;
 
 use self::feedback_tokens::get_expected_tokens_with_feedback;
 use glob;
-use harness::tokenizer_test::{default_initial_states, Bailout, TokenizerTest};
+use harness::tokenizer_test::{default_initial_states, Bailout, TestCase};
 use serde_json::from_reader;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use test::TestDescAndFn;
 
 fn parse_inputs(file: BufReader<File>) -> Vec<String> {
     let mut inputs = Vec::new();
@@ -42,7 +41,7 @@ fn load_expected_bailouts() -> ExpectedBailouts {
     from_reader::<_, ExpectedBailouts>(file).unwrap()
 }
 
-pub fn get_tests() -> Vec<TestDescAndFn> {
+pub fn get_test_cases() -> Vec<TestCase> {
     let mut tests = Vec::new();
     let expected_bailouts = load_expected_bailouts();
 
@@ -54,7 +53,7 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
             tests.extend(parse_inputs(file).into_iter().map(|input| {
                 let expected_bailout = expected_bailouts.0.get(&input).cloned();
 
-                TokenizerTest {
+                TestCase {
                     description: input
                         .chars()
                         .flat_map(|c| c.escape_default())
@@ -72,5 +71,5 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
         }
     }
 
-    tokenizer_tests!(tests)
+    tests
 }

@@ -1,11 +1,9 @@
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
-use harness::tokenizer_test::chunked_input::ChunkedInput;
-use harness::tokenizer_test::lex_unit_sink::LexUnitSink;
-use harness::tokenizer_test::runners::BUFFER_SIZE;
-use harness::tokenizer_test::test_outputs::TestToken;
-use harness::tokenizer_test::Bailout;
+use harness::tokenizer_test::{
+    Bailout, ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
+};
 use itertools::izip;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -135,3 +133,65 @@ impl ParsingResult {
         }
     }
 }
+
+/// Tests that full state machine produces correct lex units.
+pub struct FullStateMachineTests;
+
+impl FullStateMachineTests {
+    fn assert_tokens_have_correct_raw_strings(actual: ParsingResult) {
+        if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
+            for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
+                let raw = raw.into();
+                let mut actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
+
+                assert_eql!(
+                    actual.lex_unit_sink.tokens,
+                    vec![token.to_owned(), TestToken::Eof],
+                    raw,
+                    text_parsing_mode_snapshot,
+                    "Token's raw string doesn't produce the same token"
+                );
+            }
+        }
+    }
+}
+
+impl TestFixture for FullStateMachineTests {
+    fn get_test_description_suffix() -> &'static str {
+        "Full state machine"
+    }
+
+    fn run_test_case(test: &TestCase, initial_mode_snapshot: TextParsingModeSnapshot) {
+        let actual = ParsingResult::new(&test.input, initial_mode_snapshot);
+
+        assert_eql!(
+            actual.bailout,
+            test.expected_bailout,
+            test.input,
+            initial_mode_snapshot,
+            "Tokenizer bailout error mismatch"
+        );
+
+        if actual.bailout.is_none() {
+            assert_eql!(
+                actual.lex_unit_sink.tokens,
+                test.expected_tokens,
+                test.input,
+                initial_mode_snapshot,
+                "Token mismatch"
+            );
+
+            assert_eql!(
+                actual.get_cumulative_raw_string(),
+                test.input,
+                test.input,
+                initial_mode_snapshot,
+                "Cumulative raw strings mismatch"
+            );
+
+            Self::assert_tokens_have_correct_raw_strings(actual);
+        }
+    }
+}
+
+tokenizer_test_fixture!(FullStateMachineTests);

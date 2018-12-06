@@ -1,13 +1,13 @@
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
-use harness::tokenizer_test::chunked_input::ChunkedInput;
-use harness::tokenizer_test::runners::BUFFER_SIZE;
-use harness::tokenizer_test::test_outputs::TestTagPreview;
+use harness::tokenizer_test::{
+    get_tag_tokens, ChunkedInput, TestCase, TestFixture, TestTagPreview, BUFFER_SIZE,
+};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-pub struct ParsingResult {
+struct ParsingResult {
     pub previews: Vec<TestTagPreview>,
     pub has_bailout: bool,
     pending_tag_preview: Option<TestTagPreview>,
@@ -102,3 +102,29 @@ impl ParsingResult {
         self.pending_tag_preview = Some(TestTagPreview::new(tag_preview));
     }
 }
+
+/// Tests that eager state machine produces correct tag previews.
+pub struct EagerStateMachineTests;
+
+impl TestFixture for EagerStateMachineTests {
+    fn get_test_description_suffix() -> &'static str {
+        "Eager state machine"
+    }
+
+    fn run_test_case(test: &TestCase, initial_mode_snapshot: TextParsingModeSnapshot) {
+        let actual = ParsingResult::new(&test.input, initial_mode_snapshot);
+        let expected_tokens = get_tag_tokens(&test.expected_tokens);
+
+        if !actual.has_bailout {
+            assert_eql!(
+                actual.previews,
+                expected_tokens,
+                test.input,
+                initial_mode_snapshot,
+                "Previews and tokens mismatch"
+            );
+        }
+    }
+}
+
+tokenizer_test_fixture!(EagerStateMachineTests);

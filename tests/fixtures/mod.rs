@@ -1,6 +1,8 @@
+mod eager_sm_tests;
+mod full_sm_tests;
+mod sm_switch_tests;
 mod tag_name_hash_tests;
-mod tokenizer_tests;
-mod tokenizer_with_feedback_tests;
+mod token_capturing_tests;
 
 use test::TestDescAndFn;
 
@@ -15,8 +17,10 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
 
     add_tests!(
         tag_name_hash_tests,
-        tokenizer_tests,
-        tokenizer_with_feedback_tests
+        eager_sm_tests,
+        full_sm_tests,
+        sm_switch_tests,
+        token_capturing_tests
     );
 
     tests

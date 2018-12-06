@@ -2,10 +2,9 @@ use cool_thing::base::Bytes;
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot, Token};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
-use harness::tokenizer_test::chunked_input::ChunkedInput;
-use harness::tokenizer_test::lex_unit_sink::LexUnitSink;
-use harness::tokenizer_test::runners::BUFFER_SIZE;
-use harness::tokenizer_test::test_outputs::TestToken;
+use harness::tokenizer_test::{
+    ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
+};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -15,6 +14,77 @@ fn to_lower_string(bytes: &Bytes<'_>) -> String {
     string.make_ascii_lowercase();
 
     string
+}
+
+fn get_descendants_of_top_level_elements(tokens: &[TestToken]) -> Vec<Vec<TestToken>> {
+    tokens
+        .to_owned()
+        .into_iter()
+        .fold(
+            (Vec::new(), Vec::new(), None, 0),
+            |(
+                mut captures,
+                mut pending_token_set,
+                captured_tag_name,
+                mut open_captured_tag_count,
+            ): (Vec<Vec<_>>, Vec<_>, Option<_>, usize),
+             t| {
+                macro_rules! add_pending_token_set {
+                    () => {
+                        if !pending_token_set.is_empty() {
+                            captures.push(pending_token_set);
+                            pending_token_set = Vec::new();
+                        }
+                    };
+                }
+
+                let captured_tag_name = match captured_tag_name {
+                    Some(captured_tag_name) => match t {
+                        TestToken::StartTag { ref name, .. } if *name == captured_tag_name => {
+                            open_captured_tag_count += 1;
+                            pending_token_set.push(t.to_owned());
+
+                            Some(captured_tag_name)
+                        }
+                        TestToken::EndTag { ref name, .. } if *name == captured_tag_name => {
+                            open_captured_tag_count -= 1;
+
+                            if open_captured_tag_count == 0 {
+                                add_pending_token_set!();
+                                None
+                            } else {
+                                pending_token_set.push(t.to_owned());
+                                Some(captured_tag_name)
+                            }
+                        }
+                        TestToken::Eof => {
+                            add_pending_token_set!();
+
+                            None
+                        }
+                        _ => {
+                            pending_token_set.push(t.to_owned());
+                            Some(captured_tag_name)
+                        }
+                    },
+                    None => match t {
+                        TestToken::StartTag { name, .. } => {
+                            open_captured_tag_count = 1;
+
+                            Some(name.to_owned())
+                        }
+                        _ => None,
+                    },
+                };
+
+                (
+                    captures,
+                    pending_token_set,
+                    captured_tag_name,
+                    open_captured_tag_count,
+                )
+            },
+        ).0
 }
 
 pub struct ParsingResult {
@@ -170,3 +240,30 @@ impl ParsingResult {
         )
     }
 }
+
+/// Tests that tokenizer correctly captures lex units that
+/// are descendants of the top level elements.
+pub struct TokenCapturingTests;
+
+impl TestFixture for TokenCapturingTests {
+    fn get_test_description_suffix() -> &'static str {
+        "Content capturing"
+    }
+
+    fn run_test_case(test: &TestCase, initial_mode_snapshot: TextParsingModeSnapshot) {
+        let actual = ParsingResult::new(&test.input, initial_mode_snapshot);
+        let expected_token_sets = get_descendants_of_top_level_elements(&test.expected_tokens);
+
+        if !actual.has_bailout {
+            assert_eql!(
+                actual.token_sets,
+                expected_token_sets,
+                test.input,
+                initial_mode_snapshot,
+                "Token sets mismatch"
+            );
+        }
+    }
+}
+
+tokenizer_test_fixture!(TokenCapturingTests);
