@@ -170,8 +170,8 @@ impl ParsingResult {
                 }
 
                 match lex_unit.get_token() {
-                    Some(Token::StartTag { ref name, .. })
-                        if to_lower_string(name) == captured_tag_name =>
+                    Some(Token::StartTag(t))
+                        if to_lower_string(t.get_name()) == captured_tag_name =>
                     {
                         result.open_captured_tag_count += 1;
 
@@ -181,8 +181,8 @@ impl ParsingResult {
 
                         NextOutputType::LexUnit
                     }
-                    Some(Token::EndTag { ref name, .. })
-                        if to_lower_string(name) == captured_tag_name =>
+                    Some(Token::EndTag(t))
+                        if to_lower_string(t.get_name()) == captured_tag_name =>
                     {
                         result.open_captured_tag_count -= 1;
 

@@ -48,41 +48,39 @@ impl<'c> LexUnit<'c> {
         self.token
             .borrow_with(|| {
                 self.token_view.as_ref().map(|token_view| match token_view {
-                    TokenView::Character => Token::Character(
+                    TokenView::Character => Token::new_character(
                         self.input.slice(
                             self.raw_range
                                 .expect("Character token should always have raw representation"),
                         ),
                     ),
 
-                    &TokenView::Comment(text) => Token::Comment(self.input.slice(text)),
+                    &TokenView::Comment(text) => Token::new_comment(self.input.slice(text)),
 
                     &TokenView::StartTag {
                         name,
                         ref attributes,
                         self_closing,
                         ..
-                    } => Token::StartTag {
-                        name: self.input.slice(name),
-                        attributes: AttributeList::new(self.input, Rc::clone(&attributes)),
+                    } => Token::new_start_tag(
+                        self.input.slice(name),
+                        AttributeList::new(self.input, Rc::clone(&attributes)),
                         self_closing,
-                    },
+                    ),
 
-                    &TokenView::EndTag { name, .. } => Token::EndTag {
-                        name: self.input.slice(name),
-                    },
+                    &TokenView::EndTag { name, .. } => Token::new_end_tag(self.input.slice(name)),
 
                     &TokenView::Doctype {
                         name,
                         public_id,
                         system_id,
                         force_quirks,
-                    } => Token::Doctype {
-                        name: self.input.opt_slice(name),
-                        public_id: self.input.opt_slice(public_id),
-                        system_id: self.input.opt_slice(system_id),
+                    } => Token::new_doctype(
+                        self.input.opt_slice(name),
+                        self.input.opt_slice(public_id),
+                        self.input.opt_slice(system_id),
                         force_quirks,
-                    },
+                    ),
 
                     TokenView::Eof => Token::Eof,
                 })
@@ -91,7 +89,7 @@ impl<'c> LexUnit<'c> {
     }
 }
 
-impl<'c> Debug for LexUnit<'c> {
+impl Debug for LexUnit<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut builder = f.debug_struct("LexUnit");
 

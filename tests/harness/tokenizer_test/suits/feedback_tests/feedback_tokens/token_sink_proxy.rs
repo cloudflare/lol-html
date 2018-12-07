@@ -22,10 +22,7 @@ impl<'a, Sink> TokenSinkProxy<'a, Sink> {
     }
 }
 
-impl<'a, Sink> TokenSink for TokenSinkProxy<'a, Sink>
-where
-    Sink: TokenSink,
-{
+impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
     type Handle = Sink::Handle;
 
     fn process_token(&mut self, token: Token, line_number: u64) -> TokenSinkResult<Self::Handle> {

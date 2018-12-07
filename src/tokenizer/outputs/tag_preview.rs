@@ -24,7 +24,7 @@ impl<'c> TagNameInfo<'c> {
     }
 }
 
-impl<'c> Debug for TagNameInfo<'c> {
+impl Debug for TagNameInfo<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TagNameInfo")
             .field("name", self.get_name())

@@ -26,13 +26,13 @@ impl<'b> From<&'b [u8]> for Bytes<'b> {
     }
 }
 
-impl<'b> Debug for Bytes<'b> {
+impl Debug for Bytes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "`{}`", self.as_str())
     }
 }
 
-impl<'b> Deref for Bytes<'b> {
+impl Deref for Bytes<'_> {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {

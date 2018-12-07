@@ -12,7 +12,7 @@
 //! to bail out from the tokenization in such a case
 //! (see `AmbiguityGuard` for the details).
 
-use crate::tokenizer::outputs::{Attribute, LexUnit, Token, TokenView};
+use crate::tokenizer::outputs::{LexUnit, Token, TokenView};
 use crate::tokenizer::{TagName, TextParsingMode};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
@@ -237,8 +237,8 @@ impl TreeBuilderSimulator {
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
-            Token::EndTag { name, .. } => {
-                if eq_case_insensitive(name, b"annotation-xml") {
+            Token::EndTag(t) => {
+                if eq_case_insensitive(t.get_name(), b"annotation-xml") {
                     self.leave_ns()
                 } else {
                     TreeBuilderFeedback::None
@@ -253,18 +253,12 @@ impl TreeBuilderSimulator {
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
-            Token::StartTag {
-                name,
-                attributes,
-                self_closing,
-            } => {
-                if !self_closing && eq_case_insensitive(name, b"annotation-xml") {
-                    for Attribute {
-                        ref name,
-                        ref value,
-                    } in attributes.iter()
-                    {
-                        if eq_case_insensitive(name, b"encoding")
+            Token::StartTag(t) => {
+                if !t.is_self_closing() && eq_case_insensitive(t.get_name(), b"annotation-xml") {
+                    for attr in t.get_attributes().iter() {
+                        let value = attr.get_value();
+
+                        if eq_case_insensitive(attr.get_name(), b"encoding")
                             && (eq_case_insensitive(value, b"text/html")
                                 || eq_case_insensitive(value, b"application/xhtml+xml"))
                         {
@@ -284,8 +278,10 @@ impl TreeBuilderSimulator {
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
-            Token::StartTag { attributes, .. } => {
-                for Attribute { ref name, .. } in attributes.iter() {
+            Token::StartTag(t) => {
+                for attr in t.get_attributes().iter() {
+                    let name = attr.get_name();
+
                     if eq_case_insensitive(name, b"color")
                         || eq_case_insensitive(name, b"size")
                         || eq_case_insensitive(name, b"face")

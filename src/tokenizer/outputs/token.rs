@@ -7,23 +7,87 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 #[derive(Debug)]
-pub struct Attribute<'c> {
-    pub name: Bytes<'c>,
-    pub value: Bytes<'c>,
+pub struct CharacterToken<'c> {
+    text: Bytes<'c>,
 }
 
-pub struct AttributeList<'c> {
+impl<'c> CharacterToken<'c> {
+    #[inline]
+    pub fn get_text(&self) -> &Bytes<'_> {
+        &self.text
+    }
+}
+
+#[derive(Debug)]
+pub struct CommentToken<'c> {
+    text: Bytes<'c>,
+}
+
+impl<'c> CommentToken<'c> {
+    #[inline]
+    pub fn get_text(&self) -> &Bytes<'_> {
+        &self.text
+    }
+}
+
+#[derive(Debug)]
+pub struct Attribute<'c> {
+    name: Bytes<'c>,
+    value: Bytes<'c>,
+}
+
+impl<'c> Attribute<'c> {
+    pub fn new(name: Bytes<'c>, value: Bytes<'c>) -> Self {
+        Attribute { name, value }
+    }
+
+    #[inline]
+    pub fn get_name(&self) -> &Bytes<'c> {
+        &self.name
+    }
+
+    #[inline]
+    pub fn get_value(&self) -> &Bytes<'c> {
+        &self.value
+    }
+}
+
+struct ParsedAttributesData<'c> {
     input: &'c Chunk<'c>,
     attribute_views: Rc<RefCell<Vec<AttributeView>>>,
+}
+
+#[derive(Default)]
+pub struct AttributeList<'c> {
+    parsed_attributes_data: Option<ParsedAttributesData<'c>>,
     attributes: LazyCell<Vec<Attribute<'c>>>,
 }
 
 impl<'c> AttributeList<'c> {
     pub fn new(input: &'c Chunk<'c>, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
         AttributeList {
-            input,
-            attribute_views,
-            attributes: LazyCell::new(),
+            parsed_attributes_data: Some(ParsedAttributesData {
+                input,
+                attribute_views,
+            }),
+            attributes: LazyCell::default(),
+        }
+    }
+
+    fn init(&self) -> Vec<Attribute<'c>> {
+        match self.parsed_attributes_data {
+            Some(ParsedAttributesData {
+                ref input,
+                ref attribute_views,
+            }) => attribute_views
+                .borrow()
+                .iter()
+                .map(|a| Attribute {
+                    name: input.slice(a.name),
+                    value: input.slice(a.value),
+                })
+                .collect(),
+            None => Vec::new(),
         }
     }
 }
@@ -32,46 +96,128 @@ impl<'c> Deref for AttributeList<'c> {
     type Target = Vec<Attribute<'c>>;
 
     fn deref(&self) -> &Vec<Attribute<'c>> {
-        self.attributes.borrow_with(|| {
-            self.attribute_views
-                .borrow()
-                .iter()
-                .map(|a| Attribute {
-                    name: self.input.slice(a.name),
-                    value: self.input.slice(a.value),
-                })
-                .collect()
-        })
+        self.attributes.borrow_with(|| self.init())
     }
 }
 
-impl<'c> Debug for AttributeList<'c> {
+impl Debug for AttributeList<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.deref().fmt(f)
     }
 }
 
 #[derive(Debug)]
-pub enum Token<'c> {
-    Character(Bytes<'c>),
-    Comment(Bytes<'c>),
+pub struct StartTagToken<'c> {
+    name: Bytes<'c>,
+    attributes: AttributeList<'c>,
+    self_closing: bool,
+}
 
-    StartTag {
+impl<'c> StartTagToken<'c> {
+    #[inline]
+    pub fn get_name(&self) -> &Bytes<'c> {
+        &self.name
+    }
+
+    #[inline]
+    pub fn get_attributes(&self) -> &AttributeList<'c> {
+        &self.attributes
+    }
+
+    #[inline]
+    pub fn is_self_closing(&self) -> bool {
+        self.self_closing
+    }
+}
+
+#[derive(Debug)]
+pub struct EndTagToken<'c> {
+    name: Bytes<'c>,
+}
+
+impl<'c> EndTagToken<'c> {
+    #[inline]
+    pub fn get_name(&self) -> &Bytes<'c> {
+        &self.name
+    }
+}
+
+#[derive(Debug)]
+pub struct DoctypeToken<'c> {
+    name: Option<Bytes<'c>>,
+    public_id: Option<Bytes<'c>>,
+    system_id: Option<Bytes<'c>>,
+    force_quirks: bool,
+}
+
+impl<'c> DoctypeToken<'c> {
+    #[inline]
+    pub fn get_name(&self) -> Option<&Bytes<'c>> {
+        self.name.as_ref()
+    }
+
+    #[inline]
+    pub fn get_public_id(&self) -> Option<&Bytes<'c>> {
+        self.public_id.as_ref()
+    }
+
+    #[inline]
+    pub fn get_system_id(&self) -> Option<&Bytes<'c>> {
+        self.system_id.as_ref()
+    }
+
+    #[inline]
+    pub fn is_quirky(&self) -> bool {
+        self.force_quirks
+    }
+}
+
+#[derive(Debug)]
+pub enum Token<'c> {
+    Character(CharacterToken<'c>),
+    Comment(CommentToken<'c>),
+    StartTag(StartTagToken<'c>),
+    EndTag(EndTagToken<'c>),
+    Doctype(DoctypeToken<'c>),
+    Eof,
+}
+
+impl<'c> Token<'c> {
+    pub fn new_character(text: Bytes<'c>) -> Self {
+        Token::Character(CharacterToken { text })
+    }
+
+    pub fn new_comment(text: Bytes<'c>) -> Self {
+        Token::Comment(CommentToken { text })
+    }
+
+    pub fn new_start_tag(
         name: Bytes<'c>,
         attributes: AttributeList<'c>,
         self_closing: bool,
-    },
+    ) -> Self {
+        Token::StartTag(StartTagToken {
+            name,
+            attributes,
+            self_closing,
+        })
+    }
 
-    EndTag {
-        name: Bytes<'c>,
-    },
+    pub fn new_end_tag(name: Bytes<'c>) -> Self {
+        Token::EndTag(EndTagToken { name })
+    }
 
-    Doctype {
+    pub fn new_doctype(
         name: Option<Bytes<'c>>,
         public_id: Option<Bytes<'c>>,
         system_id: Option<Bytes<'c>>,
         force_quirks: bool,
-    },
-
-    Eof,
+    ) -> Self {
+        Token::Doctype(DoctypeToken {
+            name,
+            public_id,
+            system_id,
+            force_quirks,
+        })
+    }
 }
