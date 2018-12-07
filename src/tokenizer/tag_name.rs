@@ -22,9 +22,7 @@
 //! we are safe here, since we'll just get first character shifted left
 //! by zeroes as repetitave 1 digits get added to the hash.
 
-// NOTE: unfortunately `static fn` is still unavaliable in stable,
-// so we need to use manually precalculated values in this enum.
-// Consistency between hashing algorithm and these values is guaranteed
+// NOTE: Consistency between hashing algorithm and these values is guaranteed
 // by the dedicated test.
 #[repr(u64)]
 #[derive(Debug, Copy, Clone)]

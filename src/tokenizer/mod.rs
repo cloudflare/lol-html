@@ -12,7 +12,7 @@ use self::feedback_providers::*;
 use self::state_machine::{
     EagerStateMachine, FullStateMachine, ParsingLoopTerminationReason, StateMachine,
 };
-use base::Chunk;
+use crate::base::Chunk;
 use crate::Error;
 use std::cell::RefCell;
 use std::rc::Rc;

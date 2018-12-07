@@ -1,4 +1,4 @@
-use base::{Bytes, Range};
+use super::{Bytes, Range};
 
 #[derive(Debug)]
 pub struct Chunk<'b> {

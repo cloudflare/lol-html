@@ -8,9 +8,9 @@ mod impls;
 
 pub use self::impls::*;
 
-use base::{Chunk, Cursor};
+use crate::base::{Chunk, Cursor};
+use crate::tokenizer::{NextOutputType, TextParsingMode};
 use crate::Error;
-use tokenizer::{NextOutputType, TextParsingMode};
 
 #[derive(Debug, Copy, Clone)]
 pub struct StateMachineBookmark {

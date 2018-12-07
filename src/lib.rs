@@ -1,7 +1,3 @@
-extern crate cfg_if;
-extern crate lazycell;
-extern crate safemem;
-
 #[macro_use]
 mod debug_trace;
 

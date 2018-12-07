@@ -1,6 +1,6 @@
 use super::token::*;
 use super::token_view::*;
-use base::{Bytes, Chunk, Range};
+use crate::base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
 use std::fmt::{self, Debug, Write};
 use std::rc::Rc;
@@ -86,7 +86,8 @@ impl<'c> LexUnit<'c> {
 
                     TokenView::Eof => Token::Eof,
                 })
-            }).as_ref()
+            })
+            .as_ref()
     }
 }
 

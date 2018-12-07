@@ -25,7 +25,8 @@ pub fn get_tag_tokens(tokens: &[TestToken]) -> Vec<TestToken> {
         .filter(|t| match t {
             TestToken::StartTag { .. } | TestToken::EndTag { .. } => true,
             _ => false,
-        }).collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>()
 }
 
 pub trait TestFixture {
@@ -40,7 +41,8 @@ pub trait TestFixture {
             "{} - {}",
             test.description,
             Self::get_test_description_suffix()
-        ).unwrap();
+        )
+        .unwrap();
 
         descr
     }
@@ -77,7 +79,7 @@ macro_rules! assert_eql {
 
 macro_rules! tokenizer_test_fixture {
     ($fixture:ident) => {
-        use harness::tokenizer_test::TEST_CASES;
+        use crate::harness::tokenizer_test::TEST_CASES;
         use test::TestDescAndFn;
 
         pub fn get_tests() -> Vec<TestDescAndFn> {
@@ -88,7 +90,8 @@ macro_rules! tokenizer_test_fixture {
                     create_test!($fixture::get_test_description(&t), t.ignored, {
                         $fixture::run(&t);
                     })
-                }).collect()
+                })
+                .collect()
         }
     };
 }

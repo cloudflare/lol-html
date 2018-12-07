@@ -1,5 +1,5 @@
+use crate::harness::tokenizer_test::TestCase;
 use glob;
-use harness::tokenizer_test::TestCase;
 use serde_json::from_reader;
 
 #[derive(Deserialize)]

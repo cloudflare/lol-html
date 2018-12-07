@@ -12,8 +12,8 @@
 //! to bail out from the tokenization in such a case
 //! (see `AmbiguityGuard` for the details).
 
-use tokenizer::outputs::{Attribute, LexUnit, Token, TokenView};
-use tokenizer::{TagName, TextParsingMode};
+use crate::tokenizer::outputs::{Attribute, LexUnit, Token, TokenView};
+use crate::tokenizer::{TagName, TextParsingMode};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 

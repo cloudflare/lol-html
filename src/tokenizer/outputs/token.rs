@@ -1,5 +1,5 @@
 use super::AttributeView;
-use base::{Bytes, Chunk};
+use crate::base::{Bytes, Chunk};
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::fmt::{self, Debug};
@@ -39,7 +39,8 @@ impl<'c> Deref for AttributeList<'c> {
                 .map(|a| Attribute {
                     name: self.input.slice(a.name),
                     value: self.input.slice(a.value),
-                }).collect()
+                })
+                .collect()
         })
     }
 }

@@ -1,6 +1,6 @@
+use crate::harness::tokenizer_test::decoder::Decoder;
+use crate::harness::tokenizer_test::test_outputs::TestToken;
 use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView};
-use harness::tokenizer_test::decoder::Decoder;
-use harness::tokenizer_test::test_outputs::TestToken;
 
 fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);

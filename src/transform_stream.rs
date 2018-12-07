@@ -1,6 +1,6 @@
-use base::{Buffer, Chunk};
+use crate::base::{Buffer, Chunk};
+use crate::tokenizer::{LexUnitHandler, TagLexUnitHandler, TagPreviewHandler, Tokenizer};
 use crate::Error;
-use tokenizer::{LexUnitHandler, TagLexUnitHandler, TagPreviewHandler, Tokenizer};
 
 pub struct TransformStream<LH, TH, PH>
 where
@@ -57,18 +57,17 @@ where
         assert!(!self.finished, "Attempt to call write() after end()");
         trace!(@write data);
 
-        let blocked_byte_count = {
-            let chunk = if self.has_buffered_data {
-                self.buffer.append(data)?;
-                self.buffer.bytes()
-            } else {
-                data
-            }.into();
+        let chunk = if self.has_buffered_data {
+            self.buffer.append(data)?;
+            self.buffer.bytes()
+        } else {
+            data
+        }
+        .into();
 
-            trace!(@chunk chunk);
+        trace!(@chunk chunk);
 
-            self.tokenizer.tokenize(&chunk)?
-        };
+        let blocked_byte_count = self.tokenizer.tokenize(&chunk)?;
 
         if blocked_byte_count > 0 {
             self.buffer_blocked_bytes(data, blocked_byte_count)?;

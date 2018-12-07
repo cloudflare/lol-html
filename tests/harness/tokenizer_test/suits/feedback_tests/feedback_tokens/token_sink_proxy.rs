@@ -1,5 +1,5 @@
+use crate::harness::tokenizer_test::TestToken;
 use cool_thing::tokenizer::TagName;
-use harness::tokenizer_test::TestToken;
 use html5ever::tokenizer::{TagKind, Token, TokenSink, TokenSinkResult};
 use std::collections::HashMap;
 use std::iter::FromIterator;
@@ -60,9 +60,11 @@ where
             Token::CommentToken(ref s) => {
                 self.tokens.push(TestToken::Comment(s.to_string()));
             }
-            Token::CharacterTokens(ref s) => if !s.is_empty() {
-                self.push_character_token(s);
-            },
+            Token::CharacterTokens(ref s) => {
+                if !s.is_empty() {
+                    self.push_character_token(s);
+                }
+            }
             Token::NullCharacterToken => {
                 self.push_character_token("\0");
             }

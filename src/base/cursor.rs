@@ -1,4 +1,4 @@
-use base::{Align, Chunk};
+use super::{Align, Chunk};
 
 #[derive(Default)]
 pub struct Cursor {
@@ -16,7 +16,7 @@ impl Cursor {
     }
 
     #[inline]
-    #[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
+    #[allow(clippy::let_and_return)]
     pub fn consume_ch(&mut self, chunk: &Chunk<'_>) -> Option<u8> {
         let ch = chunk.get(self.next_pos);
 
@@ -42,7 +42,7 @@ impl Cursor {
     }
 
     #[inline]
-    #[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
+    #[allow(clippy::let_and_return)]
     pub fn lookahead(&self, chunk: &Chunk<'_>, offset: usize) -> Option<u8> {
         let ch = chunk.get(self.next_pos + offset - 1);
 

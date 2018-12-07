@@ -1,9 +1,9 @@
+use crate::harness::tokenizer_test::{
+    Bailout, ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
+};
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
-use harness::tokenizer_test::{
-    Bailout, ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
-};
 use itertools::izip;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -103,7 +103,8 @@ impl ParsingResult {
                     c.extend_from_slice(s);
                     c
                 }),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     pub fn into_token_raw_pairs(
@@ -126,7 +127,8 @@ impl ParsingResult {
                         .into_iter()
                         .map(|s| String::from_utf8(s).unwrap()),
                     self.lex_unit_sink.text_parsing_mode_snapshots.into_iter()
-                ).collect(),
+                )
+                .collect(),
             )
         } else {
             None
@@ -142,7 +144,7 @@ impl FullStateMachineTests {
         if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
             for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
                 let raw = raw.into();
-                let mut actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
+                let actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
 
                 assert_eql!(
                     actual.lex_unit_sink.tokens,

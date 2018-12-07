@@ -1,9 +1,9 @@
+use crate::harness::tokenizer_test::{
+    get_tag_tokens, ChunkedInput, TestCase, TestFixture, TestTagPreview, TestToken, BUFFER_SIZE,
+};
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
-use harness::tokenizer_test::{
-    get_tag_tokens, ChunkedInput, TestCase, TestFixture, TestTagPreview, TestToken, BUFFER_SIZE,
-};
 use std::cell::RefCell;
 use std::rc::Rc;
 

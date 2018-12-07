@@ -8,7 +8,7 @@ macro_rules! state {
     ) => {
         fn $name(&mut self, input: &Chunk<'_>) -> StateResult {
             // NOTE: clippy complains about some states that break the loop in each match arm
-            #[cfg_attr(feature = "cargo-clippy", allow(never_loop))]
+            #[allow(clippy::never_loop)]
             loop {
                 let ch = self.get_input_cursor().consume_ch(input);
 

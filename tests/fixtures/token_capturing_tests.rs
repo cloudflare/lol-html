@@ -1,10 +1,10 @@
+use crate::harness::tokenizer_test::{
+    ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
+};
 use cool_thing::base::Bytes;
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot, Token};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
-use harness::tokenizer_test::{
-    ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
-};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -84,7 +84,8 @@ fn get_descendants_of_top_level_elements(tokens: &[TestToken]) -> Vec<Vec<TestTo
                     open_captured_tag_count,
                 )
             },
-        ).0
+        )
+        .0
 }
 
 pub struct ParsingResult {

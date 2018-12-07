@@ -2,20 +2,20 @@
 mod actions;
 mod conditions;
 
-use base::{Align, Chunk, Cursor, Range};
+use crate::base::{Align, Chunk, Cursor, Range};
 
+use crate::tokenizer::outputs::*;
+use crate::tokenizer::state_machine::{
+    ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
+};
+use crate::tokenizer::{
+    FeedbackProviders, NextOutputType, TagName, TagPreviewHandler, TextParsingMode,
+    TreeBuilderFeedback,
+};
 use crate::Error;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;
-use tokenizer::outputs::*;
-use tokenizer::state_machine::{
-    ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
-};
-use tokenizer::{
-    FeedbackProviders, NextOutputType, TagName, TagPreviewHandler, TextParsingMode,
-    TreeBuilderFeedback,
-};
 
 #[cfg(feature = "testing_api")]
 use super::common::SharedTagConfirmationHandler;

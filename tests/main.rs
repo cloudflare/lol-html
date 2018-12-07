@@ -1,17 +1,3 @@
-extern crate cool_thing;
-extern crate glob;
-extern crate html5ever;
-extern crate itertools;
-extern crate lazy_static;
-extern crate rand;
-extern crate serde;
-extern crate serde_json;
-
-// From 'rustc-test' crate.
-// Mirrors Rust's internal 'libtest'.
-// https://doc.rust-lang.org/1.1.0/test/index.html
-extern crate test;
-
 #[macro_use]
 extern crate serde_derive;
 
@@ -20,7 +6,7 @@ mod harness;
 
 mod fixtures;
 
-use fixtures::get_tests;
+use self::fixtures::get_tests;
 use test::test_main;
 
 fn main() {

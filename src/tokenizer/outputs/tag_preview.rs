@@ -1,4 +1,4 @@
-use base::{Bytes, Chunk, Range};
+use crate::base::{Bytes, Chunk, Range};
 use lazycell::LazyCell;
 use std::fmt::{self, Debug};
 

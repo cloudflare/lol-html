@@ -1,4 +1,4 @@
-use harness::tokenizer_test::TestCase;
+use crate::harness::tokenizer_test::TestCase;
 use lazy_static::lazy_static;
 
 macro_rules! read_test_data {

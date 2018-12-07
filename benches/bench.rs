@@ -47,7 +47,8 @@ fn get_inputs() -> Vec<Input> {
                     .map(|c| unsafe { String::from_utf8_unchecked(c.to_vec()) })
                     .collect(),
             }
-        }).collect()
+        })
+        .collect()
 }
 
 fn cool_thing_tokenizer_bench(with_full_sm: bool) -> impl FnMut(&mut Bencher, &Input) {
@@ -164,10 +165,12 @@ fn tokenization_benchmark(c: &mut Criterion) {
             "cool_thing - Eager state machine",
             cool_thing_tokenizer_bench(false),
             inputs,
-        ).with_function(
+        )
+        .with_function(
             "cool_thing - Full state machine",
             cool_thing_tokenizer_bench(true),
-        ).with_function("lazyhtml", lazyhtml_tokenizer_bench())
+        )
+        .with_function("lazyhtml", lazyhtml_tokenizer_bench())
         .with_function("html5ever", html5ever_tokenizer_bench())
         .throughput(|i| Throughput::Bytes(i.length as u32)),
     );

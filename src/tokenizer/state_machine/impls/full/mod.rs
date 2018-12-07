@@ -2,23 +2,23 @@
 mod actions;
 mod conditions;
 
-use base::{Align, Chunk, Cursor, Range};
-use cfg_if::cfg_if;
-use crate::Error;
-use std::cell::RefCell;
-use std::rc::Rc;
-use tokenizer::outputs::*;
-use tokenizer::state_machine::{
+use crate::base::{Align, Chunk, Cursor, Range};
+use crate::tokenizer::outputs::*;
+use crate::tokenizer::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
-use tokenizer::{
+use crate::tokenizer::{
     FeedbackProviders, LexUnitHandler, NextOutputType, ParsingLoopTerminationReason,
     TagLexUnitHandler, TagName, TextParsingMode, TreeBuilderFeedback,
 };
+use crate::Error;
+use cfg_if::cfg_if;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 cfg_if! {
     if #[cfg(feature = "testing_api")] {
-        use tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
+        use crate::tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
         use super::common::SharedTagConfirmationHandler;
     }
 }

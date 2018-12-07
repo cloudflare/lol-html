@@ -1,8 +1,8 @@
 mod feedback_tokens;
 
 use self::feedback_tokens::get_expected_tokens_with_feedback;
+use crate::harness::tokenizer_test::{default_initial_states, Bailout, TestCase};
 use glob;
-use harness::tokenizer_test::{default_initial_states, Bailout, TestCase};
 use serde_json::from_reader;
 use std::collections::HashMap;
 use std::fs::File;

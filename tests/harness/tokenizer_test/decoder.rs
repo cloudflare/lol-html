@@ -61,7 +61,8 @@ impl<'a> Decoder<'a> {
                         C1_REPLACEMENTS[(code - 0x80) as usize].or_else(|| char::from_u32(code))
                     }
                     _ => char::from_u32(code),
-                }.unwrap_or('\u{FFFD}'),
+                }
+                .unwrap_or('\u{FFFD}'),
             );
             self.next_if_char(';');
             true

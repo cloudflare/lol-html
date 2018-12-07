@@ -1,5 +1,5 @@
 use super::*;
-use tokenizer::state_machine::StateMachineConditions;
+use crate::tokenizer::state_machine::StateMachineConditions;
 
 impl<LH, TH> StateMachineConditions for FullStateMachine<LH, TH>
 where

@@ -1,6 +1,6 @@
 use super::*;
-use base::Chunk;
-use tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
+use crate::base::Chunk;
+use crate::tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
 impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
     impl_common_sm_actions!();

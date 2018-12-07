@@ -18,13 +18,13 @@ cfg_if! {
             };
 
             ( @buffer $buffer:expr ) => {
-                use base::Bytes;
+                use crate::base::Bytes;
 
                 println!("-- Buffered: {:#?}", Bytes::from($buffer.bytes()));
             };
 
             ( @write $slice:expr ) => {
-                use base::Bytes;
+                use crate::base::Bytes;
 
                 println!("-- Write: {:#?}", Bytes::from($slice));
             };

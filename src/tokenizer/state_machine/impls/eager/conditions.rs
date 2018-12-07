@@ -1,5 +1,5 @@
 use super::*;
-use tokenizer::state_machine::StateMachineConditions;
+use crate::tokenizer::state_machine::StateMachineConditions;
 
 impl<H: TagPreviewHandler> StateMachineConditions for EagerStateMachine<H> {
     #[inline]

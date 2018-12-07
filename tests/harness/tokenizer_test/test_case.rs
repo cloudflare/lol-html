@@ -67,7 +67,8 @@ impl TestCase {
             "`{}` (chunk size: {})",
             self.description,
             self.input.get_chunk_size()
-        ).unwrap();
+        )
+        .unwrap();
 
         self.description = new_descr;
     }
