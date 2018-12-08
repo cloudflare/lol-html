@@ -1,10 +1,8 @@
+mod attributes;
+
+pub use self::attributes::*;
 use super::AttributeView;
-use crate::base::{Bytes, Chunk};
-use lazycell::LazyCell;
-use std::cell::RefCell;
-use std::fmt::{self, Debug};
-use std::ops::Deref;
-use std::rc::Rc;
+use crate::base::Bytes;
 
 #[derive(Getters, Debug)]
 pub struct CharacterToken<'c> {
@@ -19,81 +17,12 @@ pub struct CommentToken<'c> {
 }
 
 #[derive(Getters, Debug)]
-pub struct Attribute<'c> {
-    #[get = "pub"]
-    name: Bytes<'c>,
-
-    #[get = "pub"]
-    value: Bytes<'c>,
-}
-
-impl<'c> Attribute<'c> {
-    pub fn new(name: Bytes<'c>, value: Bytes<'c>) -> Self {
-        Attribute { name, value }
-    }
-}
-
-struct ParsedAttributesData<'c> {
-    input: &'c Chunk<'c>,
-    attribute_views: Rc<RefCell<Vec<AttributeView>>>,
-}
-
-#[derive(Default)]
-pub struct AttributeList<'c> {
-    parsed_attributes_data: Option<ParsedAttributesData<'c>>,
-    attributes: LazyCell<Vec<Attribute<'c>>>,
-}
-
-impl<'c> AttributeList<'c> {
-    pub fn new(input: &'c Chunk<'c>, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
-        AttributeList {
-            parsed_attributes_data: Some(ParsedAttributesData {
-                input,
-                attribute_views,
-            }),
-            attributes: LazyCell::default(),
-        }
-    }
-
-    fn init(&self) -> Vec<Attribute<'c>> {
-        match self.parsed_attributes_data {
-            Some(ParsedAttributesData {
-                ref input,
-                ref attribute_views,
-            }) => attribute_views
-                .borrow()
-                .iter()
-                .map(|a| Attribute {
-                    name: input.slice(a.name),
-                    value: input.slice(a.value),
-                })
-                .collect(),
-            None => Vec::new(),
-        }
-    }
-}
-
-impl<'c> Deref for AttributeList<'c> {
-    type Target = Vec<Attribute<'c>>;
-
-    fn deref(&self) -> &Vec<Attribute<'c>> {
-        self.attributes.borrow_with(|| self.init())
-    }
-}
-
-impl Debug for AttributeList<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.deref().fmt(f)
-    }
-}
-
-#[derive(Getters, Debug)]
 pub struct StartTagToken<'c> {
     #[get = "pub"]
     name: Bytes<'c>,
 
     #[get = "pub"]
-    attributes: AttributeList<'c>,
+    attributes: Attributes<'c>,
 
     self_closing: bool,
 }
@@ -162,12 +91,12 @@ impl<'c> Token<'c> {
 
     pub fn new_start_tag(
         name: Bytes<'c>,
-        attributes: AttributeList<'c>,
+        attributes: ParsedAttributeList<'c>,
         self_closing: bool,
     ) -> Self {
         Token::StartTag(StartTagToken {
             name,
-            attributes,
+            attributes: Box::new(attributes),
             self_closing,
         })
     }

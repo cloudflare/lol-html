@@ -64,7 +64,7 @@ impl<'c> LexUnit<'c> {
                         ..
                     } => Token::new_start_tag(
                         self.input.slice(name),
-                        AttributeList::new(self.input, Rc::clone(&attributes)),
+                        ParsedAttributeList::new(self.input, Rc::clone(&attributes)),
                         self_closing,
                     ),
 
