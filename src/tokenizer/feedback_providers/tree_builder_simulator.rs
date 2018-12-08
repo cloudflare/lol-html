@@ -88,7 +88,7 @@ fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
 macro_rules! expect_token {
     ($lex_unit: ident) => {
         $lex_unit
-            .get_token()
+            .as_token()
             .expect("There should be a token at this point")
     };
 }
@@ -218,7 +218,7 @@ impl TreeBuilderSimulator {
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
         match lex_unit
-            .get_token_view()
+            .token_view()
             .expect("There should be a token at this point")
         {
             TokenView::StartTag { self_closing, .. } => {
@@ -238,7 +238,7 @@ impl TreeBuilderSimulator {
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
             Token::EndTag(t) => {
-                if eq_case_insensitive(t.get_name(), b"annotation-xml") {
+                if eq_case_insensitive(t.name(), b"annotation-xml") {
                     self.leave_ns()
                 } else {
                     TreeBuilderFeedback::None
@@ -254,11 +254,11 @@ impl TreeBuilderSimulator {
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
             Token::StartTag(t) => {
-                if !t.is_self_closing() && eq_case_insensitive(t.get_name(), b"annotation-xml") {
-                    for attr in t.get_attributes().iter() {
-                        let value = attr.get_value();
+                if !t.self_closing() && eq_case_insensitive(t.name(), b"annotation-xml") {
+                    for attr in t.attributes().iter() {
+                        let value = attr.value();
 
-                        if eq_case_insensitive(attr.get_name(), b"encoding")
+                        if eq_case_insensitive(attr.name(), b"encoding")
                             && (eq_case_insensitive(value, b"text/html")
                                 || eq_case_insensitive(value, b"application/xhtml+xml"))
                         {
@@ -279,8 +279,8 @@ impl TreeBuilderSimulator {
     ) -> TreeBuilderFeedback {
         match expect_token!(lex_unit) {
             Token::StartTag(t) => {
-                for attr in t.get_attributes().iter() {
-                    let name = attr.get_name();
+                for attr in t.attributes().iter() {
+                    let name = attr.name();
 
                     if eq_case_insensitive(name, b"color")
                         || eq_case_insensitive(name, b"size")

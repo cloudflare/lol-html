@@ -139,7 +139,7 @@ impl ParsingResult {
             move |lex_unit: &LexUnit<'_>| {
                 let mut result = result.borrow_mut();
 
-                if let Some(Token::Eof) = lex_unit.get_token() {
+                if let Some(Token::Eof) = lex_unit.as_token() {
                     result.add_pending_token_set();
                 } else {
                     result
@@ -169,10 +169,8 @@ impl ParsingResult {
                     };
                 }
 
-                match lex_unit.get_token() {
-                    Some(Token::StartTag(t))
-                        if to_lower_string(t.get_name()) == captured_tag_name =>
-                    {
+                match lex_unit.as_token() {
+                    Some(Token::StartTag(t)) if to_lower_string(t.name()) == captured_tag_name => {
                         result.open_captured_tag_count += 1;
 
                         if result.open_captured_tag_count > 1 {
@@ -181,9 +179,7 @@ impl ParsingResult {
 
                         NextOutputType::LexUnit
                     }
-                    Some(Token::EndTag(t))
-                        if to_lower_string(t.get_name()) == captured_tag_name =>
-                    {
+                    Some(Token::EndTag(t)) if to_lower_string(t.name()) == captured_tag_name => {
                         result.open_captured_tag_count -= 1;
 
                         if result.open_captured_tag_count == 0 {
@@ -210,7 +206,7 @@ impl ParsingResult {
                 TagPreview::StartTag(name_info) => {
                     let mut result = result.borrow_mut();
 
-                    result.captured_tag_name = Some(to_lower_string(name_info.get_name()));
+                    result.captured_tag_name = Some(to_lower_string(name_info.name()));
 
                     NextOutputType::LexUnit
                 }
@@ -226,8 +222,8 @@ impl ParsingResult {
         );
 
         transform_stream
-            .get_tokenizer()
-            .get_full_sm()
+            .tokenizer()
+            .full_sm()
             .text_parsing_mode_change_handler = Some(Box::new({
             let mode_snapshot = Rc::clone(&mode_snapshot);
 

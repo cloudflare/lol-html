@@ -135,7 +135,7 @@ where
         with_current_sm!(self, { sm.set_last_start_tag_name_hash(name_hash) });
     }
 
-    pub fn get_full_sm(&mut self) -> &mut FullStateMachine<LH, TH> {
+    pub fn full_sm(&mut self) -> &mut FullStateMachine<LH, TH> {
         &mut self.full_sm
     }
 

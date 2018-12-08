@@ -98,7 +98,7 @@ where
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn get_tokenizer(&mut self) -> &mut Tokenizer<LH, TH, PH> {
+    pub fn tokenizer(&mut self) -> &mut Tokenizer<LH, TH, PH> {
         &mut self.tokenizer
     }
 }

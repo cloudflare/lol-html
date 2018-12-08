@@ -75,7 +75,7 @@ fn cool_thing_tokenizer_bench(with_full_sm: bool) -> impl FnMut(&mut Bencher, &I
             );
 
             transform_stream
-                .get_tokenizer()
+                .tokenizer()
                 .set_next_output_type(if with_full_sm {
                     NextOutputType::LexUnit
                 } else {

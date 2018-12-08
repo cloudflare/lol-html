@@ -45,13 +45,11 @@ impl ChunkedInput {
         TH: TagLexUnitHandler,
         PH: TagPreviewHandler,
     {
-        {
-            let tokenizer = transform_stream.get_tokenizer();
+        let tokenizer = transform_stream.tokenizer();
 
-            tokenizer.set_next_output_type(initial_output_type);
-            tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
-            tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
-        }
+        tokenizer.set_next_output_type(initial_output_type);
+        tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
+        tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
 
         for chunk in self.get_chunks() {
             transform_stream.write(chunk)?;

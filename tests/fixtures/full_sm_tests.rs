@@ -72,8 +72,8 @@ impl ParsingResult {
         );
 
         transform_stream
-            .get_tokenizer()
-            .get_full_sm()
+            .tokenizer()
+            .full_sm()
             .text_parsing_mode_change_handler = Some(Box::new({
             let mode_snapshot = Rc::clone(&mode_snapshot);
 

@@ -74,7 +74,7 @@ impl ParsingResult {
 
     fn add_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
         self.tokens_from_preview.push(TestToken::new(
-            lex_unit.get_token().expect("Tag should have a token"),
+            lex_unit.as_token().expect("Tag should have a token"),
             lex_unit,
         ));
 

@@ -21,6 +21,7 @@ harness = false
 name = "bench"
 
 [dependencies]
+getset = "0.0.6"
 lazycell = "1.2"
 safemem = "0.3.0"
 cfg-if = "0.1"

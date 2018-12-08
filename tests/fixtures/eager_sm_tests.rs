@@ -59,13 +59,11 @@ impl ParsingResult {
             tag_preview_handler,
         );
 
-        transform_stream
-            .get_tokenizer()
-            .set_tag_confirmation_handler({
-                let pending_preview_confirmed = Rc::clone(&pending_preview_confirmed);
+        transform_stream.tokenizer().set_tag_confirmation_handler({
+            let pending_preview_confirmed = Rc::clone(&pending_preview_confirmed);
 
-                Box::new(move || pending_preview_confirmed.set(true))
-            });
+            Box::new(move || pending_preview_confirmed.set(true))
+        });
 
         input.parse(
             transform_stream,

@@ -19,7 +19,7 @@ impl<'c> TagNameInfo<'c> {
         }
     }
 
-    pub fn get_name(&self) -> &Bytes<'c> {
+    pub fn name(&self) -> &Bytes<'c> {
         self.name.borrow_with(|| self.input.slice(self.name_range))
     }
 }
@@ -27,7 +27,7 @@ impl<'c> TagNameInfo<'c> {
 impl Debug for TagNameInfo<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TagNameInfo")
-            .field("name", self.get_name())
+            .field("name", self.name())
             .field("name_hash", &self.name_hash)
             .finish()
     }

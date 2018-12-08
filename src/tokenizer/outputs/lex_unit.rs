@@ -28,23 +28,23 @@ impl<'c> LexUnit<'c> {
         }
     }
 
-    pub fn get_raw(&self) -> Option<&Bytes<'c>> {
+    pub fn raw(&self) -> Option<&Bytes<'c>> {
         self.raw
             .borrow_with(|| self.input.opt_slice(self.raw_range))
             .as_ref()
     }
 
     #[inline]
-    pub fn get_token_view(&self) -> Option<&TokenView> {
+    pub fn token_view(&self) -> Option<&TokenView> {
         self.token_view.as_ref()
     }
 
     #[inline]
-    pub fn get_raw_range(&self) -> Option<Range> {
+    pub fn raw_range(&self) -> Option<Range> {
         self.raw_range
     }
 
-    pub fn get_token(&self) -> Option<&Token<'c>> {
+    pub fn as_token(&self) -> Option<&Token<'c>> {
         self.token
             .borrow_with(|| {
                 self.token_view.as_ref().map(|token_view| match token_view {
@@ -107,7 +107,7 @@ impl Debug for LexUnit<'_> {
             builder.field("raw", &format_args!("`{}`", &pretty_raw));
         }
 
-        if let (Some(token_view), Some(token)) = (self.token_view.as_ref(), self.get_token()) {
+        if let (Some(token_view), Some(token)) = (self.token_view.as_ref(), self.as_token()) {
             builder
                 .field("token_view", token_view)
                 .field("token", token);

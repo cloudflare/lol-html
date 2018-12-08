@@ -26,18 +26,16 @@ pub struct LexUnitSink {
 
 impl LexUnitSink {
     pub fn add_lex_unit(&mut self, lex_unit: &LexUnit<'_>, mode_snapshot: TextParsingModeSnapshot) {
-        if let (Some(TokenView::Character), Some(raw)) =
-            (lex_unit.get_token_view(), lex_unit.get_raw())
-        {
+        if let (Some(TokenView::Character), Some(raw)) = (lex_unit.token_view(), lex_unit.raw()) {
             self.buffer_chars(&raw, mode_snapshot);
         } else {
-            if let Some(token) = lex_unit.get_token() {
+            if let Some(token) = lex_unit.as_token() {
                 self.flush();
                 self.tokens.push(TestToken::new(token, lex_unit));
                 self.text_parsing_mode_snapshots.push(mode_snapshot);
             }
 
-            if let Some(raw) = lex_unit.get_raw() {
+            if let Some(raw) = lex_unit.raw() {
                 self.raw_slices.push(raw.to_vec());
             }
         }

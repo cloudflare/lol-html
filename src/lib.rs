@@ -1,4 +1,7 @@
 #[macro_use]
+extern crate getset;
+
+#[macro_use]
 mod debug_trace;
 
 #[macro_use]

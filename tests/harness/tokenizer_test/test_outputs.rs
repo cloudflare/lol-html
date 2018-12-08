@@ -48,42 +48,42 @@ pub enum TestToken {
 impl TestToken {
     pub fn new(token: &Token<'_>, lex_unit: &LexUnit<'_>) -> Self {
         match token {
-            Token::Character(t) => TestToken::Character(t.get_text().as_string()),
-            Token::Comment(t) => TestToken::Comment(to_null_decoded(t.get_text())),
+            Token::Character(t) => TestToken::Character(t.text().as_string()),
+            Token::Comment(t) => TestToken::Comment(to_null_decoded(t.text())),
 
             Token::StartTag(t) => TestToken::StartTag {
-                name: to_lower_null_decoded(t.get_name()),
-                name_hash: match lex_unit.get_token_view() {
+                name: to_lower_null_decoded(t.name()),
+                name_hash: match lex_unit.token_view() {
                     Some(&TokenView::StartTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
 
-                attributes: HashMap::from_iter(t.get_attributes().iter().rev().map(|a| {
+                attributes: HashMap::from_iter(t.attributes().iter().rev().map(|a| {
                     (
-                        to_lower_null_decoded(&a.get_name()),
-                        Decoder::new(a.get_value().as_str())
+                        to_lower_null_decoded(&a.name()),
+                        Decoder::new(a.value().as_str())
                             .unsafe_null()
                             .attr_entities()
                             .run(),
                     )
                 })),
 
-                self_closing: t.is_self_closing(),
+                self_closing: t.self_closing(),
             },
 
             Token::EndTag(t) => TestToken::EndTag {
-                name: to_lower_null_decoded(t.get_name()),
-                name_hash: match lex_unit.get_token_view() {
+                name: to_lower_null_decoded(t.name()),
+                name_hash: match lex_unit.token_view() {
                     Some(&TokenView::EndTag { name_hash, .. }) => name_hash,
                     _ => None,
                 },
             },
 
             Token::Doctype(t) => TestToken::Doctype {
-                name: t.get_name().map(to_lower_null_decoded),
-                public_id: t.get_public_id().map(to_null_decoded),
-                system_id: t.get_system_id().map(to_null_decoded),
-                force_quirks: t.is_quirky(),
+                name: t.name().map(to_lower_null_decoded),
+                public_id: t.public_id().map(to_null_decoded),
+                system_id: t.system_id().map(to_null_decoded),
+                force_quirks: t.force_quirks(),
             },
 
             Token::Eof => TestToken::Eof,
@@ -259,7 +259,7 @@ impl TestTagPreview {
         };
 
         TestTagPreview {
-            name: to_lower_null_decoded(tag_name_info.get_name()),
+            name: to_lower_null_decoded(tag_name_info.name()),
             name_hash: tag_name_info.name_hash,
             tag_type,
         }

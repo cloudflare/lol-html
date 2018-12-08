@@ -6,49 +6,30 @@ use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::rc::Rc;
 
-#[derive(Debug)]
+#[derive(Getters, Debug)]
 pub struct CharacterToken<'c> {
+    #[get = "pub"]
     text: Bytes<'c>,
 }
 
-impl<'c> CharacterToken<'c> {
-    #[inline]
-    pub fn get_text(&self) -> &Bytes<'_> {
-        &self.text
-    }
-}
-
-#[derive(Debug)]
+#[derive(Getters, Debug)]
 pub struct CommentToken<'c> {
+    #[get = "pub"]
     text: Bytes<'c>,
 }
 
-impl<'c> CommentToken<'c> {
-    #[inline]
-    pub fn get_text(&self) -> &Bytes<'_> {
-        &self.text
-    }
-}
-
-#[derive(Debug)]
+#[derive(Getters, Debug)]
 pub struct Attribute<'c> {
+    #[get = "pub"]
     name: Bytes<'c>,
+
+    #[get = "pub"]
     value: Bytes<'c>,
 }
 
 impl<'c> Attribute<'c> {
     pub fn new(name: Bytes<'c>, value: Bytes<'c>) -> Self {
         Attribute { name, value }
-    }
-
-    #[inline]
-    pub fn get_name(&self) -> &Bytes<'c> {
-        &self.name
-    }
-
-    #[inline]
-    pub fn get_value(&self) -> &Bytes<'c> {
-        &self.value
     }
 }
 
@@ -106,40 +87,28 @@ impl Debug for AttributeList<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Getters, Debug)]
 pub struct StartTagToken<'c> {
+    #[get = "pub"]
     name: Bytes<'c>,
+
+    #[get = "pub"]
     attributes: AttributeList<'c>,
+
     self_closing: bool,
 }
 
 impl<'c> StartTagToken<'c> {
     #[inline]
-    pub fn get_name(&self) -> &Bytes<'c> {
-        &self.name
-    }
-
-    #[inline]
-    pub fn get_attributes(&self) -> &AttributeList<'c> {
-        &self.attributes
-    }
-
-    #[inline]
-    pub fn is_self_closing(&self) -> bool {
+    pub fn self_closing(&self) -> bool {
         self.self_closing
     }
 }
 
-#[derive(Debug)]
+#[derive(Getters, Debug)]
 pub struct EndTagToken<'c> {
+    #[get = "pub"]
     name: Bytes<'c>,
-}
-
-impl<'c> EndTagToken<'c> {
-    #[inline]
-    pub fn get_name(&self) -> &Bytes<'c> {
-        &self.name
-    }
 }
 
 #[derive(Debug)]
@@ -152,22 +121,22 @@ pub struct DoctypeToken<'c> {
 
 impl<'c> DoctypeToken<'c> {
     #[inline]
-    pub fn get_name(&self) -> Option<&Bytes<'c>> {
+    pub fn name(&self) -> Option<&Bytes<'c>> {
         self.name.as_ref()
     }
 
     #[inline]
-    pub fn get_public_id(&self) -> Option<&Bytes<'c>> {
+    pub fn public_id(&self) -> Option<&Bytes<'c>> {
         self.public_id.as_ref()
     }
 
     #[inline]
-    pub fn get_system_id(&self) -> Option<&Bytes<'c>> {
+    pub fn system_id(&self) -> Option<&Bytes<'c>> {
         self.system_id.as_ref()
     }
 
     #[inline]
-    pub fn is_quirky(&self) -> bool {
+    pub fn force_quirks(&self) -> bool {
         self.force_quirks
     }
 }

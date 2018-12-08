@@ -78,25 +78,21 @@ fn main() {
         },
     );
 
-    {
-        let tokenizer = transform_stream.get_tokenizer();
+    let tokenizer = transform_stream.tokenizer();
 
-        tokenizer.set_next_output_type(if tag_scan_mode || matches.opt_present("p") {
-            NextOutputType::TagPreview
-        } else {
-            NextOutputType::LexUnit
-        });
+    tokenizer.set_next_output_type(if tag_scan_mode || matches.opt_present("p") {
+        NextOutputType::TagPreview
+    } else {
+        NextOutputType::LexUnit
+    });
 
-        tokenizer.switch_text_parsing_mode(
-            match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
-                None => TextParsingMode::Data,
-                Some(state) => TextParsingMode::from(state),
-            },
-        );
+    tokenizer.switch_text_parsing_mode(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
+        None => TextParsingMode::Data,
+        Some(state) => TextParsingMode::from(state),
+    });
 
-        if let Some(ref tag_name) = matches.opt_str("t") {
-            tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
-        }
+    if let Some(ref tag_name) = matches.opt_str("t") {
+        tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
     }
 
     let chunks = if let Some(chunk_size) = matches.opt_get("c").unwrap() {
