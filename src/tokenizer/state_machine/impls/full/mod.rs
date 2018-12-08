@@ -201,12 +201,12 @@ where
     }
 
     #[inline]
-    fn create_lex_unit_with_raw<'c>(
+    fn create_lex_unit_with_raw<'i>(
         &mut self,
-        input: &'c Chunk<'c>,
+        input: &'i Chunk<'i>,
         token: Option<TokenView>,
         raw_end: usize,
-    ) -> LexUnit<'c> {
+    ) -> LexUnit<'i> {
         let raw_range = Some(Range {
             start: self.lex_unit_start,
             end: raw_end,
@@ -216,22 +216,22 @@ where
     }
 
     #[inline]
-    fn create_lex_unit_with_raw_inclusive<'c>(
+    fn create_lex_unit_with_raw_inclusive<'i>(
         &mut self,
-        input: &'c Chunk<'c>,
+        input: &'i Chunk<'i>,
         token: Option<TokenView>,
-    ) -> LexUnit<'c> {
+    ) -> LexUnit<'i> {
         let raw_end = self.input_cursor.pos() + 1;
 
         self.create_lex_unit_with_raw(input, token, raw_end)
     }
 
     #[inline]
-    fn create_lex_unit_with_raw_exclusive<'c>(
+    fn create_lex_unit_with_raw_exclusive<'i>(
         &mut self,
-        input: &'c Chunk<'c>,
+        input: &'i Chunk<'i>,
         token: Option<TokenView>,
-    ) -> LexUnit<'c> {
+    ) -> LexUnit<'i> {
         let raw_end = self.input_cursor.pos();
 
         self.create_lex_unit_with_raw(input, token, raw_end)

@@ -5,29 +5,29 @@ use super::AttributeView;
 use crate::base::Bytes;
 
 #[derive(Getters, Debug)]
-pub struct CharacterToken<'c> {
+pub struct CharacterToken<'i> {
     #[get = "pub"]
-    text: Bytes<'c>,
+    text: Bytes<'i>,
 }
 
 #[derive(Getters, Debug)]
-pub struct CommentToken<'c> {
+pub struct CommentToken<'i> {
     #[get = "pub"]
-    text: Bytes<'c>,
+    text: Bytes<'i>,
 }
 
 #[derive(Getters, Debug)]
-pub struct StartTagToken<'c> {
+pub struct StartTagToken<'i> {
     #[get = "pub"]
-    name: Bytes<'c>,
+    name: Bytes<'i>,
 
     #[get = "pub"]
-    attributes: Attributes<'c>,
+    attributes: Attributes<'i>,
 
     self_closing: bool,
 }
 
-impl<'c> StartTagToken<'c> {
+impl<'i> StartTagToken<'i> {
     #[inline]
     pub fn self_closing(&self) -> bool {
         self.self_closing
@@ -35,32 +35,32 @@ impl<'c> StartTagToken<'c> {
 }
 
 #[derive(Getters, Debug)]
-pub struct EndTagToken<'c> {
+pub struct EndTagToken<'i> {
     #[get = "pub"]
-    name: Bytes<'c>,
+    name: Bytes<'i>,
 }
 
 #[derive(Debug)]
-pub struct DoctypeToken<'c> {
-    name: Option<Bytes<'c>>,
-    public_id: Option<Bytes<'c>>,
-    system_id: Option<Bytes<'c>>,
+pub struct DoctypeToken<'i> {
+    name: Option<Bytes<'i>>,
+    public_id: Option<Bytes<'i>>,
+    system_id: Option<Bytes<'i>>,
     force_quirks: bool,
 }
 
-impl<'c> DoctypeToken<'c> {
+impl<'i> DoctypeToken<'i> {
     #[inline]
-    pub fn name(&self) -> Option<&Bytes<'c>> {
+    pub fn name(&self) -> Option<&Bytes<'i>> {
         self.name.as_ref()
     }
 
     #[inline]
-    pub fn public_id(&self) -> Option<&Bytes<'c>> {
+    pub fn public_id(&self) -> Option<&Bytes<'i>> {
         self.public_id.as_ref()
     }
 
     #[inline]
-    pub fn system_id(&self) -> Option<&Bytes<'c>> {
+    pub fn system_id(&self) -> Option<&Bytes<'i>> {
         self.system_id.as_ref()
     }
 
@@ -71,27 +71,27 @@ impl<'c> DoctypeToken<'c> {
 }
 
 #[derive(Debug)]
-pub enum Token<'c> {
-    Character(CharacterToken<'c>),
-    Comment(CommentToken<'c>),
-    StartTag(StartTagToken<'c>),
-    EndTag(EndTagToken<'c>),
-    Doctype(DoctypeToken<'c>),
+pub enum Token<'i> {
+    Character(CharacterToken<'i>),
+    Comment(CommentToken<'i>),
+    StartTag(StartTagToken<'i>),
+    EndTag(EndTagToken<'i>),
+    Doctype(DoctypeToken<'i>),
     Eof,
 }
 
-impl<'c> Token<'c> {
-    pub fn new_character(text: Bytes<'c>) -> Self {
+impl<'i> Token<'i> {
+    pub fn new_character(text: Bytes<'i>) -> Self {
         Token::Character(CharacterToken { text })
     }
 
-    pub fn new_comment(text: Bytes<'c>) -> Self {
+    pub fn new_comment(text: Bytes<'i>) -> Self {
         Token::Comment(CommentToken { text })
     }
 
     pub fn new_start_tag(
-        name: Bytes<'c>,
-        attributes: ParsedAttributeList<'c>,
+        name: Bytes<'i>,
+        attributes: ParsedAttributeList<'i>,
         self_closing: bool,
     ) -> Self {
         Token::StartTag(StartTagToken {
@@ -101,14 +101,14 @@ impl<'c> Token<'c> {
         })
     }
 
-    pub fn new_end_tag(name: Bytes<'c>) -> Self {
+    pub fn new_end_tag(name: Bytes<'i>) -> Self {
         Token::EndTag(EndTagToken { name })
     }
 
     pub fn new_doctype(
-        name: Option<Bytes<'c>>,
-        public_id: Option<Bytes<'c>>,
-        system_id: Option<Bytes<'c>>,
+        name: Option<Bytes<'i>>,
+        public_id: Option<Bytes<'i>>,
+        system_id: Option<Bytes<'i>>,
         force_quirks: bool,
     ) -> Self {
         Token::Doctype(DoctypeToken {

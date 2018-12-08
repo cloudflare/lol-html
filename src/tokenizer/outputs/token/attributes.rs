@@ -7,31 +7,31 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 #[derive(Getters, Debug)]
-pub struct Attribute<'c> {
+pub struct Attribute<'i> {
     #[get = "pub"]
-    name: Bytes<'c>,
+    name: Bytes<'i>,
 
     #[get = "pub"]
-    value: Bytes<'c>,
+    value: Bytes<'i>,
 }
 
-impl<'c> Attribute<'c> {
-    pub fn new(name: Bytes<'c>, value: Bytes<'c>) -> Self {
+impl<'i> Attribute<'i> {
+    pub fn new(name: Bytes<'i>, value: Bytes<'i>) -> Self {
         Attribute { name, value }
     }
 }
 
-pub trait AttributeList<'c>: Debug + Deref<Target = Vec<Attribute<'c>>> {}
-pub type Attributes<'c> = Box<dyn AttributeList<'c, Target = Vec<Attribute<'c>>> + 'c>;
+pub trait AttributeList<'i>: Debug + Deref<Target = Vec<Attribute<'i>>> {}
+pub type Attributes<'i> = Box<dyn AttributeList<'i, Target = Vec<Attribute<'i>>> + 'i>;
 
-pub struct ParsedAttributeList<'c> {
-    input: &'c Chunk<'c>,
+pub struct ParsedAttributeList<'i> {
+    input: &'i Chunk<'i>,
     attribute_views: Rc<RefCell<Vec<AttributeView>>>,
-    list: LazyCell<Vec<Attribute<'c>>>,
+    list: LazyCell<Vec<Attribute<'i>>>,
 }
 
-impl<'c> ParsedAttributeList<'c> {
-    pub fn new(input: &'c Chunk<'c>, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
+impl<'i> ParsedAttributeList<'i> {
+    pub fn new(input: &'i Chunk<'i>, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
         ParsedAttributeList {
             input,
             attribute_views,
@@ -40,10 +40,10 @@ impl<'c> ParsedAttributeList<'c> {
     }
 }
 
-impl<'c> Deref for ParsedAttributeList<'c> {
-    type Target = Vec<Attribute<'c>>;
+impl<'i> Deref for ParsedAttributeList<'i> {
+    type Target = Vec<Attribute<'i>>;
 
-    fn deref(&self) -> &Vec<Attribute<'c>> {
+    fn deref(&self) -> &Vec<Attribute<'i>> {
         self.list.borrow_with(|| {
             self.attribute_views
                 .borrow()
@@ -63,4 +63,4 @@ impl Debug for ParsedAttributeList<'_> {
     }
 }
 
-impl<'c> AttributeList<'c> for ParsedAttributeList<'c> {}
+impl<'i> AttributeList<'i> for ParsedAttributeList<'i> {}

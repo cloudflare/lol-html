@@ -78,7 +78,7 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
         }
     }
 
-    fn create_tag_preview<'c>(&mut self, input: &'c Chunk<'c>) -> TagPreview<'c> {
+    fn create_tag_preview<'i>(&mut self, input: &'i Chunk<'i>) -> TagPreview<'i> {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.input_cursor.pos(),

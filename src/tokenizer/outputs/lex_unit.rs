@@ -5,17 +5,17 @@ use lazycell::LazyCell;
 use std::fmt::{self, Debug, Write};
 use std::rc::Rc;
 
-pub struct LexUnit<'c> {
-    input: &'c Chunk<'c>,
+pub struct LexUnit<'i> {
+    input: &'i Chunk<'i>,
     raw_range: Option<Range>,
     token_view: Option<TokenView>,
-    raw: LazyCell<Option<Bytes<'c>>>,
-    token: LazyCell<Option<Token<'c>>>,
+    raw: LazyCell<Option<Bytes<'i>>>,
+    token: LazyCell<Option<Token<'i>>>,
 }
 
-impl<'c> LexUnit<'c> {
+impl<'i> LexUnit<'i> {
     pub fn new(
-        input: &'c Chunk<'c>,
+        input: &'i Chunk<'i>,
         token_view: Option<TokenView>,
         raw_range: Option<Range>,
     ) -> Self {
@@ -28,7 +28,7 @@ impl<'c> LexUnit<'c> {
         }
     }
 
-    pub fn raw(&self) -> Option<&Bytes<'c>> {
+    pub fn raw(&self) -> Option<&Bytes<'i>> {
         self.raw
             .borrow_with(|| self.input.opt_slice(self.raw_range))
             .as_ref()
@@ -44,7 +44,7 @@ impl<'c> LexUnit<'c> {
         self.raw_range
     }
 
-    pub fn as_token(&self) -> Option<&Token<'c>> {
+    pub fn as_token(&self) -> Option<&Token<'i>> {
         self.token
             .borrow_with(|| {
                 self.token_view.as_ref().map(|token_view| match token_view {
