@@ -45,7 +45,7 @@ cfg_if! {
                 println!("{:#?}", $bookmark);
                 println!("Next output type: `{:#?}`", $next_output_type);
 
-                let mut chunk_str = $chunk.as_string();
+                let mut chunk_str = $chunk.as_debug_string();
 
                 chunk_str.insert_str($bookmark.pos, "|*|");
 

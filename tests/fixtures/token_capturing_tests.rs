@@ -8,11 +8,12 @@ use cool_thing::tokenizer::{
 };
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
+use encoding_rs::UTF_8;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 fn to_lower_string(bytes: &Bytes<'_>) -> String {
-    let mut string = bytes.as_string();
+    let mut string = bytes.as_string(UTF_8);
 
     string.make_ascii_lowercase();
 

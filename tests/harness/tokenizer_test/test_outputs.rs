@@ -2,6 +2,7 @@ use super::decoder::{to_lower_null_decoded, to_null_decoded, Decoder};
 use super::unescape::Unescape;
 use cool_thing::rewriting::Token;
 use cool_thing::tokenizer::{LexUnit, TagName, TagPreview, TokenView};
+use encoding_rs::UTF_8;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -49,7 +50,7 @@ pub enum TestToken {
 impl TestToken {
     pub fn new(token: Token<'_>, lex_unit: &LexUnit<'_>) -> Self {
         match token {
-            Token::Text(t) => TestToken::Text(t.text().as_string()),
+            Token::Text(t) => TestToken::Text(t.text().as_string(UTF_8)),
             Token::Comment(t) => TestToken::Comment(to_null_decoded(t.text())),
 
             Token::StartTag(t) => TestToken::StartTag {
@@ -62,7 +63,7 @@ impl TestToken {
                 attributes: HashMap::from_iter(t.attributes().iter().rev().map(|a| {
                     (
                         to_lower_null_decoded(&a.name()),
-                        Decoder::new(a.value().as_str())
+                        Decoder::new(&a.value().as_string(UTF_8))
                             .unsafe_null()
                             .attr_entities()
                             .run(),

@@ -1,3 +1,4 @@
+use encoding_rs::{Encoding, WINDOWS_1252};
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
@@ -14,30 +15,37 @@ impl<'b> Bytes<'b> {
         Bytes(Cow::Borrowed(&[]))
     }
 
-    pub fn as_str(&self) -> &str {
-        str::from_utf8(self).unwrap()
+    pub fn from_str(string: &'b str, encoding: &'static Encoding) -> Self {
+        encoding.encode(string).0.into()
     }
 
-    pub fn as_string(&self) -> String {
-        String::from_utf8(self.to_vec()).unwrap()
+    pub fn as_string(&self, encoding: &'static Encoding) -> String {
+        encoding.decode(self).0.into_owned()
+    }
+
+    pub(crate) fn as_debug_string(&self) -> String {
+        // NOTE: use WINDOWS_1252 (superset of ASCII) encoding here as
+        // the most safe variant since we don't know which actual encoding
+        // has been used for bytes.
+        self.as_string(WINDOWS_1252)
+    }
+}
+
+impl<'b> From<Cow<'b, [u8]>> for Bytes<'b> {
+    fn from(bytes: Cow<'b, [u8]>) -> Self {
+        Bytes(bytes)
     }
 }
 
 impl<'b> From<&'b [u8]> for Bytes<'b> {
     fn from(bytes: &'b [u8]) -> Self {
-        Bytes(bytes.into())
-    }
-}
-
-impl<'b> From<Vec<u8>> for Bytes<'b> {
-    fn from(bytes: Vec<u8>) -> Self {
-        Bytes(bytes.into())
+        bytes.into()
     }
 }
 
 impl Debug for Bytes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "`{}`", self.as_str())
+        write!(f, "`{}`", self.as_debug_string())
     }
 }
 

@@ -51,8 +51,9 @@ impl<'b> Chunk<'b> {
         self.data.get(pos).cloned()
     }
 
-    pub fn as_string(&self) -> String {
-        self.data.as_string()
+    #[inline]
+    pub(crate) fn as_debug_string(&self) -> String {
+        self.data.as_debug_string()
     }
 }
 

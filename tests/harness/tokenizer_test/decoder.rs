@@ -1,11 +1,12 @@
 use cool_thing::base::Bytes;
+use encoding_rs::UTF_8;
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
 use std::iter::Peekable;
 use std::str::Chars;
 
 pub fn to_null_decoded(bytes: &Bytes<'_>) -> String {
-    Decoder::new(bytes.as_str()).unsafe_null().run()
+    Decoder::new(&bytes.as_string(UTF_8)).unsafe_null().run()
 }
 
 pub fn to_lower_null_decoded(bytes: &Bytes<'_>) -> String {
