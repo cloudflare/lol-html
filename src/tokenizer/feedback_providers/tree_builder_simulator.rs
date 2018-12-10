@@ -12,7 +12,8 @@
 //! to bail out from the tokenization in such a case
 //! (see `AmbiguityGuard` for the details).
 
-use crate::tokenizer::outputs::{LexUnit, Token, TokenView};
+use crate::base::Bytes;
+use crate::tokenizer::outputs::{LexUnit, TokenView};
 use crate::tokenizer::{TagName, TextParsingMode};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
@@ -34,7 +35,7 @@ pub enum TreeBuilderFeedback {
 }
 
 #[inline]
-fn eq_case_insensitive(actual: &[u8], expected: &[u8]) -> bool {
+fn eq_case_insensitive(actual: &Bytes<'_>, expected: &[u8]) -> bool {
     if actual.len() != expected.len() {
         return false;
     }
@@ -85,11 +86,11 @@ fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
     tag_is_one_of!(tag_name_hash, [Desc, Title, ForeignObject])
 }
 
-macro_rules! expect_token {
+macro_rules! expect_token_view {
     ($lex_unit: ident) => {
-        $lex_unit
-            .as_token()
-            .expect("There should be a token at this point")
+        *$lex_unit
+            .token_view()
+            .expect("There should be a token view at this point")
     };
 }
 
@@ -217,12 +218,9 @@ impl TreeBuilderSimulator {
         &mut self,
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
-        match lex_unit
-            .token_view()
-            .expect("There should be a token at this point")
-        {
+        match expect_token_view!(lex_unit) {
             TokenView::StartTag { self_closing, .. } => {
-                if *self_closing {
+                if self_closing {
                     TreeBuilderFeedback::None
                 } else {
                     self.enter_ns(Namespace::Html)
@@ -236,9 +234,11 @@ impl TreeBuilderSimulator {
         &mut self,
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token!(lex_unit) {
-            Token::EndTag(t) => {
-                if eq_case_insensitive(t.name(), b"annotation-xml") {
+        match expect_token_view!(lex_unit) {
+            TokenView::EndTag { name, .. } => {
+                let name = lex_unit.input().slice(name);
+
+                if eq_case_insensitive(&name, b"annotation-xml") {
                     self.leave_ns()
                 } else {
                     TreeBuilderFeedback::None
@@ -252,15 +252,23 @@ impl TreeBuilderSimulator {
         &mut self,
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token!(lex_unit) {
-            Token::StartTag(t) => {
-                if !t.self_closing() && eq_case_insensitive(t.name(), b"annotation-xml") {
-                    for attr in t.attributes().iter() {
-                        let value = attr.value();
+        match expect_token_view!(lex_unit) {
+            TokenView::StartTag {
+                name,
+                ref attributes,
+                self_closing,
+                ..
+            } => {
+                let name = lex_unit.input().slice(name);
 
-                        if eq_case_insensitive(attr.name(), b"encoding")
-                            && (eq_case_insensitive(value, b"text/html")
-                                || eq_case_insensitive(value, b"application/xhtml+xml"))
+                if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
+                    for attr in attributes.borrow().iter() {
+                        let name = lex_unit.input().slice(attr.name);
+                        let value = lex_unit.input().slice(attr.value);
+
+                        if eq_case_insensitive(&name, b"encoding")
+                            && (eq_case_insensitive(&value, b"text/html")
+                                || eq_case_insensitive(&value, b"application/xhtml+xml"))
                         {
                             return self.enter_ns(Namespace::Html);
                         }
@@ -277,14 +285,14 @@ impl TreeBuilderSimulator {
         &mut self,
         lex_unit: &LexUnit<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token!(lex_unit) {
-            Token::StartTag(t) => {
-                for attr in t.attributes().iter() {
-                    let name = attr.name();
+        match expect_token_view!(lex_unit) {
+            TokenView::StartTag { ref attributes, .. } => {
+                for attr in attributes.borrow().iter() {
+                    let name = lex_unit.input().slice(attr.name);
 
-                    if eq_case_insensitive(name, b"color")
-                        || eq_case_insensitive(name, b"size")
-                        || eq_case_insensitive(name, b"face")
+                    if eq_case_insensitive(&name, b"color")
+                        || eq_case_insensitive(&name, b"size")
+                        || eq_case_insensitive(&name, b"face")
                     {
                         return self.leave_ns();
                     }

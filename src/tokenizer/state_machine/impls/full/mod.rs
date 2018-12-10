@@ -177,7 +177,7 @@ where
 
     #[inline]
     fn emit_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
-        trace!(@output lex_unit);
+        trace!(@lex_unit lex_unit);
 
         self.set_next_lex_unit_start(lex_unit);
         self.lex_unit_handler.handle(lex_unit);
@@ -185,7 +185,7 @@ where
 
     #[inline]
     fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
-        trace!(@output lex_unit);
+        trace!(@lex_unit lex_unit);
 
         self.set_next_lex_unit_start(lex_unit);
 

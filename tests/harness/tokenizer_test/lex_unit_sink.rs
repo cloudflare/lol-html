@@ -1,5 +1,6 @@
 use crate::harness::tokenizer_test::decoder::Decoder;
 use crate::harness::tokenizer_test::test_outputs::TestToken;
+use cool_thing::rewriting::Token;
 use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView};
 
 fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
@@ -29,7 +30,7 @@ impl LexUnitSink {
         if let Some(TokenView::Text) = lex_unit.token_view() {
             self.buffer_text(lex_unit.raw(), mode_snapshot);
         } else {
-            if let Some(token) = lex_unit.as_token() {
+            if let Some(token) = Token::try_from(lex_unit) {
                 self.flush();
                 self.tokens.push(TestToken::new(token, lex_unit));
                 self.text_parsing_mode_snapshots.push(mode_snapshot);

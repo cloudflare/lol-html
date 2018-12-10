@@ -2,7 +2,10 @@ use crate::harness::tokenizer_test::{
     ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
 };
 use cool_thing::base::Bytes;
-use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot, Token};
+use cool_thing::rewriting::Token;
+use cool_thing::tokenizer::{
+    LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot, TokenView,
+};
 use cool_thing::transform_stream::TransformStream;
 use cool_thing::Error;
 use std::cell::{Cell, RefCell};
@@ -139,7 +142,7 @@ impl ParsingResult {
             move |lex_unit: &LexUnit<'_>| {
                 let mut result = result.borrow_mut();
 
-                if let Some(Token::Eof) = lex_unit.as_token() {
+                if let Some(TokenView::Eof) = lex_unit.token_view() {
                     result.add_pending_token_set();
                 } else {
                     result
@@ -169,7 +172,7 @@ impl ParsingResult {
                     };
                 }
 
-                match lex_unit.as_token() {
+                match Token::try_from(lex_unit).as_ref() {
                     Some(Token::StartTag(t)) if to_lower_string(t.name()) == captured_tag_name => {
                         result.open_captured_tag_count += 1;
 

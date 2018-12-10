@@ -1,5 +1,5 @@
-use super::AttributeView;
 use crate::base::{Bytes, Chunk};
+use crate::tokenizer::AttributeView;
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::fmt::{self, Debug};
