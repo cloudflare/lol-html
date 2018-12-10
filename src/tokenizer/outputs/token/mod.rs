@@ -5,7 +5,7 @@ use super::AttributeView;
 use crate::base::Bytes;
 
 #[derive(Getters, Debug)]
-pub struct CharacterToken<'i> {
+pub struct TextToken<'i> {
     #[get = "pub"]
     text: Bytes<'i>,
 }
@@ -72,7 +72,7 @@ impl<'i> DoctypeToken<'i> {
 
 #[derive(Debug)]
 pub enum Token<'i> {
-    Character(CharacterToken<'i>),
+    Text(TextToken<'i>),
     Comment(CommentToken<'i>),
     StartTag(StartTagToken<'i>),
     EndTag(EndTagToken<'i>),
@@ -81,17 +81,17 @@ pub enum Token<'i> {
 }
 
 impl<'i> Token<'i> {
-    pub fn new_character(text: Bytes<'i>) -> Self {
-        Token::Character(CharacterToken { text })
+    pub(crate) fn new_text(text: Bytes<'i>) -> Self {
+        Token::Text(TextToken { text })
     }
 
-    pub fn new_comment(text: Bytes<'i>) -> Self {
+    pub(crate) fn new_comment(text: Bytes<'i>) -> Self {
         Token::Comment(CommentToken { text })
     }
 
-    pub fn new_start_tag(
+    pub(crate) fn new_start_tag<A: AttributeList<'i> + 'i>(
         name: Bytes<'i>,
-        attributes: ParsedAttributeList<'i>,
+        attributes: A,
         self_closing: bool,
     ) -> Self {
         Token::StartTag(StartTagToken {
@@ -101,11 +101,11 @@ impl<'i> Token<'i> {
         })
     }
 
-    pub fn new_end_tag(name: Bytes<'i>) -> Self {
+    pub(crate) fn new_end_tag(name: Bytes<'i>) -> Self {
         Token::EndTag(EndTagToken { name })
     }
 
-    pub fn new_doctype(
+    pub(crate) fn new_doctype(
         name: Option<Bytes<'i>>,
         public_id: Option<Bytes<'i>>,
         system_id: Option<Bytes<'i>>,

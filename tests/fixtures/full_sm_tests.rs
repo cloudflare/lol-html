@@ -113,9 +113,9 @@ impl ParsingResult {
         // NOTE: remove EOF which doesn't have raw representation
         self.lex_unit_sink.tokens.pop();
 
-        // NOTE: there are cases there character token can contain
+        // NOTE: there are cases where text token can contain
         // part that is ignored during parsing, but still has raw
-        // representation. E.g. `a</>b` will produce `ab` character
+        // representation. E.g. `a</>b` will produce `ab` text
         // token, however we'll have `a` and `</>b` raw strings and,
         // thus, we can't produce one-on-one mapping.
         if self.lex_unit_sink.tokens.len() == self.lex_unit_sink.raw_slices.len() {

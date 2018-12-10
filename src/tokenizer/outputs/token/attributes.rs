@@ -59,7 +59,7 @@ impl<'i> Deref for ParsedAttributeList<'i> {
 
 impl Debug for ParsedAttributeList<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.deref().fmt(f)
+        (&**self).fmt(f)
     }
 }
 

@@ -172,9 +172,7 @@ where
 
     #[inline]
     fn set_next_lex_unit_start(&mut self, curr_lex_unit: &LexUnit<'_>) {
-        if let Some(Range { end, .. }) = curr_lex_unit.raw_range() {
-            self.lex_unit_start = end;
-        }
+        self.lex_unit_start = curr_lex_unit.raw_range().end;
     }
 
     #[inline]
@@ -207,10 +205,10 @@ where
         token: Option<TokenView>,
         raw_end: usize,
     ) -> LexUnit<'i> {
-        let raw_range = Some(Range {
+        let raw_range = Range {
             start: self.lex_unit_start,
             end: raw_end,
-        });
+        };
 
         LexUnit::new(input, token, raw_range)
     }

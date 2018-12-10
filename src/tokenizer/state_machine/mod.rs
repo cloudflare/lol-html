@@ -37,7 +37,7 @@ pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, Error>;
 
 pub trait StateMachineActions {
     fn emit_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn emit_chars(&mut self, input: &Chunk<'_>, _ch: Option<u8>);
+    fn emit_text(&mut self, input: &Chunk<'_>, _ch: Option<u8>);
     fn emit_current_token(&mut self, input: &Chunk<'_>, ch: Option<u8>);
     fn emit_tag(&mut self, input: &Chunk<'_>, ch: Option<u8>) -> StateResult;
     fn emit_current_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);

@@ -8,14 +8,14 @@ define_state_group!(tag_states_group = {
         b'/'  => ( --> end_tag_open_state )
         alpha => ( create_start_tag; start_token_part; update_tag_name_hash; --> tag_name_state )
         b'?'  => ( unmark_tag_start; create_comment; start_token_part; --> bogus_comment_state )
-        eof   => ( emit_chars; emit_eof; )
-        _     => ( unmark_tag_start; emit_chars; reconsume in data_state )
+        eof   => ( emit_text; emit_eof; )
+        _     => ( unmark_tag_start; emit_text; reconsume in data_state )
     }
 
     end_tag_open_state {
         alpha => ( create_end_tag; start_token_part; update_tag_name_hash; --> tag_name_state )
         b'>'  => ( unmark_tag_start; emit_raw_without_token; --> data_state )
-        eof   => ( emit_chars; emit_eof; )
+        eof   => ( emit_text; emit_eof; )
         _     => ( create_comment; start_token_part; reconsume in bogus_comment_state )
     }
 

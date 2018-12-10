@@ -19,7 +19,7 @@ enum TokenKind {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TestToken {
-    Character(String),
+    Text(String),
 
     Comment(String),
 
@@ -48,7 +48,7 @@ pub enum TestToken {
 impl TestToken {
     pub fn new(token: &Token<'_>, lex_unit: &LexUnit<'_>) -> Self {
         match token {
-            Token::Character(t) => TestToken::Character(t.text().as_string()),
+            Token::Text(t) => TestToken::Text(t.text().as_string()),
             Token::Comment(t) => TestToken::Comment(to_null_decoded(t.text())),
 
             Token::StartTag(t) => TestToken::StartTag {
@@ -131,7 +131,7 @@ impl<'de> Deserialize<'de> for TestToken {
                 let kind = next!("2 or more");
 
                 let mut token = match kind {
-                    TokenKind::Character => TestToken::Character(next!("2")),
+                    TokenKind::Character => TestToken::Text(next!("2")),
                     TokenKind::Comment => TestToken::Comment(next!("2")),
                     TokenKind::StartTag => TestToken::StartTag {
                         name: {
@@ -197,7 +197,7 @@ impl<'de> Deserialize<'de> for TestToken {
 impl Unescape for TestToken {
     fn unescape(&mut self) -> Result<(), Error> {
         match *self {
-            TestToken::Character(ref mut s) | TestToken::Comment(ref mut s) => {
+            TestToken::Text(ref mut s) | TestToken::Comment(ref mut s) => {
                 s.unescape()?;
             }
 

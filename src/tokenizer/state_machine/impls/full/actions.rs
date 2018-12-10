@@ -20,21 +20,20 @@ where
 
     #[inline]
     fn emit_eof(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
-        let lex_unit = LexUnit::new(input, Some(TokenView::Eof), None);
+        let lex_unit = self.create_lex_unit_with_raw_exclusive(input, Some(TokenView::Eof));
 
         self.emit_lex_unit(&lex_unit);
     }
 
     #[inline]
-    fn emit_chars(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
+    fn emit_text(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
         if self.input_cursor.pos() > self.lex_unit_start {
-            // NOTE: unlike any other tokens, character tokens don't have
+            // NOTE: unlike any other tokens, text tokens (except EOF) don't have
             // any lexical symbols that determine their bounds. Therefore,
-            // representation of character token content is the raw slice.
-            // Also, we always emit characters if we encounter some other bounded
+            // representation of text token content is the raw slice.
+            // Also, we always emit text if we encounter some other bounded
             // lexical structure and, thus, we use exclusive range for the raw slice.
-            let lex_unit =
-                self.create_lex_unit_with_raw_exclusive(input, Some(TokenView::Character));
+            let lex_unit = self.create_lex_unit_with_raw_exclusive(input, Some(TokenView::Text));
 
             self.emit_lex_unit(&lex_unit);
         }

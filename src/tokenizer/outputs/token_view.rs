@@ -19,7 +19,7 @@ impl Align for AttributeView {
 // without necessity to iterate over attributes vector.
 #[derive(Debug)]
 pub enum TokenView {
-    Character,
+    Text,
 
     Comment(Range),
 

@@ -7,18 +7,14 @@ use std::rc::Rc;
 
 pub struct LexUnit<'i> {
     input: &'i Chunk<'i>,
-    raw_range: Option<Range>,
+    raw_range: Range,
     token_view: Option<TokenView>,
-    raw: LazyCell<Option<Bytes<'i>>>,
+    raw: LazyCell<Bytes<'i>>,
     token: LazyCell<Option<Token<'i>>>,
 }
 
 impl<'i> LexUnit<'i> {
-    pub fn new(
-        input: &'i Chunk<'i>,
-        token_view: Option<TokenView>,
-        raw_range: Option<Range>,
-    ) -> Self {
+    pub fn new(input: &'i Chunk<'i>, token_view: Option<TokenView>, raw_range: Range) -> Self {
         LexUnit {
             input,
             raw_range,
@@ -28,10 +24,9 @@ impl<'i> LexUnit<'i> {
         }
     }
 
-    pub fn raw(&self) -> Option<&Bytes<'i>> {
-        self.raw
-            .borrow_with(|| self.input.opt_slice(self.raw_range))
-            .as_ref()
+    #[inline]
+    pub fn raw(&self) -> &Bytes<'i> {
+        self.raw.borrow_with(|| self.input.slice(self.raw_range))
     }
 
     #[inline]
@@ -40,7 +35,7 @@ impl<'i> LexUnit<'i> {
     }
 
     #[inline]
-    pub fn raw_range(&self) -> Option<Range> {
+    pub fn raw_range(&self) -> Range {
         self.raw_range
     }
 
@@ -48,12 +43,7 @@ impl<'i> LexUnit<'i> {
         self.token
             .borrow_with(|| {
                 self.token_view.as_ref().map(|token_view| match token_view {
-                    TokenView::Character => Token::new_character(
-                        self.input.slice(
-                            self.raw_range
-                                .expect("Character token should always have raw representation"),
-                        ),
-                    ),
+                    TokenView::Text => Token::new_text(self.input.slice(self.raw_range)),
 
                     &TokenView::Comment(text) => Token::new_comment(self.input.slice(text)),
 
@@ -92,20 +82,17 @@ impl<'i> LexUnit<'i> {
 impl Debug for LexUnit<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut builder = f.debug_struct("LexUnit");
+        let mut pretty_raw = self.input.as_string();
+        let mut start = String::new();
+        let mut end = String::new();
 
-        if let Some(raw_range) = self.raw_range {
-            let mut pretty_raw = self.input.as_string();
-            let mut start = String::new();
-            let mut end = String::new();
+        write!(start, "|{}|", self.raw_range.start)?;
+        write!(end, "|{}|", self.raw_range.end)?;
 
-            write!(start, "|{}|", raw_range.start)?;
-            write!(end, "|{}|", raw_range.end)?;
+        pretty_raw.insert_str(self.raw_range.end, &end);
+        pretty_raw.insert_str(self.raw_range.start, &start);
 
-            pretty_raw.insert_str(raw_range.end, &end);
-            pretty_raw.insert_str(raw_range.start, &start);
-
-            builder.field("raw", &format_args!("`{}`", &pretty_raw));
-        }
+        builder.field("raw", &format_args!("`{}`", &pretty_raw));
 
         if let (Some(token_view), Some(token)) = (self.token_view.as_ref(), self.as_token()) {
             builder

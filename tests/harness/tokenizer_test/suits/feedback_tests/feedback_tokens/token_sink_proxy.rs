@@ -12,13 +12,13 @@ pub struct TokenSinkProxy<'a, Sink> {
 }
 
 impl<'a, Sink> TokenSinkProxy<'a, Sink> {
-    fn push_character_token(&mut self, s: &str) {
-        if let Some(&mut TestToken::Character(ref mut last)) = self.tokens.last_mut() {
+    fn push_text_token(&mut self, s: &str) {
+        if let Some(&mut TestToken::Text(ref mut last)) = self.tokens.last_mut() {
             *last += s;
 
             return;
         }
-        self.tokens.push(TestToken::Character(s.to_string()));
+        self.tokens.push(TestToken::Text(s.to_string()));
     }
 }
 
@@ -59,11 +59,11 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
             }
             Token::CharacterTokens(ref s) => {
                 if !s.is_empty() {
-                    self.push_character_token(s);
+                    self.push_text_token(s);
                 }
             }
             Token::NullCharacterToken => {
-                self.push_character_token("\0");
+                self.push_text_token("\0");
             }
             _ => {}
         }

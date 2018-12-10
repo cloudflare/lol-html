@@ -84,7 +84,7 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
     noop_action!(
         emit_eof,
-        emit_chars,
+        emit_text,
         emit_current_token,
         emit_current_token_and_eof,
         emit_raw_without_token,

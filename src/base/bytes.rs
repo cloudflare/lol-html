@@ -1,14 +1,17 @@
+use std::borrow::Cow;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::str;
 
-/// Bytes is a thin wrapper around a byte slice with some handy APIs
+/// Bytes is a thin wrapper around either byte slice or
+/// owned bytes with some handy APIs attached
 #[repr(transparent)]
-pub struct Bytes<'b>(&'b [u8]);
+#[derive(Clone)]
+pub struct Bytes<'b>(Cow<'b, [u8]>);
 
 impl<'b> Bytes<'b> {
     pub fn empty() -> Self {
-        Bytes(&[])
+        Bytes(Cow::Borrowed(&[]))
     }
 
     pub fn as_str(&self) -> &str {
@@ -22,7 +25,13 @@ impl<'b> Bytes<'b> {
 
 impl<'b> From<&'b [u8]> for Bytes<'b> {
     fn from(bytes: &'b [u8]) -> Self {
-        Bytes(bytes)
+        Bytes(bytes.into())
+    }
+}
+
+impl<'b> From<Vec<u8>> for Bytes<'b> {
+    fn from(bytes: Vec<u8>) -> Self {
+        Bytes(bytes.into())
     }
 }
 
@@ -36,6 +45,6 @@ impl Deref for Bytes<'_> {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {
-        self.0
+        &*self.0
     }
 }

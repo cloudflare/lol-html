@@ -21,13 +21,13 @@ pub struct LexUnitSink {
     pub tokens: Vec<TestToken>,
     pub raw_slices: Vec<Vec<u8>>,
     pub text_parsing_mode_snapshots: Vec<TextParsingModeSnapshot>,
-    buffered_chars: Option<Vec<u8>>,
+    buffered_text: Option<Vec<u8>>,
 }
 
 impl LexUnitSink {
     pub fn add_lex_unit(&mut self, lex_unit: &LexUnit<'_>, mode_snapshot: TextParsingModeSnapshot) {
-        if let (Some(TokenView::Character), Some(raw)) = (lex_unit.token_view(), lex_unit.raw()) {
-            self.buffer_chars(&raw, mode_snapshot);
+        if let Some(TokenView::Text) = lex_unit.token_view() {
+            self.buffer_text(lex_unit.raw(), mode_snapshot);
         } else {
             if let Some(token) = lex_unit.as_token() {
                 self.flush();
@@ -35,36 +35,34 @@ impl LexUnitSink {
                 self.text_parsing_mode_snapshots.push(mode_snapshot);
             }
 
-            if let Some(raw) = lex_unit.raw() {
-                self.raw_slices.push(raw.to_vec());
-            }
+            self.raw_slices.push(lex_unit.raw().to_vec());
         }
     }
 
     pub fn flush(&mut self) {
-        if let Some(buffered_chars) = self.buffered_chars.take() {
-            let mut text = String::from_utf8(buffered_chars).unwrap();
+        if let Some(buffered_text) = self.buffered_text.take() {
+            let mut text = String::from_utf8(buffered_text).unwrap();
 
             let mode_snapshot = self
                 .text_parsing_mode_snapshots
                 .last()
-                .expect("Buffered chars should have associated mode snapshot");
+                .expect("Buffered text should have associated mode snapshot");
 
             text = decode_text(&mut text, mode_snapshot.mode);
-            self.tokens.push(TestToken::Character(text));
+            self.tokens.push(TestToken::Text(text));
         }
     }
 
-    fn buffer_chars(&mut self, chars: &[u8], mode_snapshot: TextParsingModeSnapshot) {
-        if let Some(ref mut buffered_chars) = self.buffered_chars {
-            buffered_chars.extend_from_slice(chars);
+    fn buffer_text(&mut self, text: &[u8], mode_snapshot: TextParsingModeSnapshot) {
+        if let Some(ref mut buffered_text) = self.buffered_text {
+            buffered_text.extend_from_slice(text);
 
             if let Some(last_raw) = self.raw_slices.last_mut() {
-                last_raw.extend_from_slice(chars);
+                last_raw.extend_from_slice(text);
             }
         } else {
-            self.buffered_chars = Some(chars.to_vec());
-            self.raw_slices.push(chars.to_vec());
+            self.buffered_text = Some(text.to_vec());
+            self.raw_slices.push(text.to_vec());
             self.text_parsing_mode_snapshots.push(mode_snapshot);
         }
     }
