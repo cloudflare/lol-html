@@ -35,8 +35,8 @@ where
     input_cursor: Cursor,
     lex_unit_start: usize,
     token_part_start: usize,
-    state_enter: bool,
-    allow_cdata: bool,
+    is_state_enter: bool,
+    cdata_allowed: bool,
     lex_unit_handler: LH,
     tag_lex_unit_handler: TH,
     state: State<LH, TH>,
@@ -70,8 +70,8 @@ where
             input_cursor: Cursor::default(),
             lex_unit_start: 0,
             token_part_start: 0,
-            state_enter: true,
-            allow_cdata: false,
+            is_state_enter: true,
+            cdata_allowed: false,
             lex_unit_handler,
             tag_lex_unit_handler,
             state: FullStateMachine::data_state,
@@ -152,8 +152,8 @@ where
                 self.switch_text_parsing_mode(mode);
                 ParsingLoopDirective::Continue
             }
-            TreeBuilderFeedback::SetAllowCdata(allow_cdata) => {
-                self.allow_cdata = allow_cdata;
+            TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
+                self.cdata_allowed = cdata_allowed;
                 ParsingLoopDirective::None
             }
             TreeBuilderFeedback::RequestLexUnit(callback) => {
@@ -249,7 +249,7 @@ where
     }
 
     #[inline]
-    fn get_state(&self) -> State<LH, TH> {
+    fn state(&self) -> State<LH, TH> {
         self.state
     }
 
@@ -273,7 +273,7 @@ where
     }
 
     #[inline]
-    fn store_last_text_parsing_mode_change(&mut self, mode: TextParsingMode) {
+    fn set_last_text_parsing_mode(&mut self, mode: TextParsingMode) {
         self.last_text_parsing_mode_change = mode;
 
         #[cfg(feature = "testing_api")]

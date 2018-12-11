@@ -60,7 +60,7 @@ where
         let next_output_type = self.emit_tag_lex_unit(&lex_unit);
 
         // NOTE: exit from any non-initial text parsing mode always happens on tag emission.
-        self.store_last_text_parsing_mode_change(TextParsingMode::Data);
+        self.set_last_text_parsing_mode(TextParsingMode::Data);
 
         let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
 

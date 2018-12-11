@@ -16,6 +16,6 @@ where
 
     #[inline]
     fn cdata_allowed(&self, _ch: Option<u8>) -> bool {
-        self.allow_cdata
+        self.cdata_allowed
     }
 }

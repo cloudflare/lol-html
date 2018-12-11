@@ -41,8 +41,8 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     is_in_end_tag: bool,
     tag_name_hash: Option<u64>,
     last_start_tag_name_hash: Option<u64>,
-    state_enter: bool,
-    allow_cdata: bool,
+    is_state_enter: bool,
+    cdata_allowed: bool,
     tag_preview_handler: H,
     state: State<H>,
     closing_quote: u8,
@@ -64,8 +64,8 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             is_in_end_tag: false,
             tag_name_hash: None,
             last_start_tag_name_hash: None,
-            state_enter: true,
-            allow_cdata: false,
+            is_state_enter: true,
+            cdata_allowed: false,
             tag_preview_handler,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
@@ -134,8 +134,8 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
                 self.pending_text_parsing_mode_change = Some(mode);
                 ParsingLoopDirective::None
             }
-            TreeBuilderFeedback::SetAllowCdata(allow_cdata) => {
-                self.allow_cdata = allow_cdata;
+            TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
+                self.cdata_allowed = cdata_allowed;
                 ParsingLoopDirective::None
             }
             TreeBuilderFeedback::RequestLexUnit(_) => ParsingLoopDirective::Break(
@@ -157,7 +157,7 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     }
 
     #[inline]
-    fn get_state(&self) -> State<H> {
+    fn state(&self) -> State<H> {
         self.state
     }
 
@@ -195,7 +195,7 @@ impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
     }
 
     #[inline]
-    fn store_last_text_parsing_mode_change(&mut self, mode: TextParsingMode) {
+    fn set_last_text_parsing_mode(&mut self, mode: TextParsingMode) {
         self.last_text_parsing_mode_change = mode;
     }
 

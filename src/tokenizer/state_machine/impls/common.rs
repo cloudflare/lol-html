@@ -5,32 +5,37 @@ use cfg_if::cfg_if;
 macro_rules! impl_common_sm_accessors {
     () => {
         #[inline]
-        fn get_input_cursor(&mut self) -> &mut Cursor {
+        fn input_cursor(&mut self) -> &mut Cursor {
             &mut self.input_cursor
         }
 
         #[inline]
-        fn set_is_state_enter(&mut self, val: bool) {
-            self.state_enter = val;
+        fn set_input_cursor(&mut self, input_cursor: Cursor) {
+            self.input_cursor = input_cursor;
         }
 
         #[inline]
         fn is_state_enter(&self) -> bool {
-            self.state_enter
+            self.is_state_enter
         }
 
         #[inline]
-        fn get_last_text_parsing_mode(&self) -> TextParsingMode {
+        fn set_is_state_enter(&mut self, val: bool) {
+            self.is_state_enter = val;
+        }
+
+        #[inline]
+        fn last_text_parsing_mode(&self) -> TextParsingMode {
             self.last_text_parsing_mode_change
         }
 
         #[inline]
-        fn get_closing_quote(&self) -> u8 {
+        fn closing_quote(&self) -> u8 {
             self.closing_quote
         }
 
         #[inline]
-        fn get_last_start_tag_name_hash(&self) -> Option<u64> {
+        fn last_start_tag_name_hash(&self) -> Option<u64> {
             self.last_start_tag_name_hash
         }
 
@@ -40,13 +45,8 @@ macro_rules! impl_common_sm_accessors {
         }
 
         #[inline]
-        fn set_allow_cdata(&mut self, allow_cdata: bool) {
-            self.allow_cdata = allow_cdata;
-        }
-
-        #[inline]
-        fn set_input_cursor(&mut self, input_cursor: Cursor) {
-            self.input_cursor = input_cursor;
+        fn set_cdata_allowed(&mut self, cdata_allowed: bool) {
+            self.cdata_allowed = cdata_allowed;
         }
     };
 }

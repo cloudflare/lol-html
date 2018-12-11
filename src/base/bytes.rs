@@ -39,7 +39,7 @@ impl<'b> From<Cow<'b, [u8]>> for Bytes<'b> {
 
 impl<'b> From<&'b [u8]> for Bytes<'b> {
     fn from(bytes: &'b [u8]) -> Self {
-        bytes.into()
+        Bytes(bytes.into())
     }
 }
 

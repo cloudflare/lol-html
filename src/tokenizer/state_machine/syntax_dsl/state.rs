@@ -10,7 +10,7 @@ macro_rules! state {
             // NOTE: clippy complains about some states that break the loop in each match arm
             #[allow(clippy::never_loop)]
             loop {
-                let ch = self.get_input_cursor().consume_ch(input);
+                let ch = self.input_cursor().consume_ch(input);
 
                 state_body!(|[self, input, ch]|> [$($arms)*], [$($($enter_actions)*)*]);
             }

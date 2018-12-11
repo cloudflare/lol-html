@@ -14,7 +14,7 @@ use crate::Error;
 
 #[derive(Debug, Copy, Clone)]
 pub struct StateMachineBookmark {
-    pub allow_cdata: bool,
+    pub cdata_allowed: bool,
     pub text_parsing_mode: TextParsingMode,
     pub last_start_tag_name_hash: Option<u64>,
     pub pos: usize,
@@ -83,27 +83,34 @@ pub trait StateMachineConditions {
 pub trait StateMachine: StateMachineActions + StateMachineConditions {
     define_states!();
 
+    fn state(&self) -> fn(&mut Self, &Chunk<'_>) -> StateResult;
     fn set_state(&mut self, state: fn(&mut Self, &Chunk<'_>) -> StateResult);
-    fn get_state(&self) -> fn(&mut Self, &Chunk<'_>) -> StateResult;
-    fn get_input_cursor(&mut self) -> &mut Cursor;
-    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize;
-    fn adjust_for_next_input(&mut self);
+
+    fn input_cursor(&mut self) -> &mut Cursor;
+    fn set_input_cursor(&mut self, input_cursor: Cursor);
+
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
-    fn get_closing_quote(&self) -> u8;
-    fn get_last_start_tag_name_hash(&self) -> Option<u64>;
+
+    fn last_start_tag_name_hash(&self) -> Option<u64>;
     fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);
+
+    fn set_last_text_parsing_mode(&mut self, mode: TextParsingMode);
+    fn last_text_parsing_mode(&self) -> TextParsingMode;
+
+    fn set_cdata_allowed(&mut self, cdata_allowed: bool);
+
+    fn closing_quote(&self) -> u8;
+
+    fn adjust_for_next_input(&mut self);
     fn adjust_to_bookmark(&mut self, pos: usize);
-    fn set_allow_cdata(&mut self, allow_cdata: bool);
-    fn set_input_cursor(&mut self, input_cursor: Cursor);
-    fn store_last_text_parsing_mode_change(&mut self, mode: TextParsingMode);
-    fn get_last_text_parsing_mode(&self) -> TextParsingMode;
     fn enter_ch_sequence_matching(&mut self);
     fn leave_ch_sequence_matching(&mut self);
+    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize;
 
     fn run_parsing_loop(&mut self, input: &Chunk<'_>) -> ParsingLoopResult {
         loop {
-            let state = self.get_state();
+            let state = self.state();
 
             if let ParsingLoopDirective::Break(reason) = state(self, input)? {
                 return Ok(reason);
@@ -116,7 +123,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         input: &Chunk<'_>,
         bookmark: StateMachineBookmark,
     ) -> ParsingLoopResult {
-        self.set_allow_cdata(bookmark.allow_cdata);
+        self.set_cdata_allowed(bookmark.cdata_allowed);
         self.switch_text_parsing_mode(bookmark.text_parsing_mode);
         self.set_last_start_tag_name_hash(bookmark.last_start_tag_name_hash);
         self.adjust_to_bookmark(bookmark.pos);
@@ -141,9 +148,9 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     #[inline]
     fn create_bookmark(&self, pos: usize) -> StateMachineBookmark {
         StateMachineBookmark {
-            allow_cdata: self.cdata_allowed(None),
-            text_parsing_mode: self.get_last_text_parsing_mode(),
-            last_start_tag_name_hash: self.get_last_start_tag_name_hash(),
+            cdata_allowed: self.cdata_allowed(None),
+            text_parsing_mode: self.last_text_parsing_mode(),
+            last_start_tag_name_hash: self.last_start_tag_name_hash(),
             pos,
         }
     }
@@ -156,7 +163,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
 
     #[inline]
     fn switch_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        self.store_last_text_parsing_mode_change(mode);
+        self.set_last_text_parsing_mode(mode);
 
         self.switch_state(match mode {
             TextParsingMode::Data => Self::data_state,
