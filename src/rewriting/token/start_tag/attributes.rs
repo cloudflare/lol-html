@@ -21,13 +21,10 @@ impl<'i> Attribute<'i> {
     }
 }
 
-pub trait AttributeList<'i>: Debug + Deref<Target = Vec<Attribute<'i>>> {}
-pub type Attributes<'i> = Box<dyn AttributeList<'i, Target = Vec<Attribute<'i>>> + 'i>;
-
 pub struct ParsedAttributeList<'i> {
     input: &'i Chunk<'i>,
     attribute_views: Rc<RefCell<Vec<AttributeView>>>,
-    list: LazyCell<Vec<Attribute<'i>>>,
+    items: LazyCell<Vec<Attribute<'i>>>,
 }
 
 impl<'i> ParsedAttributeList<'i> {
@@ -35,16 +32,12 @@ impl<'i> ParsedAttributeList<'i> {
         ParsedAttributeList {
             input,
             attribute_views,
-            list: LazyCell::default(),
+            items: LazyCell::default(),
         }
     }
-}
 
-impl<'i> Deref for ParsedAttributeList<'i> {
-    type Target = Vec<Attribute<'i>>;
-
-    fn deref(&self) -> &Vec<Attribute<'i>> {
-        self.list.borrow_with(|| {
+    fn items(&self) -> &Vec<Attribute<'i>> {
+        self.items.borrow_with(|| {
             self.attribute_views
                 .borrow()
                 .iter()
@@ -57,10 +50,36 @@ impl<'i> Deref for ParsedAttributeList<'i> {
     }
 }
 
-impl Debug for ParsedAttributeList<'_> {
+pub enum Attributes<'i> {
+    Parsed(ParsedAttributeList<'i>),
+    Custom(Vec<Attribute<'i>>),
+}
+
+impl<'i> From<ParsedAttributeList<'i>> for Attributes<'i> {
+    fn from(list: ParsedAttributeList<'i>) -> Self {
+        Attributes::Parsed(list)
+    }
+}
+
+impl<'i> From<Vec<Attribute<'i>>> for Attributes<'i> {
+    fn from(list: Vec<Attribute<'i>>) -> Self {
+        Attributes::Custom(list)
+    }
+}
+
+impl<'i> Deref for Attributes<'i> {
+    type Target = Vec<Attribute<'i>>;
+
+    fn deref(&self) -> &Vec<Attribute<'i>> {
+        match self {
+            Attributes::Parsed(list) => list.items(),
+            Attributes::Custom(list) => list,
+        }
+    }
+}
+
+impl Debug for Attributes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         (&**self).fmt(f)
     }
 }
-
-impl<'i> AttributeList<'i> for ParsedAttributeList<'i> {}

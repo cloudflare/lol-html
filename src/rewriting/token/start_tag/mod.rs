@@ -23,7 +23,7 @@ impl<'i> StartTag<'i> {
     ) -> Self {
         StartTag {
             name,
-            attributes: Box::new(attributes),
+            attributes: attributes.into(),
             self_closing,
         }
     }
