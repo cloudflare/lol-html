@@ -11,8 +11,8 @@ use crate::tokenizer::{
     FeedbackProviders, LexUnitHandler, NextOutputType, ParsingLoopTerminationReason,
     TagLexUnitHandler, TagName, TextParsingMode, TreeBuilderFeedback,
 };
-use crate::Error;
 use cfg_if::cfg_if;
+use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 

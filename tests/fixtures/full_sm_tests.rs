@@ -3,7 +3,7 @@ use crate::harness::tokenizer_test::{
 };
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
-use cool_thing::Error;
+use failure::Error;
 use itertools::izip;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -21,7 +21,7 @@ impl ParsingResult {
         };
 
         // TODO use bailout handler later with substitution and test eager state machine as well.
-        if let Err(e) = result.parse(input, initial_mode_snapshot) {
+        if let Err(ref e) = result.parse(input, initial_mode_snapshot) {
             result.add_bailout(e);
         }
 
@@ -87,7 +87,7 @@ impl ParsingResult {
         )
     }
 
-    fn add_bailout(&mut self, reason: Error) {
+    fn add_bailout(&mut self, reason: &Error) {
         self.bailout = Some(Bailout {
             reason: format!("{:?}", reason),
             parsed_chunk: self.get_cumulative_raw_string(),

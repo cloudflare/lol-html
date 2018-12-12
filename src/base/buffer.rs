@@ -1,5 +1,16 @@
-use crate::Error;
 use safemem::copy_over;
+
+#[derive(Fail, Debug)]
+#[fail(display = "The buffer capacity ({}B) has been exceeded.", capacity)]
+pub struct BufferCapacityExceededError {
+    capacity: usize,
+}
+
+impl BufferCapacityExceededError {
+    fn new(capacity: usize) -> Self {
+        BufferCapacityExceededError { capacity }
+    }
+}
 
 pub struct Buffer {
     data: Box<[u8]>,
@@ -16,7 +27,7 @@ impl Buffer {
         }
     }
 
-    pub fn append(&mut self, slice: &[u8]) -> Result<(), Error> {
+    pub fn append(&mut self, slice: &[u8]) -> Result<(), BufferCapacityExceededError> {
         let slice_len = slice.len();
 
         if self.watermark + slice_len <= self.capacity {
@@ -27,11 +38,11 @@ impl Buffer {
 
             Ok(())
         } else {
-            Err(Error::BufferCapacityExceeded)
+            Err(BufferCapacityExceededError::new(self.capacity))
         }
     }
 
-    pub fn init_with(&mut self, slice: &[u8]) -> Result<(), Error> {
+    pub fn init_with(&mut self, slice: &[u8]) -> Result<(), BufferCapacityExceededError> {
         self.watermark = 0;
 
         self.append(slice)

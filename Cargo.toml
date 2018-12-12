@@ -22,6 +22,7 @@ name = "bench"
 
 [dependencies]
 encoding_rs = "0.8.13"
+failure = "0.1.3"
 getset = "0.0.6"
 lazycell = "1.2"
 safemem = "0.3.0"

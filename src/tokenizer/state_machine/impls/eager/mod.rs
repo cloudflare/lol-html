@@ -12,7 +12,7 @@ use crate::tokenizer::{
     FeedbackProviders, NextOutputType, TagName, TagPreviewHandler, TextParsingMode,
     TreeBuilderFeedback,
 };
-use crate::Error;
+use failure::Error;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;

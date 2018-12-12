@@ -7,8 +7,8 @@ use cool_thing::tokenizer::{
     LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot, TokenView,
 };
 use cool_thing::transform_stream::TransformStream;
-use cool_thing::Error;
 use encoding_rs::UTF_8;
+use failure::Error;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 

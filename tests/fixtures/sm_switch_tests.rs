@@ -4,7 +4,7 @@ use crate::harness::tokenizer_test::{
 use cool_thing::rewriting::Token;
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
-use cool_thing::Error;
+use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 

@@ -2,6 +2,9 @@
 extern crate getset;
 
 #[macro_use]
+extern crate failure;
+
+#[macro_use]
 mod debug_trace;
 
 #[macro_use]
@@ -10,14 +13,6 @@ pub mod base;
 pub mod rewriting;
 pub mod tokenizer;
 pub mod transform_stream;
-
-#[derive(Debug, Copy, Clone)]
-pub enum Error {
-    BufferCapacityExceeded,
-    TextParsingAmbiguity,
-    MaxTagNestingReached,
-}
-
 // TODO
 // -- Functionality
 // 5. Adjustable limits

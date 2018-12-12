@@ -3,7 +3,7 @@ use cool_thing::tokenizer::{
     LexUnitHandler, NextOutputType, TagLexUnitHandler, TagPreviewHandler, TextParsingModeSnapshot,
 };
 use cool_thing::transform_stream::TransformStream;
-use cool_thing::Error;
+use failure::Error;
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde_json::error::Error as SerdeError;

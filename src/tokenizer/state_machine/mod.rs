@@ -10,7 +10,7 @@ pub use self::impls::*;
 
 use crate::base::{Chunk, Cursor};
 use crate::tokenizer::{NextOutputType, TextParsingMode};
-use crate::Error;
+use failure::Error;
 
 #[derive(Debug, Copy, Clone)]
 pub struct StateMachineBookmark {

@@ -35,7 +35,84 @@
 //! trigger this bailout case should be seen quite rarely in the wild.
 
 use crate::tokenizer::TagName;
-use crate::Error;
+use std::fmt::{self, Display};
+
+macro_rules! err_msg_tmpl {
+    (text_parsing_ambiguity) => {
+        concat!(
+            "The parser has encountered a text content tag (`<{}>`) in the context where it is ",
+            "ambiguous whether this tag should be ignored or not. And, thus, is is unclear is ",
+            "consequent content should be parsed as raw text or an HTML markup.",
+            "\n\n",
+            "This error occurs due to the limited capabilities of the streaming parsing. However, ",
+            "almost all of the cases of this error are caused by a non-conforming markup (e.g. a ",
+            "`<script>` element in `<select>` element)."
+        )
+    };
+
+    (max_template_nesting_reached) => {
+        concat!(
+            "The parser has encountered {} nested `<template>` tags which exceed supported depth",
+            "limits.",
+            "\n\n",
+            "Even if `<template>` elements are not captured by the provided selectors the parser",
+            "tracks them to maintain correct inner state."
+        )
+    };
+}
+
+#[derive(Fail, Debug)]
+pub enum AmbiguityGuardError {
+    TextParsingAmbiguity { on_tag_name: String },
+    MaxTemplateNestingReached { depth_limit: usize },
+}
+
+impl Display for AmbiguityGuardError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AmbiguityGuardError::TextParsingAmbiguity { on_tag_name } => {
+                write!(f, err_msg_tmpl!(text_parsing_ambiguity), on_tag_name)
+            }
+            AmbiguityGuardError::MaxTemplateNestingReached { depth_limit } => {
+                write!(f, err_msg_tmpl!(max_template_nesting_reached), depth_limit)
+            }
+        }
+    }
+}
+
+// NOTE: use macro for the assertion function definition, so we can
+// provide ambiguity error with a string representation of the tag
+// name without a necessity to implement conversion from u64 tag name
+// hash to a string. This also allows us to be consistent about asserted
+// tag name hashes and the corresponding tag name strings.
+macro_rules! create_assert_for_tags {
+    ( $($tag:ident),+ ) => {
+        #[inline]
+        fn tag_hash_to_string(tag_name_hash: u64) -> String {
+            match tag_name_hash {
+                $(t if t == TagName::$tag => stringify!($tag).to_string().to_lowercase(),)+
+                _ => unreachable!("Error tag name should have a string representation")
+            }
+        }
+
+        #[inline]
+        fn assert_not_ambigious_mode_switch(
+            tag_name_hash: u64,
+        ) -> Result<(), AmbiguityGuardError> {
+            if tag_is_one_of!(tag_name_hash, [ $($tag),+ ]) {
+                Err(AmbiguityGuardError::TextParsingAmbiguity {
+                    on_tag_name: tag_hash_to_string(tag_name_hash)
+                })
+            } else {
+                Ok(())
+            }
+        }
+    };
+}
+
+create_assert_for_tags!(
+    Textarea, Title, Plaintext, Script, Style, Iframe, Xmp, Noembed, Noframes, Noscript
+);
 
 #[derive(Copy, Clone)]
 enum State {
@@ -43,18 +120,6 @@ enum State {
     InSelect,
     InTemplateInSelect(u8),
     InOrAfterFrameset,
-}
-
-#[inline]
-fn assert_not_ambigious_mode_switch(tag_name_hash: u64) -> Result<(), Error> {
-    if tag_is_one_of!(
-        tag_name_hash,
-        [Textarea, Title, Plaintext, Script, Style, Iframe, Xmp, Noembed, Noframes, Noscript]
-    ) {
-        Err(Error::TextParsingAmbiguity)
-    } else {
-        Ok(())
-    }
 }
 
 pub struct AmbiguityGuard {
@@ -70,7 +135,10 @@ impl Default for AmbiguityGuard {
 }
 
 impl AmbiguityGuard {
-    pub fn track_start_tag(&mut self, tag_name_hash: Option<u64>) -> Result<(), Error> {
+    pub fn track_start_tag(
+        &mut self,
+        tag_name_hash: Option<u64>,
+    ) -> Result<(), AmbiguityGuardError> {
         if let Some(t) = tag_name_hash {
             match self.state {
                 State::Default => {
@@ -97,7 +165,9 @@ impl AmbiguityGuard {
                     if t == TagName::Template {
                         // TODO: make depth limit adjustable
                         if depth == u8::max_value() {
-                            return Err(Error::MaxTagNestingReached);
+                            return Err(AmbiguityGuardError::MaxTemplateNestingReached {
+                                depth_limit: u8::max_value() as usize,
+                            });
                         }
 
                         self.state = State::InTemplateInSelect(depth + 1);

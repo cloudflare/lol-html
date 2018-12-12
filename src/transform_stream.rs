@@ -1,6 +1,11 @@
 use crate::base::{Buffer, Chunk};
 use crate::tokenizer::{LexUnitHandler, TagLexUnitHandler, TagPreviewHandler, Tokenizer};
-use crate::Error;
+use failure::{Error, ResultExt};
+
+const BUFFER_ERROR_CONTEXT: &str = concat!(
+    "This is caused by the parser encountering an extremely long ",
+    "tag or a comment that is captured by the specified selector."
+);
 
 pub struct TransformStream<LH, TH, PH>
 where
@@ -44,7 +49,10 @@ where
         } else {
             let blocked_bytes = &data[data.len() - blocked_byte_count..];
 
-            self.buffer.init_with(blocked_bytes)?;
+            self.buffer
+                .init_with(blocked_bytes)
+                .context(BUFFER_ERROR_CONTEXT)?;
+
             self.has_buffered_data = true;
         }
 
@@ -58,7 +66,7 @@ where
         trace!(@write data);
 
         let chunk = if self.has_buffered_data {
-            self.buffer.append(data)?;
+            self.buffer.append(data).context(BUFFER_ERROR_CONTEXT)?;
             self.buffer.bytes()
         } else {
             data

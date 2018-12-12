@@ -13,7 +13,7 @@ use self::state_machine::{
     EagerStateMachine, FullStateMachine, ParsingLoopTerminationReason, StateMachine,
 };
 use crate::base::Chunk;
-use crate::Error;
+use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
