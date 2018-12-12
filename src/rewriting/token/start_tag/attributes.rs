@@ -68,9 +68,9 @@ impl<'i> From<Vec<Attribute<'i>>> for Attributes<'i> {
 }
 
 impl<'i> Deref for Attributes<'i> {
-    type Target = Vec<Attribute<'i>>;
+    type Target = [Attribute<'i>];
 
-    fn deref(&self) -> &Vec<Attribute<'i>> {
+    fn deref(&self) -> &[Attribute<'i>] {
         match self {
             Attributes::Parsed(list) => list.items(),
             Attributes::Custom(list) => list,
