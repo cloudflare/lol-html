@@ -74,7 +74,8 @@ impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
 
                 ParsingLoopDirective::Continue
             } else {
-                // NOTE: exit from any non-initial text parsing mode always happens on tag emission.
+                // NOTE: exit from any non-initial text parsing mode always happens on tag emission
+                // (except for CDATA, but there is a special action to take care of it).
                 self.set_last_text_parsing_mode(TextParsingMode::Data);
 
                 ParsingLoopDirective::None

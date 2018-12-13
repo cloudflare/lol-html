@@ -95,44 +95,22 @@ impl ParsingResult {
     }
 
     pub fn get_cumulative_raw_string(&self) -> String {
-        String::from_utf8(
-            self.lex_unit_sink
-                .raw_slices
-                .iter()
-                .fold(Vec::new(), |mut c, s| {
-                    c.extend_from_slice(s);
-                    c
-                }),
-        )
-        .unwrap()
+        String::from_utf8(self.lex_unit_sink.cummulative_raw.to_owned()).unwrap()
     }
 
-    pub fn into_token_raw_pairs(
-        mut self,
-    ) -> Option<Vec<(TestToken, String, TextParsingModeSnapshot)>> {
+    pub fn into_token_raw_pairs(mut self) -> Vec<(TestToken, String, TextParsingModeSnapshot)> {
         // NOTE: remove EOF which doesn't have raw representation
         self.lex_unit_sink.tokens.pop();
 
-        // NOTE: there are cases where text token can contain
-        // part that is ignored during parsing, but still has raw
-        // representation. E.g. `a</>b` will produce `ab` text
-        // token, however we'll have `a` and `</>b` raw strings and,
-        // thus, we can't produce one-on-one mapping.
-        if self.lex_unit_sink.tokens.len() == self.lex_unit_sink.raw_slices.len() {
-            Some(
-                izip!(
-                    self.lex_unit_sink.tokens.into_iter(),
-                    self.lex_unit_sink
-                        .raw_slices
-                        .into_iter()
-                        .map(|s| String::from_utf8(s).unwrap()),
-                    self.lex_unit_sink.text_parsing_mode_snapshots.into_iter()
-                )
-                .collect(),
-            )
-        } else {
-            None
-        }
+        izip!(
+            self.lex_unit_sink.tokens.into_iter(),
+            self.lex_unit_sink
+                .raw_slices
+                .into_iter()
+                .map(|s| String::from_utf8(s).unwrap()),
+            self.lex_unit_sink.text_parsing_mode_snapshots.into_iter()
+        )
+        .collect()
     }
 }
 
@@ -141,19 +119,17 @@ pub struct FullStateMachineTests;
 
 impl FullStateMachineTests {
     fn assert_tokens_have_correct_raw_strings(actual: ParsingResult) {
-        if let Some(token_raw_pairs) = actual.into_token_raw_pairs() {
-            for (token, raw, text_parsing_mode_snapshot) in token_raw_pairs {
-                let raw = raw.into();
-                let actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
+        for (token, raw, text_parsing_mode_snapshot) in actual.into_token_raw_pairs() {
+            let raw = raw.into();
+            let actual = ParsingResult::new(&raw, text_parsing_mode_snapshot);
 
-                assert_eql!(
-                    actual.lex_unit_sink.tokens,
-                    vec![token.to_owned(), TestToken::Eof],
-                    raw,
-                    text_parsing_mode_snapshot,
-                    "Token's raw string doesn't produce the same token"
-                );
-            }
+            assert_eql!(
+                actual.lex_unit_sink.tokens,
+                vec![token.to_owned(), TestToken::Eof],
+                raw,
+                text_parsing_mode_snapshot,
+                "Token's raw string doesn't produce the same token"
+            );
         }
     }
 }

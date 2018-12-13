@@ -173,7 +173,7 @@ impl ParsingResult {
                     };
                 }
 
-                match Token::try_from(lex_unit).as_ref() {
+                match Token::try_from(lex_unit, UTF_8).as_ref() {
                     Some(Token::StartTag(t)) if to_lower_string(t.name()) == captured_tag_name => {
                         result.open_captured_tag_count += 1;
 

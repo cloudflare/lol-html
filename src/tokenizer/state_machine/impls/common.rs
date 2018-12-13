@@ -62,6 +62,16 @@ macro_rules! impl_common_sm_actions {
         fn set_closing_quote_to_single(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
             self.closing_quote = b'\'';
         }
+
+        #[inline]
+        fn enter_cdata(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+            self.set_last_text_parsing_mode(TextParsingMode::CDataSection);
+        }
+
+        #[inline]
+        fn leave_cdata(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+            self.set_last_text_parsing_mode(TextParsingMode::Data);
+        }
     };
 }
 

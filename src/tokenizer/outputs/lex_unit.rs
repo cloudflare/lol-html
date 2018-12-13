@@ -1,13 +1,11 @@
 use super::token_view::*;
-use crate::base::{Bytes, Chunk, Range};
-use lazycell::LazyCell;
+use crate::base::{Chunk, Range};
 use std::fmt::{self, Debug, Write};
 
 pub struct LexUnit<'i> {
     input: &'i Chunk<'i>,
     raw_range: Range,
     token_view: Option<TokenView>,
-    raw: LazyCell<Bytes<'i>>,
 }
 
 impl<'i> LexUnit<'i> {
@@ -16,18 +14,12 @@ impl<'i> LexUnit<'i> {
             input,
             raw_range,
             token_view,
-            raw: LazyCell::new(),
         }
     }
 
     #[inline]
     pub fn input(&self) -> &Chunk<'i> {
         self.input
-    }
-
-    #[inline]
-    pub fn raw(&self) -> &Bytes<'i> {
-        self.raw.borrow_with(|| self.input.slice(self.raw_range))
     }
 
     #[inline]

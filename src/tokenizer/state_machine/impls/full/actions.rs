@@ -59,7 +59,8 @@ where
         let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
         let next_output_type = self.emit_tag_lex_unit(&lex_unit);
 
-        // NOTE: exit from any non-initial text parsing mode always happens on tag emission.
+        // NOTE: exit from any non-initial text parsing mode always happens on tag emission
+        // (except for CDATA, but there is a special action to take care of it).
         self.set_last_text_parsing_mode(TextParsingMode::Data);
 
         let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);

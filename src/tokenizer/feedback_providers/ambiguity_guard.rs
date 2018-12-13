@@ -42,7 +42,7 @@ macro_rules! err_msg_tmpl {
         concat!(
             "The parser has encountered a text content tag (`<{}>`) in the context where it is ",
             "ambiguous whether this tag should be ignored or not. And, thus, is is unclear is ",
-            "consequent content should be parsed as raw text or an HTML markup.",
+            "consequent content should be parsed as raw text or HTML markup.",
             "\n\n",
             "This error occurs due to the limited capabilities of the streaming parsing. However, ",
             "almost all of the cases of this error are caused by a non-conforming markup (e.g. a ",

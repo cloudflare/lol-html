@@ -4,6 +4,7 @@ use crate::harness::tokenizer_test::{
 use cool_thing::rewriting::Token;
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
+use encoding_rs::UTF_8;
 use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -75,7 +76,7 @@ impl ParsingResult {
 
     fn add_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
         self.tokens_from_preview.push(TestToken::new(
-            Token::try_from(lex_unit).expect("Tag should have a token"),
+            Token::try_from(lex_unit, UTF_8).expect("Tag should have a token"),
             lex_unit,
         ));
 

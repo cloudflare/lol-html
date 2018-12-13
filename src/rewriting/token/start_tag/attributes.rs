@@ -1,5 +1,6 @@
 use crate::base::{Bytes, Chunk};
 use crate::tokenizer::AttributeView;
+use encoding_rs::Encoding;
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::fmt::{self, Debug};
@@ -13,11 +14,16 @@ pub struct Attribute<'i> {
 
     #[get = "pub"]
     value: Bytes<'i>,
+    encoding: &'static Encoding,
 }
 
 impl<'i> Attribute<'i> {
-    pub fn new(name: Bytes<'i>, value: Bytes<'i>) -> Self {
-        Attribute { name, value }
+    pub(super) fn new(name: Bytes<'i>, value: Bytes<'i>, encoding: &'static Encoding) -> Self {
+        Attribute {
+            name,
+            value,
+            encoding,
+        }
     }
 }
 
@@ -25,25 +31,34 @@ pub struct ParsedAttributeList<'i> {
     input: &'i Chunk<'i>,
     attribute_views: Rc<RefCell<Vec<AttributeView>>>,
     items: LazyCell<Vec<Attribute<'i>>>,
+    encoding: &'static Encoding,
 }
 
 impl<'i> ParsedAttributeList<'i> {
-    pub fn new(input: &'i Chunk<'i>, attribute_views: Rc<RefCell<Vec<AttributeView>>>) -> Self {
+    pub fn new(
+        input: &'i Chunk<'i>,
+        attribute_views: Rc<RefCell<Vec<AttributeView>>>,
+        encoding: &'static Encoding,
+    ) -> Self {
         ParsedAttributeList {
             input,
             attribute_views,
             items: LazyCell::default(),
+            encoding,
         }
     }
 
-    fn items(&self) -> &Vec<Attribute<'i>> {
+    fn items(&self) -> &[Attribute<'i>] {
         self.items.borrow_with(|| {
             self.attribute_views
                 .borrow()
                 .iter()
-                .map(|a| Attribute {
-                    name: self.input.slice(a.name),
-                    value: self.input.slice(a.value),
+                .map(|a| {
+                    Attribute::new(
+                        self.input.slice(a.name),
+                        self.input.slice(a.value),
+                        self.encoding,
+                    )
                 })
                 .collect()
         })

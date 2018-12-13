@@ -1,7 +1,8 @@
 use crate::harness::tokenizer_test::decoder::Decoder;
 use crate::harness::tokenizer_test::test_outputs::TestToken;
 use cool_thing::rewriting::Token;
-use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot, TokenView};
+use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot};
+use encoding_rs::UTF_8;
 
 fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
     let mut decoder = Decoder::new(text);
@@ -21,23 +22,32 @@ fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
 pub struct LexUnitSink {
     pub tokens: Vec<TestToken>,
     pub raw_slices: Vec<Vec<u8>>,
+    pub cummulative_raw: Vec<u8>,
     pub text_parsing_mode_snapshots: Vec<TextParsingModeSnapshot>,
     buffered_text: Option<Vec<u8>>,
 }
 
 impl LexUnitSink {
     pub fn add_lex_unit(&mut self, lex_unit: &LexUnit<'_>, mode_snapshot: TextParsingModeSnapshot) {
-        if let Some(TokenView::Text) = lex_unit.token_view() {
-            self.buffer_text(lex_unit.raw(), mode_snapshot);
-        } else {
-            if let Some(token) = Token::try_from(lex_unit) {
+        if let Some(token) = Token::try_from(lex_unit, UTF_8) {
+            if let Token::Text(t) = token {
+                self.buffer_text(t.text(), mode_snapshot);
+                return;
+            } else {
                 self.flush();
+
+                if let Some(raw) = token.raw() {
+                    self.raw_slices.push(raw.to_vec());
+                }
+
                 self.tokens.push(TestToken::new(token, lex_unit));
                 self.text_parsing_mode_snapshots.push(mode_snapshot);
             }
-
-            self.raw_slices.push(lex_unit.raw().to_vec());
         }
+
+        let lex_unit_raw = lex_unit.input().slice(lex_unit.raw_range());
+
+        self.cummulative_raw.extend_from_slice(&lex_unit_raw);
     }
 
     pub fn flush(&mut self) {
@@ -50,6 +60,7 @@ impl LexUnitSink {
                 .expect("Buffered text should have associated mode snapshot");
 
             text = decode_text(&mut text, mode_snapshot.mode);
+
             self.tokens.push(TestToken::Text(text));
         }
     }
@@ -66,5 +77,7 @@ impl LexUnitSink {
             self.raw_slices.push(text.to_vec());
             self.text_parsing_mode_snapshots.push(mode_snapshot);
         }
+
+        self.cummulative_raw.extend_from_slice(text);
     }
 }

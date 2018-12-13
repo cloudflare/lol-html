@@ -25,7 +25,7 @@ define_state_group!(tag_states_group = {
 
         [ "[CDATA[" ] => (
             if cdata_allowed
-                ( emit_raw_without_token; --> cdata_section_state )
+                ( emit_raw_without_token; enter_cdata; --> cdata_section_state )
             else
                 ( create_comment; --> bogus_comment_state )
         )

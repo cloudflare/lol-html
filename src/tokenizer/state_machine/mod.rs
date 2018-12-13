@@ -73,6 +73,9 @@ pub trait StateMachineActions {
 
     fn mark_tag_start(&mut self, input: &Chunk<'_>, ch: Option<u8>);
     fn unmark_tag_start(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+
+    fn enter_cdata(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn leave_cdata(&mut self, input: &Chunk<'_>, ch: Option<u8>);
 }
 
 pub trait StateMachineConditions {
