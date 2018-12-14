@@ -10,7 +10,7 @@ mod debug_trace;
 #[macro_use]
 pub mod base;
 
-pub mod rewriting;
+pub mod token;
 pub mod tokenizer;
 pub mod transform_stream;
 // TODO

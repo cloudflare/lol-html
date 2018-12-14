@@ -1,6 +1,6 @@
 use super::decoder::{to_lower_null_decoded, to_null_decoded, Decoder};
 use super::unescape::Unescape;
-use cool_thing::rewriting::Token;
+use cool_thing::token::Token;
 use cool_thing::tokenizer::{LexUnit, TagName, TagPreview, TokenView};
 use encoding_rs::UTF_8;
 use serde::de::{Deserialize, Deserializer, Error as DeError};

@@ -1,7 +1,7 @@
 use crate::harness::tokenizer_test::{
     get_tag_tokens, ChunkedInput, TestCase, TestFixture, TestTagPreview, TestToken, BUFFER_SIZE,
 };
-use cool_thing::rewriting::Token;
+use cool_thing::token::Token;
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot};
 use cool_thing::transform_stream::TransformStream;
 use encoding_rs::UTF_8;

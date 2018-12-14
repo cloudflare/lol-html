@@ -2,7 +2,7 @@ use crate::harness::tokenizer_test::{
     ChunkedInput, LexUnitSink, TestCase, TestFixture, TestToken, BUFFER_SIZE,
 };
 use cool_thing::base::Bytes;
-use cool_thing::rewriting::Token;
+use cool_thing::token::Token;
 use cool_thing::tokenizer::{
     LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot, TokenView,
 };

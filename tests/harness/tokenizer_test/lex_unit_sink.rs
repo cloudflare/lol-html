@@ -1,6 +1,6 @@
 use crate::harness::tokenizer_test::decoder::Decoder;
 use crate::harness::tokenizer_test::test_outputs::TestToken;
-use cool_thing::rewriting::Token;
+use cool_thing::token::Token;
 use cool_thing::tokenizer::{LexUnit, TextParsingMode, TextParsingModeSnapshot};
 use encoding_rs::UTF_8;
 
