@@ -1,8 +1,10 @@
 mod token_factory;
 
 use crate::base::{Buffer, Chunk};
-use crate::tokenizer::{LexUnitHandler, TagLexUnitHandler, TagPreviewHandler, Tokenizer};
+use crate::tokenizer::{OutputSink as TokenizerOutputSink, Tokenizer};
 use failure::{Error, ResultExt};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[cfg(feature = "testing_api")]
 use crate::tokenizer::Tokenizer;
@@ -20,32 +22,19 @@ pub enum TransformStreamError {
     EndCallAfterEnd,
 }
 
-pub struct TransformStream<LUH, TLUH, TPH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-    TPH: TagPreviewHandler,
-{
-    tokenizer: Tokenizer<LUH, TLUH, TPH>,
+pub struct TransformStream<S: TokenizerOutputSink> {
+    tokenizer: Tokenizer<S>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
 }
 
-impl<LUH, TLUH, TPH> TransformStream<LUH, TLUH, TPH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-    TPH: TagPreviewHandler,
-{
-    pub fn new(
-        buffer_capacity: usize,
-        lex_unit_handler: LUH,
-        tag_lex_unit_handler: TLUH,
-        tag_preview_handler: TPH,
-    ) -> Self {
+impl<S: TokenizerOutputSink> TransformStream<S> {
+    pub fn new(buffer_capacity: usize, tokenizer_output_sink: S) -> Self {
+        let tokenizer_output_sink = Rc::new(RefCell::new(tokenizer_output_sink));
+
         TransformStream {
-            tokenizer: Tokenizer::new(lex_unit_handler, tag_lex_unit_handler, tag_preview_handler),
+            tokenizer: Tokenizer::new(&tokenizer_output_sink),
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,

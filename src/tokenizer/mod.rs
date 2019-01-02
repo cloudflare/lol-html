@@ -18,6 +18,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::outputs::*;
+pub use self::state_machine::{LexUnitSink, TagPreviewSink};
 pub use self::tag_name::TagName;
 pub use self::text_parsing_mode::*;
 
@@ -27,26 +28,30 @@ pub enum NextOutputType {
     LexUnit,
 }
 
-declare_handler! {
-    LexUnitHandler(&LexUnit<'_>)
+impl<S: LexUnitSink> LexUnitSink for Rc<RefCell<S>> {
+    #[inline]
+    fn handle_tag(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
+        self.borrow_mut().handle_tag(lex_unit)
+    }
+
+    #[inline]
+    fn handle_non_tag_content(&mut self, lex_unit: &LexUnit<'_>) {
+        self.borrow_mut().handle_non_tag_content(lex_unit);
+    }
 }
 
-declare_handler! {
-    TagLexUnitHandler(&LexUnit<'_>) -> NextOutputType
+impl<S: TagPreviewSink> TagPreviewSink for Rc<RefCell<S>> {
+    #[inline]
+    fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType {
+        self.borrow_mut().handle_tag_preview(tag_preview)
+    }
 }
 
-declare_handler! {
-    TagPreviewHandler(&TagPreview<'_>) -> NextOutputType
-}
+pub trait OutputSink: LexUnitSink + TagPreviewSink {}
 
-pub struct Tokenizer<LUH, TLUH, TPH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-    TPH: TagPreviewHandler,
-{
-    full_sm: FullStateMachine<LUH, TLUH>,
-    eager_sm: EagerStateMachine<TPH>,
+pub struct Tokenizer<S: OutputSink> {
+    full_sm: FullStateMachine<Rc<RefCell<S>>>,
+    eager_sm: EagerStateMachine<Rc<RefCell<S>>>,
     next_output_type: NextOutputType,
 }
 
@@ -62,26 +67,16 @@ macro_rules! with_current_sm {
     };
 }
 
-impl<LUH, TLUH, TPH> Tokenizer<LUH, TLUH, TPH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-    TPH: TagPreviewHandler,
-{
-    pub fn new(
-        lex_unit_handler: LUH,
-        tag_lex_unit_handler: TLUH,
-        tag_preview_handler: TPH,
-    ) -> Self {
+impl<S: OutputSink> Tokenizer<S> {
+    pub fn new(output_sink: &Rc<RefCell<S>>) -> Self {
         let feedback_providers = Rc::new(RefCell::new(FeedbackProviders::default()));
 
         Tokenizer {
-            full_sm: FullStateMachine::new(
-                lex_unit_handler,
-                tag_lex_unit_handler,
+            full_sm: FullStateMachine::new(Rc::clone(output_sink), Rc::clone(&feedback_providers)),
+            eager_sm: EagerStateMachine::new(
+                Rc::clone(output_sink),
                 Rc::clone(&feedback_providers),
             ),
-            eager_sm: EagerStateMachine::new(tag_preview_handler, Rc::clone(&feedback_providers)),
             next_output_type: NextOutputType::TagPreview,
         }
     }
@@ -121,12 +116,7 @@ where
 }
 
 #[cfg(feature = "testing_api")]
-impl<LUH, TLUH, TPH> Tokenizer<LUH, TLUH, TPH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-    TPH: TagPreviewHandler,
-{
+impl<S: OutputSink> Tokenizer<S> {
     pub fn set_next_output_type(&mut self, ty: NextOutputType) {
         self.next_output_type = ty;
     }

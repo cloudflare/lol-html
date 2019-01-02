@@ -9,8 +9,7 @@ use crate::tokenizer::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
 use crate::tokenizer::{
-    FeedbackProviders, NextOutputType, TagName, TagPreviewHandler, TextParsingMode,
-    TreeBuilderFeedback,
+    FeedbackProviders, NextOutputType, TagName, TextParsingMode, TreeBuilderFeedback,
 };
 use failure::Error;
 use std::cell::RefCell;
@@ -20,7 +19,11 @@ use std::rc::Rc;
 #[cfg(feature = "testing_api")]
 use super::common::SharedTagConfirmationHandler;
 
-pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk<'_>) -> StateResult;
+pub trait TagPreviewSink {
+    fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType;
+}
+
+pub type State<S> = fn(&mut EagerStateMachine<S>, &Chunk<'_>) -> StateResult;
 
 /// Eager state machine skips the majority of full state machine operations and, thus,
 /// is faster. It also has much less requirements for buffering which makes it more
@@ -33,7 +36,7 @@ pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk<'_>) -> StateResult;
 /// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
 /// it's not a concern for our use case as no content will be erroneously captured
 /// in this case.
-pub struct EagerStateMachine<TPH: TagPreviewHandler> {
+pub struct EagerStateMachine<S: TagPreviewSink> {
     input_cursor: Cursor,
     tag_start: Option<usize>,
     ch_sequence_matching_start: Option<usize>,
@@ -43,8 +46,8 @@ pub struct EagerStateMachine<TPH: TagPreviewHandler> {
     last_start_tag_name_hash: Option<u64>,
     is_state_enter: bool,
     cdata_allowed: bool,
-    tag_preview_handler: TPH,
-    state: State<TPH>,
+    tag_preview_sink: S,
+    state: State<S>,
     closing_quote: u8,
     feedback_providers: Rc<RefCell<FeedbackProviders>>,
     pending_text_parsing_mode_change: Option<TextParsingMode>,
@@ -54,11 +57,8 @@ pub struct EagerStateMachine<TPH: TagPreviewHandler> {
     pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
 }
 
-impl<TPH: TagPreviewHandler> EagerStateMachine<TPH> {
-    pub fn new(
-        tag_preview_handler: TPH,
-        feedback_providers: Rc<RefCell<FeedbackProviders>>,
-    ) -> Self {
+impl<S: TagPreviewSink> EagerStateMachine<S> {
+    pub fn new(tag_preview_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
             tag_start: None,
@@ -69,7 +69,7 @@ impl<TPH: TagPreviewHandler> EagerStateMachine<TPH> {
             last_start_tag_name_hash: None,
             is_state_enter: true,
             cdata_allowed: false,
-            tag_preview_handler,
+            tag_preview_sink,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
             feedback_providers,
@@ -152,16 +152,16 @@ impl<TPH: TagPreviewHandler> EagerStateMachine<TPH> {
     }
 }
 
-impl<TPH: TagPreviewHandler> StateMachine for EagerStateMachine<TPH> {
+impl<S: TagPreviewSink> StateMachine for EagerStateMachine<S> {
     impl_common_sm_accessors!();
 
     #[inline]
-    fn set_state(&mut self, state: State<TPH>) {
+    fn set_state(&mut self, state: State<S>) {
         self.state = state;
     }
 
     #[inline]
-    fn state(&self) -> State<TPH> {
+    fn state(&self) -> State<S> {
         self.state
     }
 

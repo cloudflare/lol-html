@@ -2,22 +2,16 @@ use crate::base::{Bytes, Chunk, Range};
 use crate::token::Token;
 use crate::token::*;
 use crate::tokenizer::{
-    AttributeView, LexUnit, LexUnitHandler, NextOutputType, TagLexUnitHandler, TagPreview,
-    TagPreviewHandler, TokenView,
+    AttributeView, LexUnit, LexUnitSink, NextOutputType, OutputSink as TokenizerOutputSink,
+    TagPreview, TagPreviewSink, TokenView,
 };
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-declare_handler! {
-    TokenHandler(Token)
-}
-
-// TODO TokenCaptureFlags
-// TODO trait TokenCaptureContoller
 bitflags! {
-    pub struct TokenProductionFlags: u8 {
+    pub struct TokenCaptureFlags: u8 {
         const TEXT = 0b0000_0001;
         const COMMENTS = 0b0000_0010;
         const START_TAGS = 0b0000_0100;
@@ -27,32 +21,30 @@ bitflags! {
     }
 }
 
-pub struct TokenFactory<TPH, TLUH, TH>
-where
-    TPH: TagPreviewHandler,
-    TLUH: TagLexUnitHandler,
-    TH: TokenHandler,
-{
-    tag_preview_handler: TPH,
-    tag_lex_unit_handler: TLUH,
-    token_handler: TH,
+pub trait TokenRewriter {
+    fn get_token_capture_flags_for_tag(&mut self, tag_lex_unit: &LexUnit) -> NextOutputType;
+    fn get_token_capture_flags_for_tag_preview(
+        &mut self,
+        tag_preview: &TagPreview,
+    ) -> NextOutputType;
+
+    fn handle_token(&mut self, token: Token);
+}
+
+pub struct TokenFactory<R: TokenRewriter> {
+    token_rewriter: R,
     encoding: &'static Encoding,
     pending_text_decoder: Option<Decoder>,
     text_buffer: String,
-    token_production_flags: TokenProductionFlags,
+    token_production_flags: TokenCaptureFlags,
 }
 
-impl<TPH, TLUH, TH> TokenFactory<TPH, TLUH, TH>
-where
-    TPH: TagPreviewHandler,
-    TLUH: TagLexUnitHandler,
-    TH: TokenHandler,
-{
+impl<R: TokenRewriter> TokenFactory<R> {
     // TODO: temporary code that just toggles all flags depending on the next output type.
     fn adjust_token_production_flags(&mut self, next_output_type: NextOutputType) {
         self.token_production_flags = match next_output_type {
-            NextOutputType::LexUnit => TokenProductionFlags::all(),
-            NextOutputType::TagPreview => TokenProductionFlags::empty(),
+            NextOutputType::LexUnit => TokenCaptureFlags::all(),
+            NextOutputType::TagPreview => TokenCaptureFlags::empty(),
         };
     }
 
@@ -76,7 +68,7 @@ where
             if written > 0 {
                 let token = Token::Text(Text::new_parsed_chunk(&buffer[..written], encoding));
 
-                self.token_handler.handle(token);
+                self.token_rewriter.handle_token(token);
             }
 
             if let CoderResult::InputEmpty = result {
@@ -89,7 +81,7 @@ where
         let text = input.slice(text);
         let token = Token::Comment(Comment::new_parsed(text, raw, self.encoding));
 
-        self.token_handler.handle(token);
+        self.token_rewriter.handle_token(token);
     }
 
     fn handle_start_tag(
@@ -111,14 +103,14 @@ where
             self.encoding,
         ));
 
-        self.token_handler.handle(token);
+        self.token_rewriter.handle_token(token);
     }
 
     fn handle_end_tag(&mut self, name: Range, raw: Bytes<'_>, input: &Chunk<'_>) {
         let name = input.slice(name);
         let token = Token::EndTag(EndTag::new_parsed(name, raw, self.encoding));
 
-        self.token_handler.handle(token);
+        self.token_rewriter.handle_token(token);
     }
 
     fn handle_doctype(
@@ -143,11 +135,11 @@ where
             self.encoding,
         ));
 
-        self.token_handler.handle(token);
+        self.token_rewriter.handle_token(token);
     }
 
     fn handle_eof(&mut self) {
-        self.token_handler.handle(Token::Eof);
+        self.token_rewriter.handle_token(Token::Eof);
     }
 
     fn handle_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
@@ -181,47 +173,36 @@ where
     }
 }
 
-impl<TPH, TLUH, TH> TagLexUnitHandler for TokenFactory<TPH, TLUH, TH>
-where
-    TPH: TagPreviewHandler,
-    TLUH: TagLexUnitHandler,
-    TH: TokenHandler,
-{
+impl<R: TokenRewriter> LexUnitSink for TokenFactory<R> {
     #[inline]
-    fn handle(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
-        let next_output_type = self.tag_lex_unit_handler.handle(lex_unit);
+    fn handle_tag(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
+        let next_output_type = self
+            .token_rewriter
+            .get_token_capture_flags_for_tag(lex_unit);
 
         self.adjust_token_production_flags(next_output_type);
         self.handle_lex_unit(lex_unit);
 
         next_output_type
     }
-}
 
-impl<TPH, TLUH, TH> LexUnitHandler for TokenFactory<TPH, TLUH, TH>
-where
-    TPH: TagPreviewHandler,
-    TLUH: TagLexUnitHandler,
-    TH: TokenHandler,
-{
     #[inline]
-    fn handle(&mut self, lex_unit: &LexUnit<'_>) {
+    fn handle_non_tag_content(&mut self, lex_unit: &LexUnit<'_>) {
         self.handle_lex_unit(lex_unit);
     }
 }
 
-impl<TPH, TLUH, TH> TagPreviewHandler for TokenFactory<TPH, TLUH, TH>
-where
-    TPH: TagPreviewHandler,
-    TLUH: TagLexUnitHandler,
-    TH: TokenHandler,
-{
+impl<R: TokenRewriter> TagPreviewSink for TokenFactory<R> {
     #[inline]
-    fn handle(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType {
-        let next_output_type = self.tag_preview_handler.handle(tag_preview);
+    fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType {
+        let next_output_type = self
+            .token_rewriter
+            .get_token_capture_flags_for_tag_preview(tag_preview);
 
         self.adjust_token_production_flags(next_output_type);
 
         next_output_type
     }
 }
+
+impl<R: TokenRewriter> TokenizerOutputSink for TokenFactory<R> {}

@@ -11,11 +11,7 @@ macro_rules! get_token_part_range {
     };
 }
 
-impl<LUH, TLUH> StateMachineActions for FullStateMachine<LUH, TLUH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-{
+impl<S: LexUnitSink> StateMachineActions for FullStateMachine<S> {
     impl_common_sm_actions!();
 
     #[inline]

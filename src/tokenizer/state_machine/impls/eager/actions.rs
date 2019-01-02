@@ -2,7 +2,7 @@ use super::*;
 use crate::base::Chunk;
 use crate::tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
-impl<TPH: TagPreviewHandler> StateMachineActions for EagerStateMachine<TPH> {
+impl<S: TagPreviewSink> StateMachineActions for EagerStateMachine<S> {
     impl_common_sm_actions!();
 
     #[inline]
@@ -38,7 +38,7 @@ impl<TPH: TagPreviewHandler> StateMachineActions for EagerStateMachine<TPH> {
     #[inline]
     fn finish_tag_name(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
         let tag_preview = self.create_tag_preview(input);
-        let next_output_type = self.tag_preview_handler.handle(&tag_preview);
+        let next_output_type = self.tag_preview_sink.handle_tag_preview(&tag_preview);
 
         trace!(@output tag_preview);
 

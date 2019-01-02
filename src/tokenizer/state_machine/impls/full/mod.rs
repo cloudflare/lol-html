@@ -8,8 +8,8 @@ use crate::tokenizer::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
 use crate::tokenizer::{
-    FeedbackProviders, LexUnitHandler, NextOutputType, ParsingLoopTerminationReason,
-    TagLexUnitHandler, TagName, TextParsingMode, TreeBuilderFeedback,
+    FeedbackProviders, NextOutputType, ParsingLoopTerminationReason, TagName, TextParsingMode,
+    TreeBuilderFeedback,
 };
 use cfg_if::cfg_if;
 use failure::Error;
@@ -25,21 +25,21 @@ cfg_if! {
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub type State<LUH, TLUH> = fn(&mut FullStateMachine<LUH, TLUH>, &Chunk<'_>) -> StateResult;
+pub trait LexUnitSink {
+    fn handle_tag(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType;
+    fn handle_non_tag_content(&mut self, lex_unit: &LexUnit<'_>);
+}
 
-pub struct FullStateMachine<LUH, TLUH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-{
+pub type State<S> = fn(&mut FullStateMachine<S>, &Chunk<'_>) -> StateResult;
+
+pub struct FullStateMachine<S: LexUnitSink> {
     input_cursor: Cursor,
     lex_unit_start: usize,
     token_part_start: usize,
     is_state_enter: bool,
     cdata_allowed: bool,
-    lex_unit_handler: LUH,
-    tag_lex_unit_handler: TLUH,
-    state: State<LUH, TLUH>,
+    lex_unit_sink: S,
+    state: State<S>,
     current_token: Option<TokenView>,
     current_attr: Option<AttributeView>,
     last_start_tag_name_hash: Option<u64>,
@@ -56,24 +56,15 @@ where
     pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
 }
 
-impl<LUH, TLUH> FullStateMachine<LUH, TLUH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-{
-    pub fn new(
-        lex_unit_handler: LUH,
-        tag_lex_unit_handler: TLUH,
-        feedback_providers: Rc<RefCell<FeedbackProviders>>,
-    ) -> Self {
+impl<S: LexUnitSink> FullStateMachine<S> {
+    pub fn new(lex_unit_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
         FullStateMachine {
             input_cursor: Cursor::default(),
             lex_unit_start: 0,
             token_part_start: 0,
             is_state_enter: true,
             cdata_allowed: false,
-            lex_unit_handler,
-            tag_lex_unit_handler,
+            lex_unit_sink,
             state: FullStateMachine::data_state,
             current_token: None,
             current_attr: None,
@@ -180,7 +171,7 @@ where
         trace!(@lex_unit lex_unit);
 
         self.set_next_lex_unit_start(lex_unit);
-        self.lex_unit_handler.handle(lex_unit);
+        self.lex_unit_sink.handle_non_tag_content(lex_unit);
     }
 
     #[inline]
@@ -194,7 +185,7 @@ where
             self.should_silently_consume_current_tag_only = false;
             NextOutputType::TagPreview
         } else {
-            self.tag_lex_unit_handler.handle(lex_unit)
+            self.lex_unit_sink.handle_tag(lex_unit)
         }
     }
 
@@ -236,20 +227,16 @@ where
     }
 }
 
-impl<LUH, TLUH> StateMachine for FullStateMachine<LUH, TLUH>
-where
-    LUH: LexUnitHandler,
-    TLUH: TagLexUnitHandler,
-{
+impl<S: LexUnitSink> StateMachine for FullStateMachine<S> {
     impl_common_sm_accessors!();
 
     #[inline]
-    fn set_state(&mut self, state: State<LUH, TLUH>) {
+    fn set_state(&mut self, state: State<S>) {
         self.state = state;
     }
 
     #[inline]
-    fn state(&self) -> State<LUH, TLUH> {
+    fn state(&self) -> State<S> {
         self.state
     }
 
