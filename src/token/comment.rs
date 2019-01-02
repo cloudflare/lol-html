@@ -10,7 +10,7 @@ pub struct Comment<'i> {
 }
 
 impl<'i> Comment<'i> {
-    pub(super) fn new_parsed(text: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
+    pub(crate) fn new_parsed(text: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
         Comment {
             text,
             raw: Some(raw),

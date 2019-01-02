@@ -13,6 +13,9 @@ pub mod base;
 pub mod token;
 pub mod tokenizer;
 pub mod transform_stream;
+
+// TODO test all errors!!!x
+
 // TODO
 // -- Functionality
 // 5. Adjustable limits

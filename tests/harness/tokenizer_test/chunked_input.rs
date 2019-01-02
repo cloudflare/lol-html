@@ -34,16 +34,16 @@ impl ChunkedInput {
         self.chunk_size
     }
 
-    pub fn parse<LH, TH, PH>(
+    pub fn parse<LUH, TLUH, TPH>(
         &self,
-        mut transform_stream: TransformStream<LH, TH, PH>,
+        mut transform_stream: TransformStream<LUH, TLUH, TPH>,
         initial_mode_snapshot: TextParsingModeSnapshot,
         initial_output_type: NextOutputType,
     ) -> Result<(), Error>
     where
-        LH: LexUnitHandler,
-        TH: TagLexUnitHandler,
-        PH: TagPreviewHandler,
+        LUH: LexUnitHandler,
+        TLUH: TagLexUnitHandler,
+        TPH: TagPreviewHandler,
     {
         let tokenizer = transform_stream.tokenizer();
 

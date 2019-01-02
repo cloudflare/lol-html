@@ -21,7 +21,7 @@ pub use self::outputs::*;
 pub use self::tag_name::TagName;
 pub use self::text_parsing_mode::*;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum NextOutputType {
     TagPreview,
     LexUnit,
@@ -39,14 +39,14 @@ declare_handler! {
     TagPreviewHandler(&TagPreview<'_>) -> NextOutputType
 }
 
-pub struct Tokenizer<LH, TH, PH>
+pub struct Tokenizer<LUH, TLUH, TPH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
-    PH: TagPreviewHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
+    TPH: TagPreviewHandler,
 {
-    full_sm: FullStateMachine<LH, TH>,
-    eager_sm: EagerStateMachine<PH>,
+    full_sm: FullStateMachine<LUH, TLUH>,
+    eager_sm: EagerStateMachine<TPH>,
     next_output_type: NextOutputType,
 }
 
@@ -62,13 +62,17 @@ macro_rules! with_current_sm {
     };
 }
 
-impl<LH, TH, PH> Tokenizer<LH, TH, PH>
+impl<LUH, TLUH, TPH> Tokenizer<LUH, TLUH, TPH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
-    PH: TagPreviewHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
+    TPH: TagPreviewHandler,
 {
-    pub fn new(lex_unit_handler: LH, tag_lex_unit_handler: TH, tag_preview_handler: PH) -> Self {
+    pub fn new(
+        lex_unit_handler: LUH,
+        tag_lex_unit_handler: TLUH,
+        tag_preview_handler: TPH,
+    ) -> Self {
         let feedback_providers = Rc::new(RefCell::new(FeedbackProviders::default()));
 
         Tokenizer {
@@ -109,7 +113,7 @@ where
                         .silently_consume_current_tag_only(input, sm_bookmark)?;
                 }
                 ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
-                    return Ok(blocked_byte_count)
+                    return Ok(blocked_byte_count);
                 }
             }
         }
@@ -117,11 +121,11 @@ where
 }
 
 #[cfg(feature = "testing_api")]
-impl<LH, TH, PH> Tokenizer<LH, TH, PH>
+impl<LUH, TLUH, TPH> Tokenizer<LUH, TLUH, TPH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
-    PH: TagPreviewHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
+    TPH: TagPreviewHandler,
 {
     pub fn set_next_output_type(&mut self, ty: NextOutputType) {
         self.next_output_type = ty;
@@ -135,7 +139,7 @@ where
         with_current_sm!(self, { sm.set_last_start_tag_name_hash(name_hash) });
     }
 
-    pub fn full_sm(&mut self) -> &mut FullStateMachine<LH, TH> {
+    pub fn full_sm(&mut self) -> &mut FullStateMachine<LUH, TLUH> {
         &mut self.full_sm
     }
 

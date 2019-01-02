@@ -10,7 +10,7 @@ pub struct EndTag<'i> {
 }
 
 impl<'i> EndTag<'i> {
-    pub(super) fn new_parsed(name: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
+    pub(crate) fn new_parsed(name: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
         EndTag {
             name,
             raw: Some(raw),

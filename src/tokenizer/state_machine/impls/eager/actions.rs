@@ -2,7 +2,7 @@ use super::*;
 use crate::base::Chunk;
 use crate::tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
-impl<H: TagPreviewHandler> StateMachineActions for EagerStateMachine<H> {
+impl<TPH: TagPreviewHandler> StateMachineActions for EagerStateMachine<TPH> {
     impl_common_sm_actions!();
 
     #[inline]

@@ -25,21 +25,21 @@ cfg_if! {
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub type State<LH, TH> = fn(&mut FullStateMachine<LH, TH>, &Chunk<'_>) -> StateResult;
+pub type State<LUH, TLUH> = fn(&mut FullStateMachine<LUH, TLUH>, &Chunk<'_>) -> StateResult;
 
-pub struct FullStateMachine<LH, TH>
+pub struct FullStateMachine<LUH, TLUH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
 {
     input_cursor: Cursor,
     lex_unit_start: usize,
     token_part_start: usize,
     is_state_enter: bool,
     cdata_allowed: bool,
-    lex_unit_handler: LH,
-    tag_lex_unit_handler: TH,
-    state: State<LH, TH>,
+    lex_unit_handler: LUH,
+    tag_lex_unit_handler: TLUH,
+    state: State<LUH, TLUH>,
     current_token: Option<TokenView>,
     current_attr: Option<AttributeView>,
     last_start_tag_name_hash: Option<u64>,
@@ -56,14 +56,14 @@ where
     pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
 }
 
-impl<LH, TH> FullStateMachine<LH, TH>
+impl<LUH, TLUH> FullStateMachine<LUH, TLUH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
 {
     pub fn new(
-        lex_unit_handler: LH,
-        tag_lex_unit_handler: TH,
+        lex_unit_handler: LUH,
+        tag_lex_unit_handler: TLUH,
         feedback_providers: Rc<RefCell<FeedbackProviders>>,
     ) -> Self {
         FullStateMachine {
@@ -236,20 +236,20 @@ where
     }
 }
 
-impl<LH, TH> StateMachine for FullStateMachine<LH, TH>
+impl<LUH, TLUH> StateMachine for FullStateMachine<LUH, TLUH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
 {
     impl_common_sm_accessors!();
 
     #[inline]
-    fn set_state(&mut self, state: State<LH, TH>) {
+    fn set_state(&mut self, state: State<LUH, TLUH>) {
         self.state = state;
     }
 
     #[inline]
-    fn state(&self) -> State<LH, TH> {
+    fn state(&self) -> State<LUH, TLUH> {
         self.state
     }
 

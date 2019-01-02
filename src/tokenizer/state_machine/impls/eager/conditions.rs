@@ -1,7 +1,7 @@
 use super::*;
 use crate::tokenizer::state_machine::StateMachineConditions;
 
-impl<H: TagPreviewHandler> StateMachineConditions for EagerStateMachine<H> {
+impl<TPH: TagPreviewHandler> StateMachineConditions for EagerStateMachine<TPH> {
     #[inline]
     fn is_appropriate_end_tag(&self, _ch: Option<u8>) -> bool {
         self.tag_name_hash == self.last_start_tag_name_hash

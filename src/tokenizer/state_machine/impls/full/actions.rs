@@ -11,10 +11,10 @@ macro_rules! get_token_part_range {
     };
 }
 
-impl<LH, TH> StateMachineActions for FullStateMachine<LH, TH>
+impl<LUH, TLUH> StateMachineActions for FullStateMachine<LUH, TLUH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
 {
     impl_common_sm_actions!();
 

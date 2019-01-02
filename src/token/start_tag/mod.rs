@@ -19,7 +19,7 @@ pub struct StartTag<'i> {
 }
 
 impl<'i> StartTag<'i> {
-    pub(super) fn new_parsed(
+    pub(crate) fn new_parsed(
         name: Bytes<'i>,
         attributes: ParsedAttributeList<'i>,
         self_closing: bool,

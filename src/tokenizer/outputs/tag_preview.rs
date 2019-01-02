@@ -1,40 +1,55 @@
 use crate::base::{Bytes, Chunk, Range};
-use lazycell::LazyCell;
 use std::fmt::{self, Debug};
 
-pub struct TagNameInfo<'i> {
-    input: &'i Chunk<'i>,
-    name_range: Range,
-    name: LazyCell<Bytes<'i>>,
-    pub name_hash: Option<u64>,
+#[derive(Debug, Copy, Clone)]
+pub enum TagType {
+    StartTag,
+    EndTag,
 }
 
-impl<'i> TagNameInfo<'i> {
-    pub fn new(input: &'i Chunk<'i>, name_range: Range, name_hash: Option<u64>) -> Self {
-        TagNameInfo {
+pub struct TagPreview<'i> {
+    input: &'i Chunk<'i>,
+    tag_type: TagType,
+    name_range: Range,
+    name_hash: Option<u64>,
+}
+
+impl<'i> TagPreview<'i> {
+    pub fn new(
+        input: &'i Chunk<'i>,
+        tag_type: TagType,
+        name_range: Range,
+        name_hash: Option<u64>,
+    ) -> Self {
+        TagPreview {
             input,
+            tag_type,
             name_range,
-            name: LazyCell::new(),
             name_hash,
         }
     }
 
-    pub fn name(&self) -> &Bytes<'i> {
-        self.name.borrow_with(|| self.input.slice(self.name_range))
+    #[inline]
+    pub fn name(&self) -> Bytes<'i> {
+        self.input.slice(self.name_range)
+    }
+
+    #[inline]
+    pub fn name_hash(&self) -> Option<u64> {
+        self.name_hash
+    }
+
+    #[inline]
+    pub fn tag_type(&self) -> TagType {
+        self.tag_type
     }
 }
 
-impl Debug for TagNameInfo<'_> {
+impl Debug for TagPreview<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TagNameInfo")
-            .field("name", self.name())
+            .field("name", &self.name())
             .field("name_hash", &self.name_hash)
             .finish()
     }
-}
-
-#[derive(Debug)]
-pub enum TagPreview<'i> {
-    StartTag(TagNameInfo<'i>),
-    EndTag(TagNameInfo<'i>),
 }

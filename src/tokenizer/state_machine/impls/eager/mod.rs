@@ -33,7 +33,7 @@ pub type State<H> = fn(&mut EagerStateMachine<H>, &Chunk<'_>) -> StateResult;
 /// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
 /// it's not a concern for our use case as no content will be erroneously captured
 /// in this case.
-pub struct EagerStateMachine<H: TagPreviewHandler> {
+pub struct EagerStateMachine<TPH: TagPreviewHandler> {
     input_cursor: Cursor,
     tag_start: Option<usize>,
     ch_sequence_matching_start: Option<usize>,
@@ -43,8 +43,8 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     last_start_tag_name_hash: Option<u64>,
     is_state_enter: bool,
     cdata_allowed: bool,
-    tag_preview_handler: H,
-    state: State<H>,
+    tag_preview_handler: TPH,
+    state: State<TPH>,
     closing_quote: u8,
     feedback_providers: Rc<RefCell<FeedbackProviders>>,
     pending_text_parsing_mode_change: Option<TextParsingMode>,
@@ -54,8 +54,11 @@ pub struct EagerStateMachine<H: TagPreviewHandler> {
     pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
 }
 
-impl<H: TagPreviewHandler> EagerStateMachine<H> {
-    pub fn new(tag_preview_handler: H, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
+impl<TPH: TagPreviewHandler> EagerStateMachine<TPH> {
+    pub fn new(
+        tag_preview_handler: TPH,
+        feedback_providers: Rc<RefCell<FeedbackProviders>>,
+    ) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
             tag_start: None,
@@ -84,15 +87,15 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
             end: self.input_cursor.pos(),
         };
 
-        let tag_name_info = TagNameInfo::new(input, name_range, self.tag_name_hash);
-
-        if self.is_in_end_tag {
+        let tag_type = if self.is_in_end_tag {
             self.is_in_end_tag = false;
-            TagPreview::EndTag(tag_name_info)
+            TagType::EndTag
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;
-            TagPreview::StartTag(tag_name_info)
-        }
+            TagType::StartTag
+        };
+
+        TagPreview::new(input, tag_type, name_range, self.tag_name_hash)
     }
 
     fn get_feedback_for_tag(
@@ -100,25 +103,26 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
         tag_preview: &TagPreview<'_>,
     ) -> Result<TreeBuilderFeedback, Error> {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
+        let name_hash = tag_preview.name_hash();
 
-        match *tag_preview {
-            TagPreview::StartTag(TagNameInfo { name_hash, .. }) => {
+        Ok(match tag_preview.tag_type() {
+            TagType::StartTag => {
                 feedback_providers
                     .ambiguity_guard
                     .track_start_tag(name_hash)?;
 
-                Ok(feedback_providers
+                feedback_providers
                     .tree_builder_simulator
-                    .get_feedback_for_start_tag_name(name_hash))
+                    .get_feedback_for_start_tag_name(name_hash)
             }
-            TagPreview::EndTag(TagNameInfo { name_hash, .. }) => {
+            TagType::EndTag => {
                 feedback_providers.ambiguity_guard.track_end_tag(name_hash);
 
-                Ok(feedback_providers
+                feedback_providers
                     .tree_builder_simulator
-                    .get_feedback_for_end_tag_name(name_hash))
+                    .get_feedback_for_end_tag_name(name_hash)
             }
-        }
+        })
     }
 
     fn handle_tree_builder_feedback(
@@ -148,16 +152,16 @@ impl<H: TagPreviewHandler> EagerStateMachine<H> {
     }
 }
 
-impl<H: TagPreviewHandler> StateMachine for EagerStateMachine<H> {
+impl<TPH: TagPreviewHandler> StateMachine for EagerStateMachine<TPH> {
     impl_common_sm_accessors!();
 
     #[inline]
-    fn set_state(&mut self, state: State<H>) {
+    fn set_state(&mut self, state: State<TPH>) {
         self.state = state;
     }
 
     #[inline]
-    fn state(&self) -> State<H> {
+    fn state(&self) -> State<TPH> {
         self.state
     }
 

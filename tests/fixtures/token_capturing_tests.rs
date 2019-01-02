@@ -4,7 +4,7 @@ use crate::harness::tokenizer_test::{
 use cool_thing::base::Bytes;
 use cool_thing::token::Token;
 use cool_thing::tokenizer::{
-    LexUnit, NextOutputType, TagPreview, TextParsingModeSnapshot, TokenView,
+    LexUnit, NextOutputType, TagPreview, TagType, TextParsingModeSnapshot, TokenView,
 };
 use cool_thing::transform_stream::TransformStream;
 use encoding_rs::UTF_8;
@@ -206,11 +206,11 @@ impl ParsingResult {
         let tag_preview_handler = {
             let result = Rc::clone(&result);
 
-            move |tag_preview: &TagPreview<'_>| match tag_preview {
-                TagPreview::StartTag(name_info) => {
+            move |tag_preview: &TagPreview<'_>| match tag_preview.tag_type() {
+                TagType::StartTag => {
                     let mut result = result.borrow_mut();
 
-                    result.captured_tag_name = Some(to_lower_string(name_info.name()));
+                    result.captured_tag_name = Some(to_lower_string(&tag_preview.name()));
 
                     NextOutputType::LexUnit
                 }

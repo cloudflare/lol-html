@@ -1,7 +1,7 @@
 use super::decoder::{to_lower_null_decoded, to_null_decoded, Decoder};
 use super::unescape::Unescape;
 use cool_thing::token::Token;
-use cool_thing::tokenizer::{LexUnit, TagName, TagPreview, TokenView};
+use cool_thing::tokenizer::{LexUnit, TagName, TagPreview, TagType, TokenView};
 use encoding_rs::UTF_8;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
@@ -235,12 +235,6 @@ impl Unescape for TestToken {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum TagType {
-    StartTag,
-    EndTag,
-}
-
 #[derive(Debug)]
 pub struct TestTagPreview {
     name: String,
@@ -250,20 +244,10 @@ pub struct TestTagPreview {
 
 impl TestTagPreview {
     pub fn new(tag_preview: &TagPreview<'_>) -> Self {
-        let mut tag_type = TagType::StartTag;
-
-        let tag_name_info = match tag_preview {
-            TagPreview::StartTag(name_info) => name_info,
-            TagPreview::EndTag(name_info) => {
-                tag_type = TagType::EndTag;
-                name_info
-            }
-        };
-
         TestTagPreview {
-            name: to_lower_null_decoded(tag_name_info.name()),
-            name_hash: tag_name_info.name_hash,
-            tag_type,
+            name: to_lower_null_decoded(&tag_preview.name()),
+            name_hash: tag_preview.name_hash(),
+            tag_type: tag_preview.tag_type(),
         }
     }
 }

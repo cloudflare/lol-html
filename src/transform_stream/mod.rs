@@ -1,35 +1,48 @@
+mod token_factory;
+
 use crate::base::{Buffer, Chunk};
 use crate::tokenizer::{LexUnitHandler, TagLexUnitHandler, TagPreviewHandler, Tokenizer};
 use failure::{Error, ResultExt};
+
+#[cfg(feature = "testing_api")]
+use crate::tokenizer::Tokenizer;
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
     "tag or a comment that is captured by the specified selector."
 );
 
-pub struct TransformStream<LH, TH, PH>
+#[derive(Fail, Debug)]
+pub enum TransformStreamError {
+    #[fail(display = "Data was written into the stream after it has ended.")]
+    WriteCallAfterEnd,
+    #[fail(display = "Stream was ended twice.")]
+    EndCallAfterEnd,
+}
+
+pub struct TransformStream<LUH, TLUH, TPH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
-    PH: TagPreviewHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
+    TPH: TagPreviewHandler,
 {
-    tokenizer: Tokenizer<LH, TH, PH>,
+    tokenizer: Tokenizer<LUH, TLUH, TPH>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
 }
 
-impl<LH, TH, PH> TransformStream<LH, TH, PH>
+impl<LUH, TLUH, TPH> TransformStream<LUH, TLUH, TPH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
-    PH: TagPreviewHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
+    TPH: TagPreviewHandler,
 {
     pub fn new(
         buffer_capacity: usize,
-        lex_unit_handler: LH,
-        tag_lex_unit_handler: TH,
-        tag_preview_handler: PH,
+        lex_unit_handler: LUH,
+        tag_lex_unit_handler: TLUH,
+        tag_preview_handler: TPH,
     ) -> Self {
         TransformStream {
             tokenizer: Tokenizer::new(lex_unit_handler, tag_lex_unit_handler, tag_preview_handler),
@@ -62,7 +75,10 @@ where
     }
 
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
-        assert!(!self.finished, "Attempt to call write() after end()");
+        if self.finished {
+            return Err(TransformStreamError::WriteCallAfterEnd.into());
+        }
+
         trace!(@write data);
 
         let chunk = if self.has_buffered_data {
@@ -87,10 +103,12 @@ where
     }
 
     pub fn end(&mut self) -> Result<(), Error> {
-        assert!(!self.finished, "Attempt to call end() twice");
-        trace!(@end);
+        if self.finished {
+            return Err(TransformStreamError::EndCallAfterEnd.into());
+        }
 
         self.finished = true;
+        trace!(@end);
 
         let chunk = if self.has_buffered_data {
             Chunk::last(self.buffer.bytes())
@@ -106,7 +124,7 @@ where
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn tokenizer(&mut self) -> &mut Tokenizer<LH, TH, PH> {
-        &mut self.tokenizer
+    pub fn tokenizer(&mut self) -> &mut Tokenizer<LUH, TLUH, PH> {
+        self.tokenizer
     }
 }

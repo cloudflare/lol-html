@@ -35,7 +35,7 @@ pub struct ParsedAttributeList<'i> {
 }
 
 impl<'i> ParsedAttributeList<'i> {
-    pub fn new(
+    pub(crate) fn new(
         input: &'i Chunk<'i>,
         attribute_views: Rc<RefCell<Vec<AttributeView>>>,
         encoding: &'static Encoding,

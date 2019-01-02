@@ -1,10 +1,10 @@
 use super::*;
 use crate::tokenizer::state_machine::StateMachineConditions;
 
-impl<LH, TH> StateMachineConditions for FullStateMachine<LH, TH>
+impl<LUH, TLUH> StateMachineConditions for FullStateMachine<LUH, TLUH>
 where
-    LH: LexUnitHandler,
-    TH: TagLexUnitHandler,
+    LUH: LexUnitHandler,
+    TLUH: TagLexUnitHandler,
 {
     #[inline]
     fn is_appropriate_end_tag(&self, _ch: Option<u8>) -> bool {

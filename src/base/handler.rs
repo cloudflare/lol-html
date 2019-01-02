@@ -9,5 +9,11 @@ macro_rules! declare_handler {
                 self(val)
             }
         }
+
+        impl<H: $name> $name for std::rc::Rc<std::cell::RefCell<H>> {
+            fn handle(&mut self, val: $ty) $(-> $ret_ty)* {
+                self.borrow_mut().handle(val)
+            }
+        }
     };
 }
