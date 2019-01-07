@@ -1,5 +1,5 @@
 use super::token_view::*;
-use crate::base::{Chunk, Range};
+use crate::base::{Bytes, Chunk, Range};
 use std::fmt::{self, Debug, Write};
 
 pub struct LexUnit<'i> {
@@ -30,6 +30,21 @@ impl<'i> LexUnit<'i> {
     #[inline]
     pub fn raw_range(&self) -> Range {
         self.raw_range
+    }
+
+    #[inline]
+    pub fn part(&self, range: Range) -> Bytes<'_> {
+        self.input.slice(range)
+    }
+
+    #[inline]
+    pub fn opt_part(&self, range: Option<Range>) -> Option<Bytes<'_>> {
+        self.input.opt_slice(range)
+    }
+
+    #[inline]
+    pub fn raw(&self) -> Bytes<'_> {
+        self.input.slice(self.raw_range())
     }
 }
 

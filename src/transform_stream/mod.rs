@@ -1,7 +1,9 @@
-mod token_factory;
+mod writer;
 
+use self::writer::{TransformController, Writer};
 use crate::base::{Buffer, Chunk};
-use crate::tokenizer::{OutputSink as TokenizerOutputSink, Tokenizer};
+use crate::tokenizer::Tokenizer;
+use encoding_rs::Encoding;
 use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -22,19 +24,23 @@ pub enum TransformStreamError {
     EndCallAfterEnd,
 }
 
-pub struct TransformStream<S: TokenizerOutputSink> {
-    tokenizer: Tokenizer<S>,
+pub struct TransformStream<C: TransformController> {
+    tokenizer: Tokenizer<Writer<C>>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
 }
 
-impl<S: TokenizerOutputSink> TransformStream<S> {
-    pub fn new(buffer_capacity: usize, tokenizer_output_sink: S) -> Self {
-        let tokenizer_output_sink = Rc::new(RefCell::new(tokenizer_output_sink));
+impl<C: TransformController> TransformStream<C> {
+    pub fn new(
+        buffer_capacity: usize,
+        transform_controller: C,
+        encoding: &'static Encoding,
+    ) -> Self {
+        let writer = Rc::new(RefCell::new(Writer::new(transform_controller, encoding)));
 
         TransformStream {
-            tokenizer: Tokenizer::new(&tokenizer_output_sink),
+            tokenizer: Tokenizer::new(&writer),
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
