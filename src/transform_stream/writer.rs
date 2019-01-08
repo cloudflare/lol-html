@@ -23,7 +23,9 @@ bitflags! {
 // OutputSink
 // handle_bailout
 pub trait TransformController {
+    fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags;
     fn get_token_capture_flags_for_tag(&mut self, tag_lex_unit: &LexUnit) -> NextOutputType;
+
     fn get_token_capture_flags_for_tag_preview(
         &mut self,
         tag_preview: &TagPreview,
@@ -42,13 +44,15 @@ pub struct Writer<C: TransformController> {
 
 impl<C: TransformController> Writer<C> {
     pub fn new(transform_controller: C, encoding: &'static Encoding) -> Self {
+        let token_capture_flags = transform_controller.get_initial_token_capture_flags();
+
         Writer {
             transform_controller,
             encoding,
             pending_text_decoder: None,
             // TODO make adjustable
             text_buffer: String::from_utf8(vec![0u8; 1024]).unwrap(),
-            token_capture_flags: TokenCaptureFlags::empty(),
+            token_capture_flags,
         }
     }
 
@@ -63,7 +67,7 @@ impl<C: TransformController> Writer<C> {
     #[inline]
     fn flush_pending_text(&mut self) {
         if self.pending_text_decoder.is_some() {
-            self.emit_text(Bytes::empty(), true);
+            self.emit_text(&Bytes::empty(), true);
 
             let token = Token::Text(Text::End);
 
@@ -71,7 +75,7 @@ impl<C: TransformController> Writer<C> {
         }
     }
 
-    fn emit_text(&mut self, raw: Bytes<'_>, last: bool) {
+    fn emit_text(&mut self, raw: &Bytes<'_>, last: bool) {
         let encoding = self.encoding;
         let buffer = self.text_buffer.as_mut_str();
 
@@ -180,7 +184,7 @@ impl<C: TransformController> Writer<C> {
         if let Some(token_view) = lex_unit.token_view() {
             if let TokenView::Text = token_view {
                 if self.token_capture_flags.contains(TokenCaptureFlags::TEXT) {
-                    self.emit_text(lex_unit.raw(), false);
+                    self.emit_text(&lex_unit.raw(), false);
                 }
             } else {
                 self.flush_pending_text();

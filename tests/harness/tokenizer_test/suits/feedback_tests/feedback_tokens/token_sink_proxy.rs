@@ -1,5 +1,4 @@
 use crate::harness::tokenizer_test::TestToken;
-use cool_thing::tokenizer::TagName;
 use html5ever::tokenizer::{TagKind, Token, TokenSink, TokenSinkResult};
 use std::collections::HashMap;
 use std::iter::FromIterator;
@@ -37,12 +36,10 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
             }
             Token::TagToken(ref tag) => {
                 let name = tag.name.to_string();
-                let name_hash = TagName::get_hash(&name);
 
                 self.tokens.push(match tag.kind {
                     TagKind::StartTag => TestToken::StartTag {
                         name,
-                        name_hash,
                         attributes: HashMap::from_iter(
                             tag.attrs
                                 .iter()
@@ -51,7 +48,7 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
                         ),
                         self_closing: tag.self_closing,
                     },
-                    TagKind::EndTag => TestToken::EndTag { name, name_hash },
+                    TagKind::EndTag => TestToken::EndTag { name },
                 })
             }
             Token::CommentToken(ref s) => {

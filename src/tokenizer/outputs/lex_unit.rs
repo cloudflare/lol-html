@@ -48,7 +48,7 @@ impl<'i> LexUnit<'i> {
     }
 }
 
-impl<'i> Debug for LexUnit<'i> {
+impl Debug for LexUnit<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut builder = f.debug_struct("LexUnit");
         let mut pretty_raw = self.input.as_debug_string();

@@ -5,14 +5,10 @@ use encoding_rs::Encoding;
 
 pub use self::attributes::*;
 
-#[derive(Getters, Debug)]
+#[derive(Debug)]
 pub struct StartTag<'i> {
-    #[get = "pub"]
     name: Bytes<'i>,
-
-    #[get = "pub"]
     attributes: Attributes<'i>,
-
     self_closing: bool,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
@@ -33,6 +29,16 @@ impl<'i> StartTag<'i> {
             raw: Some(raw),
             encoding,
         }
+    }
+
+    #[inline]
+    pub fn attributes(&self) -> &Attributes<'i> {
+        &self.attributes
+    }
+
+    #[inline]
+    pub fn name(&self) -> String {
+        self.name.as_string(self.encoding)
     }
 
     #[inline]

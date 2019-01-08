@@ -7,12 +7,9 @@ use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::rc::Rc;
 
-#[derive(Getters, Debug)]
+#[derive(Debug)]
 pub struct Attribute<'i> {
-    #[get = "pub"]
     name: Bytes<'i>,
-
-    #[get = "pub"]
     value: Bytes<'i>,
     encoding: &'static Encoding,
 }
@@ -24,6 +21,16 @@ impl<'i> Attribute<'i> {
             value,
             encoding,
         }
+    }
+
+    #[inline]
+    pub fn name(&self) -> String {
+        self.name.as_string(self.encoding)
+    }
+
+    #[inline]
+    pub fn value(&self) -> String {
+        self.value.as_string(self.encoding)
     }
 }
 

@@ -36,23 +36,14 @@ cfg_if! {
             }
         }
 
-        #[derive(Copy, Clone, Debug)]
-        pub struct TextParsingModeSnapshot {
-            pub mode: TextParsingMode,
-            pub last_start_tag_name_hash: Option<u64>,
+        pub trait TextParsingModeChangeHandler {
+            fn handle(&mut self, mode: TextParsingMode);
         }
 
-        impl Default for TextParsingModeSnapshot {
-            fn default() -> Self {
-                TextParsingModeSnapshot {
-                    mode: TextParsingMode::Data,
-                    last_start_tag_name_hash: None,
-                }
+        impl<F: FnMut(TextParsingMode)> TextParsingModeChangeHandler for F {
+            fn handle(&mut self, mode: TextParsingMode) {
+                self(mode);
             }
-        }
-
-        declare_handler! {
-            TextParsingModeChangeHandler(TextParsingModeSnapshot)
         }
     }
 }

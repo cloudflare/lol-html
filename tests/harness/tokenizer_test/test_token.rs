@@ -1,8 +1,8 @@
-use super::decoder::{to_lower_null_decoded, to_null_decoded, Decoder};
+use super::decoder::{decode_attr_value, decode_text, to_null_decoded};
 use super::unescape::Unescape;
-use cool_thing::token::Token;
-use cool_thing::tokenizer::{LexUnit, TagName, TagPreview, TagType, TokenView};
-use encoding_rs::UTF_8;
+use cool_thing::token::{Text, Token};
+use cool_thing::tokenizer::TextParsingMode;
+use cool_thing::transform_stream::TokenCaptureFlags;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -27,14 +27,12 @@ pub enum TestToken {
 
     StartTag {
         name: String,
-        name_hash: Option<u64>,
         attributes: HashMap<String, String>,
         self_closing: bool,
     },
 
     EndTag {
         name: String,
-        name_hash: Option<u64>,
     },
 
     Doctype {
@@ -47,44 +45,37 @@ pub enum TestToken {
     Eof,
 }
 
-impl TestToken {
-    pub fn new(token: Token<'_>, lex_unit: &LexUnit<'_>) -> Self {
+impl From<Token<'_>> for TestToken {
+    fn from(token: Token<'_>) -> Self {
         match token {
-            Token::Text(t) => TestToken::Text(t.text().as_string(UTF_8)),
-            Token::Comment(t) => TestToken::Comment(to_null_decoded(t.text())),
+            Token::Text(t) => match t {
+                Text::Chunk(c) => TestToken::Text(c.text().into()),
+                Text::End => TestToken::Text("".into()),
+            },
+
+            Token::Comment(t) => TestToken::Comment(to_null_decoded(&t.text())),
 
             Token::StartTag(t) => TestToken::StartTag {
-                name: to_lower_null_decoded(t.name()),
-                name_hash: match lex_unit.token_view() {
-                    Some(&TokenView::StartTag { name_hash, .. }) => name_hash,
-                    _ => None,
-                },
+                name: to_null_decoded(&t.name()),
 
-                attributes: HashMap::from_iter(t.attributes().iter().rev().map(|a| {
-                    (
-                        to_lower_null_decoded(&a.name()),
-                        Decoder::new(&a.value().as_string(UTF_8))
-                            .unsafe_null()
-                            .attr_entities()
-                            .run(),
-                    )
-                })),
+                attributes: HashMap::from_iter(
+                    t.attributes()
+                        .iter()
+                        .rev()
+                        .map(|a| (to_null_decoded(&a.name()), decode_attr_value(&a.value()))),
+                ),
 
                 self_closing: t.self_closing(),
             },
 
             Token::EndTag(t) => TestToken::EndTag {
-                name: to_lower_null_decoded(t.name()),
-                name_hash: match lex_unit.token_view() {
-                    Some(&TokenView::EndTag { name_hash, .. }) => name_hash,
-                    _ => None,
-                },
+                name: to_null_decoded(&t.name()),
             },
 
             Token::Doctype(t) => TestToken::Doctype {
-                name: t.name().map(to_lower_null_decoded),
-                public_id: t.public_id().map(to_null_decoded),
-                system_id: t.system_id().map(to_null_decoded),
+                name: t.name().map(|s| to_null_decoded(&s)),
+                public_id: t.public_id().map(|s| to_null_decoded(&s)),
+                system_id: t.system_id().map(|s| to_null_decoded(&s)),
                 force_quirks: t.force_quirks(),
             },
 
@@ -132,7 +123,7 @@ impl<'de> Deserialize<'de> for TestToken {
 
                 let kind = next!("2 or more");
 
-                let mut token = match kind {
+                Ok(match kind {
                     TokenKind::Character => TestToken::Text(next!("2")),
                     TokenKind::Comment => TestToken::Comment(next!("2")),
                     TokenKind::StartTag => TestToken::StartTag {
@@ -141,7 +132,6 @@ impl<'de> Deserialize<'de> for TestToken {
                             value.make_ascii_lowercase();
                             value
                         },
-                        name_hash: None,
                         attributes: {
                             let value: HashMap<String, String> = next!("3 or 4");
                             HashMap::from_iter(value.into_iter().map(|(mut k, v)| {
@@ -157,7 +147,6 @@ impl<'de> Deserialize<'de> for TestToken {
                             value.make_ascii_lowercase();
                             value
                         },
-                        name_hash: None,
                     },
                     TokenKind::Doctype => TestToken::Doctype {
                         name: {
@@ -171,24 +160,7 @@ impl<'de> Deserialize<'de> for TestToken {
                         system_id: next!("5"),
                         force_quirks: !next!("5"),
                     },
-                };
-
-                match token {
-                    TestToken::StartTag {
-                        ref name,
-                        ref mut name_hash,
-                        ..
-                    }
-                    | TestToken::EndTag {
-                        ref name,
-                        ref mut name_hash,
-                    } => {
-                        *name_hash = TagName::get_hash(name);
-                    }
-                    _ => (),
-                }
-
-                Ok(token)
+                })
             }
         }
 
@@ -235,39 +207,64 @@ impl Unescape for TestToken {
     }
 }
 
-#[derive(Debug)]
-pub struct TestTagPreview {
-    name: String,
-    name_hash: Option<u64>,
-    tag_type: TagType,
+pub struct TestTokenList {
+    tokens: Vec<TestToken>,
+    text_parsing_mode: TextParsingMode,
 }
 
-impl TestTagPreview {
-    pub fn new(tag_preview: &TagPreview<'_>) -> Self {
-        TestTagPreview {
-            name: to_lower_null_decoded(&tag_preview.name()),
-            name_hash: tag_preview.name_hash(),
-            tag_type: tag_preview.tag_type(),
+impl Default for TestTokenList {
+    fn default() -> Self {
+        TestTokenList {
+            tokens: Vec::new(),
+            text_parsing_mode: TextParsingMode::Data,
         }
     }
 }
 
-impl PartialEq<TestToken> for TestTagPreview {
-    fn eq(&self, token: &TestToken) -> bool {
-        match (self.tag_type, token) {
-            (
-                TagType::StartTag,
-                TestToken::StartTag {
-                    name, name_hash, ..
-                },
-            )
-            | (
-                TagType::EndTag,
-                TestToken::EndTag {
-                    name, name_hash, ..
-                },
-            ) => self.name == *name && self.name_hash == *name_hash,
-            _ => false,
+impl TestTokenList {
+    pub fn push(&mut self, token: Token<'_>, text_parsing_mode: TextParsingMode) {
+        let token = TestToken::from(token);
+
+        if let Some(TestToken::Text(last)) = self.tokens.last_mut() {
+            if let TestToken::Text(ref curr) = token {
+                *last += curr;
+            } else {
+                decode_text(last, self.text_parsing_mode);
+                self.tokens.push(token);
+            }
+        } else {
+            if let TestToken::Text(_) = token {
+                self.text_parsing_mode = text_parsing_mode;
+            }
+
+            self.tokens.push(token);
         }
+    }
+
+    pub fn get_tokens(&self, capture_flags: TokenCaptureFlags) -> Vec<&TestToken> {
+        self.tokens
+            .iter()
+            .filter(|t| match t {
+                TestToken::Text(_) if capture_flags.contains(TokenCaptureFlags::TEXT) => true,
+                TestToken::StartTag { .. }
+                    if capture_flags.contains(TokenCaptureFlags::START_TAGS) =>
+                {
+                    true
+                }
+                TestToken::EndTag { .. } if capture_flags.contains(TokenCaptureFlags::END_TAGS) => {
+                    true
+                }
+                TestToken::Doctype { .. }
+                    if capture_flags.contains(TokenCaptureFlags::DOCTYPES) =>
+                {
+                    true
+                }
+                TestToken::Comment(_) if capture_flags.contains(TokenCaptureFlags::COMMENTS) => {
+                    true
+                }
+                TestToken::Eof if capture_flags.contains(TokenCaptureFlags::EOF) => true,
+                _ => false,
+            })
+            .collect()
     }
 }

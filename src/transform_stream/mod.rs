@@ -1,15 +1,14 @@
 mod writer;
 
-use self::writer::{TransformController, Writer};
+use self::writer::Writer;
 use crate::base::{Buffer, Chunk};
-use crate::tokenizer::Tokenizer;
+use crate::tokenizer::{NextOutputType, Tokenizer};
 use encoding_rs::Encoding;
 use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[cfg(feature = "testing_api")]
-use crate::tokenizer::Tokenizer;
+pub use self::writer::{TokenCaptureFlags, TransformController};
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
@@ -37,10 +36,19 @@ impl<C: TransformController> TransformStream<C> {
         transform_controller: C,
         encoding: &'static Encoding,
     ) -> Self {
+        let initial_output_type = if transform_controller
+            .get_initial_token_capture_flags()
+            .is_empty()
+        {
+            NextOutputType::TagPreview
+        } else {
+            NextOutputType::LexUnit
+        };
+
         let writer = Rc::new(RefCell::new(Writer::new(transform_controller, encoding)));
 
         TransformStream {
-            tokenizer: Tokenizer::new(&writer),
+            tokenizer: Tokenizer::new(&writer, initial_output_type),
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
@@ -119,7 +127,7 @@ impl<C: TransformController> TransformStream<C> {
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn tokenizer(&mut self) -> &mut Tokenizer<LUH, TLUH, PH> {
-        self.tokenizer
+    pub fn tokenizer(&mut self) -> &mut Tokenizer<Writer<C>> {
+        &mut self.tokenizer
     }
 }

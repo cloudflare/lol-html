@@ -58,13 +58,6 @@ cfg_if! {
                 println!("{:#?}", $output);
                 println!();
             };
-
-            ( @lex_unit $lex_unit:expr ) => {
-                use crate::rewriting::Token;
-
-                trace!(@output $lex_unit);
-                trace!(@output Token::try_from($lex_unit));
-            };
         }
     } else {
         macro_rules! trace {

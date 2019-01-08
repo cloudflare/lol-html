@@ -18,7 +18,7 @@ use std::rc::Rc;
 
 cfg_if! {
     if #[cfg(feature = "testing_api")] {
-        use crate::tokenizer::{TextParsingModeChangeHandler, TextParsingModeSnapshot};
+        use crate::tokenizer::TextParsingModeChangeHandler;
         use super::common::SharedTagConfirmationHandler;
     }
 }
@@ -168,7 +168,7 @@ impl<S: LexUnitSink> FullStateMachine<S> {
 
     #[inline]
     fn emit_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
-        trace!(@lex_unit lex_unit);
+        trace!(@output lex_unit);
 
         self.set_next_lex_unit_start(lex_unit);
         self.lex_unit_sink.handle_non_tag_content(lex_unit);
@@ -176,7 +176,7 @@ impl<S: LexUnitSink> FullStateMachine<S> {
 
     #[inline]
     fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
-        trace!(@lex_unit lex_unit);
+        trace!(@output lex_unit);
 
         self.set_next_lex_unit_start(lex_unit);
 
@@ -268,12 +268,7 @@ impl<S: LexUnitSink> StateMachine for FullStateMachine<S> {
             if let Some(ref mut text_parsing_mode_change_handler) =
                 self.text_parsing_mode_change_handler
             {
-                let snapshot = TextParsingModeSnapshot {
-                    mode,
-                    last_start_tag_name_hash: self.last_start_tag_name_hash,
-                };
-
-                text_parsing_mode_change_handler.handle(snapshot);
+                text_parsing_mode_change_handler.handle(mode);
             }
         }
     }

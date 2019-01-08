@@ -1,12 +1,8 @@
 #[macro_use]
 extern crate criterion;
 
-extern crate cool_thing;
-extern crate glob;
-extern crate html5ever;
-extern crate lazyhtml;
-
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
+use encoding_rs::UTF_8;
 use glob::glob;
 use std::fmt::{self, Debug};
 use std::fs::File;
@@ -51,36 +47,70 @@ fn get_inputs() -> Vec<Input> {
         .collect()
 }
 
-fn cool_thing_tokenizer_bench(with_full_sm: bool) -> impl FnMut(&mut Bencher, &Input) {
+fn cool_thing_tokenizer_bench(capture_everything: bool) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
+        use cool_thing::token::Token;
         use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview};
-        use cool_thing::transform_stream::TransformStream;
+        use cool_thing::transform_stream::{
+            TokenCaptureFlags, TransformController, TransformStream,
+        };
+
+        struct BenchTransformController {
+            capture_everything: bool,
+        }
+
+        impl BenchTransformController {
+            pub fn new(capture_everything: bool) -> Self {
+                BenchTransformController { capture_everything }
+            }
+        }
+
+        impl TransformController for BenchTransformController {
+            fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags {
+                if self.capture_everything {
+                    TokenCaptureFlags::all()
+                } else {
+                    TokenCaptureFlags::empty()
+                }
+            }
+
+            fn get_token_capture_flags_for_tag(
+                &mut self,
+                tag_lex_unit: &LexUnit,
+            ) -> NextOutputType {
+                black_box(tag_lex_unit);
+
+                if self.capture_everything {
+                    NextOutputType::LexUnit
+                } else {
+                    NextOutputType::TagPreview
+                }
+            }
+
+            fn get_token_capture_flags_for_tag_preview(
+                &mut self,
+                tag_preview: &TagPreview,
+            ) -> NextOutputType {
+                black_box(tag_preview);
+
+                if self.capture_everything {
+                    NextOutputType::LexUnit
+                } else {
+                    NextOutputType::TagPreview
+                }
+            }
+
+            fn handle_token(&mut self, token: Token) {
+                black_box(token);
+            }
+        }
 
         b.iter(|| {
             let mut transform_stream = TransformStream::new(
                 2048,
-                |lex_unit: &LexUnit<'_>| {
-                    black_box(lex_unit);
-                },
-                |lex_unit: &LexUnit<'_>| {
-                    black_box(lex_unit);
-
-                    NextOutputType::LexUnit
-                },
-                |tag_preview: &TagPreview<'_>| {
-                    black_box(tag_preview);
-
-                    NextOutputType::TagPreview
-                },
+                BenchTransformController::new(capture_everything),
+                UTF_8,
             );
-
-            transform_stream
-                .tokenizer()
-                .set_next_output_type(if with_full_sm {
-                    NextOutputType::LexUnit
-                } else {
-                    NextOutputType::TagPreview
-                });
 
             for chunk in &i.chunks {
                 transform_stream.write(chunk.as_bytes()).unwrap();
@@ -162,12 +192,12 @@ fn tokenization_benchmark(c: &mut Criterion) {
     c.bench(
         "Tokenizer",
         ParameterizedBenchmark::new(
-            "cool_thing - Eager state machine",
+            "cool_thing - Fast scan",
             cool_thing_tokenizer_bench(false),
             inputs,
         )
         .with_function(
-            "cool_thing - Full state machine",
+            "cool_thing - Capture everything",
             cool_thing_tokenizer_bench(true),
         )
         .with_function("lazyhtml", lazyhtml_tokenizer_bench())

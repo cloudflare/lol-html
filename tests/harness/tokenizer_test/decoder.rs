@@ -1,20 +1,29 @@
-use cool_thing::base::Bytes;
-use encoding_rs::UTF_8;
+use cool_thing::tokenizer::TextParsingMode;
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
 use std::iter::Peekable;
 use std::str::Chars;
 
-pub fn to_null_decoded(bytes: &Bytes<'_>) -> String {
-    Decoder::new(&bytes.as_string(UTF_8)).unsafe_null().run()
+pub fn to_null_decoded(s: &str) -> String {
+    Decoder::new(s).unsafe_null().run()
 }
 
-pub fn to_lower_null_decoded(bytes: &Bytes<'_>) -> String {
-    let mut string = to_null_decoded(bytes);
+pub fn decode_attr_value(s: &str) -> String {
+    Decoder::new(s).unsafe_null().attr_entities().run()
+}
 
-    string.make_ascii_lowercase();
+pub fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
+    let mut decoder = Decoder::new(text);
 
-    string
+    if text_parsing_mode.should_replace_unsafe_null_in_text() {
+        decoder = decoder.unsafe_null();
+    }
+
+    if text_parsing_mode.allows_text_entitites() {
+        decoder = decoder.text_entities();
+    }
+
+    decoder.run()
 }
 
 #[derive(PartialEq, Eq)]
@@ -24,7 +33,7 @@ enum Entities {
     Attribute,
 }
 
-pub struct Decoder<'a> {
+struct Decoder<'a> {
     chars: Peekable<Chars<'a>>,
     result: String,
     null: bool,

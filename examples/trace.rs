@@ -1,8 +1,7 @@
-extern crate cool_thing;
-extern crate getopts;
-
+use cool_thing::token::Token;
 use cool_thing::tokenizer::*;
-use cool_thing::transform_stream::TransformStream;
+use cool_thing::transform_stream::{TokenCaptureFlags, TransformController, TransformStream};
+use encoding_rs::UTF_8;
 use getopts::{Matches, Options};
 use std::env::args;
 
@@ -19,11 +18,6 @@ fn parse_options() -> Option<Matches> {
     opts.optopt("t", "last_start_tag", "Last start tag name", "-t");
     opts.optopt("c", "chunk_size", "Chunk size", "-c");
     opts.optflag("p", "tag_preview_mode", "Trace in tag preview mode");
-    opts.optflag(
-        "s",
-        "tag_scan_mode",
-        "Trace in tag scan mode: emit tag previews and corresponding lex units",
-    );
     opts.optflag("h", "help", "Show this help");
 
     let matches = match opts.parse(args().skip(1)) {
@@ -50,6 +44,44 @@ fn parse_options() -> Option<Matches> {
     matches
 }
 
+struct TraceTransformController {
+    tag_preview_mode: bool,
+}
+
+impl TraceTransformController {
+    pub fn new(tag_preview_mode: bool) -> Self {
+        TraceTransformController { tag_preview_mode }
+    }
+}
+
+impl TransformController for TraceTransformController {
+    fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags {
+        if self.tag_preview_mode {
+            TokenCaptureFlags::empty()
+        } else {
+            TokenCaptureFlags::all()
+        }
+    }
+
+    fn get_token_capture_flags_for_tag(&mut self, _: &LexUnit) -> NextOutputType {
+        if self.tag_preview_mode {
+            NextOutputType::TagPreview
+        } else {
+            NextOutputType::LexUnit
+        }
+    }
+
+    fn get_token_capture_flags_for_tag_preview(&mut self, _: &TagPreview) -> NextOutputType {
+        if self.tag_preview_mode {
+            NextOutputType::TagPreview
+        } else {
+            NextOutputType::LexUnit
+        }
+    }
+
+    fn handle_token(&mut self, _: Token) {}
+}
+
 fn main() {
     let matches = match parse_options() {
         Some(m) => m,
@@ -57,34 +89,12 @@ fn main() {
     };
 
     let html = matches.free.first().unwrap();
-    let tag_scan_mode = matches.opt_present("s");
+    let tag_preview_mode = matches.opt_present("p");
 
-    let mut transform_stream = TransformStream::new(
-        2048,
-        |_: &LexUnit<'_>| {},
-        |_: &LexUnit<'_>| {
-            if tag_scan_mode {
-                NextOutputType::TagPreview
-            } else {
-                NextOutputType::LexUnit
-            }
-        },
-        |_: &TagPreview<'_>| {
-            if tag_scan_mode {
-                NextOutputType::LexUnit
-            } else {
-                NextOutputType::TagPreview
-            }
-        },
-    );
+    let mut transform_stream =
+        TransformStream::new(2048, TraceTransformController::new(tag_preview_mode), UTF_8);
 
     let tokenizer = transform_stream.tokenizer();
-
-    tokenizer.set_next_output_type(if tag_scan_mode || matches.opt_present("p") {
-        NextOutputType::TagPreview
-    } else {
-        NextOutputType::LexUnit
-    });
 
     tokenizer.switch_text_parsing_mode(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
         None => TextParsingMode::Data,

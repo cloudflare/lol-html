@@ -31,18 +31,23 @@ impl<'i> Doctype<'i> {
     }
 
     #[inline]
-    pub fn name(&self) -> Option<&Bytes<'i>> {
-        self.name.as_ref()
+    fn part_to_opt_str(&self, part: &Option<Bytes<'_>>) -> Option<String> {
+        part.as_ref().map(|p| p.as_string(self.encoding))
     }
 
     #[inline]
-    pub fn public_id(&self) -> Option<&Bytes<'i>> {
-        self.public_id.as_ref()
+    pub fn name(&self) -> Option<String> {
+        self.part_to_opt_str(&self.name)
     }
 
     #[inline]
-    pub fn system_id(&self) -> Option<&Bytes<'i>> {
-        self.system_id.as_ref()
+    pub fn public_id(&self) -> Option<String> {
+        self.part_to_opt_str(&self.public_id)
+    }
+
+    #[inline]
+    pub fn system_id(&self) -> Option<String> {
+        self.part_to_opt_str(&self.system_id)
     }
 
     #[inline]

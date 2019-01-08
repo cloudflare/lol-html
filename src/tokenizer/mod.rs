@@ -68,7 +68,7 @@ macro_rules! with_current_sm {
 }
 
 impl<S: OutputSink> Tokenizer<S> {
-    pub fn new(output_sink: &Rc<RefCell<S>>) -> Self {
+    pub fn new(output_sink: &Rc<RefCell<S>>, initial_output_type: NextOutputType) -> Self {
         let feedback_providers = Rc::new(RefCell::new(FeedbackProviders::default()));
 
         Tokenizer {
@@ -77,7 +77,7 @@ impl<S: OutputSink> Tokenizer<S> {
                 Rc::clone(output_sink),
                 Rc::clone(&feedback_providers),
             ),
-            next_output_type: NextOutputType::TagPreview,
+            next_output_type: initial_output_type,
         }
     }
 
@@ -117,10 +117,6 @@ impl<S: OutputSink> Tokenizer<S> {
 
 #[cfg(feature = "testing_api")]
 impl<S: OutputSink> Tokenizer<S> {
-    pub fn set_next_output_type(&mut self, ty: NextOutputType) {
-        self.next_output_type = ty;
-    }
-
     pub fn switch_text_parsing_mode(&mut self, mode: TextParsingMode) {
         with_current_sm!(self, { sm.switch_text_parsing_mode(mode) });
     }
@@ -129,7 +125,7 @@ impl<S: OutputSink> Tokenizer<S> {
         with_current_sm!(self, { sm.set_last_start_tag_name_hash(name_hash) });
     }
 
-    pub fn full_sm(&mut self) -> &mut FullStateMachine<LUH, TLUH> {
+    pub fn full_sm(&mut self) -> &mut FullStateMachine<Rc<RefCell<S>>> {
         &mut self.full_sm
     }
 

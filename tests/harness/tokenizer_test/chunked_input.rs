@@ -1,8 +1,7 @@
 use super::Unescape;
-use cool_thing::tokenizer::{
-    LexUnitHandler, NextOutputType, TagLexUnitHandler, TagPreviewHandler, TextParsingModeSnapshot,
-};
-use cool_thing::transform_stream::TransformStream;
+use cool_thing::tokenizer::{NextOutputType, TextParsingMode};
+use cool_thing::transform_stream::{TransformController, TransformStream};
+use encoding_rs::{Encoding, UTF_8};
 use failure::Error;
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
@@ -14,6 +13,7 @@ use std::fmt::{self, Formatter};
 pub struct ChunkedInput {
     input: String,
     chunk_size: usize,
+    encoding: &'static Encoding,
 }
 
 impl From<String> for ChunkedInput {
@@ -21,6 +21,7 @@ impl From<String> for ChunkedInput {
         let mut input = ChunkedInput {
             input,
             chunk_size: 1,
+            encoding: UTF_8,
         };
 
         input.set_chunk_size();
@@ -34,24 +35,18 @@ impl ChunkedInput {
         self.chunk_size
     }
 
-    pub fn parse<LUH, TLUH, TPH>(
+    pub fn parse<C: TransformController>(
         &self,
-        mut transform_stream: TransformStream<LUH, TLUH, TPH>,
-        initial_mode_snapshot: TextParsingModeSnapshot,
-        initial_output_type: NextOutputType,
-    ) -> Result<(), Error>
-    where
-        LUH: LexUnitHandler,
-        TLUH: TagLexUnitHandler,
-        TPH: TagPreviewHandler,
-    {
+        mut transform_stream: TransformStream<C>,
+        initial_mode: TextParsingMode,
+        last_start_tag_name_hash: Option<u64>,
+    ) -> Result<(), Error> {
         let tokenizer = transform_stream.tokenizer();
 
-        tokenizer.set_next_output_type(initial_output_type);
-        tokenizer.set_last_start_tag_name_hash(initial_mode_snapshot.last_start_tag_name_hash);
-        tokenizer.switch_text_parsing_mode(initial_mode_snapshot.mode);
+        tokenizer.set_last_start_tag_name_hash(last_start_tag_name_hash);
+        tokenizer.switch_text_parsing_mode(initial_mode);
 
-        for chunk in self.get_chunks() {
+        for chunk in self.chunks() {
             transform_stream.write(chunk)?;
         }
 
@@ -60,7 +55,11 @@ impl ChunkedInput {
         Ok(())
     }
 
-    fn get_chunks(&self) -> Vec<&[u8]> {
+    pub fn encoding(&self) -> &'static Encoding {
+        self.encoding
+    }
+
+    fn chunks(&self) -> Vec<&[u8]> {
         let bytes = self.input.as_bytes();
 
         if self.chunk_size > 0 {

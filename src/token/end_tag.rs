@@ -1,9 +1,8 @@
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 
-#[derive(Getters, Debug)]
+#[derive(Debug)]
 pub struct EndTag<'i> {
-    #[get = "pub"]
     name: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
@@ -16,6 +15,11 @@ impl<'i> EndTag<'i> {
             raw: Some(raw),
             encoding,
         }
+    }
+
+    #[inline]
+    pub fn name(&self) -> String {
+        self.name.as_string(self.encoding)
     }
 
     #[inline]
