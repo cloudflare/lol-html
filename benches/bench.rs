@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
-use cool_thing::transform_stream::TokenCaptureFlags;
+use cool_thing::token::TokenCaptureFlags;
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
 use encoding_rs::UTF_8;
 use glob::glob;

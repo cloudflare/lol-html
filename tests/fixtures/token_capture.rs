@@ -1,9 +1,9 @@
 use crate::harness::functional_testing::{
     FunctionalTestFixture, TestCase, TestToken, TestTokenList,
 };
-use cool_thing::token::Token;
+use cool_thing::token::{Token, TokenCaptureFlags};
 use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview, TextType};
-use cool_thing::transform_stream::{TokenCaptureFlags, TransformController};
+use cool_thing::transform_stream::TransformController;
 use std::cell::RefCell;
 use std::rc::Rc;
 

@@ -1,6 +1,6 @@
-use cool_thing::token::Token;
+use cool_thing::token::{Token, TokenCaptureFlags};
 use cool_thing::tokenizer::*;
-use cool_thing::transform_stream::{TokenCaptureFlags, TransformController, TransformStream};
+use cool_thing::transform_stream::{TransformController, TransformStream};
 use encoding_rs::UTF_8;
 use getopts::{Matches, Options};
 use std::env::args;
