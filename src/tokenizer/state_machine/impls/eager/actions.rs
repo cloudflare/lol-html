@@ -66,17 +66,15 @@ impl<S: TagPreviewSink> StateMachineActions for EagerStateMachine<S> {
 
     #[inline]
     fn emit_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
-        confirm_tag!(self);
-
         Ok(
-            if let Some(mode) = self.pending_text_parsing_mode_change.take() {
-                self.switch_text_parsing_mode(mode);
+            if let Some(text_type) = self.pending_text_type_change.take() {
+                self.switch_text_type(text_type);
 
                 ParsingLoopDirective::Continue
             } else {
                 // NOTE: exit from any non-initial text parsing mode always happens on tag emission
                 // (except for CDATA, but there is a special action to take care of it).
-                self.set_last_text_parsing_mode(TextParsingMode::Data);
+                self.set_last_text_type(TextType::Data);
 
                 ParsingLoopDirective::None
             },

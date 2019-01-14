@@ -9,13 +9,13 @@ fn parse_options() -> Option<Matches> {
     let mut opts = Options::new();
 
     opts.optopt(
-        "m",
-        "text_parsing_mode",
-        "Initial text parsing mode",
-        "-s (Data state|PLAINTEXT state|RCDATA state|RAWTEXT state|Script data state|CDATA section state)",
+        "t",
+        "text_type",
+        "Initial text type",
+        "-t (Data state|PLAINTEXT state|RCDATA state|RAWTEXT state|Script data state|CDATA section state)",
     );
 
-    opts.optopt("t", "last_start_tag", "Last start tag name", "-t");
+    opts.optopt("l", "last_start_tag", "Last start tag name", "-l");
     opts.optopt("c", "chunk_size", "Chunk size", "-c");
     opts.optflag("p", "tag_preview_mode", "Trace in tag preview mode");
     opts.optflag("h", "help", "Show this help");
@@ -96,12 +96,12 @@ fn main() {
 
     let tokenizer = transform_stream.tokenizer();
 
-    tokenizer.switch_text_parsing_mode(match matches.opt_str("s").as_ref().map(|s| s.as_str()) {
-        None => TextParsingMode::Data,
-        Some(state) => TextParsingMode::from(state),
+    tokenizer.switch_text_type(match matches.opt_str("t").as_ref().map(|s| s.as_str()) {
+        None => TextType::Data,
+        Some(state) => TextType::from(state),
     });
 
-    if let Some(ref tag_name) = matches.opt_str("t") {
+    if let Some(ref tag_name) = matches.opt_str("l") {
         tokenizer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
     }
 

@@ -1,5 +1,3 @@
-use cfg_if::cfg_if;
-
 /// Macro that implements accesors required by the StateMachine
 /// trait and that are common for both implementations.
 macro_rules! impl_common_sm_accessors {
@@ -25,8 +23,13 @@ macro_rules! impl_common_sm_accessors {
         }
 
         #[inline]
-        fn last_text_parsing_mode(&self) -> TextParsingMode {
-            self.last_text_parsing_mode_change
+        fn set_last_text_type(&mut self, text_type: TextType) {
+            self.last_text_type = text_type;
+        }
+
+        #[inline]
+        fn last_text_type(&self) -> TextType {
+            self.last_text_type
         }
 
         #[inline]
@@ -65,12 +68,12 @@ macro_rules! impl_common_sm_actions {
 
         #[inline]
         fn enter_cdata(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-            self.set_last_text_parsing_mode(TextParsingMode::CDataSection);
+            self.set_last_text_type(TextType::CDataSection);
         }
 
         #[inline]
         fn leave_cdata(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-            self.set_last_text_parsing_mode(TextParsingMode::Data);
+            self.set_last_text_type(TextType::Data);
         }
     };
 }
@@ -84,25 +87,4 @@ macro_rules! noop_action {
             }
         )*
     };
-}
-
-cfg_if! {
-    if #[cfg(feature = "testing_api")] {
-        use std::rc::Rc;
-        use std::cell::RefCell;
-
-        pub type SharedTagConfirmationHandler = Rc<RefCell<Box<dyn FnMut()>>>;
-
-        macro_rules! confirm_tag {
-            ($self:tt) => {
-                if let Some(ref tag_confirmation_handler) = $self.tag_confirmation_handler {
-                    let handler = &mut *tag_confirmation_handler.borrow_mut();
-
-                    handler();
-                }
-            };
-        }
-    } else {
-        macro_rules! confirm_tag { ($self:tt) => (); }
-    }
 }

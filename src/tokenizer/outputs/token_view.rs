@@ -1,4 +1,5 @@
 use crate::base::{Align, Range};
+use crate::tokenizer::TextType;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -19,7 +20,7 @@ impl Align for AttributeView {
 // without necessity to iterate over attributes vector.
 #[derive(Debug)]
 pub enum TokenView {
-    Text,
+    Text(TextType),
 
     Comment(Range),
 

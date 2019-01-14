@@ -1,7 +1,7 @@
 mod feedback_tokens;
 
 use self::feedback_tokens::get_expected_tokens_with_feedback;
-use crate::harness::tokenizer_test::{default_initial_states, Bailout, TestCase};
+use crate::harness::functional_testing::{default_initial_states, Bailout, TestCase};
 use glob;
 use serde_json::from_reader;
 use std::collections::HashMap;
@@ -64,7 +64,6 @@ pub fn get_test_cases() -> Vec<TestCase> {
                     initial_states: default_initial_states(),
                     double_escaped: false,
                     last_start_tag: String::new(),
-                    ignored: false,
                     expected_bailout,
                 }
             }));

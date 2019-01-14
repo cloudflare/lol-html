@@ -96,7 +96,7 @@ macro_rules! create_assert_for_tags {
         }
 
         #[inline]
-        fn assert_not_ambigious_mode_switch(
+        fn assert_not_ambigious_text_type_switch(
             tag_name_hash: u64,
         ) -> Result<(), AmbiguityGuardError> {
             if tag_is_one_of!(tag_name_hash, [ $($tag),+ ]) {
@@ -158,7 +158,7 @@ impl AmbiguityGuard {
                     }
                     // NOTE: <script> is allowed in "in select" insertion mode.
                     else if t != TagName::Script {
-                        assert_not_ambigious_mode_switch(t)?;
+                        assert_not_ambigious_text_type_switch(t)?;
                     }
                 }
                 State::InTemplateInSelect(depth) => {
@@ -172,13 +172,13 @@ impl AmbiguityGuard {
 
                         self.state = State::InTemplateInSelect(depth + 1);
                     } else {
-                        assert_not_ambigious_mode_switch(t)?;
+                        assert_not_ambigious_text_type_switch(t)?;
                     }
                 }
                 State::InOrAfterFrameset => {
                     // NOTE: <noframes> is allowed in and after <frameset>.
                     if t != TagName::Noframes {
-                        assert_not_ambigious_mode_switch(t)?
+                        assert_not_ambigious_text_type_switch(t)?
                     }
                 }
             }

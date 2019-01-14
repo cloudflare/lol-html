@@ -1,14 +1,14 @@
 #[macro_use]
-pub mod tokenizer_test;
+pub mod functional_testing;
 
 macro_rules! create_test {
-    ($name:expr, $ignored:expr, $body:tt) => {{
+    ($name:expr, $body:tt) => {{
         use test::{ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};
 
         TestDescAndFn {
             desc: TestDesc {
                 name: TestName::DynTestName($name),
-                ignore: $ignored,
+                ignore: false,
                 should_panic: ShouldPanic::No,
                 allow_fail: false,
             },
@@ -30,7 +30,7 @@ macro_rules! test_fixture {
 
                 write!(&mut name, "{} - {}", $fixture_name, $name).unwrap();
 
-                tests.push(create_test!(name, false, $body));
+                tests.push(create_test!(name, $body));
             })+
 
             tests

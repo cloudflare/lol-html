@@ -31,23 +31,24 @@ impl<'i> Doctype<'i> {
     }
 
     #[inline]
-    fn part_to_opt_str(&self, part: &Option<Bytes<'_>>) -> Option<String> {
-        part.as_ref().map(|p| p.as_string(self.encoding))
-    }
-
-    #[inline]
     pub fn name(&self) -> Option<String> {
-        self.part_to_opt_str(&self.name)
+        self.name.as_ref().map(|n| {
+            let mut name = n.as_string(self.encoding);
+
+            name.make_ascii_lowercase();
+
+            name
+        })
     }
 
     #[inline]
     pub fn public_id(&self) -> Option<String> {
-        self.part_to_opt_str(&self.public_id)
+        self.public_id.as_ref().map(|i| i.as_string(self.encoding))
     }
 
     #[inline]
     pub fn system_id(&self) -> Option<String> {
-        self.part_to_opt_str(&self.system_id)
+        self.system_id.as_ref().map(|i| i.as_string(self.encoding))
     }
 
     #[inline]

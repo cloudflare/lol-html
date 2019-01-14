@@ -1,4 +1,5 @@
 mod tag_name_hash_tests;
+mod token_capture;
 
 use test::TestDescAndFn;
 
@@ -11,7 +12,7 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
         };
     }
 
-    add_tests!(tag_name_hash_tests);
+    add_tests!(tag_name_hash_tests, token_capture);
 
     tests
 }

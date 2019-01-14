@@ -3,7 +3,7 @@ use crate::token::Token;
 use crate::token::*;
 use crate::tokenizer::{
     LexUnit, LexUnitSink, NextOutputType, OutputSink as TokenizerOutputSink, TagPreview,
-    TagPreviewSink, TokenView,
+    TagPreviewSink, TextType, TokenView,
 };
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
@@ -40,6 +40,7 @@ pub struct Writer<C: TransformController> {
     pending_text_decoder: Option<Decoder>,
     text_buffer: String,
     token_capture_flags: TokenCaptureFlags,
+    last_text_type: TextType,
 }
 
 impl<C: TransformController> Writer<C> {
@@ -53,23 +54,19 @@ impl<C: TransformController> Writer<C> {
             // TODO make adjustable
             text_buffer: String::from_utf8(vec![0u8; 1024]).unwrap(),
             token_capture_flags,
+            last_text_type: TextType::Data,
         }
-    }
-
-    // TODO: temporary code that just toggles all flags depending on the next output type.
-    fn adjust_token_capture_flags(&mut self, next_output_type: NextOutputType) {
-        self.token_capture_flags = match next_output_type {
-            NextOutputType::LexUnit => TokenCaptureFlags::all(),
-            NextOutputType::TagPreview => TokenCaptureFlags::empty(),
-        };
     }
 
     #[inline]
     fn flush_pending_text(&mut self) {
         if self.pending_text_decoder.is_some() {
             self.emit_text(&Bytes::empty(), true);
+            self.pending_text_decoder = None;
 
             let token = Token::Text(Text::End);
+
+            trace!(@output token);
 
             self.transform_controller.handle_token(token);
         }
@@ -81,7 +78,7 @@ impl<C: TransformController> Writer<C> {
 
         let decoder = self
             .pending_text_decoder
-            .get_or_insert_with(|| encoding.new_decoder());
+            .get_or_insert_with(|| encoding.new_decoder_without_bom_handling());
 
         let mut consumed = 0usize;
 
@@ -91,7 +88,13 @@ impl<C: TransformController> Writer<C> {
             consumed += read;
 
             if written > 0 {
-                let token = Token::Text(Text::new_parsed_chunk(&buffer[..written], encoding));
+                let token = Token::Text(Text::new_parsed_chunk(
+                    &buffer[..written],
+                    self.last_text_type,
+                    encoding,
+                ));
+
+                trace!(@output token);
 
                 self.transform_controller.handle_token(token);
             }
@@ -176,14 +179,17 @@ impl<C: TransformController> Writer<C> {
         };
 
         if let Some(token) = token {
+            trace!(@output token);
+
             self.transform_controller.handle_token(token);
         }
     }
 
     fn handle_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
         if let Some(token_view) = lex_unit.token_view() {
-            if let TokenView::Text = token_view {
+            if let TokenView::Text(text_type) = *token_view {
                 if self.token_capture_flags.contains(TokenCaptureFlags::TEXT) {
+                    self.last_text_type = text_type;
                     self.emit_text(&lex_unit.raw(), false);
                 }
             } else {
@@ -203,7 +209,6 @@ impl<C: TransformController> LexUnitSink for Writer<C> {
             .transform_controller
             .get_token_capture_flags_for_tag(lex_unit);
 
-        self.adjust_token_capture_flags(next_output_type);
         self.handle_lex_unit(lex_unit);
 
         next_output_type
@@ -218,13 +223,8 @@ impl<C: TransformController> LexUnitSink for Writer<C> {
 impl<C: TransformController> TagPreviewSink for Writer<C> {
     #[inline]
     fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType {
-        let next_output_type = self
-            .transform_controller
-            .get_token_capture_flags_for_tag_preview(tag_preview);
-
-        self.adjust_token_capture_flags(next_output_type);
-
-        next_output_type
+        self.transform_controller
+            .get_token_capture_flags_for_tag_preview(tag_preview)
     }
 }
 

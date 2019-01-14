@@ -9,13 +9,13 @@ mod impls;
 pub use self::impls::*;
 
 use crate::base::{Chunk, Cursor};
-use crate::tokenizer::{NextOutputType, TextParsingMode};
+use crate::tokenizer::{NextOutputType, TextType};
 use failure::Error;
 
 #[derive(Debug, Copy, Clone)]
 pub struct StateMachineBookmark {
     pub cdata_allowed: bool,
-    pub text_parsing_mode: TextParsingMode,
+    pub text_type: TextType,
     pub last_start_tag_name_hash: Option<u64>,
     pub pos: usize,
 }
@@ -98,8 +98,8 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn last_start_tag_name_hash(&self) -> Option<u64>;
     fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);
 
-    fn set_last_text_parsing_mode(&mut self, mode: TextParsingMode);
-    fn last_text_parsing_mode(&self) -> TextParsingMode;
+    fn set_last_text_type(&mut self, text_type: TextType);
+    fn last_text_type(&self) -> TextType;
 
     fn set_cdata_allowed(&mut self, cdata_allowed: bool);
 
@@ -127,7 +127,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         bookmark: StateMachineBookmark,
     ) -> ParsingLoopResult {
         self.set_cdata_allowed(bookmark.cdata_allowed);
-        self.switch_text_parsing_mode(bookmark.text_parsing_mode);
+        self.switch_text_type(bookmark.text_type);
         self.set_last_start_tag_name_hash(bookmark.last_start_tag_name_hash);
         self.adjust_to_bookmark(bookmark.pos);
         self.set_input_cursor(Cursor::new(bookmark.pos));
@@ -152,7 +152,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn create_bookmark(&self, pos: usize) -> StateMachineBookmark {
         StateMachineBookmark {
             cdata_allowed: self.cdata_allowed(None),
-            text_parsing_mode: self.last_text_parsing_mode(),
+            text_type: self.last_text_type(),
             last_start_tag_name_hash: self.last_start_tag_name_hash(),
             pos,
         }
@@ -165,16 +165,16 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn switch_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        self.set_last_text_parsing_mode(mode);
+    fn switch_text_type(&mut self, text_type: TextType) {
+        self.set_last_text_type(text_type);
 
-        self.switch_state(match mode {
-            TextParsingMode::Data => Self::data_state,
-            TextParsingMode::PlainText => Self::plaintext_state,
-            TextParsingMode::RCData => Self::rcdata_state,
-            TextParsingMode::RawText => Self::rawtext_state,
-            TextParsingMode::ScriptData => Self::script_data_state,
-            TextParsingMode::CDataSection => Self::cdata_section_state,
+        self.switch_state(match text_type {
+            TextType::Data => Self::data_state,
+            TextType::PlainText => Self::plaintext_state,
+            TextType::RCData => Self::rcdata_state,
+            TextType::RawText => Self::rawtext_state,
+            TextType::ScriptData => Self::script_data_state,
+            TextType::CDataSection => Self::cdata_section_state,
         });
     }
 }

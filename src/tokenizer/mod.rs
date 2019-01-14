@@ -6,7 +6,7 @@ mod state_machine;
 
 mod feedback_providers;
 mod outputs;
-mod text_parsing_mode;
+mod text_type;
 
 use self::feedback_providers::*;
 use self::state_machine::{
@@ -20,7 +20,7 @@ use std::rc::Rc;
 pub use self::outputs::*;
 pub use self::state_machine::{LexUnitSink, TagPreviewSink};
 pub use self::tag_name::TagName;
-pub use self::text_parsing_mode::*;
+pub use self::text_type::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum NextOutputType {
@@ -117,22 +117,11 @@ impl<S: OutputSink> Tokenizer<S> {
 
 #[cfg(feature = "testing_api")]
 impl<S: OutputSink> Tokenizer<S> {
-    pub fn switch_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        with_current_sm!(self, { sm.switch_text_parsing_mode(mode) });
+    pub fn switch_text_type(&mut self, text_type: TextType) {
+        with_current_sm!(self, { sm.switch_text_type(text_type) });
     }
 
     pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
         with_current_sm!(self, { sm.set_last_start_tag_name_hash(name_hash) });
-    }
-
-    pub fn full_sm(&mut self) -> &mut FullStateMachine<Rc<RefCell<S>>> {
-        &mut self.full_sm
-    }
-
-    pub fn set_tag_confirmation_handler(&mut self, handler: Box<dyn FnMut()>) {
-        let handler = Rc::new(RefCell::new(handler));
-
-        self.full_sm.tag_confirmation_handler = Some(Rc::clone(&handler));
-        self.eager_sm.tag_confirmation_handler = Some(Rc::clone(&handler));
     }
 }

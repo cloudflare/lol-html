@@ -1,4 +1,4 @@
-use crate::harness::tokenizer_test::TestCase;
+use crate::harness::functional_testing::TestCase;
 use glob;
 use serde_json::from_reader;
 

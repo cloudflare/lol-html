@@ -1,4 +1,4 @@
-use crate::harness::tokenizer_test::TestToken;
+use crate::harness::functional_testing::TestToken;
 use html5ever::tokenizer::{TagKind, Token, TokenSink, TokenSinkResult};
 use std::collections::HashMap;
 use std::iter::FromIterator;

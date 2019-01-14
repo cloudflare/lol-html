@@ -38,7 +38,11 @@ impl<'i> StartTag<'i> {
 
     #[inline]
     pub fn name(&self) -> String {
-        self.name.as_string(self.encoding)
+        let mut name = self.name.as_string(self.encoding);
+
+        name.make_ascii_lowercase();
+
+        name
     }
 
     #[inline]

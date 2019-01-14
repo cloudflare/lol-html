@@ -1,8 +1,8 @@
 use super::Unescape;
-use cool_thing::tokenizer::{NextOutputType, TextParsingMode};
+use cool_thing::tokenizer::TextType;
 use cool_thing::transform_stream::{TransformController, TransformStream};
 use encoding_rs::{Encoding, UTF_8};
-use failure::Error;
+use failure::{ensure, Error};
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde_json::error::Error as SerdeError;
@@ -12,41 +12,36 @@ use std::fmt::{self, Formatter};
 #[derive(Debug, Clone)]
 pub struct ChunkedInput {
     input: String,
-    chunk_size: usize,
+    chunks: Vec<Vec<u8>>,
+    initialized: bool,
     encoding: &'static Encoding,
 }
 
 impl From<String> for ChunkedInput {
     fn from(input: String) -> Self {
-        let mut input = ChunkedInput {
+        ChunkedInput {
             input,
-            chunk_size: 1,
+            chunks: Vec::new(),
+            initialized: false,
             encoding: UTF_8,
-        };
-
-        input.set_chunk_size();
-
-        input
+        }
     }
 }
 
 impl ChunkedInput {
-    pub fn get_chunk_size(&self) -> usize {
-        self.chunk_size
-    }
-
     pub fn parse<C: TransformController>(
         &self,
-        mut transform_stream: TransformStream<C>,
-        initial_mode: TextParsingMode,
+        transform_controller: C,
+        initial_text_type: TextType,
         last_start_tag_name_hash: Option<u64>,
     ) -> Result<(), Error> {
+        let mut transform_stream = TransformStream::new(2048, transform_controller, self.encoding);
         let tokenizer = transform_stream.tokenizer();
 
         tokenizer.set_last_start_tag_name_hash(last_start_tag_name_hash);
-        tokenizer.switch_text_parsing_mode(initial_mode);
+        tokenizer.switch_text_type(initial_text_type);
 
-        for chunk in self.chunks() {
+        for chunk in &self.chunks {
             transform_stream.write(chunk)?;
         }
 
@@ -55,24 +50,28 @@ impl ChunkedInput {
         Ok(())
     }
 
-    pub fn encoding(&self) -> &'static Encoding {
-        self.encoding
-    }
+    pub fn init(&mut self, encoding: &'static Encoding) -> Result<usize, Error> {
+        let (bytes, _, had_unmappable_chars) = encoding.encode(&self.input);
 
-    fn chunks(&self) -> Vec<&[u8]> {
-        let bytes = self.input.as_bytes();
+        // NOTE: Input had unmappable characters for this encoding which were
+        // converted to HTML entities by the encoder. This basically means
+        // that such input is impossible with the given encoding, so we just
+        // bail.
+        ensure!(!had_unmappable_chars, "There were unmappable characters");
 
-        if self.chunk_size > 0 {
-            bytes.chunks(self.chunk_size).collect()
-        } else {
-            vec![bytes]
-        }
-    }
+        // NOTE: Some encodings deviate from ASCII, e.g. in ShiftJIS yen sign (U+00A5) is
+        // mapped to 0x5C which makes conversion from UTF8 to it non-roundtrippable despite the
+        // abscence of HTML entities replacements inserted by the encoder.
+        ensure!(
+            self.input == encoding.decode_without_bom_handling(&bytes).0,
+            "ASCII characters deviation"
+        );
 
-    fn set_chunk_size(&mut self) {
-        let len = self.input.len();
+        let len = bytes.len();
 
-        self.chunk_size = match env::var("CHUNK_SIZE") {
+        self.encoding = encoding;
+
+        let chunk_size = match env::var("CHUNK_SIZE") {
             Ok(val) => val.parse().unwrap(),
             Err(_) => {
                 if len > 1 {
@@ -82,6 +81,14 @@ impl ChunkedInput {
                 }
             }
         };
+
+        if chunk_size > 0 {
+            self.chunks = bytes.chunks(chunk_size).map(|c| c.to_vec()).collect()
+        }
+
+        self.initialized = true;
+
+        Ok(chunk_size)
     }
 }
 
@@ -113,15 +120,13 @@ impl<'de> Deserialize<'de> for ChunkedInput {
 
 impl Unescape for ChunkedInput {
     fn unescape(&mut self) -> Result<(), SerdeError> {
+        assert!(
+            !self.initialized,
+            "Input can't be unescaped after initialization"
+        );
+
         self.input.unescape()?;
-        self.set_chunk_size();
 
         Ok(())
-    }
-}
-
-impl PartialEq<ChunkedInput> for String {
-    fn eq(&self, value: &ChunkedInput) -> bool {
-        *self == value.input
     }
 }

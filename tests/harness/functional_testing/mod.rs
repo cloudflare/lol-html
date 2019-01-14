@@ -1,26 +1,23 @@
 mod chunked_input;
 mod decoder;
-mod suits;
-mod test_case;
+mod test_cases;
 mod test_token;
 mod unescape;
 
 use self::unescape::Unescape;
-use cool_thing::tokenizer::{TagName, TextParsingMode};
+use cool_thing::tokenizer::{TagName, TextType};
 use std::fmt::Write;
 
 pub use self::chunked_input::ChunkedInput;
-pub use self::suits::TEST_CASES;
-pub use self::test_case::*;
+pub use self::test_cases::*;
 pub use self::test_token::*;
 
-// TODO functional test
-pub trait TestFixture {
+pub trait FunctionalTestFixture {
     fn get_test_description_suffix() -> &'static str;
 
     fn run_test_case(
         test: &TestCase,
-        initial_mode: TextParsingMode,
+        initial_text_type: TextType,
         last_start_tag_name_hash: Option<u64>,
     );
 
@@ -42,34 +39,48 @@ pub trait TestFixture {
         for cs in &test.initial_states {
             Self::run_test_case(
                 test,
-                TextParsingMode::from(cs.as_str()),
+                TextType::from(cs.as_str()),
                 TagName::get_hash(&test.last_start_tag),
             );
         }
     }
 }
 
-macro_rules! assert_eql {
-    ($actual:expr, $expected:expr, $cs:expr, $input:expr, $msg:expr) => {
+macro_rules! expect_eql {
+    ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {
         assert!(
             $actual == $expected,
             "{}\n\
+             actual: {:#?}\n\
+             expected: {:#?}\n\
              state: {:?}\n\
              input: {:?}\n\
-             actual: {:#?}\n\
-             expected: {:#?}",
+             ",
             $msg,
-            $input,
-            $cs,
             $actual,
-            $expected
+            $expected,
+            $state,
+            $input,
         );
     };
 }
 
-macro_rules! tokenizer_test_fixture {
+macro_rules! expect {
+    ($actual:expr, $state:expr, $input:expr, $msg:expr) => {
+        assert!(
+            $actual,
+            "{}\n\
+             state: {:?}\n\
+             input: {:?}\n\
+             ",
+            $msg, $state, $input,
+        );
+    };
+}
+
+macro_rules! functional_test_fixture {
     ($fixture:ident) => {
-        use crate::harness::tokenizer_test::TEST_CASES;
+        use crate::harness::functional_testing::TEST_CASES;
         use test::TestDescAndFn;
 
         pub fn get_tests() -> Vec<TestDescAndFn> {
@@ -77,7 +88,7 @@ macro_rules! tokenizer_test_fixture {
                 .iter()
                 .cloned()
                 .map(|t| {
-                    create_test!($fixture::get_test_description(&t), t.ignored, {
+                    create_test!($fixture::get_test_description(&t), {
                         $fixture::run(&t);
                     })
                 })

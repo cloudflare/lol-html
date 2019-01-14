@@ -14,7 +14,7 @@
 
 use crate::base::Bytes;
 use crate::tokenizer::outputs::{LexUnit, TokenView};
-use crate::tokenizer::{TagName, TextParsingMode};
+use crate::tokenizer::{TagName, TextType};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
@@ -28,7 +28,7 @@ enum Namespace {
 #[must_use]
 #[derive(Copy, Clone)]
 pub enum TreeBuilderFeedback {
-    SwitchTextParsingMode(TextParsingMode),
+    SwitchTextType(TextType),
     SetAllowCdata(bool),
     RequestLexUnit(fn(&mut TreeBuilderSimulator, &LexUnit<'_>) -> TreeBuilderFeedback),
     None,
@@ -50,18 +50,18 @@ fn eq_case_insensitive(actual: &Bytes<'_>, expected: &[u8]) -> bool {
 }
 
 #[inline]
-fn get_text_parsing_mode_adjustment(tag_name_hash: u64) -> TreeBuilderFeedback {
+fn get_text_type_adjustment(tag_name_hash: u64) -> TreeBuilderFeedback {
     if tag_is_one_of!(tag_name_hash, [Textarea, Title]) {
-        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::RCData)
+        TreeBuilderFeedback::SwitchTextType(TextType::RCData)
     } else if tag_name_hash == TagName::Plaintext {
-        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::PlainText)
+        TreeBuilderFeedback::SwitchTextType(TextType::PlainText)
     } else if tag_name_hash == TagName::Script {
-        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::ScriptData)
+        TreeBuilderFeedback::SwitchTextType(TextType::ScriptData)
     } else if tag_is_one_of!(
         tag_name_hash,
         [Style, Iframe, Xmp, Noembed, Noframes, Noscript]
     ) {
-        TreeBuilderFeedback::SwitchTextParsingMode(TextParsingMode::RawText)
+        TreeBuilderFeedback::SwitchTextType(TextType::RawText)
     } else {
         TreeBuilderFeedback::None
     }
@@ -121,7 +121,7 @@ impl TreeBuilderSimulator {
         match tag_name_hash {
             Some(t) if t == TagName::Svg => self.enter_ns(Namespace::Svg),
             Some(t) if t == TagName::Math => self.enter_ns(Namespace::MathML),
-            Some(t) if self.current_ns == Namespace::Html => get_text_parsing_mode_adjustment(t),
+            Some(t) if self.current_ns == Namespace::Html => get_text_type_adjustment(t),
             _ if self.current_ns != Namespace::Html => {
                 self.get_feedback_for_start_tag_in_foreign_content(tag_name_hash)
             }

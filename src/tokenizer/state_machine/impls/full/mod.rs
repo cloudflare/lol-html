@@ -8,20 +8,12 @@ use crate::tokenizer::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
 use crate::tokenizer::{
-    FeedbackProviders, NextOutputType, ParsingLoopTerminationReason, TagName, TextParsingMode,
+    FeedbackProviders, NextOutputType, ParsingLoopTerminationReason, TagName, TextType,
     TreeBuilderFeedback,
 };
-use cfg_if::cfg_if;
 use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
-
-cfg_if! {
-    if #[cfg(feature = "testing_api")] {
-        use crate::tokenizer::TextParsingModeChangeHandler;
-        use super::common::SharedTagConfirmationHandler;
-    }
-}
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
@@ -46,14 +38,8 @@ pub struct FullStateMachine<S: LexUnitSink> {
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
     feedback_providers: Rc<RefCell<FeedbackProviders>>,
-    last_text_parsing_mode_change: TextParsingMode,
+    last_text_type: TextType,
     should_silently_consume_current_tag_only: bool,
-
-    #[cfg(feature = "testing_api")]
-    pub text_parsing_mode_change_handler: Option<Box<dyn TextParsingModeChangeHandler>>,
-
-    #[cfg(feature = "testing_api")]
-    pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
 }
 
 impl<S: LexUnitSink> FullStateMachine<S> {
@@ -74,14 +60,8 @@ impl<S: LexUnitSink> FullStateMachine<S> {
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
             feedback_providers,
-            last_text_parsing_mode_change: TextParsingMode::Data,
+            last_text_type: TextType::Data,
             should_silently_consume_current_tag_only: false,
-
-            #[cfg(feature = "testing_api")]
-            text_parsing_mode_change_handler: None,
-
-            #[cfg(feature = "testing_api")]
-            tag_confirmation_handler: None,
         }
     }
 
@@ -139,8 +119,8 @@ impl<S: LexUnitSink> FullStateMachine<S> {
         lex_unit: &LexUnit<'_>,
     ) -> ParsingLoopDirective {
         match feedback {
-            TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
-                self.switch_text_parsing_mode(mode);
+            TreeBuilderFeedback::SwitchTextType(text_type) => {
+                self.switch_text_type(text_type);
                 ParsingLoopDirective::Continue
             }
             TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
@@ -181,7 +161,6 @@ impl<S: LexUnitSink> FullStateMachine<S> {
         self.set_next_lex_unit_start(lex_unit);
 
         if self.should_silently_consume_current_tag_only {
-            confirm_tag!(self);
             self.should_silently_consume_current_tag_only = false;
             NextOutputType::TagPreview
         } else {
@@ -257,20 +236,6 @@ impl<S: LexUnitSink> StateMachine for FullStateMachine<S> {
     #[inline]
     fn adjust_to_bookmark(&mut self, pos: usize) {
         self.lex_unit_start = pos;
-    }
-
-    #[inline]
-    fn set_last_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        self.last_text_parsing_mode_change = mode;
-
-        #[cfg(feature = "testing_api")]
-        {
-            if let Some(ref mut text_parsing_mode_change_handler) =
-                self.text_parsing_mode_change_handler
-            {
-                text_parsing_mode_change_handler.handle(mode);
-            }
-        }
     }
 
     #[inline]

@@ -29,7 +29,10 @@ impl<S: LexUnitSink> StateMachineActions for FullStateMachine<S> {
             // representation of text token content is the raw slice.
             // Also, we always emit text if we encounter some other bounded
             // lexical structure and, thus, we use exclusive range for the raw slice.
-            let lex_unit = self.create_lex_unit_with_raw_exclusive(input, Some(TokenView::Text));
+            let lex_unit = self.create_lex_unit_with_raw_exclusive(
+                input,
+                Some(TokenView::Text(self.last_text_type)),
+            );
 
             self.emit_lex_unit(&lex_unit);
         }
@@ -57,7 +60,7 @@ impl<S: LexUnitSink> StateMachineActions for FullStateMachine<S> {
 
         // NOTE: exit from any non-initial text parsing mode always happens on tag emission
         // (except for CDATA, but there is a special action to take care of it).
-        self.set_last_text_parsing_mode(TextParsingMode::Data);
+        self.set_last_text_type(TextType::Data);
 
         let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
 

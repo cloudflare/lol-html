@@ -1,7 +1,7 @@
 mod token_sink_proxy;
 
 use self::token_sink_proxy::TokenSinkProxy;
-use crate::harness::tokenizer_test::TestToken;
+use crate::harness::functional_testing::TestToken;
 use html5ever::rcdom::RcDom;
 use html5ever::tendril::StrTendril;
 use html5ever::tokenizer::{BufferQueue, Tokenizer, TokenizerOpts, TokenizerResult};

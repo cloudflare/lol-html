@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
+use cool_thing::transform_stream::TokenCaptureFlags;
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
 use encoding_rs::UTF_8;
 use glob::glob;
@@ -47,31 +48,27 @@ fn get_inputs() -> Vec<Input> {
         .collect()
 }
 
-fn cool_thing_tokenizer_bench(capture_everything: bool) -> impl FnMut(&mut Bencher, &Input) {
+fn cool_thing_tokenizer_bench(
+    capture_flags: TokenCaptureFlags,
+) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
         use cool_thing::token::Token;
         use cool_thing::tokenizer::{LexUnit, NextOutputType, TagPreview};
-        use cool_thing::transform_stream::{
-            TokenCaptureFlags, TransformController, TransformStream,
-        };
+        use cool_thing::transform_stream::{TransformController, TransformStream};
 
         struct BenchTransformController {
-            capture_everything: bool,
+            capture_flags: TokenCaptureFlags,
         }
 
         impl BenchTransformController {
-            pub fn new(capture_everything: bool) -> Self {
-                BenchTransformController { capture_everything }
+            pub fn new(capture_flags: TokenCaptureFlags) -> Self {
+                BenchTransformController { capture_flags }
             }
         }
 
         impl TransformController for BenchTransformController {
             fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags {
-                if self.capture_everything {
-                    TokenCaptureFlags::all()
-                } else {
-                    TokenCaptureFlags::empty()
-                }
+                self.capture_flags
             }
 
             fn get_token_capture_flags_for_tag(
@@ -80,10 +77,10 @@ fn cool_thing_tokenizer_bench(capture_everything: bool) -> impl FnMut(&mut Bench
             ) -> NextOutputType {
                 black_box(tag_lex_unit);
 
-                if self.capture_everything {
-                    NextOutputType::LexUnit
-                } else {
+                if self.capture_flags.is_empty() {
                     NextOutputType::TagPreview
+                } else {
+                    NextOutputType::LexUnit
                 }
             }
 
@@ -93,10 +90,10 @@ fn cool_thing_tokenizer_bench(capture_everything: bool) -> impl FnMut(&mut Bench
             ) -> NextOutputType {
                 black_box(tag_preview);
 
-                if self.capture_everything {
-                    NextOutputType::LexUnit
-                } else {
+                if self.capture_flags.is_empty() {
                     NextOutputType::TagPreview
+                } else {
+                    NextOutputType::LexUnit
                 }
             }
 
@@ -106,11 +103,8 @@ fn cool_thing_tokenizer_bench(capture_everything: bool) -> impl FnMut(&mut Bench
         }
 
         b.iter(|| {
-            let mut transform_stream = TransformStream::new(
-                2048,
-                BenchTransformController::new(capture_everything),
-                UTF_8,
-            );
+            let mut transform_stream =
+                TransformStream::new(2048, BenchTransformController::new(capture_flags), UTF_8);
 
             for chunk in &i.chunks {
                 transform_stream.write(chunk.as_bytes()).unwrap();
@@ -193,12 +187,21 @@ fn tokenization_benchmark(c: &mut Criterion) {
         "Tokenizer",
         ParameterizedBenchmark::new(
             "cool_thing - Fast scan",
-            cool_thing_tokenizer_bench(false),
+            cool_thing_tokenizer_bench(TokenCaptureFlags::empty()),
             inputs,
         )
         .with_function(
+            "cool_thing - Capture everything except text",
+            cool_thing_tokenizer_bench(
+                TokenCaptureFlags::DOCTYPES
+                    | TokenCaptureFlags::START_TAGS
+                    | TokenCaptureFlags::END_TAGS
+                    | TokenCaptureFlags::COMMENTS,
+            ),
+        )
+        .with_function(
             "cool_thing - Capture everything",
-            cool_thing_tokenizer_bench(true),
+            cool_thing_tokenizer_bench(TokenCaptureFlags::all()),
         )
         .with_function("lazyhtml", lazyhtml_tokenizer_bench())
         .with_function("html5ever", html5ever_tokenizer_bench())

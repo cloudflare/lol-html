@@ -1,8 +1,7 @@
 use super::decoder::{decode_attr_value, decode_text, to_null_decoded};
 use super::unescape::Unescape;
 use cool_thing::token::{Text, Token};
-use cool_thing::tokenizer::TextParsingMode;
-use cool_thing::transform_stream::TokenCaptureFlags;
+use cool_thing::tokenizer::TextType;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;
@@ -207,64 +206,80 @@ impl Unescape for TestToken {
     }
 }
 
+#[derive(Debug)]
 pub struct TestTokenList {
     tokens: Vec<TestToken>,
-    text_parsing_mode: TextParsingMode,
+    last_text_type: TextType,
 }
 
 impl Default for TestTokenList {
     fn default() -> Self {
         TestTokenList {
             tokens: Vec::new(),
-            text_parsing_mode: TextParsingMode::Data,
+            last_text_type: TextType::Data,
         }
     }
 }
 
 impl TestTokenList {
-    pub fn push(&mut self, token: Token<'_>, text_parsing_mode: TextParsingMode) {
-        let token = TestToken::from(token);
+    pub fn push(&mut self, token: Token<'_>) {
+        match token {
+            Token::Text(t) => match t {
+                Text::Chunk(c) => {
+                    let text = c.text();
 
-        if let Some(TestToken::Text(last)) = self.tokens.last_mut() {
-            if let TestToken::Text(ref curr) = token {
-                *last += curr;
-            } else {
-                decode_text(last, self.text_parsing_mode);
-                self.tokens.push(token);
-            }
-        } else {
-            if let TestToken::Text(_) = token {
-                self.text_parsing_mode = text_parsing_mode;
-            }
+                    if let Some(TestToken::Text(last)) = self.tokens.last_mut() {
+                        *last += text;
+                    } else {
+                        self.tokens.push(TestToken::Text(text.into()));
+                    }
 
-            self.tokens.push(token);
+                    self.last_text_type = c.text_type();
+                }
+                Text::End => {
+                    if let Some(TestToken::Text(last)) = self.tokens.last_mut() {
+                        *last = decode_text(last, self.last_text_type);
+                    } else {
+                        unreachable!("Where should be some text chunks stored at this point");
+                    }
+                }
+            },
+
+            Token::Comment(t) => self
+                .tokens
+                .push(TestToken::Comment(to_null_decoded(&t.text()))),
+
+            Token::StartTag(t) => self.tokens.push(TestToken::StartTag {
+                name: to_null_decoded(&t.name()),
+
+                attributes: HashMap::from_iter(
+                    t.attributes()
+                        .iter()
+                        .rev()
+                        .map(|a| (to_null_decoded(&a.name()), decode_attr_value(&a.value()))),
+                ),
+
+                self_closing: t.self_closing(),
+            }),
+
+            Token::EndTag(t) => self.tokens.push(TestToken::EndTag {
+                name: to_null_decoded(&t.name()),
+            }),
+
+            Token::Doctype(t) => self.tokens.push(TestToken::Doctype {
+                name: t.name().map(|s| to_null_decoded(&s)),
+                public_id: t.public_id().map(|s| to_null_decoded(&s)),
+                system_id: t.system_id().map(|s| to_null_decoded(&s)),
+                force_quirks: t.force_quirks(),
+            }),
+
+            Token::Eof => self.tokens.push(TestToken::Eof),
         }
     }
+}
 
-    pub fn get_tokens(&self, capture_flags: TokenCaptureFlags) -> Vec<&TestToken> {
+impl Into<Vec<TestToken>> for TestTokenList {
+    fn into(self) -> Vec<TestToken> {
         self.tokens
-            .iter()
-            .filter(|t| match t {
-                TestToken::Text(_) if capture_flags.contains(TokenCaptureFlags::TEXT) => true,
-                TestToken::StartTag { .. }
-                    if capture_flags.contains(TokenCaptureFlags::START_TAGS) =>
-                {
-                    true
-                }
-                TestToken::EndTag { .. } if capture_flags.contains(TokenCaptureFlags::END_TAGS) => {
-                    true
-                }
-                TestToken::Doctype { .. }
-                    if capture_flags.contains(TokenCaptureFlags::DOCTYPES) =>
-                {
-                    true
-                }
-                TestToken::Comment(_) if capture_flags.contains(TokenCaptureFlags::COMMENTS) => {
-                    true
-                }
-                TestToken::Eof if capture_flags.contains(TokenCaptureFlags::EOF) => true,
-                _ => false,
-            })
-            .collect()
     }
 }

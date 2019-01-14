@@ -1,4 +1,4 @@
-use cool_thing::tokenizer::TextParsingMode;
+use cool_thing::tokenizer::TextType;
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
 use std::iter::Peekable;
@@ -12,14 +12,14 @@ pub fn decode_attr_value(s: &str) -> String {
     Decoder::new(s).unsafe_null().attr_entities().run()
 }
 
-pub fn decode_text(text: &mut str, text_parsing_mode: TextParsingMode) -> String {
+pub fn decode_text(text: &str, text_type: TextType) -> String {
     let mut decoder = Decoder::new(text);
 
-    if text_parsing_mode.should_replace_unsafe_null_in_text() {
+    if text_type.should_replace_unsafe_null_in_text() {
         decoder = decoder.unsafe_null();
     }
 
-    if text_parsing_mode.allows_text_entitites() {
+    if text_type.allows_text_entitites() {
         decoder = decoder.text_entities();
     }
 

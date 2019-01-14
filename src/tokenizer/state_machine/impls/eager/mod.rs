@@ -8,16 +8,11 @@ use crate::tokenizer::outputs::*;
 use crate::tokenizer::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
-use crate::tokenizer::{
-    FeedbackProviders, NextOutputType, TagName, TextParsingMode, TreeBuilderFeedback,
-};
+use crate::tokenizer::{FeedbackProviders, NextOutputType, TagName, TextType, TreeBuilderFeedback};
 use failure::Error;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;
-
-#[cfg(feature = "testing_api")]
-use super::common::SharedTagConfirmationHandler;
 
 pub trait TagPreviewSink {
     fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType;
@@ -50,11 +45,8 @@ pub struct EagerStateMachine<S: TagPreviewSink> {
     state: State<S>,
     closing_quote: u8,
     feedback_providers: Rc<RefCell<FeedbackProviders>>,
-    pending_text_parsing_mode_change: Option<TextParsingMode>,
-    last_text_parsing_mode_change: TextParsingMode,
-
-    #[cfg(feature = "testing_api")]
-    pub tag_confirmation_handler: Option<SharedTagConfirmationHandler>,
+    pending_text_type_change: Option<TextType>,
+    last_text_type: TextType,
 }
 
 impl<S: TagPreviewSink> EagerStateMachine<S> {
@@ -73,11 +65,8 @@ impl<S: TagPreviewSink> EagerStateMachine<S> {
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
             feedback_providers,
-            pending_text_parsing_mode_change: None,
-            last_text_parsing_mode_change: TextParsingMode::Data,
-
-            #[cfg(feature = "testing_api")]
-            tag_confirmation_handler: None,
+            pending_text_type_change: None,
+            last_text_type: TextType::Data,
         }
     }
 
@@ -131,11 +120,11 @@ impl<S: TagPreviewSink> EagerStateMachine<S> {
         tag_start: usize,
     ) -> ParsingLoopDirective {
         match feedback {
-            TreeBuilderFeedback::SwitchTextParsingMode(mode) => {
-                // NOTE: we can't switch mode immediately as we
+            TreeBuilderFeedback::SwitchTextType(text_type) => {
+                // NOTE: we can't switch type immediately as we
                 // are in the middle of tag parsing. So, we need
                 // to switch later on the `emit_tag` action.
-                self.pending_text_parsing_mode_change = Some(mode);
+                self.pending_text_type_change = Some(text_type);
                 ParsingLoopDirective::None
             }
             TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
@@ -196,11 +185,6 @@ impl<S: TagPreviewSink> StateMachine for EagerStateMachine<S> {
     #[inline]
     fn adjust_to_bookmark(&mut self, _pos: usize) {
         trace!(@noop);
-    }
-
-    #[inline]
-    fn set_last_text_parsing_mode(&mut self, mode: TextParsingMode) {
-        self.last_text_parsing_mode_change = mode;
     }
 
     #[inline]
