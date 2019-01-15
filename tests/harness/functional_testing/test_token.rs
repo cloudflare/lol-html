@@ -1,7 +1,7 @@
 use super::decoder::{decode_attr_value, decode_text, to_null_decoded};
 use super::unescape::Unescape;
+use cool_thing::lexer::TextType;
 use cool_thing::token::{Text, Token};
-use cool_thing::tokenizer::TextType;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
 use std::collections::HashMap;

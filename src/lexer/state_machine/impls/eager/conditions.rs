@@ -1,5 +1,5 @@
 use super::*;
-use crate::tokenizer::state_machine::StateMachineConditions;
+use crate::lexer::state_machine::StateMachineConditions;
 
 impl<S: TagHintSink> StateMachineConditions for EagerStateMachine<S> {
     #[inline]

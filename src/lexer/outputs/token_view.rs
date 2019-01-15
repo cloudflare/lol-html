@@ -1,5 +1,5 @@
 use crate::base::{Align, Range};
-use crate::tokenizer::TextType;
+use crate::lexer::TextType;
 use std::cell::RefCell;
 use std::rc::Rc;
 

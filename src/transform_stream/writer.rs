@@ -1,7 +1,7 @@
-use crate::token::{Token, TokenCapture, TokenCaptureFlags, TokenCaptureResult};
-use crate::tokenizer::{
-    Lexeme, LexemeSink, NextOutputType, OutputSink as TokenizerOutputSink, TagHint, TagHintSink,
+use crate::lexer::{
+    Lexeme, LexemeSink, NextOutputType, OutputSink as LexerOutputSink, TagHint, TagHintSink,
 };
+use crate::token::{Token, TokenCapture, TokenCaptureFlags, TokenCaptureResult};
 use encoding_rs::Encoding;
 use std::cell::RefCell;
 
@@ -70,4 +70,4 @@ impl<C: TransformController> TagHintSink for Writer<C> {
     }
 }
 
-impl<C: TransformController> TokenizerOutputSink for Writer<C> {}
+impl<C: TransformController> LexerOutputSink for Writer<C> {}

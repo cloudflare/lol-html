@@ -52,8 +52,8 @@ fn cool_thing_tokenizer_bench(
     capture_flags: TokenCaptureFlags,
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
+        use cool_thing::lexer::{Lexeme, NextOutputType, TagHint};
         use cool_thing::token::Token;
-        use cool_thing::tokenizer::{Lexeme, NextOutputType, TagHint};
         use cool_thing::transform_stream::{TransformController, TransformStream};
 
         struct BenchTransformController {

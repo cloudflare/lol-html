@@ -1,4 +1,4 @@
-//! HTML tokenizer has 6 different state machines for text parsing
+//! HTML lexer has 6 different state machines for text parsing
 //! purposes in different contexts. Switch between these state machines
 //! usually performed by the tree construction stage depending on the
 //! state of the stack of open elements (HTML is a context-sensitive grammar).
@@ -13,8 +13,8 @@
 //! (see `AmbiguityGuard` for the details).
 
 use crate::base::Bytes;
-use crate::tokenizer::outputs::{Lexeme, TokenView};
-use crate::tokenizer::{TagName, TextType};
+use crate::lexer::outputs::{Lexeme, TokenView};
+use crate::lexer::{TagName, TextType};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 

@@ -6,12 +6,12 @@
 //! Therefore, due to these safety concerns in such cases we prefer
 //! to bail out from tokenization process.
 //!
-//! In tree builder simulation we need to switch tokenizer to one
+//! In tree builder simulation we need to switch lexer to one
 //! of standalone text parsing state machines if we encounter some
 //! specific tags. E.g. if we encounter `<script>` start tag we should
 //! treat all content up to the closing `</script>` tag as text.
 //! Without having a full-featured tree construction stage there is way
-//! to trick tokenizer into parsing content that has actual tags in it
+//! to trick lexer into parsing content that has actual tags in it
 //! as text. E.g. by putting `<script>` start tag into context where
 //! it will be ignored.
 //!
@@ -34,7 +34,7 @@
 //! construction state. Though, current assumption is that markup that can
 //! trigger this bailout case should be seen quite rarely in the wild.
 
-use crate::tokenizer::TagName;
+use crate::lexer::TagName;
 use std::fmt::{self, Display};
 
 macro_rules! err_msg_tmpl {

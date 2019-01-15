@@ -2,7 +2,7 @@ mod writer;
 
 use self::writer::Writer;
 use crate::base::{Buffer, Chunk};
-use crate::tokenizer::{NextOutputType, Tokenizer};
+use crate::lexer::{Lexer, NextOutputType};
 use encoding_rs::Encoding;
 use failure::{Error, ResultExt};
 use std::cell::RefCell;
@@ -24,7 +24,7 @@ pub enum TransformStreamError {
 }
 
 pub struct TransformStream<C: TransformController> {
-    tokenizer: Tokenizer<Writer<C>>,
+    lexer: Lexer<Writer<C>>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
@@ -48,7 +48,7 @@ impl<C: TransformController> TransformStream<C> {
         let writer = Rc::new(RefCell::new(Writer::new(transform_controller, encoding)));
 
         TransformStream {
-            tokenizer: Tokenizer::new(&writer, initial_output_type),
+            lexer: Lexer::new(&writer, initial_output_type),
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
@@ -94,7 +94,7 @@ impl<C: TransformController> TransformStream<C> {
 
         trace!(@chunk chunk);
 
-        let blocked_byte_count = self.tokenizer.tokenize(&chunk)?;
+        let blocked_byte_count = self.lexer.tokenize(&chunk)?;
 
         if blocked_byte_count > 0 {
             self.buffer_blocked_bytes(data, blocked_byte_count)?;
@@ -121,13 +121,13 @@ impl<C: TransformController> TransformStream<C> {
 
         trace!(@chunk chunk);
 
-        self.tokenizer.tokenize(&chunk)?;
+        self.lexer.tokenize(&chunk)?;
 
         Ok(())
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn tokenizer(&mut self) -> &mut Tokenizer<Writer<C>> {
-        &mut self.tokenizer
+    pub fn lexer(&mut self) -> &mut Lexer<Writer<C>> {
+        &mut self.lexer
     }
 }

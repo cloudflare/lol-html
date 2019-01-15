@@ -1,5 +1,5 @@
 use crate::base::Bytes;
-use crate::tokenizer::TextType;
+use crate::lexer::TextType;
 use encoding_rs::Encoding;
 use std::borrow::Cow;
 

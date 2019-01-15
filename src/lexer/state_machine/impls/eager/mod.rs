@@ -4,11 +4,11 @@ mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
 
-use crate::tokenizer::outputs::*;
-use crate::tokenizer::state_machine::{
+use crate::lexer::outputs::*;
+use crate::lexer::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
-use crate::tokenizer::{FeedbackProviders, NextOutputType, TagName, TextType, TreeBuilderFeedback};
+use crate::lexer::{FeedbackProviders, NextOutputType, TagName, TextType, TreeBuilderFeedback};
 use failure::Error;
 use std::cell::RefCell;
 use std::cmp::min;

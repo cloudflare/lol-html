@@ -7,8 +7,8 @@ mod debug_trace;
 #[macro_use]
 pub mod base;
 
+pub mod lexer;
 pub mod token;
-pub mod tokenizer;
 pub mod transform_stream;
 
 // TODO test all errors!!!x

@@ -1,5 +1,5 @@
 use super::Unescape;
-use cool_thing::tokenizer::TextType;
+use cool_thing::lexer::TextType;
 use cool_thing::transform_stream::{TransformController, TransformStream};
 use encoding_rs::{Encoding, UTF_8};
 use failure::{ensure, Error};
@@ -36,10 +36,10 @@ impl ChunkedInput {
         last_start_tag_name_hash: Option<u64>,
     ) -> Result<(), Error> {
         let mut transform_stream = TransformStream::new(2048, transform_controller, self.encoding);
-        let tokenizer = transform_stream.tokenizer();
+        let lexer = transform_stream.lexer();
 
-        tokenizer.set_last_start_tag_name_hash(last_start_tag_name_hash);
-        tokenizer.switch_text_type(initial_text_type);
+        lexer.set_last_start_tag_name_hash(last_start_tag_name_hash);
+        lexer.switch_text_type(initial_text_type);
 
         for chunk in &self.chunks {
             transform_stream.write(chunk)?;

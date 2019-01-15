@@ -5,7 +5,7 @@ mod start_tag;
 mod text;
 
 use crate::base::Bytes;
-use crate::tokenizer::{Lexeme, TextType, TokenView};
+use crate::lexer::{Lexeme, TextType, TokenView};
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use std::rc::Rc;
@@ -15,6 +15,10 @@ pub use self::doctype::Doctype;
 pub use self::end_tag::EndTag;
 pub use self::start_tag::*;
 pub use self::text::Text;
+
+pub trait Serialize {
+    fn serialize(&self) -> Bytes<'_>;
+}
 
 #[derive(Debug)]
 pub enum Token<'i> {
