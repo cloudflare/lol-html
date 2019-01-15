@@ -22,7 +22,7 @@ pub struct StateMachineBookmark {
 
 pub enum ParsingLoopTerminationReason {
     OutputTypeSwitch(NextOutputType, StateMachineBookmark),
-    LexUnitRequiredForAdjustment(StateMachineBookmark),
+    LexemeRequiredForAdjustment(StateMachineBookmark),
     EndOfInput { blocked_byte_count: usize },
 }
 

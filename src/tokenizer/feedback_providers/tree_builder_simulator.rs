@@ -13,7 +13,7 @@
 //! (see `AmbiguityGuard` for the details).
 
 use crate::base::Bytes;
-use crate::tokenizer::outputs::{LexUnit, TokenView};
+use crate::tokenizer::outputs::{Lexeme, TokenView};
 use crate::tokenizer::{TagName, TextType};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
@@ -30,7 +30,7 @@ enum Namespace {
 pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
-    RequestLexUnit(fn(&mut TreeBuilderSimulator, &LexUnit<'_>) -> TreeBuilderFeedback),
+    RequestLexeme(fn(&mut TreeBuilderSimulator, &Lexeme<'_>) -> TreeBuilderFeedback),
     None,
 }
 
@@ -87,8 +87,8 @@ fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
 }
 
 macro_rules! expect_token_view {
-    ($lex_unit: ident) => {
-        *$lex_unit
+    ($lexeme: ident) => {
+        *$lexeme
             .token_view()
             .expect("There should be a token view at this point")
     };
@@ -185,7 +185,7 @@ impl TreeBuilderSimulator {
                 self.leave_ns()
             }
             // NOTE: <annotation-xml> case
-            None if prev_ns == Namespace::MathML =>TreeBuilderFeedback::RequestLexUnit(
+            None if prev_ns == Namespace::MathML =>TreeBuilderFeedback::RequestLexeme(
                 TreeBuilderSimulator::check_for_annotation_xml_end_tag_for_integration_point_exit_check,
             ),
             _ => TreeBuilderFeedback::None,
@@ -200,14 +200,14 @@ impl TreeBuilderSimulator {
             Some(t) if causes_foreign_content_exit(t) => self.leave_ns(),
             // NOTE: <font> tag special case requires attributes
             // to decide on foreign context exit
-            Some(t) if t == TagName::Font => TreeBuilderFeedback::RequestLexUnit(
+            Some(t) if t == TagName::Font => TreeBuilderFeedback::RequestLexeme(
                 TreeBuilderSimulator::check_font_start_tag_token_for_foreign_content_exit,
             ),
-            Some(t) if self.is_integration_point_enter(t) => TreeBuilderFeedback::RequestLexUnit(
+            Some(t) if self.is_integration_point_enter(t) => TreeBuilderFeedback::RequestLexeme(
                 TreeBuilderSimulator::check_tag_self_closing_flag_for_integration_point_check
             ),
             // NOTE: integration point check <annotation-xml> case
-            None if self.current_ns == Namespace::MathML => TreeBuilderFeedback::RequestLexUnit(
+            None if self.current_ns == Namespace::MathML => TreeBuilderFeedback::RequestLexeme(
                 TreeBuilderSimulator::check_for_annotation_xml_start_tag_for_integration_point_check,
             ),
             _ => TreeBuilderFeedback::None,
@@ -216,9 +216,9 @@ impl TreeBuilderSimulator {
 
     fn check_tag_self_closing_flag_for_integration_point_check(
         &mut self,
-        lex_unit: &LexUnit<'_>,
+        lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lex_unit) {
+        match expect_token_view!(lexeme) {
             TokenView::StartTag { self_closing, .. } => {
                 if self_closing {
                     TreeBuilderFeedback::None
@@ -232,11 +232,11 @@ impl TreeBuilderSimulator {
 
     fn check_for_annotation_xml_end_tag_for_integration_point_exit_check(
         &mut self,
-        lex_unit: &LexUnit<'_>,
+        lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lex_unit) {
+        match expect_token_view!(lexeme) {
             TokenView::EndTag { name, .. } => {
-                let name = lex_unit.input().slice(name);
+                let name = lexeme.input().slice(name);
 
                 if eq_case_insensitive(&name, b"annotation-xml") {
                     self.leave_ns()
@@ -250,21 +250,21 @@ impl TreeBuilderSimulator {
 
     fn check_for_annotation_xml_start_tag_for_integration_point_check(
         &mut self,
-        lex_unit: &LexUnit<'_>,
+        lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lex_unit) {
+        match expect_token_view!(lexeme) {
             TokenView::StartTag {
                 name,
                 ref attributes,
                 self_closing,
                 ..
             } => {
-                let name = lex_unit.input().slice(name);
+                let name = lexeme.input().slice(name);
 
                 if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
                     for attr in attributes.borrow().iter() {
-                        let name = lex_unit.input().slice(attr.name);
-                        let value = lex_unit.input().slice(attr.value);
+                        let name = lexeme.input().slice(attr.name);
+                        let value = lexeme.input().slice(attr.value);
 
                         if eq_case_insensitive(&name, b"encoding")
                             && (eq_case_insensitive(&value, b"text/html")
@@ -283,12 +283,12 @@ impl TreeBuilderSimulator {
 
     fn check_font_start_tag_token_for_foreign_content_exit(
         &mut self,
-        lex_unit: &LexUnit<'_>,
+        lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lex_unit) {
+        match expect_token_view!(lexeme) {
             TokenView::StartTag { ref attributes, .. } => {
                 for attr in attributes.borrow().iter() {
-                    let name = lex_unit.input().slice(attr.name);
+                    let name = lexeme.input().slice(attr.name);
 
                     if eq_case_insensitive(&name, b"color")
                         || eq_case_insensitive(&name, b"size")

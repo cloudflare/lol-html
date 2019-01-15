@@ -63,11 +63,11 @@ impl TransformController for TraceTransformController {
         }
     }
 
-    fn get_token_capture_flags_for_tag(&mut self, _: &LexUnit) -> NextOutputType {
+    fn get_token_capture_flags_for_tag(&mut self, _: &Lexeme) -> NextOutputType {
         if self.tag_preview_mode {
             NextOutputType::TagPreview
         } else {
-            NextOutputType::LexUnit
+            NextOutputType::Lexeme
         }
     }
 
@@ -75,7 +75,7 @@ impl TransformController for TraceTransformController {
         if self.tag_preview_mode {
             NextOutputType::TagPreview
         } else {
-            NextOutputType::LexUnit
+            NextOutputType::Lexeme
         }
     }
 

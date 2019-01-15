@@ -17,20 +17,20 @@ use std::rc::Rc;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub trait LexUnitSink {
-    fn handle_tag(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType;
-    fn handle_non_tag_content(&mut self, lex_unit: &LexUnit<'_>);
+pub trait LexemeSink {
+    fn handle_tag(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType;
+    fn handle_non_tag_content(&mut self, lexeme: &Lexeme<'_>);
 }
 
 pub type State<S> = fn(&mut FullStateMachine<S>, &Chunk<'_>) -> StateResult;
 
-pub struct FullStateMachine<S: LexUnitSink> {
+pub struct FullStateMachine<S: LexemeSink> {
     input_cursor: Cursor,
-    lex_unit_start: usize,
+    lexeme_start: usize,
     token_part_start: usize,
     is_state_enter: bool,
     cdata_allowed: bool,
-    lex_unit_sink: S,
+    lexeme_sink: S,
     state: State<S>,
     current_token: Option<TokenView>,
     current_attr: Option<AttributeView>,
@@ -42,15 +42,15 @@ pub struct FullStateMachine<S: LexUnitSink> {
     should_silently_consume_current_tag_only: bool,
 }
 
-impl<S: LexUnitSink> FullStateMachine<S> {
-    pub fn new(lex_unit_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
+impl<S: LexemeSink> FullStateMachine<S> {
+    pub fn new(lexeme_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
         FullStateMachine {
             input_cursor: Cursor::default(),
-            lex_unit_start: 0,
+            lexeme_start: 0,
             token_part_start: 0,
             is_state_enter: true,
             cdata_allowed: false,
-            lex_unit_sink,
+            lexeme_sink,
             state: FullStateMachine::data_state,
             current_token: None,
             current_attr: None,
@@ -116,7 +116,7 @@ impl<S: LexUnitSink> FullStateMachine<S> {
     fn handle_tree_builder_feedback(
         &mut self,
         feedback: TreeBuilderFeedback,
-        lex_unit: &LexUnit<'_>,
+        lexeme: &Lexeme<'_>,
     ) -> ParsingLoopDirective {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
@@ -127,86 +127,86 @@ impl<S: LexUnitSink> FullStateMachine<S> {
                 self.cdata_allowed = cdata_allowed;
                 ParsingLoopDirective::None
             }
-            TreeBuilderFeedback::RequestLexUnit(callback) => {
+            TreeBuilderFeedback::RequestLexeme(callback) => {
                 let feedback = {
                     let tree_builder_simulator =
                         &mut self.feedback_providers.borrow_mut().tree_builder_simulator;
 
-                    callback(tree_builder_simulator, &lex_unit)
+                    callback(tree_builder_simulator, &lexeme)
                 };
 
-                self.handle_tree_builder_feedback(feedback, lex_unit)
+                self.handle_tree_builder_feedback(feedback, lexeme)
             }
             TreeBuilderFeedback::None => ParsingLoopDirective::None,
         }
     }
 
     #[inline]
-    fn set_next_lex_unit_start(&mut self, curr_lex_unit: &LexUnit<'_>) {
-        self.lex_unit_start = curr_lex_unit.raw_range().end;
+    fn set_next_lexeme_start(&mut self, curr_lexeme: &Lexeme<'_>) {
+        self.lexeme_start = curr_lexeme.raw_range().end;
     }
 
     #[inline]
-    fn emit_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
-        trace!(@output lex_unit);
+    fn emit_lexeme(&mut self, lexeme: &Lexeme<'_>) {
+        trace!(@output lexeme);
 
-        self.set_next_lex_unit_start(lex_unit);
-        self.lex_unit_sink.handle_non_tag_content(lex_unit);
+        self.set_next_lexeme_start(lexeme);
+        self.lexeme_sink.handle_non_tag_content(lexeme);
     }
 
     #[inline]
-    fn emit_tag_lex_unit(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
-        trace!(@output lex_unit);
+    fn emit_tag_lexeme(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType {
+        trace!(@output lexeme);
 
-        self.set_next_lex_unit_start(lex_unit);
+        self.set_next_lexeme_start(lexeme);
 
         if self.should_silently_consume_current_tag_only {
             self.should_silently_consume_current_tag_only = false;
             NextOutputType::TagPreview
         } else {
-            self.lex_unit_sink.handle_tag(lex_unit)
+            self.lexeme_sink.handle_tag(lexeme)
         }
     }
 
     #[inline]
-    fn create_lex_unit_with_raw<'i>(
+    fn create_lexeme_with_raw<'i>(
         &mut self,
         input: &'i Chunk<'i>,
         token: Option<TokenView>,
         raw_end: usize,
-    ) -> LexUnit<'i> {
+    ) -> Lexeme<'i> {
         let raw_range = Range {
-            start: self.lex_unit_start,
+            start: self.lexeme_start,
             end: raw_end,
         };
 
-        LexUnit::new(input, token, raw_range)
+        Lexeme::new(input, token, raw_range)
     }
 
     #[inline]
-    fn create_lex_unit_with_raw_inclusive<'i>(
+    fn create_lexeme_with_raw_inclusive<'i>(
         &mut self,
         input: &'i Chunk<'i>,
         token: Option<TokenView>,
-    ) -> LexUnit<'i> {
+    ) -> Lexeme<'i> {
         let raw_end = self.input_cursor.pos() + 1;
 
-        self.create_lex_unit_with_raw(input, token, raw_end)
+        self.create_lexeme_with_raw(input, token, raw_end)
     }
 
     #[inline]
-    fn create_lex_unit_with_raw_exclusive<'i>(
+    fn create_lexeme_with_raw_exclusive<'i>(
         &mut self,
         input: &'i Chunk<'i>,
         token: Option<TokenView>,
-    ) -> LexUnit<'i> {
+    ) -> Lexeme<'i> {
         let raw_end = self.input_cursor.pos();
 
-        self.create_lex_unit_with_raw(input, token, raw_end)
+        self.create_lexeme_with_raw(input, token, raw_end)
     }
 }
 
-impl<S: LexUnitSink> StateMachine for FullStateMachine<S> {
+impl<S: LexemeSink> StateMachine for FullStateMachine<S> {
     impl_common_sm_accessors!();
 
     #[inline]
@@ -221,21 +221,21 @@ impl<S: LexUnitSink> StateMachine for FullStateMachine<S> {
 
     #[inline]
     fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize {
-        input.len() - self.lex_unit_start
+        input.len() - self.lexeme_start
     }
 
     fn adjust_for_next_input(&mut self) {
-        self.input_cursor.align(self.lex_unit_start);
-        self.token_part_start.align(self.lex_unit_start);
-        self.current_token.align(self.lex_unit_start);
-        self.current_attr.align(self.lex_unit_start);
+        self.input_cursor.align(self.lexeme_start);
+        self.token_part_start.align(self.lexeme_start);
+        self.current_token.align(self.lexeme_start);
+        self.current_attr.align(self.lexeme_start);
 
-        self.lex_unit_start = 0;
+        self.lexeme_start = 0;
     }
 
     #[inline]
     fn adjust_to_bookmark(&mut self, pos: usize) {
-        self.lex_unit_start = pos;
+        self.lexeme_start = pos;
     }
 
     #[inline]

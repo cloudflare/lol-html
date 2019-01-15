@@ -5,7 +5,7 @@ mod start_tag;
 mod text;
 
 use crate::base::Bytes;
-use crate::tokenizer::{LexUnit, TextType, TokenView};
+use crate::tokenizer::{Lexeme, TextType, TokenView};
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use std::rc::Rc;
@@ -39,7 +39,7 @@ bitflags! {
 
 pub enum TokenCaptureResult<'i> {
     Captured(Token<'i>),
-    Skipped(&'i LexUnit<'i>),
+    Skipped(&'i Lexeme<'i>),
 }
 
 pub struct TokenCapture {
@@ -115,7 +115,7 @@ impl TokenCapture {
 
     fn handle_non_textual_content(
         &mut self,
-        lex_unit: &LexUnit<'_>,
+        lexeme: &Lexeme<'_>,
         token_view: &TokenView,
         result_handler: &mut dyn FnMut(TokenCaptureResult<'_>),
     ) {
@@ -123,7 +123,7 @@ impl TokenCapture {
             ( $Type:ident ($($args:expr),+) ) => {
                 TokenCaptureResult::Captured(Token::$Type($Type::new_parsed(
                     $($args),+,
-                    lex_unit.raw(),
+                    lexeme.raw(),
                     self.encoding
                 )))
             };
@@ -133,7 +133,7 @@ impl TokenCapture {
             &TokenView::Comment(text)
                 if self.capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
             {
-                capture!(Comment(lex_unit.part(text)))
+                capture!(Comment(lexeme.part(text)))
             }
 
             &TokenView::StartTag {
@@ -142,19 +142,16 @@ impl TokenCapture {
                 self_closing,
                 ..
             } if self.capture_flags.contains(TokenCaptureFlags::START_TAGS) => {
-                let attributes = ParsedAttributeList::new(
-                    lex_unit.input(),
-                    Rc::clone(attributes),
-                    self.encoding,
-                );
+                let attributes =
+                    ParsedAttributeList::new(lexeme.input(), Rc::clone(attributes), self.encoding);
 
-                capture!(StartTag(lex_unit.part(name), attributes, self_closing))
+                capture!(StartTag(lexeme.part(name), attributes, self_closing))
             }
 
             &TokenView::EndTag { name, .. }
                 if self.capture_flags.contains(TokenCaptureFlags::END_TAGS) =>
             {
-                capture!(EndTag(lex_unit.part(name)))
+                capture!(EndTag(lexeme.part(name)))
             }
 
             &TokenView::Doctype {
@@ -163,16 +160,16 @@ impl TokenCapture {
                 system_id,
                 force_quirks,
             } if self.capture_flags.contains(TokenCaptureFlags::DOCTYPES) => capture!(Doctype(
-                lex_unit.opt_part(name),
-                lex_unit.opt_part(public_id),
-                lex_unit.opt_part(system_id),
+                lexeme.opt_part(name),
+                lexeme.opt_part(public_id),
+                lexeme.opt_part(system_id),
                 force_quirks
             )),
 
             TokenView::Eof if self.capture_flags.contains(TokenCaptureFlags::EOF) => {
                 TokenCaptureResult::Captured(Token::Eof)
             }
-            _ => TokenCaptureResult::Skipped(lex_unit),
+            _ => TokenCaptureResult::Skipped(lexeme),
         };
 
         trace!(@output result);
@@ -182,27 +179,27 @@ impl TokenCapture {
 
     pub fn feed(
         &mut self,
-        lex_unit: &LexUnit<'_>,
+        lexeme: &Lexeme<'_>,
         result_handler: &mut dyn FnMut(TokenCaptureResult<'_>),
     ) {
-        match lex_unit.token_view() {
+        match lexeme.token_view() {
             Some(token_view) => match *token_view {
                 TokenView::Text(text_type)
                     if self.capture_flags.contains(TokenCaptureFlags::TEXT) =>
                 {
                     self.last_text_type = text_type;
-                    self.emit_text(&lex_unit.raw(), false, result_handler);
+                    self.emit_text(&lexeme.raw(), false, result_handler);
                 }
-                TokenView::Text(_) => result_handler(TokenCaptureResult::Skipped(lex_unit)),
+                TokenView::Text(_) => result_handler(TokenCaptureResult::Skipped(lexeme)),
                 _ => {
                     self.flush_pending_text(result_handler);
-                    self.handle_non_textual_content(lex_unit, token_view, result_handler);
+                    self.handle_non_textual_content(lexeme, token_view, result_handler);
                 }
             },
 
             None => {
                 self.flush_pending_text(result_handler);
-                result_handler(TokenCaptureResult::Skipped(lex_unit));
+                result_handler(TokenCaptureResult::Skipped(lexeme));
             }
         }
     }

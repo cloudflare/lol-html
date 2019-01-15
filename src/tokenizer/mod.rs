@@ -18,25 +18,25 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::outputs::*;
-pub use self::state_machine::{LexUnitSink, TagPreviewSink};
+pub use self::state_machine::{LexemeSink, TagPreviewSink};
 pub use self::tag_name::TagName;
 pub use self::text_type::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum NextOutputType {
     TagPreview,
-    LexUnit,
+    Lexeme,
 }
 
-impl<S: LexUnitSink> LexUnitSink for Rc<RefCell<S>> {
+impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_tag(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
-        self.borrow_mut().handle_tag(lex_unit)
+    fn handle_tag(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType {
+        self.borrow_mut().handle_tag(lexeme)
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lex_unit: &LexUnit<'_>) {
-        self.borrow_mut().handle_non_tag_content(lex_unit);
+    fn handle_non_tag_content(&mut self, lexeme: &Lexeme<'_>) {
+        self.borrow_mut().handle_non_tag_content(lexeme);
     }
 }
 
@@ -47,7 +47,7 @@ impl<S: TagPreviewSink> TagPreviewSink for Rc<RefCell<S>> {
     }
 }
 
-pub trait OutputSink: LexUnitSink + TagPreviewSink {}
+pub trait OutputSink: LexemeSink + TagPreviewSink {}
 
 pub struct Tokenizer<S: OutputSink> {
     full_sm: FullStateMachine<Rc<RefCell<S>>>,
@@ -62,7 +62,7 @@ macro_rules! with_current_sm {
     ($self:tt, { sm.$fn:ident($($args:tt)*) }) => {
         match $self.next_output_type {
             NextOutputType::TagPreview => $self.eager_sm.$fn($($args)*),
-            NextOutputType::LexUnit => $self.full_sm.$fn($($args)*),
+            NextOutputType::Lexeme => $self.full_sm.$fn($($args)*),
         }
     };
 }
@@ -94,12 +94,12 @@ impl<S: OutputSink> Tokenizer<S> {
                     loop_termination_reason =
                         with_current_sm!(self, { sm.continue_from_bookmark(input, sm_bookmark) })?;
                 }
-                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment(sm_bookmark) => {
-                    // NOTE: lex unit was required to get tree builder feedback for eager
-                    // tokenizer. So we need to spin full state machine and consume lex unit
+                ParsingLoopTerminationReason::LexemeRequiredForAdjustment(sm_bookmark) => {
+                    // NOTE: lexeme was required to get tree builder feedback for eager
+                    // tokenizer. So we need to spin full state machine and consume lexeme
                     // for the tag, but without emitting it to consumers as they don't expect
-                    // lex units at this point.
-                    self.next_output_type = NextOutputType::LexUnit;
+                    // lexemes at this point.
+                    self.next_output_type = NextOutputType::Lexeme;
 
                     trace!(@continue_from_bookmark sm_bookmark, self.next_output_type, input);
 

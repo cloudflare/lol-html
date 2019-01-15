@@ -53,11 +53,11 @@ impl<S: TagPreviewSink> StateMachineActions for EagerStateMachine<S> {
 
                 self.handle_tree_builder_feedback(feedback, tag_start)
             }
-            NextOutputType::LexUnit => {
+            NextOutputType::Lexeme => {
                 // NOTE: we don't need to take feedback from tree builder simulator
                 // here because tag will be re-parsed by the full state machine anyway.
                 ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(
-                    NextOutputType::LexUnit,
+                    NextOutputType::Lexeme,
                     self.create_bookmark(tag_start),
                 ))
             }

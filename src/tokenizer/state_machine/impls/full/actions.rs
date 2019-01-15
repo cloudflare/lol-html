@@ -11,39 +11,39 @@ macro_rules! get_token_part_range {
     };
 }
 
-impl<S: LexUnitSink> StateMachineActions for FullStateMachine<S> {
+impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
     impl_common_sm_actions!();
 
     #[inline]
     fn emit_eof(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
-        let lex_unit = self.create_lex_unit_with_raw_exclusive(input, Some(TokenView::Eof));
+        let lexeme = self.create_lexeme_with_raw_exclusive(input, Some(TokenView::Eof));
 
-        self.emit_lex_unit(&lex_unit);
+        self.emit_lexeme(&lexeme);
     }
 
     #[inline]
     fn emit_text(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
-        if self.input_cursor.pos() > self.lex_unit_start {
+        if self.input_cursor.pos() > self.lexeme_start {
             // NOTE: unlike any other tokens, text tokens (except EOF) don't have
             // any lexical symbols that determine their bounds. Therefore,
             // representation of text token content is the raw slice.
             // Also, we always emit text if we encounter some other bounded
             // lexical structure and, thus, we use exclusive range for the raw slice.
-            let lex_unit = self.create_lex_unit_with_raw_exclusive(
+            let lexeme = self.create_lexeme_with_raw_exclusive(
                 input,
                 Some(TokenView::Text(self.last_text_type)),
             );
 
-            self.emit_lex_unit(&lex_unit);
+            self.emit_lexeme(&lexeme);
         }
     }
 
     #[inline]
     fn emit_current_token(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
         let token = self.current_token.take();
-        let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
+        let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
 
-        self.emit_lex_unit(&lex_unit);
+        self.emit_lexeme(&lexeme);
     }
 
     #[inline]
@@ -55,21 +55,21 @@ impl<S: LexUnitSink> StateMachineActions for FullStateMachine<S> {
         }
 
         let feedback = self.get_feedback_for_tag(&token)?;
-        let lex_unit = self.create_lex_unit_with_raw_inclusive(input, token);
-        let next_output_type = self.emit_tag_lex_unit(&lex_unit);
+        let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
+        let next_output_type = self.emit_tag_lexeme(&lexeme);
 
         // NOTE: exit from any non-initial text parsing mode always happens on tag emission
         // (except for CDATA, but there is a special action to take care of it).
         self.set_last_text_type(TextType::Data);
 
-        let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lex_unit);
+        let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lexeme);
 
         Ok(match next_output_type {
-            NextOutputType::LexUnit => loop_directive_from_feedback,
+            NextOutputType::Lexeme => loop_directive_from_feedback,
             NextOutputType::TagPreview => {
                 ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(
                     NextOutputType::TagPreview,
-                    self.create_bookmark(self.lex_unit_start),
+                    self.create_bookmark(self.lexeme_start),
                 ))
             }
         })
@@ -78,25 +78,25 @@ impl<S: LexUnitSink> StateMachineActions for FullStateMachine<S> {
     #[inline]
     fn emit_current_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>) {
         let token = self.current_token.take();
-        let lex_unit = self.create_lex_unit_with_raw_exclusive(input, token);
+        let lexeme = self.create_lexeme_with_raw_exclusive(input, token);
 
-        self.emit_lex_unit(&lex_unit);
+        self.emit_lexeme(&lexeme);
         self.emit_eof(input, ch);
     }
 
     #[inline]
     fn emit_raw_without_token(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
-        let lex_unit = self.create_lex_unit_with_raw_inclusive(input, None);
+        let lexeme = self.create_lexeme_with_raw_inclusive(input, None);
 
-        self.emit_lex_unit(&lex_unit);
+        self.emit_lexeme(&lexeme);
     }
 
     #[inline]
     fn emit_raw_without_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>) {
         // NOTE: since we are at EOF we use exclusive range for token's raw.
-        let lex_unit = self.create_lex_unit_with_raw_exclusive(input, None);
+        let lexeme = self.create_lexeme_with_raw_exclusive(input, None);
 
-        self.emit_lex_unit(&lex_unit);
+        self.emit_lexeme(&lexeme);
         self.emit_eof(input, ch);
     }
 

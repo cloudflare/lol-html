@@ -1,6 +1,6 @@
 use crate::token::{Token, TokenCapture, TokenCaptureFlags, TokenCaptureResult};
 use crate::tokenizer::{
-    LexUnit, LexUnitSink, NextOutputType, OutputSink as TokenizerOutputSink, TagPreview,
+    Lexeme, LexemeSink, NextOutputType, OutputSink as TokenizerOutputSink, TagPreview,
     TagPreviewSink,
 };
 use encoding_rs::Encoding;
@@ -10,7 +10,7 @@ use std::cell::RefCell;
 // handle_bailout
 pub trait TransformController {
     fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags;
-    fn get_token_capture_flags_for_tag(&mut self, tag_lex_unit: &LexUnit) -> NextOutputType;
+    fn get_token_capture_flags_for_tag(&mut self, tag_lexeme: &Lexeme) -> NextOutputType;
 
     fn get_token_capture_flags_for_tag_preview(
         &mut self,
@@ -35,10 +35,10 @@ impl<C: TransformController> Writer<C> {
         }
     }
 
-    fn handle_lex_unit(&mut self, lex_unit: &LexUnit<'_>) {
+    fn handle_lexeme(&mut self, lexeme: &Lexeme<'_>) {
         let mut transform_controller = self.transform_controller.borrow_mut();
 
-        self.token_capture.feed(lex_unit, &mut |res| {
+        self.token_capture.feed(lexeme, &mut |res| {
             if let TokenCaptureResult::Captured(token) = res {
                 transform_controller.handle_token(token);
             }
@@ -46,22 +46,22 @@ impl<C: TransformController> Writer<C> {
     }
 }
 
-impl<C: TransformController> LexUnitSink for Writer<C> {
+impl<C: TransformController> LexemeSink for Writer<C> {
     #[inline]
-    fn handle_tag(&mut self, lex_unit: &LexUnit<'_>) -> NextOutputType {
+    fn handle_tag(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType {
         let next_output_type = self
             .transform_controller
             .borrow_mut()
-            .get_token_capture_flags_for_tag(lex_unit);
+            .get_token_capture_flags_for_tag(lexeme);
 
-        self.handle_lex_unit(lex_unit);
+        self.handle_lexeme(lexeme);
 
         next_output_type
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lex_unit: &LexUnit<'_>) {
-        self.handle_lex_unit(lex_unit);
+    fn handle_non_tag_content(&mut self, lexeme: &Lexeme<'_>) {
+        self.handle_lexeme(lexeme);
     }
 }
 

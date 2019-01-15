@@ -42,7 +42,7 @@ impl<C: TransformController> TransformStream<C> {
         {
             NextOutputType::TagPreview
         } else {
-            NextOutputType::LexUnit
+            NextOutputType::Lexeme
         };
 
         let writer = Rc::new(RefCell::new(Writer::new(transform_controller, encoding)));

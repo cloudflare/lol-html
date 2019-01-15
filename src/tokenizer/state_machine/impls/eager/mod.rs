@@ -131,8 +131,8 @@ impl<S: TagPreviewSink> EagerStateMachine<S> {
                 self.cdata_allowed = cdata_allowed;
                 ParsingLoopDirective::None
             }
-            TreeBuilderFeedback::RequestLexUnit(_) => ParsingLoopDirective::Break(
-                ParsingLoopTerminationReason::LexUnitRequiredForAdjustment(
+            TreeBuilderFeedback::RequestLexeme(_) => ParsingLoopDirective::Break(
+                ParsingLoopTerminationReason::LexemeRequiredForAdjustment(
                     self.create_bookmark(tag_start),
                 ),
             ),
@@ -159,9 +159,9 @@ impl<S: TagPreviewSink> StateMachine for EagerStateMachine<S> {
         // NOTE: if we are in character sequence matching we need
         // to block from the position where matching starts. We don't
         // need to do that manually in full state machine because it
-        // always blocks all bytes starting from lex unit start and it's
+        // always blocks all bytes starting from lexeme start and it's
         // guaranteed that character sequence matching occurs withih
-        // lex unit boundaries.
+        // lexeme boundaries.
         match (self.tag_start, self.ch_sequence_matching_start) {
             (Some(tag_start), Some(ch_sequence_matching_start)) => {
                 input.len() - min(tag_start, ch_sequence_matching_start)

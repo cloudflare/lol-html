@@ -2,15 +2,15 @@ use super::token_view::*;
 use crate::base::{Bytes, Chunk, Range};
 use std::fmt::{self, Debug, Write};
 
-pub struct LexUnit<'i> {
+pub struct Lexeme<'i> {
     input: &'i Chunk<'i>,
     raw_range: Range,
     token_view: Option<TokenView>,
 }
 
-impl<'i> LexUnit<'i> {
+impl<'i> Lexeme<'i> {
     pub fn new(input: &'i Chunk<'i>, token_view: Option<TokenView>, raw_range: Range) -> Self {
-        LexUnit {
+        Lexeme {
             input,
             raw_range,
             token_view,
@@ -48,9 +48,9 @@ impl<'i> LexUnit<'i> {
     }
 }
 
-impl Debug for LexUnit<'_> {
+impl Debug for Lexeme<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut builder = f.debug_struct("LexUnit");
+        let mut builder = f.debug_struct("Lexeme");
         let mut pretty_raw = self.input.as_debug_string();
         let mut start = String::new();
         let mut end = String::new();
