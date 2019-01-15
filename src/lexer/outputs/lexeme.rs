@@ -1,19 +1,23 @@
-use super::token_view::*;
+use super::token_outline::*;
 use crate::base::{Bytes, Chunk, Range};
 use std::fmt::{self, Debug, Write};
 
 pub struct Lexeme<'i> {
     input: &'i Chunk<'i>,
     raw_range: Range,
-    token_view: Option<TokenView>,
+    token_outline: Option<TokenOutline>,
 }
 
 impl<'i> Lexeme<'i> {
-    pub fn new(input: &'i Chunk<'i>, token_view: Option<TokenView>, raw_range: Range) -> Self {
+    pub fn new(
+        input: &'i Chunk<'i>,
+        token_outline: Option<TokenOutline>,
+        raw_range: Range,
+    ) -> Self {
         Lexeme {
             input,
             raw_range,
-            token_view,
+            token_outline,
         }
     }
 
@@ -23,8 +27,8 @@ impl<'i> Lexeme<'i> {
     }
 
     #[inline]
-    pub fn token_view(&self) -> Option<&TokenView> {
-        self.token_view.as_ref()
+    pub fn token_outline(&self) -> Option<&TokenOutline> {
+        self.token_outline.as_ref()
     }
 
     #[inline]
@@ -63,8 +67,8 @@ impl Debug for Lexeme<'_> {
 
         builder.field("raw", &format_args!("`{}`", &pretty_raw));
 
-        if let Some(token_view) = self.token_view() {
-            builder.field("token_view", token_view);
+        if let Some(token_outline) = self.token_outline() {
+            builder.field("token_outline", token_outline);
         }
 
         builder.finish()

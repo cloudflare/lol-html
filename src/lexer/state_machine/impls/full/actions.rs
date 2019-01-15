@@ -16,7 +16,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn emit_eof(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
-        let lexeme = self.create_lexeme_with_raw_exclusive(input, Some(TokenView::Eof));
+        let lexeme = self.create_lexeme_with_raw_exclusive(input, Some(TokenOutline::Eof));
 
         self.emit_lexeme(&lexeme);
     }
@@ -31,7 +31,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
             // lexical structure and, thus, we use exclusive range for the raw slice.
             let lexeme = self.create_lexeme_with_raw_exclusive(
                 input,
-                Some(TokenView::Text(self.last_text_type)),
+                Some(TokenOutline::Text(self.last_text_type)),
             );
 
             self.emit_lexeme(&lexeme);
@@ -50,7 +50,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
     fn emit_tag(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
         let token = self.current_token.take();
 
-        if let Some(TokenView::StartTag { name_hash, .. }) = token {
+        if let Some(TokenOutline::StartTag { name_hash, .. }) = token {
             self.last_start_tag_name_hash = name_hash;
         }
 
@@ -104,7 +104,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
     fn create_start_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.attr_buffer.borrow_mut().clear();
 
-        self.current_token = Some(TokenView::StartTag {
+        self.current_token = Some(TokenOutline::StartTag {
             name: Range::default(),
             name_hash: Some(0),
             attributes: Rc::clone(&self.attr_buffer),
@@ -114,7 +114,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn create_end_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        self.current_token = Some(TokenView::EndTag {
+        self.current_token = Some(TokenOutline::EndTag {
             name: Range::default(),
             name_hash: Some(0),
         });
@@ -122,7 +122,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn create_doctype(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        self.current_token = Some(TokenView::Doctype {
+        self.current_token = Some(TokenOutline::Doctype {
             name: None,
             public_id: None,
             system_id: None,
@@ -132,7 +132,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn create_comment(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        self.current_token = Some(TokenView::Comment(Range::default()));
+        self.current_token = Some(TokenOutline::Comment(Range::default()));
     }
 
     #[inline]
@@ -142,21 +142,21 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn mark_comment_text_end(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(TokenView::Comment(ref mut text)) = self.current_token {
+        if let Some(TokenOutline::Comment(ref mut text)) = self.current_token {
             *text = get_token_part_range!(self);
         }
     }
 
     #[inline]
     fn shift_comment_text_end_by(&mut self, _input: &Chunk<'_>, _ch: Option<u8>, offset: usize) {
-        if let Some(TokenView::Comment(ref mut text)) = self.current_token {
+        if let Some(TokenOutline::Comment(ref mut text)) = self.current_token {
             text.end += offset;
         }
     }
 
     #[inline]
     fn set_force_quirks(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(TokenView::Doctype {
+        if let Some(TokenOutline::Doctype {
             ref mut force_quirks,
             ..
         }) = self.current_token
@@ -167,14 +167,14 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn finish_doctype_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(TokenView::Doctype { ref mut name, .. }) = self.current_token {
+        if let Some(TokenOutline::Doctype { ref mut name, .. }) = self.current_token {
             *name = Some(get_token_part_range!(self));
         }
     }
 
     #[inline]
     fn finish_doctype_public_id(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(TokenView::Doctype {
+        if let Some(TokenOutline::Doctype {
             ref mut public_id, ..
         }) = self.current_token
         {
@@ -184,7 +184,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn finish_doctype_system_id(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(TokenView::Doctype {
+        if let Some(TokenOutline::Doctype {
             ref mut system_id, ..
         }) = self.current_token
         {
@@ -195,8 +195,10 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
     #[inline]
     fn finish_tag_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
         match self.current_token {
-            Some(TokenView::StartTag { ref mut name, .. })
-            | Some(TokenView::EndTag { ref mut name, .. }) => *name = get_token_part_range!(self),
+            Some(TokenOutline::StartTag { ref mut name, .. })
+            | Some(TokenOutline::EndTag { ref mut name, .. }) => {
+                *name = get_token_part_range!(self)
+            }
             _ => unreachable!("Current token should be a start or an end tag at this point"),
         }
 
@@ -207,10 +209,10 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
     fn update_tag_name_hash(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
         if let Some(ch) = ch {
             match self.current_token {
-                Some(TokenView::StartTag {
+                Some(TokenOutline::StartTag {
                     ref mut name_hash, ..
                 })
-                | Some(TokenView::EndTag {
+                | Some(TokenOutline::EndTag {
                     ref mut name_hash, ..
                 }) => TagName::update_hash(name_hash, ch),
                 _ => unreachable!("Current token should be a start or an end tag at this point"),
@@ -220,7 +222,7 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn mark_as_self_closing(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(TokenView::StartTag {
+        if let Some(TokenOutline::StartTag {
             ref mut self_closing,
             ..
         }) = self.current_token
@@ -232,8 +234,8 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
     #[inline]
     fn start_attr(&mut self, input: &Chunk<'_>, ch: Option<u8>) {
         // NOTE: create attribute only if we are parsing a start tag
-        if let Some(TokenView::StartTag { .. }) = self.current_token {
-            self.current_attr = Some(AttributeView::default());
+        if let Some(TokenOutline::StartTag { .. }) = self.current_token {
+            self.current_attr = Some(AttributeOultine::default());
 
             self.start_token_part(input, ch);
         }
@@ -241,14 +243,14 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn finish_attr_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(AttributeView { ref mut name, .. }) = self.current_attr {
+        if let Some(AttributeOultine { ref mut name, .. }) = self.current_attr {
             *name = get_token_part_range!(self);
         }
     }
 
     #[inline]
     fn finish_attr_value(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(AttributeView { ref mut value, .. }) = self.current_attr {
+        if let Some(AttributeOultine { ref mut value, .. }) = self.current_attr {
             *value = get_token_part_range!(self);
         }
     }

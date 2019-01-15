@@ -13,7 +13,7 @@
 //! (see `AmbiguityGuard` for the details).
 
 use crate::base::Bytes;
-use crate::lexer::outputs::{Lexeme, TokenView};
+use crate::lexer::outputs::{Lexeme, TokenOutline};
 use crate::lexer::{TagName, TextType};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
@@ -86,10 +86,10 @@ fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
     tag_is_one_of!(tag_name_hash, [Desc, Title, ForeignObject])
 }
 
-macro_rules! expect_token_view {
+macro_rules! expect_token_outline {
     ($lexeme: ident) => {
         *$lexeme
-            .token_view()
+            .token_outline()
             .expect("There should be a token view at this point")
     };
 }
@@ -218,8 +218,8 @@ impl TreeBuilderSimulator {
         &mut self,
         lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lexeme) {
-            TokenView::StartTag { self_closing, .. } => {
+        match expect_token_outline!(lexeme) {
+            TokenOutline::StartTag { self_closing, .. } => {
                 if self_closing {
                     TreeBuilderFeedback::None
                 } else {
@@ -234,8 +234,8 @@ impl TreeBuilderSimulator {
         &mut self,
         lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lexeme) {
-            TokenView::EndTag { name, .. } => {
+        match expect_token_outline!(lexeme) {
+            TokenOutline::EndTag { name, .. } => {
                 let name = lexeme.input().slice(name);
 
                 if eq_case_insensitive(&name, b"annotation-xml") {
@@ -252,8 +252,8 @@ impl TreeBuilderSimulator {
         &mut self,
         lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lexeme) {
-            TokenView::StartTag {
+        match expect_token_outline!(lexeme) {
+            TokenOutline::StartTag {
                 name,
                 ref attributes,
                 self_closing,
@@ -285,8 +285,8 @@ impl TreeBuilderSimulator {
         &mut self,
         lexeme: &Lexeme<'_>,
     ) -> TreeBuilderFeedback {
-        match expect_token_view!(lexeme) {
-            TokenView::StartTag { ref attributes, .. } => {
+        match expect_token_outline!(lexeme) {
+            TokenOutline::StartTag { ref attributes, .. } => {
                 for attr in attributes.borrow().iter() {
                     let name = lexeme.input().slice(attr.name);
 

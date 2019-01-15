@@ -5,7 +5,7 @@ mod start_tag;
 mod text;
 
 use crate::base::Bytes;
-use crate::lexer::{Lexeme, TextType, TokenView};
+use crate::lexer::{Lexeme, TextType, TokenOutline};
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use std::rc::Rc;
@@ -120,7 +120,7 @@ impl TokenCapture {
     fn handle_non_textual_content(
         &mut self,
         lexeme: &Lexeme<'_>,
-        token_view: &TokenView,
+        token_outline: &TokenOutline,
         result_handler: &mut dyn FnMut(TokenCaptureResult<'_>),
     ) {
         macro_rules! capture {
@@ -133,14 +133,14 @@ impl TokenCapture {
             };
         }
 
-        let result = match token_view {
-            &TokenView::Comment(text)
+        let result = match token_outline {
+            &TokenOutline::Comment(text)
                 if self.capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
             {
                 capture!(Comment(lexeme.part(text)))
             }
 
-            &TokenView::StartTag {
+            &TokenOutline::StartTag {
                 name,
                 ref attributes,
                 self_closing,
@@ -152,13 +152,13 @@ impl TokenCapture {
                 capture!(StartTag(lexeme.part(name), attributes, self_closing))
             }
 
-            &TokenView::EndTag { name, .. }
+            &TokenOutline::EndTag { name, .. }
                 if self.capture_flags.contains(TokenCaptureFlags::END_TAGS) =>
             {
                 capture!(EndTag(lexeme.part(name)))
             }
 
-            &TokenView::Doctype {
+            &TokenOutline::Doctype {
                 name,
                 public_id,
                 system_id,
@@ -170,7 +170,7 @@ impl TokenCapture {
                 force_quirks
             )),
 
-            TokenView::Eof if self.capture_flags.contains(TokenCaptureFlags::EOF) => {
+            TokenOutline::Eof if self.capture_flags.contains(TokenCaptureFlags::EOF) => {
                 TokenCaptureResult::Captured(Token::Eof)
             }
             _ => TokenCaptureResult::Skipped(lexeme),
@@ -186,18 +186,18 @@ impl TokenCapture {
         lexeme: &Lexeme<'_>,
         result_handler: &mut dyn FnMut(TokenCaptureResult<'_>),
     ) {
-        match lexeme.token_view() {
-            Some(token_view) => match *token_view {
-                TokenView::Text(text_type)
+        match lexeme.token_outline() {
+            Some(token_outline) => match *token_outline {
+                TokenOutline::Text(text_type)
                     if self.capture_flags.contains(TokenCaptureFlags::TEXT) =>
                 {
                     self.last_text_type = text_type;
                     self.emit_text(&lexeme.raw(), false, result_handler);
                 }
-                TokenView::Text(_) => result_handler(TokenCaptureResult::Skipped(lexeme)),
+                TokenOutline::Text(_) => result_handler(TokenCaptureResult::Skipped(lexeme)),
                 _ => {
                     self.flush_pending_text(result_handler);
-                    self.handle_non_textual_content(lexeme, token_view, result_handler);
+                    self.handle_non_textual_content(lexeme, token_outline, result_handler);
                 }
             },
 

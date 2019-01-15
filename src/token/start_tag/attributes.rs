@@ -1,5 +1,5 @@
 use crate::base::{Bytes, Chunk};
-use crate::lexer::AttributeView;
+use crate::lexer::AttributeOultine;
 use encoding_rs::Encoding;
 use lazycell::LazyCell;
 use std::cell::RefCell;
@@ -40,7 +40,7 @@ impl<'i> Attribute<'i> {
 
 pub struct ParsedAttributeList<'i> {
     input: &'i Chunk<'i>,
-    attribute_views: Rc<RefCell<Vec<AttributeView>>>,
+    attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
     items: LazyCell<Vec<Attribute<'i>>>,
     encoding: &'static Encoding,
 }
@@ -48,7 +48,7 @@ pub struct ParsedAttributeList<'i> {
 impl<'i> ParsedAttributeList<'i> {
     pub(crate) fn new(
         input: &'i Chunk<'i>,
-        attribute_views: Rc<RefCell<Vec<AttributeView>>>,
+        attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
         encoding: &'static Encoding,
     ) -> Self {
         ParsedAttributeList {

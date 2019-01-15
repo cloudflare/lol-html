@@ -32,11 +32,11 @@ pub struct FullStateMachine<S: LexemeSink> {
     cdata_allowed: bool,
     lexeme_sink: S,
     state: State<S>,
-    current_token: Option<TokenView>,
-    current_attr: Option<AttributeView>,
+    current_token: Option<TokenOutline>,
+    current_attr: Option<AttributeOultine>,
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
-    attr_buffer: Rc<RefCell<Vec<AttributeView>>>,
+    attr_buffer: Rc<RefCell<Vec<AttributeOultine>>>,
     feedback_providers: Rc<RefCell<FeedbackProviders>>,
     last_text_type: TextType,
     should_silently_consume_current_tag_only: bool,
@@ -78,12 +78,12 @@ impl<S: LexemeSink> FullStateMachine<S> {
 
     fn get_feedback_for_tag(
         &mut self,
-        token: &Option<TokenView>,
+        token: &Option<TokenOutline>,
     ) -> Result<TreeBuilderFeedback, Error> {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
 
         match *token {
-            Some(TokenView::StartTag { name_hash, .. }) => {
+            Some(TokenOutline::StartTag { name_hash, .. }) => {
                 // NOTE: if we are silently parsing the tag to get tree builder
                 // feedback for the eager state machine then guard check has been
                 // already activated by the eager state machine.
@@ -97,7 +97,7 @@ impl<S: LexemeSink> FullStateMachine<S> {
                     .tree_builder_simulator
                     .get_feedback_for_start_tag_name(name_hash))
             }
-            Some(TokenView::EndTag { name_hash, .. }) => {
+            Some(TokenOutline::EndTag { name_hash, .. }) => {
                 // NOTE: if we are silently parsing the tag to get tree builder
                 // feedback for the eager state machine then guard check has been
                 // already activated by the eager state machine.
@@ -172,7 +172,7 @@ impl<S: LexemeSink> FullStateMachine<S> {
     fn create_lexeme_with_raw<'i>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<TokenView>,
+        token: Option<TokenOutline>,
         raw_end: usize,
     ) -> Lexeme<'i> {
         let raw_range = Range {
@@ -187,7 +187,7 @@ impl<S: LexemeSink> FullStateMachine<S> {
     fn create_lexeme_with_raw_inclusive<'i>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<TokenView>,
+        token: Option<TokenOutline>,
     ) -> Lexeme<'i> {
         let raw_end = self.input_cursor.pos() + 1;
 
@@ -198,7 +198,7 @@ impl<S: LexemeSink> FullStateMachine<S> {
     fn create_lexeme_with_raw_exclusive<'i>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<TokenView>,
+        token: Option<TokenOutline>,
     ) -> Lexeme<'i> {
         let raw_end = self.input_cursor.pos();
 

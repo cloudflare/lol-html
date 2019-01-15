@@ -4,12 +4,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Debug, Default)]
-pub struct AttributeView {
+pub struct AttributeOultine {
     pub name: Range,
     pub value: Range,
 }
 
-impl Align for AttributeView {
+impl Align for AttributeOultine {
     fn align(&mut self, offset: usize) {
         self.name.align(offset);
         self.value.align(offset);
@@ -19,7 +19,7 @@ impl Align for AttributeView {
 // TODO create shortcuts for id and class attributes
 // without necessity to iterate over attributes vector.
 #[derive(Debug)]
-pub enum TokenView {
+pub enum TokenOutline {
     Text(TextType),
 
     Comment(Range),
@@ -27,7 +27,7 @@ pub enum TokenView {
     StartTag {
         name: Range,
         name_hash: Option<u64>,
-        attributes: Rc<RefCell<Vec<AttributeView>>>,
+        attributes: Rc<RefCell<Vec<AttributeOultine>>>,
         self_closing: bool,
     },
 
@@ -46,18 +46,18 @@ pub enum TokenView {
     Eof,
 }
 
-impl Align for TokenView {
+impl Align for TokenOutline {
     fn align(&mut self, offset: usize) {
         match self {
-            TokenView::Comment(text) => text.align(offset),
-            TokenView::StartTag {
+            TokenOutline::Comment(text) => text.align(offset),
+            TokenOutline::StartTag {
                 name, attributes, ..
             } => {
                 name.align(offset);
                 attributes.borrow_mut().align(offset);
             }
-            TokenView::EndTag { name, .. } => name.align(offset),
-            TokenView::Doctype {
+            TokenOutline::EndTag { name, .. } => name.align(offset),
+            TokenOutline::Doctype {
                 name,
                 public_id,
                 system_id,
