@@ -2,7 +2,7 @@ use super::*;
 use crate::base::Chunk;
 use crate::tokenizer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
-impl<S: TagPreviewSink> StateMachineActions for EagerStateMachine<S> {
+impl<S: TagHintSink> StateMachineActions for EagerStateMachine<S> {
     impl_common_sm_actions!();
 
     #[inline]
@@ -37,10 +37,10 @@ impl<S: TagPreviewSink> StateMachineActions for EagerStateMachine<S> {
 
     #[inline]
     fn finish_tag_name(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
-        let tag_preview = self.create_tag_preview(input);
-        let next_output_type = self.tag_preview_sink.handle_tag_preview(&tag_preview);
+        let tag_hint = self.create_tag_hint(input);
+        let next_output_type = self.tag_hint_sink.handle_tag_hint(&tag_hint);
 
-        trace!(@output tag_preview);
+        trace!(@output tag_hint);
 
         let tag_start = self
             .tag_start
@@ -48,8 +48,8 @@ impl<S: TagPreviewSink> StateMachineActions for EagerStateMachine<S> {
             .expect("Tag start should be set at this point");
 
         Ok(match next_output_type {
-            NextOutputType::TagPreview => {
-                let feedback = self.get_feedback_for_tag(&tag_preview)?;
+            NextOutputType::TagHint => {
+                let feedback = self.get_feedback_for_tag(&tag_hint)?;
 
                 self.handle_tree_builder_feedback(feedback, tag_start)
             }

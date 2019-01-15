@@ -1,7 +1,6 @@
 use crate::token::{Token, TokenCapture, TokenCaptureFlags, TokenCaptureResult};
 use crate::tokenizer::{
-    Lexeme, LexemeSink, NextOutputType, OutputSink as TokenizerOutputSink, TagPreview,
-    TagPreviewSink,
+    Lexeme, LexemeSink, NextOutputType, OutputSink as TokenizerOutputSink, TagHint, TagHintSink,
 };
 use encoding_rs::Encoding;
 use std::cell::RefCell;
@@ -12,10 +11,7 @@ pub trait TransformController {
     fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags;
     fn get_token_capture_flags_for_tag(&mut self, tag_lexeme: &Lexeme) -> NextOutputType;
 
-    fn get_token_capture_flags_for_tag_preview(
-        &mut self,
-        tag_preview: &TagPreview,
-    ) -> NextOutputType;
+    fn get_token_capture_flags_for_tag_hint(&mut self, tag_hint: &TagHint) -> NextOutputType;
 
     fn handle_token(&mut self, token: Token);
 }
@@ -65,12 +61,12 @@ impl<C: TransformController> LexemeSink for Writer<C> {
     }
 }
 
-impl<C: TransformController> TagPreviewSink for Writer<C> {
+impl<C: TransformController> TagHintSink for Writer<C> {
     #[inline]
-    fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType {
+    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> NextOutputType {
         self.transform_controller
             .borrow_mut()
-            .get_token_capture_flags_for_tag_preview(tag_preview)
+            .get_token_capture_flags_for_tag_hint(tag_hint)
     }
 }
 

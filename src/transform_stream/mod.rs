@@ -40,7 +40,7 @@ impl<C: TransformController> TransformStream<C> {
             .get_initial_token_capture_flags()
             .is_empty()
         {
-            NextOutputType::TagPreview
+            NextOutputType::TagHint
         } else {
             NextOutputType::Lexeme
         };

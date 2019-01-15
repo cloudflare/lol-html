@@ -14,8 +14,8 @@ use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;
 
-pub trait TagPreviewSink {
-    fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType;
+pub trait TagHintSink {
+    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> NextOutputType;
 }
 
 pub type State<S> = fn(&mut EagerStateMachine<S>, &Chunk<'_>) -> StateResult;
@@ -31,7 +31,7 @@ pub type State<S> = fn(&mut EagerStateMachine<S>, &Chunk<'_>) -> StateResult;
 /// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
 /// it's not a concern for our use case as no content will be erroneously captured
 /// in this case.
-pub struct EagerStateMachine<S: TagPreviewSink> {
+pub struct EagerStateMachine<S: TagHintSink> {
     input_cursor: Cursor,
     tag_start: Option<usize>,
     ch_sequence_matching_start: Option<usize>,
@@ -41,7 +41,7 @@ pub struct EagerStateMachine<S: TagPreviewSink> {
     last_start_tag_name_hash: Option<u64>,
     is_state_enter: bool,
     cdata_allowed: bool,
-    tag_preview_sink: S,
+    tag_hint_sink: S,
     state: State<S>,
     closing_quote: u8,
     feedback_providers: Rc<RefCell<FeedbackProviders>>,
@@ -49,8 +49,8 @@ pub struct EagerStateMachine<S: TagPreviewSink> {
     last_text_type: TextType,
 }
 
-impl<S: TagPreviewSink> EagerStateMachine<S> {
-    pub fn new(tag_preview_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
+impl<S: TagHintSink> EagerStateMachine<S> {
+    pub fn new(tag_hint_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
         EagerStateMachine {
             input_cursor: Cursor::default(),
             tag_start: None,
@@ -61,7 +61,7 @@ impl<S: TagPreviewSink> EagerStateMachine<S> {
             last_start_tag_name_hash: None,
             is_state_enter: true,
             cdata_allowed: false,
-            tag_preview_sink,
+            tag_hint_sink,
             state: EagerStateMachine::data_state,
             closing_quote: b'"',
             feedback_providers,
@@ -70,7 +70,7 @@ impl<S: TagPreviewSink> EagerStateMachine<S> {
         }
     }
 
-    fn create_tag_preview<'i>(&mut self, input: &'i Chunk<'i>) -> TagPreview<'i> {
+    fn create_tag_hint<'i>(&mut self, input: &'i Chunk<'i>) -> TagHint<'i> {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.input_cursor.pos(),
@@ -84,17 +84,17 @@ impl<S: TagPreviewSink> EagerStateMachine<S> {
             TagType::StartTag
         };
 
-        TagPreview::new(input, tag_type, name_range, self.tag_name_hash)
+        TagHint::new(input, tag_type, name_range, self.tag_name_hash)
     }
 
     fn get_feedback_for_tag(
         &mut self,
-        tag_preview: &TagPreview<'_>,
+        tag_hint: &TagHint<'_>,
     ) -> Result<TreeBuilderFeedback, Error> {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
-        let name_hash = tag_preview.name_hash();
+        let name_hash = tag_hint.name_hash();
 
-        Ok(match tag_preview.tag_type() {
+        Ok(match tag_hint.tag_type() {
             TagType::StartTag => {
                 feedback_providers
                     .ambiguity_guard
@@ -141,7 +141,7 @@ impl<S: TagPreviewSink> EagerStateMachine<S> {
     }
 }
 
-impl<S: TagPreviewSink> StateMachine for EagerStateMachine<S> {
+impl<S: TagHintSink> StateMachine for EagerStateMachine<S> {
     impl_common_sm_accessors!();
 
     #[inline]

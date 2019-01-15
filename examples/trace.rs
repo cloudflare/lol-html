@@ -17,7 +17,7 @@ fn parse_options() -> Option<Matches> {
 
     opts.optopt("l", "last_start_tag", "Last start tag name", "-l");
     opts.optopt("c", "chunk_size", "Chunk size", "-c");
-    opts.optflag("p", "tag_preview_mode", "Trace in tag preview mode");
+    opts.optflag("p", "tag_hint_mode", "Trace in tag preview mode");
     opts.optflag("h", "help", "Show this help");
 
     let matches = match opts.parse(args().skip(1)) {
@@ -45,18 +45,18 @@ fn parse_options() -> Option<Matches> {
 }
 
 struct TraceTransformController {
-    tag_preview_mode: bool,
+    tag_hint_mode: bool,
 }
 
 impl TraceTransformController {
-    pub fn new(tag_preview_mode: bool) -> Self {
-        TraceTransformController { tag_preview_mode }
+    pub fn new(tag_hint_mode: bool) -> Self {
+        TraceTransformController { tag_hint_mode }
     }
 }
 
 impl TransformController for TraceTransformController {
     fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags {
-        if self.tag_preview_mode {
+        if self.tag_hint_mode {
             TokenCaptureFlags::empty()
         } else {
             TokenCaptureFlags::all()
@@ -64,16 +64,16 @@ impl TransformController for TraceTransformController {
     }
 
     fn get_token_capture_flags_for_tag(&mut self, _: &Lexeme) -> NextOutputType {
-        if self.tag_preview_mode {
-            NextOutputType::TagPreview
+        if self.tag_hint_mode {
+            NextOutputType::TagHint
         } else {
             NextOutputType::Lexeme
         }
     }
 
-    fn get_token_capture_flags_for_tag_preview(&mut self, _: &TagPreview) -> NextOutputType {
-        if self.tag_preview_mode {
-            NextOutputType::TagPreview
+    fn get_token_capture_flags_for_tag_hint(&mut self, _: &TagHint) -> NextOutputType {
+        if self.tag_hint_mode {
+            NextOutputType::TagHint
         } else {
             NextOutputType::Lexeme
         }
@@ -89,10 +89,10 @@ fn main() {
     };
 
     let html = matches.free.first().unwrap();
-    let tag_preview_mode = matches.opt_present("p");
+    let tag_hint_mode = matches.opt_present("p");
 
     let mut transform_stream =
-        TransformStream::new(2048, TraceTransformController::new(tag_preview_mode), UTF_8);
+        TransformStream::new(2048, TraceTransformController::new(tag_hint_mode), UTF_8);
 
     let tokenizer = transform_stream.tokenizer();
 

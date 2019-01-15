@@ -53,7 +53,7 @@ fn cool_thing_tokenizer_bench(
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
         use cool_thing::token::Token;
-        use cool_thing::tokenizer::{Lexeme, NextOutputType, TagPreview};
+        use cool_thing::tokenizer::{Lexeme, NextOutputType, TagHint};
         use cool_thing::transform_stream::{TransformController, TransformStream};
 
         struct BenchTransformController {
@@ -75,20 +75,20 @@ fn cool_thing_tokenizer_bench(
                 black_box(tag_lexeme);
 
                 if self.capture_flags.is_empty() {
-                    NextOutputType::TagPreview
+                    NextOutputType::TagHint
                 } else {
                     NextOutputType::Lexeme
                 }
             }
 
-            fn get_token_capture_flags_for_tag_preview(
+            fn get_token_capture_flags_for_tag_hint(
                 &mut self,
-                tag_preview: &TagPreview,
+                tag_hint: &TagHint,
             ) -> NextOutputType {
-                black_box(tag_preview);
+                black_box(tag_hint);
 
                 if self.capture_flags.is_empty() {
-                    NextOutputType::TagPreview
+                    NextOutputType::TagHint
                 } else {
                     NextOutputType::Lexeme
                 }

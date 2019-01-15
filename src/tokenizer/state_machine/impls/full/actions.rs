@@ -66,9 +66,9 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
         Ok(match next_output_type {
             NextOutputType::Lexeme => loop_directive_from_feedback,
-            NextOutputType::TagPreview => {
+            NextOutputType::TagHint => {
                 ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(
-                    NextOutputType::TagPreview,
+                    NextOutputType::TagHint,
                     self.create_bookmark(self.lexeme_start),
                 ))
             }

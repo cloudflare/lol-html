@@ -18,13 +18,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::outputs::*;
-pub use self::state_machine::{LexemeSink, TagPreviewSink};
+pub use self::state_machine::{LexemeSink, TagHintSink};
 pub use self::tag_name::TagName;
 pub use self::text_type::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum NextOutputType {
-    TagPreview,
+    TagHint,
     Lexeme,
 }
 
@@ -40,14 +40,14 @@ impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
     }
 }
 
-impl<S: TagPreviewSink> TagPreviewSink for Rc<RefCell<S>> {
+impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_tag_preview(&mut self, tag_preview: &TagPreview<'_>) -> NextOutputType {
-        self.borrow_mut().handle_tag_preview(tag_preview)
+    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> NextOutputType {
+        self.borrow_mut().handle_tag_hint(tag_hint)
     }
 }
 
-pub trait OutputSink: LexemeSink + TagPreviewSink {}
+pub trait OutputSink: LexemeSink + TagHintSink {}
 
 pub struct Tokenizer<S: OutputSink> {
     full_sm: FullStateMachine<Rc<RefCell<S>>>,
@@ -61,7 +61,7 @@ pub struct Tokenizer<S: OutputSink> {
 macro_rules! with_current_sm {
     ($self:tt, { sm.$fn:ident($($args:tt)*) }) => {
         match $self.next_output_type {
-            NextOutputType::TagPreview => $self.eager_sm.$fn($($args)*),
+            NextOutputType::TagHint => $self.eager_sm.$fn($($args)*),
             NextOutputType::Lexeme => $self.full_sm.$fn($($args)*),
         }
     };

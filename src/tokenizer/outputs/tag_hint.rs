@@ -7,21 +7,21 @@ pub enum TagType {
     EndTag,
 }
 
-pub struct TagPreview<'i> {
+pub struct TagHint<'i> {
     input: &'i Chunk<'i>,
     tag_type: TagType,
     name_range: Range,
     name_hash: Option<u64>,
 }
 
-impl<'i> TagPreview<'i> {
+impl<'i> TagHint<'i> {
     pub fn new(
         input: &'i Chunk<'i>,
         tag_type: TagType,
         name_range: Range,
         name_hash: Option<u64>,
     ) -> Self {
-        TagPreview {
+        TagHint {
             input,
             tag_type,
             name_range,
@@ -45,7 +45,7 @@ impl<'i> TagPreview<'i> {
     }
 }
 
-impl Debug for TagPreview<'_> {
+impl Debug for TagHint<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TagNameInfo")
             .field("name", &self.name())

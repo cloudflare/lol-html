@@ -162,7 +162,7 @@ impl<S: LexemeSink> FullStateMachine<S> {
 
         if self.should_silently_consume_current_tag_only {
             self.should_silently_consume_current_tag_only = false;
-            NextOutputType::TagPreview
+            NextOutputType::TagHint
         } else {
             self.lexeme_sink.handle_tag(lexeme)
         }

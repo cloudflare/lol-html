@@ -2,7 +2,7 @@ use crate::harness::functional_testing::{
     FunctionalTestFixture, TestCase, TestToken, TestTokenList,
 };
 use cool_thing::token::{Token, TokenCaptureFlags};
-use cool_thing::tokenizer::{Lexeme, NextOutputType, TagPreview, TextType};
+use cool_thing::tokenizer::{Lexeme, NextOutputType, TagHint, TextType};
 use cool_thing::transform_stream::TransformController;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -30,7 +30,7 @@ impl TransformController for TestTransformController {
         NextOutputType::Lexeme
     }
 
-    fn get_token_capture_flags_for_tag_preview(&mut self, _: &TagPreview) -> NextOutputType {
+    fn get_token_capture_flags_for_tag_hint(&mut self, _: &TagHint) -> NextOutputType {
         NextOutputType::Lexeme
     }
 
