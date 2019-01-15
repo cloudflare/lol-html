@@ -7,7 +7,7 @@ mod debug_trace;
 #[macro_use]
 pub mod base;
 
-pub mod lexer;
+pub mod parser;
 pub mod token;
 pub mod transform_stream;
 

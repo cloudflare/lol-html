@@ -3,11 +3,11 @@ mod actions;
 mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
-use crate::lexer::outputs::*;
-use crate::lexer::state_machine::{
+use crate::parser::outputs::*;
+use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
-use crate::lexer::{
+use crate::parser::{
     FeedbackProviders, NextOutputType, ParsingLoopTerminationReason, TagName, TextType,
     TreeBuilderFeedback,
 };

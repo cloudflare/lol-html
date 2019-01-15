@@ -1,6 +1,6 @@
 use super::*;
 use crate::base::Chunk;
-use crate::lexer::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
+use crate::parser::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
 impl<S: TagHintSink> StateMachineActions for EagerStateMachine<S> {
     impl_common_sm_actions!();

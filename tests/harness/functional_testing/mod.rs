@@ -5,7 +5,7 @@ mod test_token;
 mod unescape;
 
 use self::unescape::Unescape;
-use cool_thing::lexer::{TagName, TextType};
+use cool_thing::parser::{TagName, TextType};
 use std::fmt::Write;
 
 pub use self::chunked_input::ChunkedInput;

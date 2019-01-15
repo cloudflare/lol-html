@@ -1,5 +1,5 @@
 use crate::base::{Bytes, Chunk};
-use crate::lexer::AttributeOultine;
+use crate::parser::AttributeOultine;
 use encoding_rs::Encoding;
 use lazycell::LazyCell;
 use std::cell::RefCell;

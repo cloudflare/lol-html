@@ -1,4 +1,4 @@
-use cool_thing::lexer::*;
+use cool_thing::parser::*;
 use cool_thing::token::{Token, TokenCaptureFlags};
 use cool_thing::transform_stream::{TransformController, TransformStream};
 use encoding_rs::UTF_8;
@@ -94,15 +94,15 @@ fn main() {
     let mut transform_stream =
         TransformStream::new(2048, TraceTransformController::new(tag_hint_mode), UTF_8);
 
-    let lexer = transform_stream.lexer();
+    let parser = transform_stream.parser();
 
-    lexer.switch_text_type(match matches.opt_str("t").as_ref().map(|s| s.as_str()) {
+    parser.switch_text_type(match matches.opt_str("t").as_ref().map(|s| s.as_str()) {
         None => TextType::Data,
         Some(state) => TextType::from(state),
     });
 
     if let Some(ref tag_name) = matches.opt_str("l") {
-        lexer.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
+        parser.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
     }
 
     let chunks = if let Some(chunk_size) = matches.opt_get("c").unwrap() {

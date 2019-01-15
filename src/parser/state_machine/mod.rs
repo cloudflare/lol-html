@@ -9,7 +9,7 @@ mod impls;
 pub use self::impls::*;
 
 use crate::base::{Chunk, Cursor};
-use crate::lexer::{NextOutputType, TextType};
+use crate::parser::{NextOutputType, TextType};
 use failure::Error;
 
 #[derive(Debug, Copy, Clone)]

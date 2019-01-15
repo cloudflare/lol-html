@@ -1,5 +1,5 @@
 use super::*;
-use crate::lexer::state_machine::StateMachineConditions;
+use crate::parser::state_machine::StateMachineConditions;
 
 impl<S: LexemeSink> StateMachineConditions for FullStateMachine<S> {
     #[inline]

@@ -49,7 +49,7 @@ impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
 
 pub trait OutputSink: LexemeSink + TagHintSink {}
 
-pub struct Lexer<S: OutputSink> {
+pub struct Parser<S: OutputSink> {
     full_sm: FullStateMachine<Rc<RefCell<S>>>,
     eager_sm: EagerStateMachine<Rc<RefCell<S>>>,
     next_output_type: NextOutputType,
@@ -67,11 +67,11 @@ macro_rules! with_current_sm {
     };
 }
 
-impl<S: OutputSink> Lexer<S> {
+impl<S: OutputSink> Parser<S> {
     pub fn new(output_sink: &Rc<RefCell<S>>, initial_output_type: NextOutputType) -> Self {
         let feedback_providers = Rc::new(RefCell::new(FeedbackProviders::default()));
 
-        Lexer {
+        Parser {
             full_sm: FullStateMachine::new(Rc::clone(output_sink), Rc::clone(&feedback_providers)),
             eager_sm: EagerStateMachine::new(
                 Rc::clone(output_sink),
@@ -96,7 +96,7 @@ impl<S: OutputSink> Lexer<S> {
                 }
                 ParsingLoopTerminationReason::LexemeRequiredForAdjustment(sm_bookmark) => {
                     // NOTE: lexeme was required to get tree builder feedback for eager
-                    // lexer. So we need to spin full state machine and consume lexeme
+                    // parser. So we need to spin full state machine and consume lexeme
                     // for the tag, but without emitting it to consumers as they don't expect
                     // lexemes at this point.
                     self.next_output_type = NextOutputType::Lexeme;
@@ -116,7 +116,7 @@ impl<S: OutputSink> Lexer<S> {
 }
 
 #[cfg(feature = "testing_api")]
-impl<S: OutputSink> Lexer<S> {
+impl<S: OutputSink> Parser<S> {
     pub fn switch_text_type(&mut self, text_type: TextType) {
         with_current_sm!(self, { sm.switch_text_type(text_type) });
     }

@@ -1,9 +1,14 @@
-use crate::lexer::{
-    Lexeme, LexemeSink, NextOutputType, OutputSink as LexerOutputSink, TagHint, TagHintSink,
+use crate::base::Bytes;
+use crate::parser::{
+    Lexeme, LexemeSink, NextOutputType, OutputSink as ParserOutputSink, TagHint, TagHintSink,
 };
 use crate::token::{Token, TokenCapture, TokenCaptureFlags, TokenCaptureResult};
 use encoding_rs::Encoding;
 use std::cell::RefCell;
+
+pub trait Serialize {
+    fn serialize(&self) -> Bytes<'_>;
+}
 
 // TODO OutputSink
 // handle_bailout
@@ -70,4 +75,4 @@ impl<C: TransformController> TagHintSink for Writer<C> {
     }
 }
 
-impl<C: TransformController> LexerOutputSink for Writer<C> {}
+impl<C: TransformController> ParserOutputSink for Writer<C> {}

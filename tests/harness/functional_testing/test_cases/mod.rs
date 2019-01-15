@@ -122,7 +122,7 @@ fn get_test_cases() -> Vec<TestCase> {
                 );
                 None
             } else {
-                // NOTE: lexer should always produce EOF token
+                // NOTE: parser should always produce EOF token
                 t.expected_tokens.push(TestToken::Eof);
                 Some(t)
             }

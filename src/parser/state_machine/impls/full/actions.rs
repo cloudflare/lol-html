@@ -1,6 +1,6 @@
 use super::*;
 use crate::base::Chunk;
-use crate::lexer::state_machine::StateMachineActions;
+use crate::parser::state_machine::StateMachineActions;
 
 macro_rules! get_token_part_range {
     ($self:tt) => {
