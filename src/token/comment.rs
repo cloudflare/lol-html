@@ -21,9 +21,4 @@ impl<'i> Comment<'i> {
     pub fn text(&self) -> String {
         self.text.as_string(self.encoding)
     }
-
-    #[inline]
-    pub fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
-    }
 }

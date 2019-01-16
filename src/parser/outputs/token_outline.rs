@@ -7,12 +7,14 @@ use std::rc::Rc;
 pub struct AttributeOultine {
     pub name: Range,
     pub value: Range,
+    pub raw_range: Range,
 }
 
 impl Align for AttributeOultine {
     fn align(&mut self, offset: usize) {
         self.name.align(offset);
         self.value.align(offset);
+        self.raw_range.align(offset);
     }
 }
 

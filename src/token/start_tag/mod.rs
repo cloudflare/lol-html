@@ -49,9 +49,4 @@ impl<'i> StartTag<'i> {
     pub fn self_closing(&self) -> bool {
         self.self_closing
     }
-
-    #[inline]
-    pub fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
-    }
 }

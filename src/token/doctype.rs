@@ -55,9 +55,4 @@ impl<'i> Doctype<'i> {
     pub fn force_quirks(&self) -> bool {
         self.force_quirks
     }
-
-    #[inline]
-    pub fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
-    }
 }

@@ -1,4 +1,3 @@
-use crate::base::Bytes;
 use crate::parser::TextType;
 use encoding_rs::Encoding;
 use std::borrow::Cow;
@@ -19,11 +18,6 @@ impl<'i> TextChunk<'i> {
     #[inline]
     pub fn text_type(&self) -> TextType {
         self.text_type
-    }
-
-    #[inline]
-    pub fn raw(&self) -> Bytes<'_> {
-        self.encoding.encode(self.text()).0.into()
     }
 }
 

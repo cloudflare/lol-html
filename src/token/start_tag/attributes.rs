@@ -11,14 +11,21 @@ use std::rc::Rc;
 pub struct Attribute<'i> {
     name: Bytes<'i>,
     value: Bytes<'i>,
+    raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
 }
 
 impl<'i> Attribute<'i> {
-    pub(super) fn new(name: Bytes<'i>, value: Bytes<'i>, encoding: &'static Encoding) -> Self {
+    pub(super) fn new(
+        name: Bytes<'i>,
+        value: Bytes<'i>,
+        raw: Bytes<'i>,
+        encoding: &'static Encoding,
+    ) -> Self {
         Attribute {
             name,
             value,
+            raw: Some(raw),
             encoding,
         }
     }
@@ -68,6 +75,7 @@ impl<'i> ParsedAttributeList<'i> {
                     Attribute::new(
                         self.input.slice(a.name),
                         self.input.slice(a.value),
+                        self.input.slice(a.raw_range),
                         self.encoding,
                     )
                 })

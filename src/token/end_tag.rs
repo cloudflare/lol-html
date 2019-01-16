@@ -25,9 +25,4 @@ impl<'i> EndTag<'i> {
 
         name
     }
-
-    #[inline]
-    pub fn raw(&self) -> Option<&Bytes<'i>> {
-        self.raw.as_ref()
-    }
 }

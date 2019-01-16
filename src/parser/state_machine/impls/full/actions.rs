@@ -243,15 +243,32 @@ impl<S: LexemeSink> StateMachineActions for FullStateMachine<S> {
 
     #[inline]
     fn finish_attr_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(AttributeOultine { ref mut name, .. }) = self.current_attr {
+        if let Some(AttributeOultine {
+            ref mut name,
+            ref mut raw_range,
+            ..
+        }) = self.current_attr
+        {
             *name = get_token_part_range!(self);
+            *raw_range = *name;
         }
     }
 
     #[inline]
-    fn finish_attr_value(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(AttributeOultine { ref mut value, .. }) = self.current_attr {
+    fn finish_attr_value(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
+        if let Some(AttributeOultine {
+            ref mut value,
+            ref mut raw_range,
+            ..
+        }) = self.current_attr
+        {
             *value = get_token_part_range!(self);
+
+            // NOTE: include closing quote into the raw value if it's present
+            raw_range.end = match ch {
+                Some(ch) if ch == self.closing_quote => value.end + 1,
+                _ => value.end,
+            };
         }
     }
 
