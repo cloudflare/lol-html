@@ -1,5 +1,5 @@
 use super::decoder::{decode_attr_value, decode_text, to_null_decoded};
-use super::unescape::Unescape;
+use crate::harness::unescape::Unescape;
 use cool_thing::parser::TextType;
 use cool_thing::token::{Text, Token};
 use serde::de::{Deserialize, Deserializer, Error as DeError};

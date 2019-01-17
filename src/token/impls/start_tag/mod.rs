@@ -15,18 +15,18 @@ pub struct StartTag<'i> {
 }
 
 impl<'i> StartTag<'i> {
-    pub(crate) fn new_parsed(
+    pub(in crate::token) fn new(
         name: Bytes<'i>,
-        attributes: ParsedAttributeList<'i>,
+        attributes: Attributes<'i>,
         self_closing: bool,
-        raw: Bytes<'i>,
+        raw: Option<Bytes<'i>>,
         encoding: &'static Encoding,
     ) -> Self {
         StartTag {
             name,
-            attributes: attributes.into(),
+            attributes,
             self_closing,
-            raw: Some(raw),
+            raw,
             encoding,
         }
     }

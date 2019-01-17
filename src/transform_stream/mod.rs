@@ -8,7 +8,7 @@ use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::writer::TransformController;
+pub use self::writer::{Serialize, TransformController};
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
@@ -94,7 +94,7 @@ impl<C: TransformController> TransformStream<C> {
 
         trace!(@chunk chunk);
 
-        let blocked_byte_count = self.parser.tokenize(&chunk)?;
+        let blocked_byte_count = self.parser.parse(&chunk)?;
 
         if blocked_byte_count > 0 {
             self.buffer_blocked_bytes(data, blocked_byte_count)?;
@@ -121,7 +121,7 @@ impl<C: TransformController> TransformStream<C> {
 
         trace!(@chunk chunk);
 
-        self.parser.tokenize(&chunk)?;
+        self.parser.parse(&chunk)?;
 
         Ok(())
     }

@@ -1,43 +1,9 @@
 use crate::harness::functional_testing::{
     FunctionalTestFixture, TestCase, TestToken, TestTokenList,
 };
-use cool_thing::parser::{Lexeme, NextOutputType, TagHint, TextType};
-use cool_thing::token::{Token, TokenCaptureFlags};
-use cool_thing::transform_stream::TransformController;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-struct TestTransformController {
-    token_list: Rc<RefCell<TestTokenList>>,
-    capture_flags: TokenCaptureFlags,
-}
-
-impl TestTransformController {
-    pub fn new(token_list: Rc<RefCell<TestTokenList>>, capture_flags: TokenCaptureFlags) -> Self {
-        TestTransformController {
-            token_list,
-            capture_flags,
-        }
-    }
-}
-
-impl TransformController for TestTransformController {
-    fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags {
-        self.capture_flags
-    }
-
-    fn get_token_capture_flags_for_tag(&mut self, _: &Lexeme) -> NextOutputType {
-        NextOutputType::Lexeme
-    }
-
-    fn get_token_capture_flags_for_tag_hint(&mut self, _: &TagHint) -> NextOutputType {
-        NextOutputType::Lexeme
-    }
-
-    fn handle_token(&mut self, token: Token) {
-        self.token_list.borrow_mut().push(token);
-    }
-}
+use crate::harness::parsing::parse;
+use cool_thing::parser::TextType;
+use cool_thing::token::TokenCaptureFlags;
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens
@@ -100,18 +66,17 @@ impl FunctionalTestFixture for TokenCaptureTests {
         .cloned()
         .for_each(|capture_flags| {
             let mut expected_tokens = filter_tokens(&test.expected_tokens, capture_flags);
-            let token_list = Rc::new(RefCell::new(TestTokenList::default()));
+            let mut token_list = TestTokenList::default();
 
-            let transform_controller =
-                TestTransformController::new(Rc::clone(&token_list), capture_flags);
-
-            let parsing_result = test.input.parse(
-                transform_controller,
+            let parsing_result = parse(
+                &test.input,
+                capture_flags,
                 initial_text_type,
                 last_start_tag_name_hash,
+                Box::new(|token| token_list.push(token)),
             );
 
-            let mut actual_tokens = Rc::try_unwrap(token_list).unwrap().into_inner().into();
+            let mut actual_tokens = token_list.into();
 
             // NOTE: text is a special case: it's impossible to achieve the same
             // text chunks layout as in the test data without surrounding tokens

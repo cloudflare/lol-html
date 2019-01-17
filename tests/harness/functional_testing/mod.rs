@@ -1,14 +1,11 @@
-mod chunked_input;
 mod decoder;
 mod test_cases;
 mod test_token;
-mod unescape;
 
-use self::unescape::Unescape;
+use crate::harness::parsing::ChunkedInput;
 use cool_thing::parser::{TagName, TextType};
 use std::fmt::Write;
 
-pub use self::chunked_input::ChunkedInput;
 pub use self::test_cases::*;
 pub use self::test_token::*;
 

@@ -1,3 +1,4 @@
+mod attributes;
 mod tag_name_hash_tests;
 mod token_capture;
 
@@ -12,7 +13,7 @@ pub fn get_tests() -> Vec<TestDescAndFn> {
         };
     }
 
-    add_tests!(tag_name_hash_tests, token_capture);
+    add_tests!(tag_name_hash_tests, attributes, token_capture);
 
     tests
 }

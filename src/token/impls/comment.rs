@@ -9,10 +9,14 @@ pub struct Comment<'i> {
 }
 
 impl<'i> Comment<'i> {
-    pub(crate) fn new_parsed(text: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
+    pub(in crate::token) fn new(
+        text: Bytes<'i>,
+        raw: Option<Bytes<'i>>,
+        encoding: &'static Encoding,
+    ) -> Self {
         Comment {
             text,
-            raw: Some(raw),
+            raw,
             encoding,
         }
     }

@@ -28,7 +28,7 @@ pub enum Text<'i> {
 }
 
 impl<'i> Text<'i> {
-    pub(crate) fn new_parsed_chunk(
+    pub(in crate::token) fn new_chunk(
         text: &'i str,
         text_type: TextType,
         encoding: &'static Encoding,

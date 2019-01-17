@@ -6,19 +6,28 @@ use crate::token::{Token, TokenCapture, TokenCaptureFlags, TokenCaptureResult};
 use encoding_rs::Encoding;
 use std::cell::RefCell;
 
-pub trait Serialize {
-    fn serialize(&self) -> Bytes<'_>;
+pub trait Serialize: Sized {
+    fn take_raw(&mut self) -> Option<Bytes<'_>>;
+    fn serialize_from_parts(self, handler: &mut dyn FnMut(Bytes<'_>));
+
+    #[inline]
+    fn into_bytes(mut self, handler: &mut dyn FnMut(Bytes<'_>)) {
+        match self.take_raw() {
+            Some(raw) => handler(raw),
+            None => self.serialize_from_parts(handler),
+        }
+    }
 }
 
 // TODO OutputSink
 // handle_bailout
 pub trait TransformController {
     fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags;
-    fn get_token_capture_flags_for_tag(&mut self, tag_lexeme: &Lexeme) -> NextOutputType;
+    fn get_token_capture_flags_for_tag(&mut self, tag_lexeme: &Lexeme<'_>) -> NextOutputType;
 
-    fn get_token_capture_flags_for_tag_hint(&mut self, tag_hint: &TagHint) -> NextOutputType;
+    fn get_token_capture_flags_for_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> NextOutputType;
 
-    fn handle_token(&mut self, token: Token);
+    fn handle_token(&mut self, token: Token<'_>);
 }
 
 pub struct Writer<C: TransformController> {

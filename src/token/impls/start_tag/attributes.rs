@@ -1,13 +1,26 @@
 use crate::base::{Bytes, Chunk};
 use crate::parser::AttributeOultine;
+use crate::transform_stream::Serialize;
 use encoding_rs::Encoding;
+use failure::Error;
 use lazycell::LazyCell;
 use std::cell::RefCell;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::rc::Rc;
 
-#[derive(Debug)]
+#[derive(Fail, Debug, PartialEq, Copy, Clone)]
+pub enum AttributeValidationError {
+    #[fail(display = "Attribute name can't be empty.")]
+    EmptyName,
+    #[fail(display = "{:?} character is forbidden in the attribute name", _0)]
+    ForbiddenCharacterInName(char),
+    #[fail(display = "The attribute name contains a character that can't \
+                      be represented in the document's character encoding.")]
+    UnencodableCharacterInName,
+}
+
+#[derive(Debug, Clone)]
 pub struct Attribute<'i> {
     name: Bytes<'i>,
     value: Bytes<'i>,
@@ -16,16 +29,16 @@ pub struct Attribute<'i> {
 }
 
 impl<'i> Attribute<'i> {
-    pub(super) fn new(
+    pub(in crate::token) fn new(
         name: Bytes<'i>,
         value: Bytes<'i>,
-        raw: Bytes<'i>,
+        raw: Option<Bytes<'i>>,
         encoding: &'static Encoding,
     ) -> Self {
         Attribute {
             name,
             value,
-            raw: Some(raw),
+            raw,
             encoding,
         }
     }
@@ -40,8 +53,61 @@ impl<'i> Attribute<'i> {
     }
 
     #[inline]
+    pub fn set_name(&mut self, name: &str) -> Result<(), Error> {
+        self.name = Attribute::name_from_str(name, self.encoding)?;
+        self.raw = None;
+
+        Ok(())
+    }
+
+    #[inline]
     pub fn value(&self) -> String {
         self.value.as_string(self.encoding)
+    }
+
+    #[inline]
+    pub fn set_value(&mut self, value: &str) {
+        self.value = Bytes::from_str(value, self.encoding).into_owned();
+        self.raw = None;
+    }
+
+    pub(in crate::token) fn name_from_str(
+        name: &str,
+        encoding: &'static Encoding,
+    ) -> Result<Bytes<'static>, Error> {
+        if name.is_empty() {
+            Err(AttributeValidationError::EmptyName.into())
+        } else if let Some(ch) = name.chars().find(|&ch| match ch {
+            ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>' | '=' => true,
+            _ => false,
+        }) {
+            Err(AttributeValidationError::ForbiddenCharacterInName(ch).into())
+        } else {
+            // NOTE: if character can't be represented in the given
+            // encoding then encoding_rs replaces it with a numeric
+            // character reference. Character references are not
+            // supported in attribute names, so we need to bail.
+            match Bytes::from_str_without_replacements(name, encoding) {
+                Some(name) => Ok(name.into_owned()),
+                None => Err(AttributeValidationError::UnencodableCharacterInName.into()),
+            }
+        }
+    }
+}
+
+impl Serialize for Attribute<'_> {
+    #[inline]
+    fn take_raw(&mut self) -> Option<Bytes<'_>> {
+        self.raw.take()
+    }
+
+    #[inline]
+    fn serialize_from_parts(self, handler: &mut dyn FnMut(Bytes<'_>)) {
+        handler(self.name);
+        handler(b"=\"".into());
+
+        self.value.replace_ch(b'"', b"&quot;", handler);
+        handler(b"\"".into());
     }
 }
 
@@ -53,7 +119,7 @@ pub struct ParsedAttributeList<'i> {
 }
 
 impl<'i> ParsedAttributeList<'i> {
-    pub(crate) fn new(
+    pub(in crate::token) fn new(
         input: &'i Chunk<'i>,
         attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
         encoding: &'static Encoding,
@@ -75,7 +141,7 @@ impl<'i> ParsedAttributeList<'i> {
                     Attribute::new(
                         self.input.slice(a.name),
                         self.input.slice(a.value),
-                        self.input.slice(a.raw_range),
+                        Some(self.input.slice(a.raw_range)),
                         self.encoding,
                     )
                 })

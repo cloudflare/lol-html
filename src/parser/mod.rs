@@ -81,7 +81,7 @@ impl<S: OutputSink> Parser<S> {
         }
     }
 
-    pub fn tokenize(&mut self, input: &Chunk<'_>) -> Result<usize, Error> {
+    pub fn parse(&mut self, input: &Chunk<'_>) -> Result<usize, Error> {
         let mut loop_termination_reason = with_current_sm!(self, { sm.run_parsing_loop(input) })?;
 
         loop {

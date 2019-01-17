@@ -1,4 +1,4 @@
-use super::Unescape;
+use crate::harness::unescape::Unescape;
 use cool_thing::parser::TextType;
 use cool_thing::transform_stream::{TransformController, TransformStream};
 use encoding_rs::{Encoding, UTF_8};
@@ -35,6 +35,11 @@ impl ChunkedInput {
         initial_text_type: TextType,
         last_start_tag_name_hash: Option<u64>,
     ) -> Result<(), Error> {
+        assert!(
+            self.initialized,
+            "Input should be initialized before parsing"
+        );
+
         let mut transform_stream = TransformStream::new(2048, transform_controller, self.encoding);
         let parser = transform_stream.parser();
 

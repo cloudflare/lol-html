@@ -9,10 +9,14 @@ pub struct EndTag<'i> {
 }
 
 impl<'i> EndTag<'i> {
-    pub(crate) fn new_parsed(name: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
+    pub(in crate::token) fn new(
+        name: Bytes<'i>,
+        raw: Option<Bytes<'i>>,
+        encoding: &'static Encoding,
+    ) -> Self {
         EndTag {
             name,
-            raw: Some(raw),
+            raw,
             encoding,
         }
     }

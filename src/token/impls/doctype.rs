@@ -12,12 +12,12 @@ pub struct Doctype<'i> {
 }
 
 impl<'i> Doctype<'i> {
-    pub(crate) fn new_parsed(
+    pub(in crate::token) fn new(
         name: Option<Bytes<'i>>,
         public_id: Option<Bytes<'i>>,
         system_id: Option<Bytes<'i>>,
         force_quirks: bool,
-        raw: Bytes<'i>,
+        raw: Option<Bytes<'i>>,
         encoding: &'static Encoding,
     ) -> Self {
         Doctype {
@@ -25,7 +25,7 @@ impl<'i> Doctype<'i> {
             public_id,
             system_id,
             force_quirks,
-            raw: Some(raw),
+            raw,
             encoding,
         }
     }
