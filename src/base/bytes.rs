@@ -68,7 +68,7 @@ impl<'b> Bytes<'b> {
         Bytes(Cow::Owned(self.0.into_owned()))
     }
 
-    // NOTE: not a trait a implementation due to the `Borrow` constraint for
+    // NOTE: not a trait implementation due to the `Borrow` constraint for
     // the `Owned` associated type.
     // See: https://github.com/rust-lang/rust/issues/44950
     #[inline]

@@ -20,9 +20,6 @@ pub enum AttributeNameError {
     UnencodableCharacter,
 }
 
-// TODO Debug
-
-#[derive(Debug)]
 pub struct Attribute<'i> {
     name: Bytes<'i>,
     value: Bytes<'i>,
@@ -76,7 +73,7 @@ impl<'i> Attribute<'i> {
         })
     }
 
-    // NOTE: not a trait a implementation due to the `Borrow` constraint for
+    // NOTE: not a trait implementation due to the `Borrow` constraint for
     // the `Owned` associated type.
     // See: https://github.com/rust-lang/rust/issues/44950
     #[inline]
@@ -123,6 +120,15 @@ impl Serialize for Attribute<'_> {
 
         self.value.replace_ch(b'"', b"&quot;", handler);
         handler(b"\"".into());
+    }
+}
+
+impl Debug for Attribute<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Attribute")
+            .field("name", &self.name())
+            .field("value", &self.value())
+            .finish()
     }
 }
 
@@ -282,7 +288,7 @@ impl<'i> Attributes<'i> {
         false
     }
 
-    // NOTE: not a trait a implementation due to the `Borrow` constraint for
+    // NOTE: not a trait implementation due to the `Borrow` constraint for
     // the `Owned` associated type.
     // See: https://github.com/rust-lang/rust/issues/44950
     #[inline]
@@ -328,11 +334,5 @@ impl<'i> Deref for Attributes<'i> {
             Attributes::Parsed(l) => l,
             Attributes::Custom(l) => l,
         }
-    }
-}
-
-impl Debug for Attributes<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (&**self).fmt(f)
     }
 }

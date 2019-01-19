@@ -4,6 +4,7 @@ use crate::base::Bytes;
 use crate::transform_stream::Serialize;
 use encoding_rs::Encoding;
 use failure::Error;
+use std::fmt::{self, Debug};
 
 pub use self::attributes::AttributeNameError;
 pub(in crate::token) use self::attributes::{Attribute, Attributes, ParsedAttributeList};
@@ -21,7 +22,6 @@ pub enum TagNameError {
     UnencodableCharacter,
 }
 
-#[derive(Debug)]
 pub struct StartTag<'i> {
     name: Bytes<'i>,
     attributes: Attributes<'i>,
@@ -141,7 +141,7 @@ impl<'i> StartTag<'i> {
         self.raw = None;
     }
 
-    // NOTE: not a trait a implementation due to the `Borrow` constraint for
+    // NOTE: not a trait implementation due to the `Borrow` constraint for
     // the `Owned` associated type.
     // See: https://github.com/rust-lang/rust/issues/44950
     #[inline]
@@ -187,5 +187,15 @@ impl Serialize for StartTag<'_> {
         } else {
             handler(b">".into());
         }
+    }
+}
+
+impl Debug for StartTag<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StartTag")
+            .field("name", &self.name())
+            .field("attributes", &self.attributes())
+            .field("self_closing", &self.self_closing)
+            .finish()
     }
 }

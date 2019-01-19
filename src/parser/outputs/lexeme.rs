@@ -65,7 +65,7 @@ impl Debug for Lexeme<'_> {
         pretty_raw.insert_str(self.raw_range.end, &end);
         pretty_raw.insert_str(self.raw_range.start, &start);
 
-        builder.field("raw", &format_args!("`{}`", &pretty_raw));
+        builder.field("raw", &pretty_raw);
 
         if let Some(token_outline) = self.token_outline() {
             builder.field("token_outline", token_outline);
