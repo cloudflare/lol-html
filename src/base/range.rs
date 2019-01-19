@@ -9,6 +9,7 @@ pub struct Range {
 }
 
 impl Align for Range {
+    #[inline]
     fn align(&mut self, offset: usize) {
         self.start.align(offset);
         self.end.align(offset);

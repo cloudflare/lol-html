@@ -99,9 +99,9 @@ impl TokenCapture {
     ) {
         macro_rules! capture {
             ( $Type:ident ($($args:expr),+) ) => {
-                TokenCaptureResult::Captured(Token::$Type($Type::new(
+                TokenCaptureResult::Captured(Token::$Type($Type::new_parsed(
                     $($args),+,
-                    Some(lexeme.raw()),
+                    lexeme.raw(),
                     self.encoding
                 )))
             };

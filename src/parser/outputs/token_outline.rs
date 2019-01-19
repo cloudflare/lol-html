@@ -11,6 +11,7 @@ pub struct AttributeOultine {
 }
 
 impl Align for AttributeOultine {
+    #[inline]
     fn align(&mut self, offset: usize) {
         self.name.align(offset);
         self.value.align(offset);
@@ -49,6 +50,7 @@ pub enum TokenOutline {
 }
 
 impl Align for TokenOutline {
+    #[inline]
     fn align(&mut self, offset: usize) {
         match self {
             TokenOutline::Comment(text) => text.align(offset),

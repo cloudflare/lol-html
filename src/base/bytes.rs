@@ -68,6 +68,14 @@ impl<'b> Bytes<'b> {
         Bytes(Cow::Owned(self.0.into_owned()))
     }
 
+    // NOTE: not a trait a implementation due to the `Borrow` constraint for
+    // the `Owned` associated type.
+    // See: https://github.com/rust-lang/rust/issues/44950
+    #[inline]
+    pub fn to_owned(&self) -> Bytes<'static> {
+        Bytes(Cow::Owned(self.to_vec()))
+    }
+
     pub(crate) fn as_debug_string(&self) -> String {
         // NOTE: use WINDOWS_1252 (superset of ASCII) encoding here as
         // the most safe variant since we don't know which actual encoding
@@ -103,17 +111,7 @@ macro_rules! impl_from_static {
     };
 }
 
-impl_from_static!(0, 1, 2);
-
-impl Clone for Bytes<'_> {
-    // NOTE: usually bytes are bound to the lifetime of the current input chunk.
-    // To unbound tokens from the original input after Clone `clone` implementation
-    // for bytes creates deep copy of the content (unlike Cow, which preserves references).
-    #[inline]
-    fn clone(&self) -> Bytes<'static> {
-        Bytes(Cow::Owned(self.to_vec()))
-    }
-}
+impl_from_static!(0, 1, 2, 3);
 
 impl Debug for Bytes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -20,6 +20,7 @@ pub mod transform_stream;
 // -- Performance
 // 5. Don't emit character immidiately, extend existing
 // 6. State embedding
+// 7. Grow the buffer lazily
 
 // 7. We can use fast skip if:
 // there is _ => () branch
