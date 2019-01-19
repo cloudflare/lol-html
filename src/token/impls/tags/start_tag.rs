@@ -1,26 +1,10 @@
-mod attributes;
-
+use super::attributes::{Attribute, Attributes};
+use super::try_tag_name_from_str;
 use crate::base::Bytes;
 use crate::transform_stream::Serialize;
 use encoding_rs::Encoding;
 use failure::Error;
 use std::fmt::{self, Debug};
-
-pub use self::attributes::AttributeNameError;
-pub(in crate::token) use self::attributes::{Attribute, Attributes, ParsedAttributeList};
-
-#[derive(Fail, Debug, PartialEq, Copy, Clone)]
-pub enum TagNameError {
-    #[fail(display = "Tag name can't be empty.")]
-    Empty,
-    #[fail(display = "First character of the tag name should be an ASCII alphabetical character.")]
-    InvalidFirstCharacter,
-    #[fail(display = "{:?} character is forbidden in the tag name", _0)]
-    ForbiddenCharacter(char),
-    #[fail(display = "The tag name contains a character that can't \
-                      be represented in the document's character encoding.")]
-    UnencodableCharacter,
-}
 
 pub struct StartTag<'i> {
     name: Bytes<'i>,
@@ -54,7 +38,7 @@ impl<'i> StartTag<'i> {
         encoding: &'static Encoding,
     ) -> Result<Self, Error> {
         Ok(StartTag {
-            name: StartTag::name_from_str(name, encoding)?,
+            name: try_tag_name_from_str(name, encoding)?,
             attributes: Attributes::try_from(attributes, encoding)?,
             self_closing,
             raw: None,
@@ -62,48 +46,7 @@ impl<'i> StartTag<'i> {
         })
     }
 
-    fn name_from_str(name: &str, encoding: &'static Encoding) -> Result<Bytes<'static>, Error> {
-        match name.chars().nth(0) {
-            Some(ch) if !ch.is_ascii_alphabetic() => {
-                Err(TagNameError::InvalidFirstCharacter.into())
-            }
-            Some(_) => {
-                if let Some(ch) = name.chars().find(|&ch| match ch {
-                    ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>' => true,
-                    _ => false,
-                }) {
-                    Err(TagNameError::ForbiddenCharacter(ch).into())
-                } else {
-                    // NOTE: if character can't be represented in the given
-                    // encoding then encoding_rs replaces it with a numeric
-                    // character reference. Character references are not
-                    // supported in attribute names, so we need to bail.
-                    match Bytes::from_str_without_replacements(name, encoding) {
-                        Some(name) => Ok(name.into_owned()),
-                        None => Err(TagNameError::UnencodableCharacter.into()),
-                    }
-                }
-            }
-            None => Err(TagNameError::Empty.into()),
-        }
-    }
-
-    #[inline]
-    pub fn name(&self) -> String {
-        let mut name = self.name.as_string(self.encoding);
-
-        name.make_ascii_lowercase();
-
-        name
-    }
-
-    #[inline]
-    pub fn set_name(&mut self, name: &str) -> Result<(), Error> {
-        self.name = StartTag::name_from_str(name, self.encoding)?;
-        self.raw = None;
-
-        Ok(())
-    }
+    implement_tag_name_accessors!();
 
     #[inline]
     pub fn attributes(&self) -> &[Attribute<'i>] {
@@ -112,7 +55,22 @@ impl<'i> StartTag<'i> {
 
     #[inline]
     pub fn get_attribute(&self, name: &str) -> Option<String> {
-        self.attributes.get_attribute(name)
+        let name = name.to_ascii_lowercase();
+
+        self.attributes().iter().find_map(|attr| {
+            if attr.name() == name {
+                Some(attr.value())
+            } else {
+                None
+            }
+        })
+    }
+
+    #[inline]
+    pub fn has_attribute(&self, name: &str) -> bool {
+        let name = name.to_ascii_lowercase();
+
+        self.attributes().iter().any(|attr| attr.name() == name)
     }
 
     #[inline]

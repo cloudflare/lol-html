@@ -254,6 +254,19 @@ test_fixture!("Start tag token", {
         }
     });
 
+    test("Has attribute", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let tag = TokenFactory::new(enc)
+                .try_start_tag_from("Foo", &[("Foo1", "Bar1"), ("Foo2", "Bar2")], false)
+                .unwrap();
+
+            assert!(tag.has_attribute("FOo1"), "Encoding: {}", enc.name());
+            assert!(tag.has_attribute("foo1"), "Encoding: {}", enc.name());
+            assert!(tag.has_attribute("FOO2"), "Encoding: {}", enc.name());
+            assert!(!tag.has_attribute("foo3"), "Encoding: {}", enc.name());
+        }
+    });
+
     test("Set attribute", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let mut tag = TokenFactory::new(enc)

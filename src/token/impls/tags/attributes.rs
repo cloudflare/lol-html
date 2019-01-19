@@ -240,18 +240,6 @@ impl<'i> Attributes<'i> {
         }
     }
 
-    pub fn get_attribute(&self, name: &str) -> Option<String> {
-        let name = name.to_ascii_lowercase();
-
-        self.iter().find_map(|attr| {
-            if attr.name() == name {
-                Some(attr.value())
-            } else {
-                None
-            }
-        })
-    }
-
     pub fn set_attribute(
         &mut self,
         name: &str,

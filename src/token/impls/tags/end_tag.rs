@@ -1,5 +1,7 @@
+use super::try_tag_name_from_str;
 use crate::base::Bytes;
 use encoding_rs::Encoding;
+use failure::Error;
 
 #[derive(Debug)]
 pub struct EndTag<'i> {
@@ -21,12 +23,5 @@ impl<'i> EndTag<'i> {
         }
     }
 
-    #[inline]
-    pub fn name(&self) -> String {
-        let mut name = self.name.as_string(self.encoding);
-
-        name.make_ascii_lowercase();
-
-        name
-    }
+    implement_tag_name_accessors!();
 }
