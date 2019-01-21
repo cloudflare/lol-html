@@ -1,10 +1,5 @@
-use crate::harness::parsing::{parse, ChunkedInput};
 use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
-use cool_thing::parser::TextType;
-use cool_thing::token::{
-    AttributeNameError, StartTag, TagNameError, Token, TokenCaptureFlags, TokenFactory,
-};
-use cool_thing::transform_stream::Serialize;
+use cool_thing::token::{AttributeNameError, StartTag, TagNameError, TokenFactory};
 use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
 test_fixture!("Start tag token", {
@@ -328,34 +323,12 @@ test_fixture!("Start tag token", {
     });
 
     test("Serialization", {
-        fn get_tag(enc: &'static Encoding) -> StartTag<'_> {
-            let mut input: ChunkedInput =
-                String::from(r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#)
-                    .into();
-
-            let mut tag = None;
-
-            input.init(enc).unwrap();
-
-            parse(
-                &input,
-                TokenCaptureFlags::START_TAGS,
-                TextType::Data,
-                None,
-                Box::new(|token| match token {
-                    Token::StartTag(t) => tag = Some(t.to_owned()),
-                    _ => unreachable!(),
-                }),
-            )
-            .unwrap();
-
-            tag.unwrap()
-        }
-
-        fn get_test_cases(
-            tag: &StartTag<'static>,
-        ) -> Vec<(&'static str, StartTag<'static>, &'static str)> {
-            vec![
+        serialization_test!(
+            StartTag,
+            START_TAGS,
+            r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
+            |tag: StartTag| {
+                vec![
                 (
                     "Parsed",
                     tag.to_owned(),
@@ -481,26 +454,7 @@ test_fixture!("Start tag token", {
                     r#"<a/>"#,
                 ),
             ]
-        }
-
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let tag = get_tag(enc);
-
-            for (case_name, tag, expected) in get_test_cases(&tag).into_iter() {
-                let mut bytes = Vec::new();
-
-                tag.into_bytes(&mut |c| bytes.extend_from_slice(&c));
-
-                let actual = enc.decode(&bytes).0.into_owned();
-
-                assert_eq!(
-                    actual,
-                    expected,
-                    "Test case: {} Encoding: {}",
-                    case_name,
-                    enc.name()
-                );
             }
-        }
+        );
     });
 });

@@ -80,3 +80,19 @@ macro_rules! test_fixture {
         }
     };
 }
+
+macro_rules! test_modules {
+    ($($m:ident),+) => {
+        $(mod $m;)+
+
+        use test::TestDescAndFn;
+
+        pub fn get_tests() -> Vec<TestDescAndFn> {
+            let mut tests = Vec::new();
+
+            $(tests.extend($m::get_tests());)+
+
+            tests
+        }
+    };
+}
