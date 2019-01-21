@@ -1,6 +1,6 @@
 use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
 use cool_thing::token::{AttributeNameError, StartTag, TagNameError, TokenFactory};
-use encoding_rs::{Encoding, EUC_JP, UTF_8};
+use encoding_rs::{EUC_JP, UTF_8};
 
 test_fixture!("Start tag token", {
     test("Empty tag name", {

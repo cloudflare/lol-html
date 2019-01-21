@@ -24,6 +24,17 @@ impl<'i> EndTag<'i> {
         }
     }
 
+    pub(in crate::token) fn try_from(
+        name: &str,
+        encoding: &'static Encoding,
+    ) -> Result<Self, Error> {
+        Ok(EndTag {
+            name: try_tag_name_from_str(name, encoding)?,
+            raw: None,
+            encoding,
+        })
+    }
+
     implement_tag_name_accessors!();
 
     // NOTE: not a trait implementation due to the `Borrow` constraint for

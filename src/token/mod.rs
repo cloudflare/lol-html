@@ -35,4 +35,9 @@ impl TokenFactory {
     ) -> Result<StartTag<'static>, Error> {
         StartTag::try_from(name, attributes, self_closing, self.encoding)
     }
+
+    #[inline]
+    pub fn try_end_tag_from(&self, name: &str) -> Result<EndTag<'static>, Error> {
+        EndTag::try_from(name, self.encoding)
+    }
 }

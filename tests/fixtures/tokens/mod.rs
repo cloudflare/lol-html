@@ -1,9 +1,11 @@
 macro_rules! serialization_test {
     ($TokenType:ident, $CAPTURE_FLAG:ident, $input:expr, $get_test_cases:expr) => {
         use crate::harness::parsing::{parse, ChunkedInput};
+        use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
         use cool_thing::parser::TextType;
         use cool_thing::token::{Token, TokenCaptureFlags};
         use cool_thing::transform_stream::Serialize;
+        use encoding_rs::Encoding;
 
         fn get_token(enc: &'static Encoding) -> $TokenType<'_> {
             let mut input: ChunkedInput = String::from($input).into();
@@ -50,4 +52,4 @@ macro_rules! serialization_test {
     };
 }
 
-test_modules!(start_tag);
+test_modules!(start_tag, end_tag);
