@@ -41,21 +41,24 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub fn replace_ch(&self, ch: u8, replacement: &[u8], chunk_handler: &mut dyn FnMut(Bytes<'_>)) {
+    pub fn replace_ch(
+        &self,
+        ch: u8,
+        replacement: &[u8],
+        chunk_handler: &mut dyn FnMut(&Bytes<'_>),
+    ) {
         let mut remainder: &[u8] = self;
 
         loop {
-            let pos = memchr(ch, remainder);
-
-            match pos {
+            match memchr(ch, remainder) {
                 Some(pos) => {
-                    chunk_handler(remainder[..pos].into());
-                    chunk_handler(replacement.into());
+                    chunk_handler(&remainder[..pos].into());
+                    chunk_handler(&replacement.into());
                     remainder = &remainder[pos + 1..];
                 }
                 None => {
                     if !remainder.is_empty() {
-                        chunk_handler(remainder.into());
+                        chunk_handler(&remainder.into());
                     }
                     break;
                 }
@@ -111,7 +114,7 @@ macro_rules! impl_from_static {
     };
 }
 
-impl_from_static!(0, 1, 2, 3);
+impl_from_static!(0, 1, 2, 3, 4);
 
 impl Debug for Bytes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

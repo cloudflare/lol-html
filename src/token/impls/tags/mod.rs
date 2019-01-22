@@ -28,7 +28,7 @@ fn try_tag_name_from_str(name: &str, encoding: &'static Encoding) -> Result<Byte
                 // NOTE: if character can't be represented in the given
                 // encoding then encoding_rs replaces it with a numeric
                 // character reference. Character references are not
-                // supported in attribute names, so we need to bail.
+                // supported in tag names, so we need to bail.
                 match Bytes::from_str_without_replacements(name, encoding) {
                     Some(name) => Ok(name.into_owned()),
                     None => Err(TagNameError::UnencodableCharacter.into()),

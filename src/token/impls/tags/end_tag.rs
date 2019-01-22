@@ -52,15 +52,15 @@ impl<'i> EndTag<'i> {
 
 impl Serialize for EndTag<'_> {
     #[inline]
-    fn take_raw(&mut self) -> Option<Bytes<'_>> {
-        self.raw.take()
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        self.raw.as_ref()
     }
 
     #[inline]
-    fn serialize_from_parts(self, handler: &mut dyn FnMut(Bytes<'_>)) {
-        handler(b"</".into());
-        handler(self.name);
-        handler(b">".into());
+    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
+        handler(&b"</".into());
+        handler(&self.name);
+        handler(&b">".into());
     }
 }
 

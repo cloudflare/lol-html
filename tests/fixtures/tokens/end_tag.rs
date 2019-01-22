@@ -87,24 +87,19 @@ test_fixture!("End tag token", {
     });
 
     test("Serialization", {
-        serialization_test!(
-            EndTag,
-            END_TAGS,
-            r#"</div foo=bar>"#,
-            |tag: EndTag<'_>| vec![
-                ("Parsed", tag.to_owned(), r#"</div foo=bar>"#,),
-                (
-                    "Modified name",
-                    {
-                        let mut tag = tag.to_owned();
+        serialization_test!(EndTag, END_TAGS, "</div foo=bar>", |tag: EndTag<'_>| vec![
+            ("Parsed", tag.to_owned(), "</div foo=bar>",),
+            (
+                "Modified name",
+                {
+                    let mut tag = tag.to_owned();
 
-                        tag.set_name("span").unwrap();
+                    tag.set_name("span").unwrap();
 
-                        tag
-                    },
-                    r#"</span>"#,
-                )
-            ]
-        );
+                    tag
+                },
+                "</span>",
+            )
+        ]);
     });
 });

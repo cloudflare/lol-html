@@ -116,19 +116,19 @@ impl<'i> StartTag<'i> {
 
 impl Serialize for StartTag<'_> {
     #[inline]
-    fn take_raw(&mut self) -> Option<Bytes<'_>> {
-        self.raw.take()
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        self.raw.as_ref()
     }
 
     #[inline]
-    fn serialize_from_parts(self, handler: &mut dyn FnMut(Bytes<'_>)) {
-        handler(b"<".into());
-        handler(self.name);
+    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
+        handler(&b"<".into());
+        handler(&self.name);
 
         if !self.attributes.is_empty() {
-            handler(b" ".into());
+            handler(&b" ".into());
 
-            self.attributes.into_bytes(handler);
+            self.attributes.to_bytes(handler);
 
             // NOTE: attributes can be modified the way that
             // last attribute has an unquoted value. We always
@@ -136,14 +136,14 @@ impl Serialize for StartTag<'_> {
             // it will be treated as a part of such an unquotted
             // attribute value.
             if self.self_closing {
-                handler(b" ".into());
+                handler(&b" ".into());
             }
         }
 
         if self.self_closing {
-            handler(b"/>".into());
+            handler(&b"/>".into());
         } else {
-            handler(b">".into());
+            handler(&b">".into());
         }
     }
 }

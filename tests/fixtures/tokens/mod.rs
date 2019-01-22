@@ -36,7 +36,7 @@ macro_rules! serialization_test {
             for (case_name, tag, expected) in get_test_cases(token).into_iter() {
                 let mut bytes = Vec::new();
 
-                tag.into_bytes(&mut |c| bytes.extend_from_slice(&c));
+                tag.to_bytes(&mut |c| bytes.extend_from_slice(c));
 
                 let actual = enc.decode(&bytes).0.into_owned();
 
@@ -52,4 +52,4 @@ macro_rules! serialization_test {
     };
 }
 
-test_modules!(start_tag, end_tag);
+test_modules!(start_tag, end_tag, comment);

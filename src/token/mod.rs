@@ -40,4 +40,9 @@ impl TokenFactory {
     pub fn try_end_tag_from(&self, name: &str) -> Result<EndTag<'static>, Error> {
         EndTag::try_from(name, self.encoding)
     }
+
+    #[inline]
+    pub fn try_comment_from(&self, text: &str) -> Result<Comment<'static>, Error> {
+        Comment::try_from(text, self.encoding)
+    }
 }

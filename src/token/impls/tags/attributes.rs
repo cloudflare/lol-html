@@ -109,17 +109,17 @@ impl<'i> Attribute<'i> {
 
 impl Serialize for Attribute<'_> {
     #[inline]
-    fn take_raw(&mut self) -> Option<Bytes<'_>> {
-        self.raw.take()
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        self.raw.as_ref()
     }
 
     #[inline]
-    fn serialize_from_parts(self, handler: &mut dyn FnMut(Bytes<'_>)) {
-        handler(self.name);
-        handler(b"=\"".into());
+    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
+        handler(&self.name);
+        handler(&b"=\"".into());
 
         self.value.replace_ch(b'"', b"&quot;", handler);
-        handler(b"\"".into());
+        handler(&b"\"".into());
     }
 }
 
@@ -184,17 +184,6 @@ impl<'i> ParsedAttributeList<'i> {
             .borrow_mut()
             .expect("Items should be initialized")
     }
-
-    #[inline]
-    fn into_vec(self) -> Vec<Attribute<'i>> {
-        if self.items.filled() {
-            self.items
-                .into_inner()
-                .expect("Items should be initialized")
-        } else {
-            self.init_items()
-        }
-    }
 }
 
 impl<'i> Deref for ParsedAttributeList<'i> {
@@ -228,14 +217,6 @@ impl<'i> Attributes<'i> {
     fn as_mut_vec(&mut self) -> &mut Vec<Attribute<'i>> {
         match self {
             Attributes::Parsed(l) => l.as_mut_vec(),
-            Attributes::Custom(l) => l,
-        }
-    }
-
-    #[inline]
-    fn into_vec(self) -> Vec<Attribute<'i>> {
-        match self {
-            Attributes::Parsed(l) => l.into_vec(),
             Attributes::Custom(l) => l,
         }
     }
@@ -287,20 +268,20 @@ impl<'i> Attributes<'i> {
 
 impl Serialize for Attributes<'_> {
     #[inline]
-    fn take_raw(&mut self) -> Option<Bytes<'_>> {
+    fn raw(&self) -> Option<&Bytes<'_>> {
         None
     }
 
     #[inline]
-    fn serialize_from_parts(self, handler: &mut dyn FnMut(Bytes<'_>)) {
+    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
         if !self.is_empty() {
             let last = self.len() - 1;
 
-            for (idx, attr) in self.into_vec().drain(..).enumerate() {
-                attr.into_bytes(handler);
+            for (idx, attr) in self.iter().enumerate() {
+                attr.to_bytes(handler);
 
                 if idx != last {
-                    handler(b" ".into());
+                    handler(&b" ".into());
                 }
             }
         }
