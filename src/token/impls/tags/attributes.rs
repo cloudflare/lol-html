@@ -118,7 +118,7 @@ impl Serialize for Attribute<'_> {
         handler(&self.name);
         handler(&b"=\"".into());
 
-        self.value.replace_ch(b'"', b"&quot;", handler);
+        self.value.replace_byte((b'"', b"&quot;"), handler);
         handler(&b"\"".into());
     }
 }

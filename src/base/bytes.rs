@@ -1,5 +1,5 @@
 use encoding_rs::{Encoding, WINDOWS_1252};
-use memchr::memchr;
+use memchr::{memchr, memchr3};
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
@@ -41,32 +41,6 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub fn replace_ch(
-        &self,
-        ch: u8,
-        replacement: &[u8],
-        chunk_handler: &mut dyn FnMut(&Bytes<'_>),
-    ) {
-        let mut remainder: &[u8] = self;
-
-        loop {
-            match memchr(ch, remainder) {
-                Some(pos) => {
-                    chunk_handler(&remainder[..pos].into());
-                    chunk_handler(&replacement.into());
-                    remainder = &remainder[pos + 1..];
-                }
-                None => {
-                    if !remainder.is_empty() {
-                        chunk_handler(&remainder.into());
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    #[inline]
     pub fn into_owned(self) -> Bytes<'static> {
         Bytes(Cow::Owned(self.0.into_owned()))
     }
@@ -89,6 +63,76 @@ impl<'b> Bytes<'b> {
         // the most safe variant since we don't know which actual encoding
         // has been used for bytes.
         self.as_string(WINDOWS_1252)
+    }
+}
+
+macro_rules! impl_replace_byte {
+    ($self:tt, $chunk_handler:ident, $impls:ident) => {
+        let mut tail: &[u8] = $self;
+
+        loop {
+            match $impls!(@find tail) {
+                Some(pos) => {
+                    let replacement = $impls!(@get_replacement tail, pos);
+
+                    $chunk_handler(&tail[..pos].into());
+                    $chunk_handler(&replacement.into());
+                    tail = &tail[pos + 1..];
+                }
+                None => {
+                    if !tail.is_empty() {
+                        $chunk_handler(&tail.into());
+                    }
+                    break;
+                }
+            }
+        }
+    };
+}
+
+impl<'b> Bytes<'b> {
+    #[inline]
+    pub fn replace_byte(&self, repl: (u8, &[u8]), chunk_handler: &mut dyn FnMut(&Bytes<'_>)) {
+        macro_rules! impls {
+            (@find $tail:ident) => {
+                memchr(repl.0, $tail)
+            };
+
+            (@get_replacement $tail:ident, $pos:ident) => {
+                repl.1
+            };
+        }
+
+        impl_replace_byte!(self, chunk_handler, impls);
+    }
+
+    #[inline]
+    pub fn replace_byte3(
+        &self,
+        repl1: (u8, &[u8]),
+        repl2: (u8, &[u8]),
+        repl3: (u8, &[u8]),
+        chunk_handler: &mut dyn FnMut(&Bytes<'_>),
+    ) {
+        macro_rules! impls {
+            (@find $tail:ident) => {
+                memchr3(repl1.0, repl2.0, repl3.0, $tail)
+            };
+
+            (@get_replacement $tail:ident, $pos:ident) => {{
+                let found = $tail[$pos];
+
+                if found == repl1.0 {
+                    repl1.1
+                } else if found == repl2.0 {
+                    repl2.1
+                } else {
+                    repl3.1
+                }
+            }};
+        }
+
+        impl_replace_byte!(self, chunk_handler, impls);
     }
 }
 
