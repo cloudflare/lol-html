@@ -44,7 +44,7 @@ impl<'i> EndTag<'i> {
     pub fn to_owned(&self) -> EndTag<'static> {
         EndTag {
             name: self.name.to_owned(),
-            raw: self.raw.as_ref().map(|r| r.to_owned()),
+            raw: Bytes::opt_to_owned(&self.raw),
             encoding: self.encoding,
         }
     }

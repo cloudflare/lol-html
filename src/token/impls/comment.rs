@@ -2,6 +2,7 @@ use crate::base::Bytes;
 use crate::transform_stream::Serialize;
 use encoding_rs::Encoding;
 use failure::Error;
+use std::fmt::{self, Debug};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum CommentTextError {
@@ -12,7 +13,6 @@ pub enum CommentTextError {
     UnencodableCharacter,
 }
 
-#[derive(Debug)]
 pub struct Comment<'i> {
     text: Bytes<'i>,
     raw: Option<Bytes<'i>>,
@@ -63,7 +63,7 @@ impl<'i> Comment<'i> {
     pub fn to_owned(&self) -> Comment<'static> {
         Comment {
             text: self.text.to_owned(),
-            raw: self.raw.as_ref().map(|r| r.to_owned()),
+            raw: Bytes::opt_to_owned(&self.raw),
             encoding: self.encoding,
         }
     }
@@ -95,5 +95,13 @@ impl Serialize for Comment<'_> {
         handler(&b"<!--".into());
         handler(&self.text);
         handler(&b"-->".into());
+    }
+}
+
+impl Debug for Comment<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Comment")
+            .field("text", &self.text())
+            .finish()
     }
 }

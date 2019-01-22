@@ -79,6 +79,11 @@ impl<'b> Bytes<'b> {
         Bytes(Cow::Owned(self.to_vec()))
     }
 
+    #[inline]
+    pub fn opt_to_owned(bytes: &Option<Bytes<'_>>) -> Option<Bytes<'static>> {
+        bytes.as_ref().map(|b| b.to_owned())
+    }
+
     pub(crate) fn as_debug_string(&self) -> String {
         // NOTE: use WINDOWS_1252 (superset of ASCII) encoding here as
         // the most safe variant since we don't know which actual encoding

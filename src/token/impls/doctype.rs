@@ -1,4 +1,5 @@
 use crate::base::Bytes;
+use crate::transform_stream::Serialize;
 use encoding_rs::Encoding;
 
 #[derive(Debug)]
@@ -7,7 +8,7 @@ pub struct Doctype<'i> {
     public_id: Option<Bytes<'i>>,
     system_id: Option<Bytes<'i>>,
     force_quirks: bool,
-    raw: Option<Bytes<'i>>,
+    raw: Bytes<'i>,
     encoding: &'static Encoding,
 }
 
@@ -25,7 +26,7 @@ impl<'i> Doctype<'i> {
             public_id,
             system_id,
             force_quirks,
-            raw: Some(raw),
+            raw,
             encoding,
         }
     }
@@ -54,5 +55,32 @@ impl<'i> Doctype<'i> {
     #[inline]
     pub fn force_quirks(&self) -> bool {
         self.force_quirks
+    }
+
+    // NOTE: not a trait implementation due to the `Borrow` constraint for
+    // the `Owned` associated type.
+    // See: https://github.com/rust-lang/rust/issues/44950
+    #[inline]
+    pub fn to_owned(&self) -> Doctype<'static> {
+        Doctype {
+            name: Bytes::opt_to_owned(&self.name),
+            public_id: Bytes::opt_to_owned(&self.public_id),
+            system_id: Bytes::opt_to_owned(&self.system_id),
+            force_quirks: self.force_quirks,
+            raw: self.raw.to_owned(),
+            encoding: self.encoding,
+        }
+    }
+}
+
+impl Serialize for Doctype<'_> {
+    #[inline]
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        Some(&self.raw)
+    }
+
+    #[inline]
+    fn serialize_from_parts(&self, _handler: &mut dyn FnMut(&Bytes<'_>)) {
+        unreachable!("Doctype should always be serialized from the raw value");
     }
 }

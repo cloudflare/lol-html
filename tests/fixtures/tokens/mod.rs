@@ -52,4 +52,4 @@ macro_rules! serialization_test {
     };
 }
 
-test_modules!(start_tag, end_tag, comment);
+test_modules!(start_tag, end_tag, comment, doctype);

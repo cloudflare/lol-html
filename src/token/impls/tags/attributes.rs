@@ -81,7 +81,7 @@ impl<'i> Attribute<'i> {
         Attribute {
             name: self.name.to_owned(),
             value: self.value.to_owned(),
-            raw: self.raw.as_ref().map(|r| r.to_owned()),
+            raw: Bytes::opt_to_owned(&self.raw),
             encoding: self.encoding,
         }
     }

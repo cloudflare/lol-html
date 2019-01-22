@@ -108,7 +108,7 @@ impl<'i> StartTag<'i> {
             name: self.name.to_owned(),
             attributes: self.attributes.to_owned(),
             self_closing: self.self_closing,
-            raw: self.raw.as_ref().map(|r| r.to_owned()),
+            raw: Bytes::opt_to_owned(&self.raw),
             encoding: self.encoding,
         }
     }
