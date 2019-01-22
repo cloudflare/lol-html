@@ -46,12 +46,6 @@ impl TokenCapture {
         if self.pending_text_decoder.is_some() {
             self.emit_text(&Bytes::empty(), true, result_handler);
             self.pending_text_decoder = None;
-
-            let result = TokenCaptureResult::Captured(Token::Text(Text::End));
-
-            trace!(@output result);
-
-            result_handler(result);
         }
     }
 
@@ -71,21 +65,20 @@ impl TokenCapture {
         let mut consumed = 0usize;
 
         loop {
-            let (result, read, written, ..) = decoder.decode_to_str(&raw[consumed..], buffer, last);
+            let (status, read, written, ..) = decoder.decode_to_str(&raw[consumed..], buffer, last);
 
             consumed += read;
 
-            if written > 0 {
-                let chunk = Text::new_chunk(&buffer[..written], self.last_text_type, encoding);
+            let chunk =
+                TextChunk::new_parsed(&buffer[..written], self.last_text_type, last, encoding);
 
-                let result = TokenCaptureResult::Captured(Token::Text(chunk));
+            let result = TokenCaptureResult::Captured(Token::Text(chunk));
 
-                trace!(@output result);
+            trace!(@output result);
 
-                result_handler(result);
-            }
+            result_handler(result);
 
-            if let CoderResult::InputEmpty = result {
+            if let CoderResult::InputEmpty = status {
                 break;
             }
         }

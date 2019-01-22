@@ -9,7 +9,7 @@ pub use self::impls::*;
 
 #[derive(Debug)]
 pub enum Token<'i> {
-    Text(Text<'i>),
+    Text(TextChunk<'i>),
     Comment(Comment<'i>),
     StartTag(StartTag<'i>),
     EndTag(EndTag<'i>),

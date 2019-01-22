@@ -14,18 +14,6 @@ pub trait Serialize {
     }
 }
 
-impl Serialize for Box<dyn Serialize> {
-    #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        None
-    }
-
-    #[inline]
-    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
-        self.to_bytes(handler);
-    }
-}
-
 impl<T: Serialize> Serialize for Borrow<[T]> {
     #[inline]
     fn raw(&self) -> Option<&Bytes<'_>> {
