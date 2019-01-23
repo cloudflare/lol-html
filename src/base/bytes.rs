@@ -1,5 +1,5 @@
 use encoding_rs::{Encoding, WINDOWS_1252};
-use memchr::{memchr, memchr3};
+use memchr::{memchr, memchr2};
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
@@ -107,27 +107,22 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub fn replace_byte3(
+    pub fn replace_byte2(
         &self,
         repl1: (u8, &[u8]),
         repl2: (u8, &[u8]),
-        repl3: (u8, &[u8]),
         chunk_handler: &mut dyn FnMut(&Bytes<'_>),
     ) {
         macro_rules! impls {
             (@find $tail:ident) => {
-                memchr3(repl1.0, repl2.0, repl3.0, $tail)
+                memchr2(repl1.0, repl2.0, $tail)
             };
 
             (@get_replacement $tail:ident, $pos:ident) => {{
-                let found = $tail[$pos];
-
-                if found == repl1.0 {
+                if $tail[$pos] == repl1.0 {
                     repl1.1
-                } else if found == repl2.0 {
-                    repl2.1
                 } else {
-                    repl3.1
+                    repl2.1
                 }
             }};
         }

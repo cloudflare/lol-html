@@ -7,10 +7,9 @@ macro_rules! serialization_test {
         use cool_thing::transform_stream::Serialize;
         use encoding_rs::Encoding;
 
-        fn get_token(enc: &'static Encoding) -> $TokenType<'_> {
-            let mut input: ChunkedInput = String::from($input).into();
-
-            let mut token = None;
+        fn get_tokens(input: &'static str, enc: &'static Encoding) -> Vec<$TokenType<'static>> {
+            let mut input: ChunkedInput = String::from(input).into();
+            let mut tokens = Vec::new();
 
             input.init(enc).unwrap();
 
@@ -20,23 +19,23 @@ macro_rules! serialization_test {
                 TextType::Data,
                 None,
                 Box::new(|t| match t {
-                    Token::$TokenType(t) => token = Some(t.to_owned()),
+                    Token::$TokenType(t) => tokens.push(t.to_owned()),
                     _ => unreachable!(),
                 }),
             )
             .unwrap();
 
-            token.unwrap()
+            tokens
         }
 
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let token = get_token(enc);
+            let tokens = get_tokens($input, enc);
             let get_test_cases = $get_test_cases;
 
-            for (case_name, tag, expected) in get_test_cases(token).into_iter() {
+            for (case_name, tokens, expected) in get_test_cases(tokens).into_iter() {
                 let mut bytes = Vec::new();
 
-                tag.to_bytes(&mut |c| bytes.extend_from_slice(c));
+                tokens.to_bytes(&mut |c| bytes.extend_from_slice(c));
 
                 let actual = enc.decode(&bytes).0.into_owned();
 
@@ -52,4 +51,4 @@ macro_rules! serialization_test {
     };
 }
 
-test_modules!(start_tag, end_tag, comment, doctype);
+test_modules!(start_tag, end_tag, comment, doctype, text_chunk);

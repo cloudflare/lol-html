@@ -16,6 +16,7 @@ bitflags! {
     }
 }
 
+#[derive(Debug)]
 pub enum TokenCaptureResult<'i> {
     Captured(Token<'i>),
     Skipped(&'i Lexeme<'i>),
@@ -69,10 +70,8 @@ impl TokenCapture {
 
             consumed += read;
 
-            let chunk =
-                TextChunk::new_parsed(&buffer[..written], self.last_text_type, last, encoding);
-
-            let result = TokenCaptureResult::Captured(Token::Text(chunk));
+            let chunk = TextChunk::new(&buffer[..written], self.last_text_type, last, encoding);
+            let result = TokenCaptureResult::Captured(Token::TextChunk(chunk));
 
             trace!(@output result);
 

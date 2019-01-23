@@ -1,5 +1,4 @@
 use crate::base::Bytes;
-use std::borrow::Borrow;
 
 pub trait Serialize {
     fn raw(&self) -> Option<&Bytes<'_>>;
@@ -14,7 +13,7 @@ pub trait Serialize {
     }
 }
 
-impl<T: Serialize> Serialize for Borrow<[T]> {
+impl<T: Serialize> Serialize for Vec<T> {
     #[inline]
     fn raw(&self) -> Option<&Bytes<'_>> {
         None
@@ -22,7 +21,7 @@ impl<T: Serialize> Serialize for Borrow<[T]> {
 
     #[inline]
     fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
-        for item in self.borrow().iter() {
+        for item in self {
             item.to_bytes(handler);
         }
     }

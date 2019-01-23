@@ -323,21 +323,19 @@ test_fixture!("Start tag token", {
     });
 
     test("Serialization", {
-        serialization_test!(
-            StartTag,
-            START_TAGS,
-            r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
-            |tag: StartTag| {
-                vec![
+        let src = r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#;
+
+        let test_cases = |tags: Vec<StartTag<'_>>| {
+            vec![
                 (
                     "Parsed",
-                    tag.to_owned(),
+                    tags[0].to_owned(),
                     r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
                 ),
                 (
                     "Modified name",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
 
                         tag.set_name("div").unwrap();
 
@@ -348,7 +346,7 @@ test_fixture!("Start tag token", {
                 (
                     "Modified single quotted attribute value",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
                         let new_value = tag.get_attribute("a1").unwrap() + "42";
 
                         tag.set_attribute("a1", &new_value).unwrap();
@@ -360,7 +358,7 @@ test_fixture!("Start tag token", {
                 (
                     "Modified double quotted attribute value",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
                         let new_value = tag.get_attribute("a2").unwrap() + "42";
 
                         tag.set_attribute("a2", &new_value).unwrap();
@@ -372,7 +370,7 @@ test_fixture!("Start tag token", {
                 (
                     "Modified unquotted attribute value",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
                         let new_value = tag.get_attribute("a3").unwrap() + "42";
 
                         tag.set_attribute("a3", &new_value).unwrap();
@@ -384,7 +382,7 @@ test_fixture!("Start tag token", {
                 (
                     "Set value for an attribute without a value",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
 
                         tag.set_attribute("a4", "42").unwrap();
 
@@ -395,7 +393,7 @@ test_fixture!("Start tag token", {
                 (
                     "Add attribute",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
 
                         tag.set_attribute("a5", r#"42'"42"#).unwrap();
 
@@ -406,7 +404,7 @@ test_fixture!("Start tag token", {
                 (
                     "With self-closing flag",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
 
                         tag.set_self_closing(true);
 
@@ -417,7 +415,7 @@ test_fixture!("Start tag token", {
                 (
                     "Remove non-existent attribute",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
 
                         tag.remove_attribute("a5");
 
@@ -428,7 +426,7 @@ test_fixture!("Start tag token", {
                 (
                     "Without attributes",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
 
                         for name in &["a1", "a2", "a3", "a4"] {
                             tag.remove_attribute(name);
@@ -441,7 +439,7 @@ test_fixture!("Start tag token", {
                 (
                     "Without attributes self-closing",
                     {
-                        let mut tag = tag.to_owned();
+                        let mut tag = tags[0].to_owned();
 
                         tag.set_self_closing(true);
 
@@ -454,7 +452,8 @@ test_fixture!("Start tag token", {
                     r#"<a/>"#,
                 ),
             ]
-            }
-        );
+        };
+
+        serialization_test!(StartTag, START_TAGS, src, test_cases);
     });
 });

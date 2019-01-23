@@ -1,6 +1,7 @@
 mod capture;
 mod impls;
 
+use crate::parser::TextType;
 use encoding_rs::Encoding;
 use failure::Error;
 
@@ -9,7 +10,7 @@ pub use self::impls::*;
 
 #[derive(Debug)]
 pub enum Token<'i> {
-    Text(TextChunk<'i>),
+    TextChunk(TextChunk<'i>),
     Comment(Comment<'i>),
     StartTag(StartTag<'i>),
     EndTag(EndTag<'i>),
@@ -44,5 +45,10 @@ impl TokenFactory {
     #[inline]
     pub fn try_comment_from(&self, text: &str) -> Result<Comment<'static>, Error> {
         Comment::try_from(text, self.encoding)
+    }
+
+    #[inline]
+    pub fn new_text_chunk<'t>(&self, text: &'t str) -> TextChunk<'t> {
+        TextChunk::new(text, TextType::Data, false, self.encoding)
     }
 }

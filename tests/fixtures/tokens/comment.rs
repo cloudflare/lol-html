@@ -43,24 +43,25 @@ test_fixture!("Comment token", {
     });
 
     test("Serialization", {
-        serialization_test!(
-            Comment,
-            COMMENTS,
-            "<!-- foo -- bar -->",
-            |comment: Comment<'_>| vec![
-                ("Parsed", comment.to_owned(), "<!-- foo -- bar -->",),
+        let src = "<!-- foo -- bar -->";
+
+        let test_cases = |comments: Vec<Comment<'_>>| {
+            vec![
+                ("Parsed", comments[0].to_owned(), "<!-- foo -- bar -->"),
                 (
                     "Modified text",
                     {
-                        let mut comment = comment.to_owned();
+                        let mut comment = comments[0].to_owned();
 
                         comment.set_text("42 <!-").unwrap();
 
                         comment
                     },
                     "<!--42 <!--->",
-                )
+                ),
             ]
-        );
+        };
+
+        serialization_test!(Comment, COMMENTS, src, test_cases);
     });
 });

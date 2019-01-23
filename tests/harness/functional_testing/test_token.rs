@@ -172,7 +172,7 @@ pub struct TestTokenList(Vec<TestToken>);
 impl TestTokenList {
     pub fn push(&mut self, token: Token<'_>) {
         match token {
-            Token::Text(t) => {
+            Token::TextChunk(t) => {
                 let text = t.as_str();
 
                 if let Some(TestToken::Text(last)) = self.0.last_mut() {
