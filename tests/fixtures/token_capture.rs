@@ -4,6 +4,7 @@ use crate::harness::functional_testing::{
 use crate::harness::parsing::parse;
 use cool_thing::parser::TextType;
 use cool_thing::token::TokenCaptureFlags;
+use cool_thing::transform_stream::Output;
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens
@@ -73,7 +74,11 @@ impl FunctionalTestFixture for TokenCaptureTests {
                 capture_flags,
                 initial_text_type,
                 last_start_tag_name_hash,
-                Box::new(|token| token_list.push(token)),
+                Box::new(|token| {
+                    token_list.push(token.to_owned());
+
+                    Output::Token(token)
+                }),
             );
 
             let mut actual_tokens = token_list.into();
@@ -94,13 +99,24 @@ impl FunctionalTestFixture for TokenCaptureTests {
             }
 
             match parsing_result {
-                Ok(_) => {
+                Ok(output) => {
                     expect_eql!(
                         actual_tokens,
                         expected_tokens,
                         initial_text_type,
                         test.input,
                         format!("Token mismatch (capture: {:#?})", capture_flags)
+                    );
+
+                    expect_eql!(
+                        output,
+                        test.input.as_str(),
+                        initial_text_type,
+                        test.input,
+                        format!(
+                            "Serialized output doesn't match original input (capture: {:#?})",
+                            capture_flags
+                        )
                     );
                 }
                 Err(_) => {

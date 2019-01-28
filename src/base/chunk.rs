@@ -1,22 +1,19 @@
 use super::{Bytes, Range};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Chunk<'b> {
-    data: Bytes<'b>,
+    data: &'b [u8],
     last: bool,
 }
 
 impl<'b> Chunk<'b> {
     pub fn last(data: &'b [u8]) -> Self {
-        Chunk {
-            data: data.into(),
-            last: true,
-        }
+        Chunk { data, last: true }
     }
 
     pub fn last_empty() -> Self {
         Chunk {
-            data: Bytes::empty(),
+            data: &[],
             last: true,
         }
     }
@@ -53,15 +50,12 @@ impl<'b> Chunk<'b> {
 
     #[inline]
     pub(crate) fn as_debug_string(&self) -> String {
-        self.data.as_debug_string()
+        Bytes::from(self.data).as_debug_string()
     }
 }
 
 impl<'b> From<&'b [u8]> for Chunk<'b> {
     fn from(data: &'b [u8]) -> Self {
-        Chunk {
-            data: data.into(),
-            last: false,
-        }
+        Chunk { data, last: false }
     }
 }

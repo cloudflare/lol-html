@@ -91,10 +91,10 @@ impl Serialize for Comment<'_> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
-        handler(&b"<!--".into());
-        handler(&self.text);
-        handler(&b"-->".into());
+    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        output_handler(b"<!--");
+        output_handler(&self.text);
+        output_handler(b"-->");
     }
 }
 

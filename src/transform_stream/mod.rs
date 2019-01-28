@@ -1,7 +1,7 @@
 mod serialize;
 mod writer;
 
-use self::writer::Writer;
+use self::writer::{OutputSink, Writer};
 use crate::base::{Buffer, Chunk};
 use crate::parser::{NextOutputType, Parser};
 use encoding_rs::Encoding;
@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::serialize::Serialize;
-pub use self::writer::TransformController;
+pub use self::writer::{Output, TransformController};
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
@@ -25,17 +25,27 @@ pub enum TransformStreamError {
     EndCallAfterEnd,
 }
 
-pub struct TransformStream<C: TransformController> {
-    parser: Parser<Writer<C>>,
+pub struct TransformStream<C, O>
+where
+    C: TransformController,
+    O: OutputSink,
+{
+    writer: Rc<RefCell<Writer<C, O>>>,
+    parser: Parser<Writer<C, O>>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
 }
 
-impl<C: TransformController> TransformStream<C> {
+impl<C, O> TransformStream<C, O>
+where
+    C: TransformController,
+    O: OutputSink,
+{
     pub fn new(
-        buffer_capacity: usize,
         transform_controller: C,
+        output_sink: O,
+        buffer_capacity: usize,
         encoding: &'static Encoding,
     ) -> Self {
         let initial_output_type = if transform_controller
@@ -47,10 +57,15 @@ impl<C: TransformController> TransformStream<C> {
             NextOutputType::Lexeme
         };
 
-        let writer = Rc::new(RefCell::new(Writer::new(transform_controller, encoding)));
+        let writer = Rc::new(RefCell::new(Writer::new(
+            transform_controller,
+            output_sink,
+            encoding,
+        )));
 
         TransformStream {
             parser: Parser::new(&writer, initial_output_type),
+            writer,
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
@@ -98,6 +113,10 @@ impl<C: TransformController> TransformStream<C> {
 
         let blocked_byte_count = self.parser.parse(&chunk)?;
 
+        self.writer
+            .borrow_mut()
+            .flush_remaining_input(&chunk, blocked_byte_count);
+
         if blocked_byte_count > 0 {
             self.buffer_blocked_bytes(data, blocked_byte_count)?;
         } else {
@@ -124,12 +143,13 @@ impl<C: TransformController> TransformStream<C> {
         trace!(@chunk chunk);
 
         self.parser.parse(&chunk)?;
+        self.writer.borrow_mut().flush_remaining_input(&chunk, 0);
 
         Ok(())
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn parser(&mut self) -> &mut Parser<Writer<C>> {
+    pub fn parser(&mut self) -> &mut Parser<Writer<C, O>> {
         &mut self.parser
     }
 }

@@ -12,19 +12,35 @@ test_fixture!("Text chunk token", {
         let src =
             "Lorem ipsum dolor sit amet, < consectetur adipiscing elit, sed do eiusmod tempor \
              incididunt ut labore et dolore > magna aliqua. Ut enim ad minim veniam, quis nostrud \
-             exercitation ullamco laboris < nisi >> ut aliquip ex ea > commodo > consequat.";
+             exercitation & ullamco laboris < nisi >> ut aliquip ex ea > commodo > consequat.";
 
         let test_cases = |chunks: Vec<TextChunk<'_>>| {
-            vec![(
+            vec![
+            (
                 "Parsed",
                 chunks
-                    .into_iter()
+                    .iter()
                     .map(|c| c.to_owned())
+                    .collect::<Vec<TextChunk<'_>>>(),
+                "Lorem ipsum dolor sit amet, < consectetur adipiscing elit, sed do eiusmod tempor \
+                 incididunt ut labore et dolore > magna aliqua. Ut enim ad minim veniam, quis \
+                 nostrud exercitation & ullamco laboris < nisi >> ut aliquip ex ea > commodo > \
+                 consequat.",
+            ),
+            (
+                "Parsed escaped",
+                chunks
+                    .iter()
+                    .map(|c| {
+                        let mut c = c.to_owned();
+                        c.escape_on_output();
+                        c
+                    })
                     .collect::<Vec<TextChunk<'_>>>(),
                 "Lorem ipsum dolor sit amet, &lt; consectetur adipiscing elit, sed do eiusmod \
                  tempor incididunt ut labore et dolore &gt; magna aliqua. Ut enim ad minim veniam, \
-                 quis nostrud exercitation ullamco laboris &lt; nisi &gt;&gt; ut aliquip ex ea \
-                 &gt; commodo &gt; consequat.",
+                 quis nostrud exercitation &amp; ullamco laboris &lt; nisi &gt;&gt; ut aliquip ex \
+                 ea &gt; commodo &gt; consequat.",
             )]
         };
 

@@ -1,7 +1,6 @@
 use crate::harness::unescape::Unescape;
-use cool_thing::parser::TextType;
-use cool_thing::transform_stream::{TransformController, TransformStream};
-use encoding_rs::{Encoding, UTF_8};
+
+use encoding_rs::Encoding;
 use failure::{ensure, Error};
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
@@ -14,7 +13,7 @@ pub struct ChunkedInput {
     input: String,
     chunks: Vec<Vec<u8>>,
     initialized: bool,
-    encoding: &'static Encoding,
+    encoding: Option<&'static Encoding>,
 }
 
 impl From<String> for ChunkedInput {
@@ -23,38 +22,12 @@ impl From<String> for ChunkedInput {
             input,
             chunks: Vec::new(),
             initialized: false,
-            encoding: UTF_8,
+            encoding: None,
         }
     }
 }
 
 impl ChunkedInput {
-    pub fn parse<C: TransformController>(
-        &self,
-        transform_controller: C,
-        initial_text_type: TextType,
-        last_start_tag_name_hash: Option<u64>,
-    ) -> Result<(), Error> {
-        assert!(
-            self.initialized,
-            "Input should be initialized before parsing"
-        );
-
-        let mut transform_stream = TransformStream::new(2048, transform_controller, self.encoding);
-        let parser = transform_stream.parser();
-
-        parser.set_last_start_tag_name_hash(last_start_tag_name_hash);
-        parser.switch_text_type(initial_text_type);
-
-        for chunk in &self.chunks {
-            transform_stream.write(chunk)?;
-        }
-
-        transform_stream.end()?;
-
-        Ok(())
-    }
-
     pub fn init(&mut self, encoding: &'static Encoding) -> Result<usize, Error> {
         let (bytes, _, had_unmappable_chars) = encoding.encode(&self.input);
 
@@ -74,7 +47,7 @@ impl ChunkedInput {
 
         let len = bytes.len();
 
-        self.encoding = encoding;
+        self.encoding = Some(encoding);
 
         let chunk_size = match env::var("CHUNK_SIZE") {
             Ok(val) => val.parse().unwrap(),
@@ -91,9 +64,19 @@ impl ChunkedInput {
             self.chunks = bytes.chunks(chunk_size).map(|c| c.to_vec()).collect()
         }
 
-        self.initialized = true;
-
         Ok(chunk_size)
+    }
+
+    pub fn encoding(&self) -> Option<&'static Encoding> {
+        self.encoding
+    }
+
+    pub fn chunks(&self) -> &[Vec<u8>] {
+        &self.chunks
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.input
     }
 }
 

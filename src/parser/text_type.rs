@@ -10,15 +10,18 @@ pub enum TextType {
     CDataSection,
 }
 
+impl TextType {
+    #[inline]
+    pub fn allows_text_entitites(self) -> bool {
+        self == TextType::Data || self == TextType::RCData
+    }
+}
+
 cfg_if! {
     if #[cfg(feature = "testing_api")] {
         impl TextType {
             pub fn should_replace_unsafe_null_in_text(self) -> bool {
                 self != TextType::Data && self != TextType::CDataSection
-            }
-
-            pub fn allows_text_entitites(self) -> bool {
-                self == TextType::Data || self == TextType::RCData
             }
         }
 

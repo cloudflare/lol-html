@@ -1,11 +1,13 @@
 mod capture;
 mod impls;
 
+use crate::base::Bytes;
 use crate::parser::TextType;
+use crate::transform_stream::Serialize;
 use encoding_rs::Encoding;
 use failure::Error;
 
-pub use self::capture::{TokenCapture, TokenCaptureFlags, TokenCaptureResult};
+pub use self::capture::{TokenCapture, TokenCaptureEvent, TokenCaptureFlags};
 pub use self::impls::*;
 
 #[derive(Debug)]
@@ -16,6 +18,56 @@ pub enum Token<'i> {
     EndTag(EndTag<'i>),
     Doctype(Doctype<'i>),
     Eof,
+}
+
+impl<'i> Token<'i> {
+    // NOTE: not a trait implementation due to the `Borrow` constraint for
+    // the `Owned` associated type.
+    // See: https://github.com/rust-lang/rust/issues/44950
+    #[inline]
+    pub fn to_owned(&self) -> Token<'static> {
+        match self {
+            Token::TextChunk(t) => Token::TextChunk(t.to_owned()),
+            Token::Comment(t) => Token::Comment(t.to_owned()),
+            Token::StartTag(t) => Token::StartTag(t.to_owned()),
+            Token::EndTag(t) => Token::EndTag(t.to_owned()),
+            Token::Doctype(t) => Token::Doctype(t.to_owned()),
+            Token::Eof => Token::Eof,
+        }
+    }
+}
+
+macro_rules! impl_from {
+    ($($Type:ident),+) => {
+        $(
+            impl<'i> From<$Type<'i>> for Token<'i> {
+                fn from(token: $Type<'i>) -> Self {
+                    Token::$Type(token)
+                }
+            }
+        )+
+    };
+}
+
+impl_from!(TextChunk, Comment, StartTag, EndTag, Doctype);
+
+impl Serialize for Token<'_> {
+    #[inline]
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        None
+    }
+
+    #[inline]
+    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        match self {
+            Token::TextChunk(t) => t.to_bytes(output_handler),
+            Token::Comment(t) => t.to_bytes(output_handler),
+            Token::StartTag(t) => t.to_bytes(output_handler),
+            Token::EndTag(t) => t.to_bytes(output_handler),
+            Token::Doctype(t) => t.to_bytes(output_handler),
+            Token::Eof => (),
+        }
+    }
 }
 
 pub struct TokenFactory {

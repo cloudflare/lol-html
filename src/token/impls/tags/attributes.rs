@@ -114,12 +114,11 @@ impl Serialize for Attribute<'_> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
-        handler(&self.name);
-        handler(&b"=\"".into());
-
-        self.value.replace_byte((b'"', b"&quot;"), handler);
-        handler(&b"\"".into());
+    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        output_handler(&self.name);
+        output_handler(b"=\"");
+        self.value.replace_byte((b'"', b"&quot;"), output_handler);
+        output_handler(b"\"");
     }
 }
 
@@ -273,15 +272,15 @@ impl Serialize for Attributes<'_> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
+    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
         if !self.is_empty() {
             let last = self.len() - 1;
 
             for (idx, attr) in self.iter().enumerate() {
-                attr.to_bytes(handler);
+                attr.to_bytes(output_handler);
 
                 if idx != last {
-                    handler(&b" ".into());
+                    output_handler(b" ");
                 }
             }
         }

@@ -1,6 +1,6 @@
 use cool_thing::parser::*;
 use cool_thing::token::{Token, TokenCaptureFlags};
-use cool_thing::transform_stream::{TransformController, TransformStream};
+use cool_thing::transform_stream::{Output, TransformController, TransformStream};
 use encoding_rs::UTF_8;
 use getopts::{Matches, Options};
 use std::env::args;
@@ -79,7 +79,9 @@ impl TransformController for TraceTransformController {
         }
     }
 
-    fn handle_token(&mut self, _: Token) {}
+    fn handle_token<'t>(&mut self, token: Token<'t>) -> Output<'t> {
+        Output::Token(token)
+    }
 }
 
 fn main() {
@@ -91,8 +93,12 @@ fn main() {
     let html = matches.free.first().unwrap();
     let tag_hint_mode = matches.opt_present("p");
 
-    let mut transform_stream =
-        TransformStream::new(2048, TraceTransformController::new(tag_hint_mode), UTF_8);
+    let mut transform_stream = TransformStream::new(
+        TraceTransformController::new(tag_hint_mode),
+        |_: &[u8]| {},
+        2048,
+        UTF_8,
+    );
 
     let parser = transform_stream.parser();
 

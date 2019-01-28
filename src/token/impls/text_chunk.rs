@@ -9,6 +9,7 @@ pub struct TextChunk<'i> {
     text: Cow<'i, str>,
     text_type: TextType,
     last_in_current_boundaries: bool,
+    requires_escape_on_output: bool,
     encoding: &'static Encoding,
 }
 
@@ -23,6 +24,7 @@ impl<'i> TextChunk<'i> {
             text: text.into(),
             text_type,
             last_in_current_boundaries,
+            requires_escape_on_output: false,
             encoding,
         }
     }
@@ -42,6 +44,11 @@ impl<'i> TextChunk<'i> {
         self.last_in_current_boundaries
     }
 
+    #[inline]
+    pub fn escape_on_output(&mut self) {
+        self.requires_escape_on_output = true;
+    }
+
     // NOTE: not a trait implementation due to the `Borrow` constraint for
     // the `Owned` associated type.
     // See: https://github.com/rust-lang/rust/issues/44950
@@ -51,6 +58,7 @@ impl<'i> TextChunk<'i> {
             text: Cow::Owned(self.text.to_string()),
             text_type: self.text_type,
             last_in_current_boundaries: self.last_in_current_boundaries,
+            requires_escape_on_output: self.requires_escape_on_output,
             encoding: self.encoding,
         }
     }
@@ -63,11 +71,20 @@ impl Serialize for TextChunk<'_> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
-        Bytes::from(self.encoding.encode(&self.text).0).replace_byte2(
-            (b'<', b"&lt;"),
-            (b'>', b"&gt;"),
-            handler,
-        );
+    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        if !self.text.is_empty() {
+            let text = self.encoding.encode(&self.text).0;
+
+            if self.requires_escape_on_output {
+                Bytes::from(text).replace_byte3(
+                    (b'<', b"&lt;"),
+                    (b'>', b"&gt;"),
+                    (b'&', b"&amp;"),
+                    output_handler,
+                );
+            } else {
+                output_handler(&text);
+            }
+        }
     }
 }

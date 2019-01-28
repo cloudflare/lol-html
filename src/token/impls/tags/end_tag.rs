@@ -57,10 +57,10 @@ impl Serialize for EndTag<'_> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, handler: &mut dyn FnMut(&Bytes<'_>)) {
-        handler(&b"</".into());
-        handler(&self.name);
-        handler(&b">".into());
+    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        output_handler(b"</");
+        output_handler(&self.name);
+        output_handler(b">");
     }
 }
 

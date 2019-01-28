@@ -17,9 +17,9 @@ bitflags! {
 }
 
 #[derive(Debug)]
-pub enum TokenCaptureResult<'i> {
-    Captured(Token<'i>),
-    Skipped(&'i Lexeme<'i>),
+pub enum TokenCaptureEvent<'i> {
+    LexemeConsumed,
+    TokenProduced(Token<'i>),
 }
 
 pub struct TokenCapture {
@@ -43,9 +43,9 @@ impl TokenCapture {
     }
 
     #[inline]
-    fn flush_pending_text(&mut self, result_handler: &mut dyn FnMut(TokenCaptureResult<'_>)) {
+    fn flush_pending_text(&mut self, event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>)) {
         if self.pending_text_decoder.is_some() {
-            self.emit_text(&Bytes::empty(), true, result_handler);
+            self.emit_text(&Bytes::empty(), true, event_handler);
             self.pending_text_decoder = None;
         }
     }
@@ -54,7 +54,7 @@ impl TokenCapture {
         &mut self,
         raw: &Bytes<'_>,
         last: bool,
-        result_handler: &mut dyn FnMut(TokenCaptureResult<'_>),
+        event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>),
     ) {
         let encoding = self.encoding;
         let buffer = self.text_buffer.as_mut_str();
@@ -70,12 +70,11 @@ impl TokenCapture {
 
             consumed += read;
 
-            let chunk = TextChunk::new(&buffer[..written], self.last_text_type, last, encoding);
-            let result = TokenCaptureResult::Captured(Token::TextChunk(chunk));
+            if written > 0 || last {
+                let chunk = TextChunk::new(&buffer[..written], self.last_text_type, last, encoding);
 
-            trace!(@output result);
-
-            result_handler(result);
+                event_handler(TokenCaptureEvent::TokenProduced(Token::TextChunk(chunk)));
+            }
 
             if let CoderResult::InputEmpty = status {
                 break;
@@ -87,23 +86,25 @@ impl TokenCapture {
         &mut self,
         lexeme: &Lexeme<'_>,
         token_outline: &TokenOutline,
-        result_handler: &mut dyn FnMut(TokenCaptureResult<'_>),
+        event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>),
     ) {
         macro_rules! capture {
             ( $Type:ident ($($args:expr),+) ) => {
-                TokenCaptureResult::Captured(Token::$Type($Type::new_parsed(
+                event_handler(TokenCaptureEvent::LexemeConsumed);
+
+                event_handler(TokenCaptureEvent::TokenProduced(Token::$Type($Type::new_parsed(
                     $($args),+,
                     lexeme.raw(),
                     self.encoding
-                )))
+                ))));
             };
         }
 
-        let result = match token_outline {
+        match token_outline {
             &TokenOutline::Comment(text)
                 if self.capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
             {
-                capture!(Comment(lexeme.part(text)))
+                capture!(Comment(lexeme.part(text)));
             }
 
             &TokenOutline::StartTag {
@@ -115,13 +116,13 @@ impl TokenCapture {
                 let attributes =
                     ParsedAttributeList::new(lexeme.input(), Rc::clone(attributes), self.encoding);
 
-                capture!(StartTag(lexeme.part(name), attributes.into(), self_closing))
+                capture!(StartTag(lexeme.part(name), attributes.into(), self_closing));
             }
 
             &TokenOutline::EndTag { name, .. }
                 if self.capture_flags.contains(TokenCaptureFlags::END_TAGS) =>
             {
-                capture!(EndTag(lexeme.part(name)))
+                capture!(EndTag(lexeme.part(name)));
             }
 
             &TokenOutline::Doctype {
@@ -129,28 +130,27 @@ impl TokenCapture {
                 public_id,
                 system_id,
                 force_quirks,
-            } if self.capture_flags.contains(TokenCaptureFlags::DOCTYPES) => capture!(Doctype(
-                lexeme.opt_part(name),
-                lexeme.opt_part(public_id),
-                lexeme.opt_part(system_id),
-                force_quirks
-            )),
+            } if self.capture_flags.contains(TokenCaptureFlags::DOCTYPES) => {
+                capture!(Doctype(
+                    lexeme.opt_part(name),
+                    lexeme.opt_part(public_id),
+                    lexeme.opt_part(system_id),
+                    force_quirks
+                ));
+            }
 
             TokenOutline::Eof if self.capture_flags.contains(TokenCaptureFlags::EOF) => {
-                TokenCaptureResult::Captured(Token::Eof)
+                event_handler(TokenCaptureEvent::LexemeConsumed);
+                event_handler(TokenCaptureEvent::TokenProduced(Token::Eof));
             }
-            _ => TokenCaptureResult::Skipped(lexeme),
-        };
-
-        trace!(@output result);
-
-        result_handler(result);
+            _ => (),
+        }
     }
 
     pub fn feed(
         &mut self,
         lexeme: &Lexeme<'_>,
-        result_handler: &mut dyn FnMut(TokenCaptureResult<'_>),
+        event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>),
     ) {
         match lexeme.token_outline() {
             Some(token_outline) => match *token_outline {
@@ -158,19 +158,18 @@ impl TokenCapture {
                     if self.capture_flags.contains(TokenCaptureFlags::TEXT) =>
                 {
                     self.last_text_type = text_type;
-                    self.emit_text(&lexeme.raw(), false, result_handler);
+
+                    event_handler(TokenCaptureEvent::LexemeConsumed);
+
+                    self.emit_text(&lexeme.raw(), false, event_handler);
                 }
-                TokenOutline::Text(_) => result_handler(TokenCaptureResult::Skipped(lexeme)),
+                TokenOutline::Text(_) => (),
                 _ => {
-                    self.flush_pending_text(result_handler);
-                    self.handle_non_textual_content(lexeme, token_outline, result_handler);
+                    self.flush_pending_text(event_handler);
+                    self.handle_non_textual_content(lexeme, token_outline, event_handler);
                 }
             },
-
-            None => {
-                self.flush_pending_text(result_handler);
-                result_handler(TokenCaptureResult::Skipped(lexeme));
-            }
+            None => self.flush_pending_text(event_handler),
         }
     }
 }

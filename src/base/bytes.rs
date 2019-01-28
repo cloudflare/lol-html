@@ -1,5 +1,5 @@
 use encoding_rs::{Encoding, WINDOWS_1252};
-use memchr::{memchr, memchr2};
+use memchr::{memchr, memchr3};
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
@@ -13,7 +13,7 @@ pub struct Bytes<'b>(Cow<'b, [u8]>);
 impl<'b> Bytes<'b> {
     #[inline]
     pub fn empty() -> Self {
-        b"".into()
+        Bytes(Cow::Borrowed(&[]))
     }
 
     #[inline]
@@ -67,7 +67,7 @@ impl<'b> Bytes<'b> {
 }
 
 macro_rules! impl_replace_byte {
-    ($self:tt, $chunk_handler:ident, $impls:ident) => {
+    ($self:tt, $output_handler:ident, $impls:ident) => {
         let mut tail: &[u8] = $self;
 
         loop {
@@ -75,13 +75,13 @@ macro_rules! impl_replace_byte {
                 Some(pos) => {
                     let replacement = $impls!(@get_replacement tail, pos);
 
-                    $chunk_handler(&tail[..pos].into());
-                    $chunk_handler(&replacement.into());
+                    $output_handler(&tail[..pos]);
+                    $output_handler(&replacement);
                     tail = &tail[pos + 1..];
                 }
                 None => {
                     if !tail.is_empty() {
-                        $chunk_handler(&tail.into());
+                        $output_handler(&tail);
                     }
                     break;
                 }
@@ -92,42 +92,47 @@ macro_rules! impl_replace_byte {
 
 impl<'b> Bytes<'b> {
     #[inline]
-    pub fn replace_byte(&self, repl: (u8, &[u8]), chunk_handler: &mut dyn FnMut(&Bytes<'_>)) {
+    pub fn replace_byte(&self, (needle, repl): (u8, &[u8]), output_handler: &mut dyn FnMut(&[u8])) {
         macro_rules! impls {
             (@find $tail:ident) => {
-                memchr(repl.0, $tail)
+                memchr(needle, $tail)
             };
 
             (@get_replacement $tail:ident, $pos:ident) => {
-                repl.1
+                repl
             };
         }
 
-        impl_replace_byte!(self, chunk_handler, impls);
+        impl_replace_byte!(self, output_handler, impls);
     }
 
     #[inline]
-    pub fn replace_byte2(
+    pub fn replace_byte3(
         &self,
-        repl1: (u8, &[u8]),
-        repl2: (u8, &[u8]),
-        chunk_handler: &mut dyn FnMut(&Bytes<'_>),
+        (needle1, repl1): (u8, &[u8]),
+        (needle2, repl2): (u8, &[u8]),
+        (needle3, repl3): (u8, &[u8]),
+        output_handler: &mut dyn FnMut(&[u8]),
     ) {
         macro_rules! impls {
             (@find $tail:ident) => {
-                memchr2(repl1.0, repl2.0, $tail)
+                memchr3(needle1, needle2, needle3, $tail)
             };
 
             (@get_replacement $tail:ident, $pos:ident) => {{
-                if $tail[$pos] == repl1.0 {
-                    repl1.1
+                let matched = $tail[$pos];
+
+                if matched == needle1 {
+                    repl1
+                } else if matched == needle2 {
+                    repl2
                 } else {
-                    repl2.1
+                    repl3
                 }
             }};
         }
 
-        impl_replace_byte!(self, chunk_handler, impls);
+        impl_replace_byte!(self, output_handler, impls);
     }
 }
 
@@ -144,21 +149,6 @@ impl<'b> From<&'b [u8]> for Bytes<'b> {
         Bytes(bytes.into())
     }
 }
-
-macro_rules! impl_from_static {
-    ($($size:expr),+) => {
-        $(
-            impl<'b> From<&'b [u8; $size]> for Bytes<'b> {
-                #[inline]
-                fn from(bytes: &'b [u8; $size]) -> Self {
-                    Bytes(Cow::Borrowed(bytes))
-                }
-            }
-        )+
-    };
-}
-
-impl_from_static!(0, 1, 2, 3, 4);
 
 impl Debug for Bytes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

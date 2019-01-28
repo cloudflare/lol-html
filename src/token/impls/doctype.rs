@@ -80,7 +80,7 @@ impl Serialize for Doctype<'_> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, _handler: &mut dyn FnMut(&Bytes<'_>)) {
+    fn serialize_from_parts(&self, _output_handler: &mut dyn FnMut(&[u8])) {
         unreachable!("Doctype should always be serialized from the raw value");
     }
 }

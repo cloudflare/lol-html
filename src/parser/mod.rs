@@ -47,9 +47,9 @@ impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
     }
 }
 
-pub trait OutputSink: LexemeSink + TagHintSink {}
+pub trait ParserOutputSink: LexemeSink + TagHintSink {}
 
-pub struct Parser<S: OutputSink> {
+pub struct Parser<S: ParserOutputSink> {
     full_sm: FullStateMachine<Rc<RefCell<S>>>,
     eager_sm: EagerStateMachine<Rc<RefCell<S>>>,
     next_output_type: NextOutputType,
@@ -67,7 +67,7 @@ macro_rules! with_current_sm {
     };
 }
 
-impl<S: OutputSink> Parser<S> {
+impl<S: ParserOutputSink> Parser<S> {
     pub fn new(output_sink: &Rc<RefCell<S>>, initial_output_type: NextOutputType) -> Self {
         let feedback_providers = Rc::new(RefCell::new(FeedbackProviders::default()));
 
@@ -116,7 +116,7 @@ impl<S: OutputSink> Parser<S> {
 }
 
 #[cfg(feature = "testing_api")]
-impl<S: OutputSink> Parser<S> {
+impl<S: ParserOutputSink> Parser<S> {
     pub fn switch_text_type(&mut self, text_type: TextType) {
         with_current_sm!(self, { sm.switch_text_type(text_type) });
     }
