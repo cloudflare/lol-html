@@ -45,7 +45,7 @@ test_fixture!("Comment token", {
     test("Serialization", {
         let src = "<!-- foo -- bar -->";
 
-        let test_cases = |comments: Vec<Comment<'_>>| {
+        let test_cases = |comments: Vec<Comment<'_>>, _| {
             vec![
                 ("Parsed", comments[0].to_owned(), "<!-- foo -- bar -->"),
                 (

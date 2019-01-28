@@ -71,9 +71,9 @@ impl TokenCapture {
             consumed += read;
 
             if written > 0 || last {
-                let chunk = TextChunk::new(&buffer[..written], self.last_text_type, last, encoding);
-
-                event_handler(TokenCaptureEvent::TokenProduced(Token::TextChunk(chunk)));
+                event_handler(TokenCaptureEvent::TokenProduced(Token::TextChunk(
+                    TextChunk::new_parsed(&buffer[..written], self.last_text_type, last, encoding),
+                )));
             }
 
             if let CoderResult::InputEmpty = status {

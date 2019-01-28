@@ -89,7 +89,7 @@ test_fixture!("End tag token", {
     test("Serialization", {
         let src = "</div foo=bar>";
 
-        let test_cases = |tags: Vec<EndTag<'_>>| {
+        let test_cases = |tags: Vec<EndTag<'_>>, _| {
             vec![
                 ("Parsed", tags[0].to_owned(), "</div foo=bar>"),
                 (

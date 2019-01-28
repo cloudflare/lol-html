@@ -325,7 +325,7 @@ test_fixture!("Start tag token", {
     test("Serialization", {
         let src = r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#;
 
-        let test_cases = |tags: Vec<StartTag<'_>>| {
+        let test_cases = |tags: Vec<StartTag<'_>>, _| {
             vec![
                 (
                     "Parsed",

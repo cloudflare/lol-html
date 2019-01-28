@@ -2,7 +2,6 @@ mod capture;
 mod impls;
 
 use crate::base::Bytes;
-use crate::parser::TextType;
 use crate::transform_stream::Serialize;
 use encoding_rs::Encoding;
 use failure::Error;
@@ -100,7 +99,17 @@ impl TokenFactory {
     }
 
     #[inline]
-    pub fn new_text_chunk<'t>(&self, text: &'t str) -> TextChunk<'t> {
-        TextChunk::new(text, TextType::Data, false, self.encoding)
+    pub fn new_text<'t>(&self, text: &'t str) -> TextChunk<'t> {
+        TextChunk::new(text, self.encoding)
+    }
+
+    #[inline]
+    pub fn try_script_text_from<'t>(&self, text: &'t str) -> Result<TextChunk<'t>, Error> {
+        TextChunk::try_script_from(text, self.encoding)
+    }
+
+    #[inline]
+    pub fn try_stylesheet_text_from<'t>(&self, text: &'t str) -> Result<TextChunk<'t>, Error> {
+        TextChunk::try_stylesheet_from(text, self.encoding)
     }
 }

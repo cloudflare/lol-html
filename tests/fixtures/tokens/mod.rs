@@ -36,7 +36,7 @@ macro_rules! serialization_test {
             let tokens = get_tokens($input, enc);
             let get_test_cases = $get_test_cases;
 
-            for (case_name, tokens, expected) in get_test_cases(tokens).into_iter() {
+            for (case_name, tokens, expected) in get_test_cases(tokens, enc).into_iter() {
                 let mut bytes = Vec::new();
 
                 tokens.to_bytes(&mut |c| bytes.extend_from_slice(c));
