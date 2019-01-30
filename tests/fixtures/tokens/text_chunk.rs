@@ -18,7 +18,7 @@ test_fixture!("Text chunk token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<TextError>().cloned(),
                 Some(TextError::UnencodableCharacter)
@@ -42,7 +42,7 @@ test_fixture!("Text chunk token", {
             ),
         ];
 
-        for (err, expected_err) in errs.into_iter() {
+        for (err, expected_err) in &errs {
             assert_eq!(err.downcast_ref::<TextError>().cloned(), *expected_err);
         }
     });

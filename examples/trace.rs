@@ -1,6 +1,6 @@
 use cool_thing::parser::*;
 use cool_thing::token::{Token, TokenCaptureFlags};
-use cool_thing::transform_stream::{Output, TransformController, TransformStream};
+use cool_thing::transform_stream::{TransformController, TransformStream};
 use encoding_rs::UTF_8;
 use getopts::{Matches, Options};
 use std::env::args;
@@ -79,9 +79,7 @@ impl TransformController for TraceTransformController {
         }
     }
 
-    fn handle_token<'t>(&mut self, token: Token<'t>) -> Output<'t> {
-        Output::Token(token)
-    }
+    fn handle_token(&mut self, _: &mut Token<'_>) {}
 }
 
 fn main() {

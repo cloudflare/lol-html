@@ -4,7 +4,7 @@ macro_rules! serialization_test {
         use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
         use cool_thing::parser::TextType;
         use cool_thing::token::{Token, TokenCaptureFlags};
-        use cool_thing::transform_stream::{Output, Serialize};
+        use cool_thing::transform_stream::Serialize;
         use encoding_rs::Encoding;
 
         fn get_tokens(input: &'static str, enc: &'static Encoding) -> Vec<$TokenType<'static>> {
@@ -18,13 +18,9 @@ macro_rules! serialization_test {
                 TokenCaptureFlags::$CAPTURE_FLAG,
                 TextType::Data,
                 None,
-                Box::new(|t| {
-                    match t {
-                        Token::$TokenType(t) => tokens.push(t.to_owned()),
-                        _ => unreachable!(),
-                    }
-
-                    Output::Nothing
+                Box::new(|t| match t {
+                    Token::$TokenType(t) => tokens.push(t.to_owned()),
+                    _ => unreachable!(),
                 }),
             )
             .unwrap();

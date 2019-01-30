@@ -4,7 +4,6 @@ use crate::harness::functional_testing::{
 use crate::harness::parsing::parse;
 use cool_thing::parser::TextType;
 use cool_thing::token::TokenCaptureFlags;
-use cool_thing::transform_stream::Output;
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens
@@ -74,11 +73,7 @@ impl FunctionalTestFixture for TokenCaptureTests {
                 capture_flags,
                 initial_text_type,
                 last_start_tag_name_hash,
-                Box::new(|token| {
-                    token_list.push(token.to_owned());
-
-                    Output::Token(token)
-                }),
+                Box::new(|t| token_list.push(t.to_owned())),
             );
 
             let mut actual_tokens = token_list.into();

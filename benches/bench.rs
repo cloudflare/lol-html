@@ -54,7 +54,7 @@ fn cool_thing_tokenizer_bench(
     move |b, i: &Input| {
         use cool_thing::parser::{Lexeme, NextOutputType, TagHint};
         use cool_thing::token::Token;
-        use cool_thing::transform_stream::{Output, TransformController, TransformStream};
+        use cool_thing::transform_stream::{TransformController, TransformStream};
 
         struct BenchTransformController {
             capture_flags: TokenCaptureFlags,
@@ -94,8 +94,8 @@ fn cool_thing_tokenizer_bench(
                 }
             }
 
-            fn handle_token<'t>(&mut self, token: Token<'t>) -> Output<'t> {
-                Output::Token(token)
+            fn handle_token(&mut self, token: &mut Token<'_>) {
+                black_box(token);
             }
         }
 

@@ -14,7 +14,7 @@ test_fixture!("End tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<TagNameError>().cloned(),
                 Some(TagNameError::Empty)
@@ -37,7 +37,7 @@ test_fixture!("End tag token", {
                     .unwrap_err(),
             ];
 
-            for err in errs.into_iter() {
+            for err in &errs {
                 assert_eq!(
                     err.downcast_ref::<TagNameError>().cloned(),
                     Some(TagNameError::ForbiddenCharacter(ch))
@@ -58,7 +58,7 @@ test_fixture!("End tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<TagNameError>().cloned(),
                 Some(TagNameError::UnencodableCharacter)
@@ -78,7 +78,7 @@ test_fixture!("End tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<TagNameError>().cloned(),
                 Some(TagNameError::InvalidFirstCharacter)

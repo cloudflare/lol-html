@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::serialize::Serialize;
-pub use self::writer::{Output, TransformController};
+pub use self::writer::TransformController;
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",

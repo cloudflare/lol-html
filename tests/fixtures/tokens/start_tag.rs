@@ -15,7 +15,7 @@ test_fixture!("Start tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<TagNameError>().cloned(),
                 Some(TagNameError::Empty)
@@ -38,7 +38,7 @@ test_fixture!("Start tag token", {
                     .unwrap_err(),
             ];
 
-            for err in errs.into_iter() {
+            for err in &errs {
                 assert_eq!(
                     err.downcast_ref::<TagNameError>().cloned(),
                     Some(TagNameError::ForbiddenCharacter(ch))
@@ -61,7 +61,7 @@ test_fixture!("Start tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<TagNameError>().cloned(),
                 Some(TagNameError::UnencodableCharacter)
@@ -81,7 +81,7 @@ test_fixture!("Start tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<TagNameError>().cloned(),
                 Some(TagNameError::InvalidFirstCharacter)
@@ -103,7 +103,7 @@ test_fixture!("Start tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<AttributeNameError>().cloned(),
                 Some(AttributeNameError::Empty)
@@ -128,7 +128,7 @@ test_fixture!("Start tag token", {
                     .unwrap_err(),
             ];
 
-            for err in errs.into_iter() {
+            for err in &errs {
                 assert_eq!(
                     err.downcast_ref::<AttributeNameError>().cloned(),
                     Some(AttributeNameError::ForbiddenCharacter(ch))
@@ -151,7 +151,7 @@ test_fixture!("Start tag token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<AttributeNameError>().cloned(),
                 Some(AttributeNameError::UnencodableCharacter)

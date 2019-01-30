@@ -1,5 +1,5 @@
 use super::Serialize;
-use crate::base::{Bytes, Chunk, Range};
+use crate::base::{Chunk, Range};
 use crate::parser::{Lexeme, LexemeSink, NextOutputType, ParserOutputSink, TagHint, TagHintSink};
 use crate::token::{Token, TokenCapture, TokenCaptureEvent, TokenCaptureFlags};
 use encoding_rs::Encoding;
@@ -15,33 +15,11 @@ impl<F: FnMut(&[u8])> OutputSink for F {
     }
 }
 
-pub enum Output<'i> {
-    Token(Token<'i>),
-    MultipleTokens(Vec<Token<'i>>),
-    Nothing,
-}
-
-impl Serialize for Output<'_> {
-    #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        None
-    }
-
-    #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
-        match self {
-            Output::Token(t) => t.to_bytes(output_handler),
-            Output::MultipleTokens(t) => t.to_bytes(output_handler),
-            Output::Nothing => (),
-        }
-    }
-}
-
 pub trait TransformController {
     fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags;
     fn get_token_capture_flags_for_tag(&mut self, tag_lexeme: &Lexeme<'_>) -> NextOutputType;
     fn get_token_capture_flags_for_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> NextOutputType;
-    fn handle_token<'t>(&mut self, token: Token<'t>) -> Output<'t>;
+    fn handle_token(&mut self, token: &mut Token<'_>);
 }
 
 pub struct Writer<C, O>
@@ -102,12 +80,11 @@ where
                 lexeme_consumed = true;
                 output_sink.handle_chunk(&chunk);
             }
-            TokenCaptureEvent::TokenProduced(token) => {
+            TokenCaptureEvent::TokenProduced(mut token) => {
                 trace!(@output token);
 
-                transform_controller
-                    .handle_token(token)
-                    .to_bytes(&mut |c| output_sink.handle_chunk(c));
+                transform_controller.handle_token(&mut token);
+                token.to_bytes(&mut |c| output_sink.handle_chunk(c));
             }
         });
 

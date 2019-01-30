@@ -14,7 +14,7 @@ test_fixture!("Comment token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<CommentTextError>().cloned(),
                 Some(CommentTextError::CommentClosingSequence)
@@ -34,7 +34,7 @@ test_fixture!("Comment token", {
                 .unwrap_err(),
         ];
 
-        for err in errs.into_iter() {
+        for err in &errs {
             assert_eq!(
                 err.downcast_ref::<CommentTextError>().cloned(),
                 Some(CommentTextError::UnencodableCharacter)
