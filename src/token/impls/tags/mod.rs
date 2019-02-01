@@ -66,6 +66,6 @@ mod start_tag;
 
 pub(in crate::token) use self::attributes::ParsedAttributeList;
 
-pub use self::attributes::AttributeNameError;
+pub use self::attributes::{Attribute, AttributeNameError};
 pub use self::end_tag::EndTag;
 pub use self::start_tag::StartTag;

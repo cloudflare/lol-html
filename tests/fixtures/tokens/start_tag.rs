@@ -325,7 +325,7 @@ test_fixture!("Start tag token", {
     test("Serialization", {
         let src = r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#;
 
-        let test_cases = |tags: Vec<StartTag<'_>>, _| {
+        let test_cases = |tags: Vec<StartTag<'_>>, factory: TokenFactory| {
             vec![
                 (
                     "Parsed",
@@ -450,6 +450,52 @@ test_fixture!("Start tag token", {
                         tag
                     },
                     r#"<a/>"#,
+                ),
+                (
+                    "With prepends and appends",
+                    {
+                        let mut tag = tags[0].to_owned();
+
+                        tag.prepend("<div>Hey</div>".into());
+                        tag.prepend(factory.try_start_tag_from("foo", &[], false).unwrap().into());
+                        tag.append(factory.try_end_tag_from("foo").unwrap().into());
+                        tag.append("<!-- 42 -->".into());
+
+                        tag
+                    },
+                    concat!(
+                        "<div>Hey</div><foo>",
+                        r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
+                        "<!-- 42 --></foo>"
+                    )
+                ),
+                (
+                    "Removed",
+                    {
+                        let mut tag = tags[0].to_owned();
+
+                        tag.remove();
+                        tag.prepend("<before>".into());
+                        tag.append("<after>".into());
+
+                        tag
+                    },
+                    "<before><after>"
+                ),
+                (
+                    "Replaced",
+                    {
+                        let mut tag = tags[0].to_owned();
+
+                        tag.prepend("<before>".into());
+                        tag.append("<after>".into());
+
+                        tag.add_replacement("<div></div>".into());
+                        tag.add_replacement(factory.try_comment_from("42").unwrap().into());
+
+                        tag
+                    },
+                    "<before><div></div><!--42--><after>"
                 ),
             ]
         };

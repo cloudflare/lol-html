@@ -45,7 +45,7 @@ test_fixture!("Comment token", {
     test("Serialization", {
         let src = "<!-- foo -- bar -->";
 
-        let test_cases = |comments: Vec<Comment<'_>>, _| {
+        let test_cases = |comments: Vec<Comment<'_>>, factory: TokenFactory| {
             vec![
                 ("Parsed", comments[0].to_owned(), "<!-- foo -- bar -->"),
                 (
@@ -58,6 +58,53 @@ test_fixture!("Comment token", {
                         comment
                     },
                     "<!--42 <!--->",
+                ),
+                (
+                    "With prepends and appends",
+                    {
+                        let mut comment = comments[0].to_owned();
+
+                        comment.prepend("<div>Hey</div>".into());
+                        comment.prepend(
+                            factory
+                                .try_start_tag_from("foo", &[], false)
+                                .unwrap()
+                                .into(),
+                        );
+                        comment.append(factory.try_end_tag_from("foo").unwrap().into());
+                        comment.append("<!-- 42 -->".into());
+
+                        comment
+                    },
+                    "<div>Hey</div><foo><!-- foo -- bar --><!-- 42 --></foo>",
+                ),
+                (
+                    "Removed",
+                    {
+                        let mut comment = comments[0].to_owned();
+
+                        comment.remove();
+                        comment.prepend("<before>".into());
+                        comment.append("<after>".into());
+
+                        comment
+                    },
+                    "<before><after>",
+                ),
+                (
+                    "Replaced",
+                    {
+                        let mut tag = comments[0].to_owned();
+
+                        tag.prepend("<before>".into());
+                        tag.append("<after>".into());
+
+                        tag.add_replacement("<div></div>".into());
+                        tag.add_replacement(factory.try_comment_from("42").unwrap().into());
+
+                        tag
+                    },
+                    "<before><div></div><!--42--><after>",
                 ),
             ]
         };

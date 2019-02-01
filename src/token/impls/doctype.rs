@@ -1,8 +1,8 @@
 use crate::base::Bytes;
-use crate::transform_stream::Serialize;
+use crate::token::Serialize;
 use encoding_rs::Encoding;
+use std::fmt::{self, Debug};
 
-#[derive(Debug)]
 pub struct Doctype<'i> {
     name: Option<Bytes<'i>>,
     public_id: Option<Bytes<'i>>,
@@ -75,12 +75,18 @@ impl<'i> Doctype<'i> {
 
 impl Serialize for Doctype<'_> {
     #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        Some(&self.raw)
+    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        output_handler(&self.raw);
     }
+}
 
-    #[inline]
-    fn serialize_from_parts(&self, _output_handler: &mut dyn FnMut(&[u8])) {
-        unreachable!("Doctype should always be serialized from the raw value");
+impl Debug for Doctype<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Doctype")
+            .field("name", &self.name())
+            .field("public_id", &self.public_id())
+            .field("system_id", &self.system_id())
+            .field("force_quirks", &self.force_quirks)
+            .finish()
     }
 }

@@ -3,8 +3,7 @@ macro_rules! serialization_test {
         use crate::harness::parsing::{parse, ChunkedInput};
         use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
         use cool_thing::parser::TextType;
-        use cool_thing::token::{Token, TokenCaptureFlags};
-        use cool_thing::transform_stream::Serialize;
+        use cool_thing::token::{Serialize, Token, TokenCaptureFlags, TokenFactory};
         use encoding_rs::Encoding;
 
         fn get_tokens(input: &'static str, enc: &'static Encoding) -> Vec<$TokenType<'static>> {
@@ -31,8 +30,9 @@ macro_rules! serialization_test {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let tokens = get_tokens($input, enc);
             let get_test_cases = $get_test_cases;
+            let factory = TokenFactory::new(enc);
 
-            for (case_name, tokens, expected) in get_test_cases(tokens, enc).into_iter() {
+            for (case_name, tokens, expected) in get_test_cases(tokens, factory).into_iter() {
                 let mut bytes = Vec::new();
 
                 tokens.to_bytes(&mut |c| bytes.extend_from_slice(c));

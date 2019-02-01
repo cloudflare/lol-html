@@ -1,7 +1,7 @@
 use super::attributes::{Attribute, Attributes};
 use super::try_tag_name_from_str;
 use crate::base::Bytes;
-use crate::transform_stream::Serialize;
+use crate::token::{OrderingMutations, Serialize};
 use encoding_rs::Encoding;
 use failure::Error;
 use std::fmt::{self, Debug};
@@ -12,7 +12,13 @@ pub struct StartTag<'i> {
     self_closing: bool,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
+
+    // NOTE: we use boxed ordering mutations and lazily initialize it to not
+    // increase stack size of a token with the heavy rarely used structure.
+    ordering_mutations: Option<Box<OrderingMutations<'i>>>,
 }
+
+impl_common_token_api!(StartTag);
 
 impl<'i> StartTag<'i> {
     pub(in crate::token) fn new_parsed(
@@ -28,6 +34,7 @@ impl<'i> StartTag<'i> {
             self_closing,
             raw: Some(raw),
             encoding,
+            ordering_mutations: None,
         }
     }
 
@@ -43,6 +50,7 @@ impl<'i> StartTag<'i> {
             self_closing,
             raw: None,
             encoding,
+            ordering_mutations: None,
         })
     }
 
@@ -110,14 +118,8 @@ impl<'i> StartTag<'i> {
             self_closing: self.self_closing,
             raw: Bytes::opt_to_owned(&self.raw),
             encoding: self.encoding,
+            ordering_mutations: None,
         }
-    }
-}
-
-impl Serialize for StartTag<'_> {
-    #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
     }
 
     #[inline]

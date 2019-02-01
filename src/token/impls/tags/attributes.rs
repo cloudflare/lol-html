@@ -1,6 +1,6 @@
 use crate::base::{Bytes, Chunk};
 use crate::parser::AttributeOultine;
-use crate::transform_stream::Serialize;
+use crate::token::Serialize;
 use encoding_rs::Encoding;
 use failure::Error;
 use lazycell::LazyCell;
@@ -109,16 +109,16 @@ impl<'i> Attribute<'i> {
 
 impl Serialize for Attribute<'_> {
     #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
-    }
-
-    #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
-        output_handler(&self.name);
-        output_handler(b"=\"");
-        self.value.replace_byte((b'"', b"&quot;"), output_handler);
-        output_handler(b"\"");
+    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        match self.raw.as_ref() {
+            Some(raw) => output_handler(raw),
+            None => {
+                output_handler(&self.name);
+                output_handler(b"=\"");
+                self.value.replace_byte((b'"', b"&quot;"), output_handler);
+                output_handler(b"\"");
+            }
+        }
     }
 }
 
@@ -267,12 +267,7 @@ impl<'i> Attributes<'i> {
 
 impl Serialize for Attributes<'_> {
     #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        None
-    }
-
-    #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
         if !self.is_empty() {
             let last = self.len() - 1;
 

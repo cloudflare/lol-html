@@ -1,5 +1,5 @@
 use crate::base::Bytes;
-use crate::transform_stream::Serialize;
+use crate::token::OrderingMutations;
 use encoding_rs::Encoding;
 use failure::Error;
 use std::fmt::{self, Debug};
@@ -17,7 +17,13 @@ pub struct Comment<'i> {
     text: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
+
+    // NOTE: we use boxed ordering mutations and lazily initialize it to not
+    // increase stack size of a token with the heavy rarely used structure.
+    ordering_mutations: Option<Box<OrderingMutations<'i>>>,
 }
+
+impl_common_token_api!(Comment);
 
 impl<'i> Comment<'i> {
     pub(in crate::token) fn new_parsed(
@@ -29,6 +35,7 @@ impl<'i> Comment<'i> {
             text,
             raw: Some(raw),
             encoding,
+            ordering_mutations: None,
         }
     }
 
@@ -40,6 +47,7 @@ impl<'i> Comment<'i> {
             text: Comment::text_from_str(text, encoding)?,
             raw: None,
             encoding,
+            ordering_mutations: None,
         })
     }
 
@@ -65,6 +73,7 @@ impl<'i> Comment<'i> {
             text: self.text.to_owned(),
             raw: Bytes::opt_to_owned(&self.raw),
             encoding: self.encoding,
+            ordering_mutations: None,
         }
     }
 
@@ -81,13 +90,6 @@ impl<'i> Comment<'i> {
                 None => Err(CommentTextError::UnencodableCharacter.into()),
             }
         }
-    }
-}
-
-impl Serialize for Comment<'_> {
-    #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
     }
 
     #[inline]

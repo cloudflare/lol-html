@@ -1,9 +1,10 @@
 use crate::base::Bytes;
 use crate::parser::TextType;
-use crate::transform_stream::Serialize;
+use crate::token::OrderingMutations;
 use encoding_rs::Encoding;
 use failure::Error;
 use std::borrow::Cow;
+use std::fmt::{self, Debug};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum TextError {
@@ -18,7 +19,6 @@ pub enum TextError {
     UnencodableCharacter,
 }
 
-#[derive(Debug)]
 pub struct TextChunk<'i> {
     text: Cow<'i, str>,
     raw: Option<Bytes<'i>>,
@@ -26,7 +26,13 @@ pub struct TextChunk<'i> {
     last_in_current_boundaries: bool,
     parsed: bool,
     encoding: &'static Encoding,
+
+    // NOTE: we use boxed ordering mutations and lazily initialize it to not
+    // increase stack size of a token with the heavy rarely used structure.
+    ordering_mutations: Option<Box<OrderingMutations<'i>>>,
 }
+
+impl_common_token_api!(TextChunk);
 
 impl<'i> TextChunk<'i> {
     pub(in crate::token) fn new_parsed(
@@ -42,6 +48,7 @@ impl<'i> TextChunk<'i> {
             last_in_current_boundaries,
             parsed: true,
             encoding,
+            ordering_mutations: None,
         }
     }
 
@@ -53,6 +60,7 @@ impl<'i> TextChunk<'i> {
             last_in_current_boundaries: false,
             parsed: false,
             encoding,
+            ordering_mutations: None,
         }
     }
 
@@ -80,6 +88,7 @@ impl<'i> TextChunk<'i> {
                     raw: Some(raw),
                     parsed: false,
                     encoding,
+                    ordering_mutations: None,
                 }),
                 None => Err(TextError::UnencodableCharacter.into()),
             }
@@ -140,14 +149,8 @@ impl<'i> TextChunk<'i> {
             last_in_current_boundaries: self.last_in_current_boundaries,
             parsed: self.parsed,
             encoding: self.encoding,
+            ordering_mutations: None,
         }
-    }
-}
-
-impl Serialize for TextChunk<'_> {
-    #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
     }
 
     #[inline]
@@ -166,5 +169,17 @@ impl Serialize for TextChunk<'_> {
                 output_handler(&text);
             }
         }
+    }
+}
+
+impl Debug for TextChunk<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TextChunk")
+            .field("text", &self.as_str())
+            .field(
+                "last_in_current_boundaries",
+                &self.last_in_current_boundaries(),
+            )
+            .finish()
     }
 }

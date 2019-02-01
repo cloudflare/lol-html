@@ -1,4 +1,3 @@
-mod serialize;
 mod writer;
 
 use self::writer::{OutputSink, Writer};
@@ -9,7 +8,6 @@ use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::serialize::Serialize;
 pub use self::writer::TransformController;
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(

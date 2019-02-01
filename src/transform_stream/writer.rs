@@ -1,7 +1,6 @@
-use super::Serialize;
 use crate::base::{Chunk, Range};
 use crate::parser::{Lexeme, LexemeSink, NextOutputType, ParserOutputSink, TagHint, TagHintSink};
-use crate::token::{Token, TokenCapture, TokenCaptureEvent, TokenCaptureFlags};
+use crate::token::{Serialize, Token, TokenCapture, TokenCaptureEvent, TokenCaptureFlags};
 use encoding_rs::Encoding;
 use std::cell::RefCell;
 
