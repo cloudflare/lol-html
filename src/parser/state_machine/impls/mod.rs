@@ -1,5 +1,5 @@
-/// Macro that implements accesors required by the StateMachine
-/// trait and that are common for both implementations.
+// Macro that implements accesors required by the StateMachine
+// trait and that are common for both implementations.
 macro_rules! impl_common_sm_accessors {
     () => {
         #[inline]

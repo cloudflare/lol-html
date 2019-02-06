@@ -1,16 +1,16 @@
-//! HTML parser has 6 different state machines for text parsing
-//! purposes in different contexts. Switch between these state machines
-//! usually performed by the tree construction stage depending on the
-//! state of the stack of open elements (HTML is a context-sensitive grammar).
-//!
-//! Luckily, in the majority of cases this tree construction stage feedback
-//! can be simulated without the stack of open elements and comlicated rules
-//! required to maintain its state.
-//!
-//! This module implements such feedback simulation. However, there are few
-//! cases where we can't unambiguously determine parsing context and prefer
-//! to bail out from the tokenization in such a case
-//! (see `AmbiguityGuard` for the details).
+// HTML parser has 6 different state machines for text parsing
+// purposes in different contexts. Switch between these state machines
+// usually performed by the tree construction stage depending on the
+// state of the stack of open elements (HTML is a context-sensitive grammar).
+//
+// Luckily, in the majority of cases this tree construction stage feedback
+// can be simulated without the stack of open elements and comlicated rules
+// required to maintain its state.
+//
+// This module implements such feedback simulation. However, there are few
+// cases where we can't unambiguously determine parsing context and prefer
+// to bail out from the tokenization in such a case
+// (see `AmbiguityGuard` for the details).
 
 use crate::base::Bytes;
 use crate::parser::outputs::{Lexeme, TokenOutline};

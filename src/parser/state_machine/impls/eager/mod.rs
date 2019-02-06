@@ -20,17 +20,17 @@ pub trait TagHintSink {
 
 pub type State<S> = fn(&mut EagerStateMachine<S>, &Chunk<'_>) -> StateResult;
 
-/// Eager state machine skips the majority of full state machine operations and, thus,
-/// is faster. It also has much less requirements for buffering which makes it more
-/// prone to bailouts caused by buffer exhaustion (actually it buffers only tag names).
-///
-/// Eager state machine produces tag previews as an output which serve as a hint for
-/// the matcher which can then switch to the full state machine if required.
-///
-/// It's not guaranteed that tag preview will actually produce the token in the end
-/// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
-/// it's not a concern for our use case as no content will be erroneously captured
-/// in this case.
+// Eager state machine skips the majority of full state machine operations and, thus,
+// is faster. It also has much less requirements for buffering which makes it more
+// prone to bailouts caused by buffer exhaustion (actually it buffers only tag names).
+//
+// Eager state machine produces tag previews as an output which serve as a hint for
+// the matcher which can then switch to the full state machine if required.
+//
+// It's not guaranteed that tag preview will actually produce the token in the end
+// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
+// it's not a concern for our use case as no content will be erroneously captured
+// in this case.
 pub struct EagerStateMachine<S: TagHintSink> {
     input_cursor: Cursor,
     tag_start: Option<usize>,

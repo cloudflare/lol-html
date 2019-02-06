@@ -1,38 +1,38 @@
-//! There are few ambigious cases where we can't determine correct
-//! parsing context having a limited information about the current
-//! state of tree builder. This caused issues in the past where
-//! Cloudflare's security features were used as XSS gadgets
-//! (see https://portswigger.net/blog/when-security-features-collide).
-//! Therefore, due to these safety concerns in such cases we prefer
-//! to bail out from tokenization process.
-//!
-//! In tree builder simulation we need to switch parser to one
-//! of standalone text parsing state machines if we encounter some
-//! specific tags. E.g. if we encounter `<script>` start tag we should
-//! treat all content up to the closing `</script>` tag as text.
-//! Without having a full-featured tree construction stage there is way
-//! to trick parser into parsing content that has actual tags in it
-//! as text. E.g. by putting `<script>` start tag into context where
-//! it will be ignored.
-//!
-//! There are just a few tree builder insertion modes in which text
-//! parsing mode switching start tags can be ignored: in `<select>` and in
-//! or after `<frameset>`.
-//!
-//! There are numerous not so obvious ways to get into or get out of these
-//! insertion modes. So, for safety reasons we try to be pro-active here
-//! and just bailout in case if we see text parsing mode switching start tags
-//! between `<select>` start and end tag, or anywhere after the `<frameset>`
-//! start tag. These cases shouldn't trigger bailout for any *conforming*
-//! markup.
-//!
-//! However, there is a case where bailout could happen even with conforming
-//! markup: if we encounter text parsing mode switching start tag in `<template>`
-//! which is inside `<select>` element content. Unfortunately, rules required
-//! to track template parsing context are way to complicated in such a case
-//! and will require an implementation of the significant part of the tree
-//! construction state. Though, current assumption is that markup that can
-//! trigger this bailout case should be seen quite rarely in the wild.
+// There are few ambigious cases where we can't determine correct
+// parsing context having a limited information about the current
+// state of tree builder. This caused issues in the past where
+// Cloudflare's security features were used as XSS gadgets
+// (see https://portswigger.net/blog/when-security-features-collide).
+// Therefore, due to these safety concerns in such cases we prefer
+// to bail out from tokenization process.
+//
+// In tree builder simulation we need to switch parser to one
+// of standalone text parsing state machines if we encounter some
+// specific tags. E.g. if we encounter `<script>` start tag we should
+// treat all content up to the closing `</script>` tag as text.
+// Without having a full-featured tree construction stage there is way
+// to trick parser into parsing content that has actual tags in it
+// as text. E.g. by putting `<script>` start tag into context where
+// it will be ignored.
+//
+// There are just a few tree builder insertion modes in which text
+// parsing mode switching start tags can be ignored: in `<select>` and in
+// or after `<frameset>`.
+//
+// There are numerous not so obvious ways to get into or get out of these
+// insertion modes. So, for safety reasons we try to be pro-active here
+// and just bailout in case if we see text parsing mode switching start tags
+// between `<select>` start and end tag, or anywhere after the `<frameset>`
+// start tag. These cases shouldn't trigger bailout for any *conforming*
+// markup.
+//
+// However, there is a case where bailout could happen even with conforming
+// markup: if we encounter text parsing mode switching start tag in `<template>`
+// which is inside `<select>` element content. Unfortunately, rules required
+// to track template parsing context are way to complicated in such a case
+// and will require an implementation of the significant part of the tree
+// construction state. Though, current assumption is that markup that can
+// trigger this bailout case should be seen quite rarely in the wild.
 
 use crate::parser::TagName;
 use std::fmt::{self, Display};
