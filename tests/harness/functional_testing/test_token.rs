@@ -178,16 +178,15 @@ impl TestTokenList {
                 if let Some(TestToken::Text(last)) = self.0.last_mut() {
                     *last += text;
 
-                    if t.last_in_current_boundaries() {
+                    if t.last_in_text_node() {
                         *last = decode_text(last, t.text_type());
                     }
                 } else {
-                    self.0
-                        .push(TestToken::Text(if t.last_in_current_boundaries() {
-                            decode_text(&text, t.text_type())
-                        } else {
-                            text.into()
-                        }));
+                    self.0.push(TestToken::Text(if t.last_in_text_node() {
+                        decode_text(&text, t.text_type())
+                    } else {
+                        text.into()
+                    }));
                 }
             }
 

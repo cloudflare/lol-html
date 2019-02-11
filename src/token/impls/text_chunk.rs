@@ -23,7 +23,7 @@ pub struct TextChunk<'i> {
     text: Cow<'i, str>,
     raw: Option<Bytes<'i>>,
     text_type: TextType,
-    last_in_current_boundaries: bool,
+    last_in_text_node: bool,
     parsed: bool,
     encoding: &'static Encoding,
 
@@ -38,14 +38,14 @@ impl<'i> TextChunk<'i> {
     pub(in crate::token) fn new_parsed(
         text: &'i str,
         text_type: TextType,
-        last_in_current_boundaries: bool,
+        last_in_text_node: bool,
         encoding: &'static Encoding,
     ) -> Self {
         TextChunk {
             text: text.into(),
             raw: None,
             text_type,
-            last_in_current_boundaries,
+            last_in_text_node,
             parsed: true,
             encoding,
             ordering_mutations: None,
@@ -57,7 +57,7 @@ impl<'i> TextChunk<'i> {
             text: text.into(),
             raw: None,
             text_type: TextType::Data,
-            last_in_current_boundaries: false,
+            last_in_text_node: false,
             parsed: false,
             encoding,
             ordering_mutations: None,
@@ -84,7 +84,7 @@ impl<'i> TextChunk<'i> {
                 Some(raw) => Ok(TextChunk {
                     text: text.into(),
                     text_type,
-                    last_in_current_boundaries: false,
+                    last_in_text_node: false,
                     raw: Some(raw),
                     parsed: false,
                     encoding,
@@ -133,8 +133,8 @@ impl<'i> TextChunk<'i> {
     }
 
     #[inline]
-    pub fn last_in_current_boundaries(&self) -> bool {
-        self.last_in_current_boundaries
+    pub fn last_in_text_node(&self) -> bool {
+        self.last_in_text_node
     }
 
     // NOTE: not a trait implementation due to the `Borrow` constraint for
@@ -146,7 +146,7 @@ impl<'i> TextChunk<'i> {
             text: Cow::Owned(self.text.to_string()),
             raw: Bytes::opt_to_owned(&self.raw),
             text_type: self.text_type,
-            last_in_current_boundaries: self.last_in_current_boundaries,
+            last_in_text_node: self.last_in_text_node,
             parsed: self.parsed,
             encoding: self.encoding,
             ordering_mutations: None,
@@ -176,10 +176,7 @@ impl Debug for TextChunk<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TextChunk")
             .field("text", &self.as_str())
-            .field(
-                "last_in_current_boundaries",
-                &self.last_in_current_boundaries(),
-            )
+            .field("last_in_text_node", &self.last_in_text_node())
             .finish()
     }
 }
