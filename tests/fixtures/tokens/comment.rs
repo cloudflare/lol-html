@@ -64,15 +64,15 @@ test_fixture!("Comment token", {
                     {
                         let mut comment = comments[0].to_owned();
 
-                        comment.prepend("<div>Hey</div>".into());
-                        comment.prepend(
+                        comment.before("<div>Hey</div>".into());
+                        comment.before(
                             factory
                                 .try_start_tag_from("foo", &[], false)
                                 .unwrap()
                                 .into(),
                         );
-                        comment.append(factory.try_end_tag_from("foo").unwrap().into());
-                        comment.append("<!-- 42 -->".into());
+                        comment.after(factory.try_end_tag_from("foo").unwrap().into());
+                        comment.after("<!-- 42 -->".into());
 
                         comment
                     },
@@ -84,8 +84,8 @@ test_fixture!("Comment token", {
                         let mut comment = comments[0].to_owned();
 
                         comment.remove();
-                        comment.prepend("<before>".into());
-                        comment.append("<after>".into());
+                        comment.before("<before>".into());
+                        comment.after("<after>".into());
 
                         comment
                     },
@@ -96,11 +96,11 @@ test_fixture!("Comment token", {
                     {
                         let mut tag = comments[0].to_owned();
 
-                        tag.prepend("<before>".into());
-                        tag.append("<after>".into());
+                        tag.before("<before>".into());
+                        tag.after("<after>".into());
 
-                        tag.add_replacement("<div></div>".into());
-                        tag.add_replacement(factory.try_comment_from("42").unwrap().into());
+                        tag.replace("<div></div>".into());
+                        tag.replace(factory.try_comment_from("42").unwrap().into());
 
                         tag
                     },

@@ -90,8 +90,8 @@ test_fixture!("Text chunk token", {
 
                         let first = chunks.first_mut().unwrap();
 
-                        first.prepend("<div>Hey</div>".into());
-                        first.prepend(
+                        first.before("<div>Hey</div>".into());
+                        first.before(
                             factory
                                 .try_start_tag_from("foo", &[], false)
                                 .unwrap()
@@ -100,8 +100,8 @@ test_fixture!("Text chunk token", {
 
                         let last = chunks.last_mut().unwrap();
 
-                        last.append(factory.try_end_tag_from("foo").unwrap().into());
-                        last.append("<!-- 42 -->".into());
+                        last.after(factory.try_end_tag_from("foo").unwrap().into());
+                        last.after("<!-- 42 -->".into());
 
                         chunks
                     },
@@ -122,8 +122,8 @@ test_fixture!("Text chunk token", {
                             .map(|c| c.to_owned())
                             .collect::<Vec<TextChunk<'static>>>();
 
-                        chunks.first_mut().unwrap().prepend("<before>".into());
-                        chunks.last_mut().unwrap().append("<after>".into());
+                        chunks.first_mut().unwrap().before("<before>".into());
+                        chunks.last_mut().unwrap().after("<after>".into());
                         chunks.iter_mut().for_each(|c| c.remove());
 
                         chunks
@@ -135,11 +135,11 @@ test_fixture!("Text chunk token", {
                     {
                         let mut chunk = chunks[0].to_owned();
 
-                        chunk.prepend("<before>".into());
-                        chunk.append("<after>".into());
+                        chunk.before("<before>".into());
+                        chunk.after("<after>".into());
 
-                        chunk.add_replacement("<div></div>".into());
-                        chunk.add_replacement(factory.try_comment_from("42").unwrap().into());
+                        chunk.replace("<div></div>".into());
+                        chunk.replace(factory.try_comment_from("42").unwrap().into());
 
                         vec![chunk]
                     },

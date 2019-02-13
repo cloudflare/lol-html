@@ -108,15 +108,15 @@ test_fixture!("End tag token", {
                 {
                         let mut tag = tags[0].to_owned();
 
-                        tag.prepend("<div>Hey</div>".into());
-                        tag.prepend(
+                        tag.before("<div>Hey</div>".into());
+                        tag.before(
                             factory
                                 .try_start_tag_from("foo", &[], false)
                                 .unwrap()
                                 .into(),
                         );
-                        tag.append(factory.try_end_tag_from("foo").unwrap().into());
-                        tag.append("<!-- 42 -->".into());
+                        tag.after(factory.try_end_tag_from("foo").unwrap().into());
+                        tag.after("<!-- 42 -->".into());
 
                         tag
                     },
@@ -128,8 +128,8 @@ test_fixture!("End tag token", {
                         let mut tag = tags[0].to_owned();
 
                         tag.remove();
-                        tag.prepend("<before>".into());
-                        tag.append("<after>".into());
+                        tag.before("<before>".into());
+                        tag.after("<after>".into());
 
                         tag
                     },
@@ -140,11 +140,11 @@ test_fixture!("End tag token", {
                     {
                         let mut tag = tags[0].to_owned();
 
-                        tag.prepend("<before>".into());
-                        tag.append("<after>".into());
+                        tag.before("<before>".into());
+                        tag.after("<after>".into());
 
-                        tag.add_replacement("<div></div>".into());
-                        tag.add_replacement(factory.try_comment_from("42").unwrap().into());
+                        tag.replace("<div></div>".into());
+                        tag.replace(factory.try_comment_from("42").unwrap().into());
 
                         tag
                     },

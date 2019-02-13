@@ -27,9 +27,9 @@ impl_from_token!(TextChunk, Comment, StartTag, EndTag, Doctype);
 
 #[derive(Default)]
 pub struct OrderingMutations<'i> {
-    prepends: Vec<Content<'i>>,
+    content_before: Vec<Content<'i>>,
     replacements: Vec<Content<'i>>,
-    appends: Vec<Content<'i>>,
+    content_after: Vec<Content<'i>>,
     removed: bool,
 }
 
@@ -43,17 +43,21 @@ macro_rules! impl_common_token_api {
             }
 
             #[inline]
-            pub fn prepend(&mut self, content: crate::token::Content<'i>) {
-                self.get_ordering_mutations_mut().prepends.push(content);
+            pub fn before(&mut self, content: crate::token::Content<'i>) {
+                self.get_ordering_mutations_mut()
+                    .content_before
+                    .push(content);
             }
 
             #[inline]
-            pub fn append(&mut self, content: crate::token::Content<'i>) {
-                self.get_ordering_mutations_mut().appends.insert(0, content);;
+            pub fn after(&mut self, content: crate::token::Content<'i>) {
+                self.get_ordering_mutations_mut()
+                    .content_after
+                    .insert(0, content);;
             }
 
             #[inline]
-            pub fn add_replacement(&mut self, content: crate::token::Content<'i>) {
+            pub fn replace(&mut self, content: crate::token::Content<'i>) {
                 self.get_ordering_mutations_mut().replacements.push(content);
             }
 
@@ -96,7 +100,7 @@ macro_rules! impl_common_token_api {
             fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
                 match self.ordering_mutations.as_ref() {
                     Some(m) => {
-                        self.serialize_content_list(&m.prepends, output_handler);
+                        self.serialize_content_list(&m.content_before, output_handler);
 
                         if !m.replacements.is_empty() {
                             self.serialize_content_list(&m.replacements, output_handler);
@@ -104,7 +108,7 @@ macro_rules! impl_common_token_api {
                             self.serialize(output_handler);
                         }
 
-                        self.serialize_content_list(&m.appends, output_handler);
+                        self.serialize_content_list(&m.content_after, output_handler);
                     }
                     None => self.serialize(output_handler),
                 }
