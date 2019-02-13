@@ -9,16 +9,13 @@ pub struct EndTag<'i> {
     name: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-
-    // NOTE: we use boxed ordering mutations and lazily initialize it to not
-    // increase stack size of a token with the heavy rarely used structure.
-    ordering_mutations: Option<Box<OrderingMutations<'i>>>,
+    ordering_mutations: OrderingMutations,
 }
 
 impl_common_token_api!(EndTag);
 
 impl<'i> EndTag<'i> {
-    pub(in crate::token) fn new_parsed(
+    pub(in crate::token) fn new(
         name: Bytes<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
@@ -27,35 +24,15 @@ impl<'i> EndTag<'i> {
             name,
             raw: Some(raw),
             encoding,
-            ordering_mutations: None,
+            ordering_mutations: OrderingMutations::default(),
         }
-    }
-
-    pub(in crate::token) fn try_from(
-        name: &str,
-        encoding: &'static Encoding,
-    ) -> Result<Self, Error> {
-        Ok(EndTag {
-            name: try_tag_name_from_str(name, encoding)?,
-            raw: None,
-            encoding,
-            ordering_mutations: None,
-        })
     }
 
     implement_tag_name_accessors!();
 
-    // NOTE: not a trait implementation due to the `Borrow` constraint for
-    // the `Owned` associated type.
-    // See: https://github.com/rust-lang/rust/issues/44950
     #[inline]
-    pub fn to_owned(&self) -> EndTag<'static> {
-        EndTag {
-            name: self.name.to_owned(),
-            raw: Bytes::opt_to_owned(&self.raw),
-            encoding: self.encoding,
-            ordering_mutations: None,
-        }
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        self.raw.as_ref()
     }
 
     #[inline]

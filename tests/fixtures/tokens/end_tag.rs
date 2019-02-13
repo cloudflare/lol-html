@@ -1,158 +1,104 @@
-use cool_thing::token::{EndTag, TagNameError, TokenFactory};
+use cool_thing::token::{EndTag, TagNameError};
 use encoding_rs::{EUC_JP, UTF_8};
 
 test_fixture!("End tag token", {
     test("Empty tag name", {
-        let factory = TokenFactory::new(UTF_8);
-
-        let errs = [
-            factory.try_end_tag_from("").unwrap_err(),
-            factory
-                .try_end_tag_from("foo")
-                .unwrap()
+        parse_token!("</div>", UTF_8, EndTag, |t: &mut EndTag<'_>| {
+            let err = t
                 .set_name("")
-                .unwrap_err(),
-        ];
+                .unwrap_err()
+                .downcast_ref::<TagNameError>()
+                .cloned()
+                .unwrap();
 
-        for err in &errs {
-            assert_eq!(
-                err.downcast_ref::<TagNameError>().cloned(),
-                Some(TagNameError::Empty)
-            );
-        }
+            assert_eq!(err, TagNameError::Empty);
+        });
     });
 
     test("Forbidden characters in tag name", {
-        let factory = TokenFactory::new(UTF_8);
+        parse_token!("</div>", UTF_8, EndTag, |t: &mut EndTag<'_>| for &ch in
+            &[' ', '\n', '\r', '\t', '\x0C', '/', '>']
+        {
+            let err = t
+                .set_name(&format!("foo{}bar", ch))
+                .unwrap_err()
+                .downcast_ref::<TagNameError>()
+                .cloned()
+                .unwrap();
 
-        for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>'] {
-            let name = &format!("foo{}bar", ch);
-
-            let errs = [
-                factory.try_end_tag_from(name).unwrap_err(),
-                factory
-                    .try_end_tag_from("foo")
-                    .unwrap()
-                    .set_name(name)
-                    .unwrap_err(),
-            ];
-
-            for err in &errs {
-                assert_eq!(
-                    err.downcast_ref::<TagNameError>().cloned(),
-                    Some(TagNameError::ForbiddenCharacter(ch))
-                );
-            }
-        }
+            assert_eq!(err, TagNameError::ForbiddenCharacter(ch));
+        });
     });
 
     test("Encoding-unmappable characters in tag name", {
-        let factory = TokenFactory::new(EUC_JP);
-
-        let errs = [
-            factory.try_end_tag_from("foo\u{00F8}bar").unwrap_err(),
-            factory
-                .try_end_tag_from("foo")
-                .unwrap()
+        parse_token!("</div>", EUC_JP, EndTag, |t: &mut EndTag<'_>| {
+            let err = t
                 .set_name("foo\u{00F8}bar")
-                .unwrap_err(),
-        ];
+                .unwrap_err()
+                .downcast_ref::<TagNameError>()
+                .cloned()
+                .unwrap();
 
-        for err in &errs {
-            assert_eq!(
-                err.downcast_ref::<TagNameError>().cloned(),
-                Some(TagNameError::UnencodableCharacter)
-            );
-        }
+            assert_eq!(err, TagNameError::UnencodableCharacter);
+        });
     });
 
     test("Invalid first character of tag name", {
-        let factory = TokenFactory::new(EUC_JP);
+        parse_token!("</div>", UTF_8, EndTag, |t: &mut EndTag<'_>| {
+            let err = t
+                .set_name("1foo")
+                .unwrap_err()
+                .downcast_ref::<TagNameError>()
+                .cloned()
+                .unwrap();
 
-        let errs = [
-            factory.try_end_tag_from("1foo").unwrap_err(),
-            factory
-                .try_end_tag_from("foo")
-                .unwrap()
-                .set_name("-bar")
-                .unwrap_err(),
-        ];
-
-        for err in &errs {
-            assert_eq!(
-                err.downcast_ref::<TagNameError>().cloned(),
-                Some(TagNameError::InvalidFirstCharacter)
-            );
-        }
+            assert_eq!(err, TagNameError::InvalidFirstCharacter);
+        });
     });
 
     test("Serialization", {
-        let src = "</div foo=bar>";
-
-        let test_cases = |tags: Vec<EndTag<'_>>, factory: TokenFactory| {
-            vec![
-                ("Parsed", tags[0].to_owned(), "</div foo=bar>"),
+        serialization_test!(
+            "</div foo=bar>",
+            EndTag,
+            &[
+                ("Parsed", Box::new(|_| {}), "</div foo=bar>"),
                 (
                     "Modified name",
-                    {
-                        let mut tag = tags[0].to_owned();
-
-                        tag.set_name("span").unwrap();
-
-                        tag
-                    },
+                    Box::new(|t| {
+                        t.set_name("span").unwrap();
+                    }),
                     "</span>",
                 ),
                 (
-                "With prepends and appends",
-                {
-                        let mut tag = tags[0].to_owned();
-
-                        tag.before("<div>Hey</div>".into());
-                        tag.before(
-                            factory
-                                .try_start_tag_from("foo", &[], false)
-                                .unwrap()
-                                .into(),
-                        );
-                        tag.after(factory.try_end_tag_from("foo").unwrap().into());
-                        tag.after("<!-- 42 -->".into());
-
-                        tag
-                    },
+                    "With prepends and appends",
+                    Box::new(|t| {
+                        t.before("<div>Hey</div>");
+                        t.before("<foo>");
+                        t.after("</foo>");
+                        t.after("<!-- 42 -->");
+                    }),
                     "<div>Hey</div><foo></div foo=bar><!-- 42 --></foo>",
                 ),
                 (
                     "Removed",
-                    {
-                        let mut tag = tags[0].to_owned();
-
-                        tag.remove();
-                        tag.before("<before>".into());
-                        tag.after("<after>".into());
-
-                        tag
-                    },
+                    Box::new(|t| {
+                        t.remove();
+                        t.before("<before>");
+                        t.after("<after>");
+                    }),
                     "<before><after>",
                 ),
                 (
                     "Replaced",
-                    {
-                        let mut tag = tags[0].to_owned();
-
-                        tag.before("<before>".into());
-                        tag.after("<after>".into());
-
-                        tag.replace("<div></div>".into());
-                        tag.replace(factory.try_comment_from("42").unwrap().into());
-
-                        tag
-                    },
+                    Box::new(|t| {
+                        t.before("<before>");
+                        t.after("<after>");
+                        t.replace("<div></div>");
+                        t.replace("<!--42-->");
+                    }),
                     "<before><div></div><!--42--><after>",
                 ),
             ]
-        };
-
-        serialization_test!(EndTag, END_TAGS, src, test_cases);
+        );
     });
 });

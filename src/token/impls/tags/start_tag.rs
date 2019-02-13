@@ -12,16 +12,13 @@ pub struct StartTag<'i> {
     self_closing: bool,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-
-    // NOTE: we use boxed ordering mutations and lazily initialize it to not
-    // increase stack size of a token with the heavy rarely used structure.
-    ordering_mutations: Option<Box<OrderingMutations<'i>>>,
+    ordering_mutations: OrderingMutations,
 }
 
 impl_common_token_api!(StartTag);
 
 impl<'i> StartTag<'i> {
-    pub(in crate::token) fn new_parsed(
+    pub(in crate::token) fn new(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         self_closing: bool,
@@ -34,24 +31,8 @@ impl<'i> StartTag<'i> {
             self_closing,
             raw: Some(raw),
             encoding,
-            ordering_mutations: None,
+            ordering_mutations: OrderingMutations::default(),
         }
-    }
-
-    pub(in crate::token) fn try_from(
-        name: &str,
-        attributes: &[(&str, &str)],
-        self_closing: bool,
-        encoding: &'static Encoding,
-    ) -> Result<Self, Error> {
-        Ok(StartTag {
-            name: try_tag_name_from_str(name, encoding)?,
-            attributes: Attributes::try_from(attributes, encoding)?,
-            self_closing,
-            raw: None,
-            encoding,
-            ordering_mutations: None,
-        })
     }
 
     implement_tag_name_accessors!();
@@ -107,19 +88,9 @@ impl<'i> StartTag<'i> {
         self.raw = None;
     }
 
-    // NOTE: not a trait implementation due to the `Borrow` constraint for
-    // the `Owned` associated type.
-    // See: https://github.com/rust-lang/rust/issues/44950
     #[inline]
-    pub fn to_owned(&self) -> StartTag<'static> {
-        StartTag {
-            name: self.name.to_owned(),
-            attributes: self.attributes.to_owned(),
-            self_closing: self.self_closing,
-            raw: Bytes::opt_to_owned(&self.raw),
-            encoding: self.encoding,
-            ordering_mutations: None,
-        }
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        self.raw.as_ref()
     }
 
     #[inline]

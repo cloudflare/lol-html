@@ -17,16 +17,13 @@ pub struct Comment<'i> {
     text: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-
-    // NOTE: we use boxed ordering mutations and lazily initialize it to not
-    // increase stack size of a token with the heavy rarely used structure.
-    ordering_mutations: Option<Box<OrderingMutations<'i>>>,
+    ordering_mutations: OrderingMutations,
 }
 
 impl_common_token_api!(Comment);
 
 impl<'i> Comment<'i> {
-    pub(in crate::token) fn new_parsed(
+    pub(in crate::token) fn new(
         text: Bytes<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
@@ -35,20 +32,8 @@ impl<'i> Comment<'i> {
             text,
             raw: Some(raw),
             encoding,
-            ordering_mutations: None,
+            ordering_mutations: OrderingMutations::default(),
         }
-    }
-
-    pub(in crate::token) fn try_from(
-        text: &str,
-        encoding: &'static Encoding,
-    ) -> Result<Self, Error> {
-        Ok(Comment {
-            text: Comment::text_from_str(text, encoding)?,
-            raw: None,
-            encoding,
-            ordering_mutations: None,
-        })
     }
 
     #[inline]
@@ -58,26 +43,6 @@ impl<'i> Comment<'i> {
 
     #[inline]
     pub fn set_text(&mut self, text: &str) -> Result<(), Error> {
-        self.text = Comment::text_from_str(text, self.encoding)?;
-        self.raw = None;
-
-        Ok(())
-    }
-
-    // NOTE: not a trait implementation due to the `Borrow` constraint for
-    // the `Owned` associated type.
-    // See: https://github.com/rust-lang/rust/issues/44950
-    #[inline]
-    pub fn to_owned(&self) -> Comment<'static> {
-        Comment {
-            text: self.text.to_owned(),
-            raw: Bytes::opt_to_owned(&self.raw),
-            encoding: self.encoding,
-            ordering_mutations: None,
-        }
-    }
-
-    fn text_from_str(text: &str, encoding: &'static Encoding) -> Result<Bytes<'static>, Error> {
         if text.find("-->").is_some() {
             Err(CommentTextError::CommentClosingSequence.into())
         } else {
@@ -85,11 +50,21 @@ impl<'i> Comment<'i> {
             // encoding then encoding_rs replaces it with a numeric
             // character reference. Character references are not
             // supported in comments, so we need to bail.
-            match Bytes::from_str_without_replacements(text, encoding) {
-                Some(name) => Ok(name.into_owned()),
+            match Bytes::from_str_without_replacements(text, self.encoding) {
+                Some(text) => {
+                    self.text = text.into_owned();
+                    self.raw = None;
+
+                    Ok(())
+                }
                 None => Err(CommentTextError::UnencodableCharacter.into()),
             }
         }
+    }
+
+    #[inline]
+    fn raw(&self) -> Option<&Bytes<'_>> {
+        self.raw.as_ref()
     }
 
     #[inline]

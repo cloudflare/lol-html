@@ -13,7 +13,7 @@ pub struct Doctype<'i> {
 }
 
 impl<'i> Doctype<'i> {
-    pub(in crate::token) fn new_parsed(
+    pub(in crate::token) fn new(
         name: Option<Bytes<'i>>,
         public_id: Option<Bytes<'i>>,
         system_id: Option<Bytes<'i>>,
@@ -55,21 +55,6 @@ impl<'i> Doctype<'i> {
     #[inline]
     pub fn force_quirks(&self) -> bool {
         self.force_quirks
-    }
-
-    // NOTE: not a trait implementation due to the `Borrow` constraint for
-    // the `Owned` associated type.
-    // See: https://github.com/rust-lang/rust/issues/44950
-    #[inline]
-    pub fn to_owned(&self) -> Doctype<'static> {
-        Doctype {
-            name: Bytes::opt_to_owned(&self.name),
-            public_id: Bytes::opt_to_owned(&self.public_id),
-            system_id: Bytes::opt_to_owned(&self.system_id),
-            force_quirks: self.force_quirks,
-            raw: self.raw.to_owned(),
-            encoding: self.encoding,
-        }
     }
 }
 

@@ -28,7 +28,11 @@ impl From<String> for ChunkedInput {
 }
 
 impl ChunkedInput {
-    pub fn init(&mut self, encoding: &'static Encoding) -> Result<usize, Error> {
+    pub fn init(
+        &mut self,
+        encoding: &'static Encoding,
+        single_chunk: bool,
+    ) -> Result<usize, Error> {
         let (bytes, _, had_unmappable_chars) = encoding.encode(&self.input);
 
         // NOTE: Input had unmappable characters for this encoding which were
@@ -49,13 +53,17 @@ impl ChunkedInput {
 
         self.encoding = Some(encoding);
 
-        let chunk_size = match env::var("CHUNK_SIZE") {
-            Ok(val) => val.parse().unwrap(),
-            Err(_) => {
-                if len > 1 {
-                    thread_rng().gen_range(1, len)
-                } else {
-                    len
+        let chunk_size = if single_chunk {
+            len
+        } else {
+            match env::var("CHUNK_SIZE") {
+                Ok(val) => val.parse().unwrap(),
+                Err(_) => {
+                    if len > 1 {
+                        thread_rng().gen_range(1, len)
+                    } else {
+                        len
+                    }
                 }
             }
         };

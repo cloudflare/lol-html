@@ -19,7 +19,7 @@ bitflags! {
 #[derive(Debug)]
 pub enum TokenCaptureEvent<'i> {
     LexemeConsumed,
-    TokenProduced(Token<'i>),
+    TokenProduced(Box<Token<'i>>),
 }
 
 pub struct TokenCapture {
@@ -71,9 +71,14 @@ impl TokenCapture {
             consumed += read;
 
             if written > 0 || last {
-                event_handler(TokenCaptureEvent::TokenProduced(Token::TextChunk(
-                    TextChunk::new_parsed(&buffer[..written], self.last_text_type, last, encoding),
-                )));
+                let token = Token::TextChunk(TextChunk::new(
+                    &buffer[..written],
+                    self.last_text_type,
+                    last,
+                    encoding,
+                ));
+
+                event_handler(TokenCaptureEvent::TokenProduced(Box::new(token)));
             }
 
             if let CoderResult::InputEmpty = status {
@@ -92,40 +97,43 @@ impl TokenCapture {
             ( $Type:ident ($($args:expr),+) ) => {
                 event_handler(TokenCaptureEvent::LexemeConsumed);
 
-                event_handler(TokenCaptureEvent::TokenProduced(Token::$Type($Type::new_parsed(
+                let token = Token::$Type($Type::new(
                     $($args),+,
                     lexeme.raw(),
                     self.encoding
-                ))));
+                ));
+
+                event_handler(TokenCaptureEvent::TokenProduced(Box::new(token)));
             };
         }
 
-        match token_outline {
-            &TokenOutline::Comment(text)
+        match *token_outline {
+            TokenOutline::Comment(text)
                 if self.capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
             {
                 capture!(Comment(lexeme.part(text)));
             }
 
-            &TokenOutline::StartTag {
+            TokenOutline::StartTag {
                 name,
                 ref attributes,
                 self_closing,
                 ..
             } if self.capture_flags.contains(TokenCaptureFlags::START_TAGS) => {
-                let attributes =
-                    ParsedAttributeList::new(lexeme.input(), Rc::clone(attributes), self.encoding);
-
-                capture!(StartTag(lexeme.part(name), attributes.into(), self_closing));
+                capture!(StartTag(
+                    lexeme.part(name),
+                    Attributes::new(lexeme.input(), Rc::clone(attributes), self.encoding),
+                    self_closing
+                ));
             }
 
-            &TokenOutline::EndTag { name, .. }
+            TokenOutline::EndTag { name, .. }
                 if self.capture_flags.contains(TokenCaptureFlags::END_TAGS) =>
             {
                 capture!(EndTag(lexeme.part(name)));
             }
 
-            &TokenOutline::Doctype {
+            TokenOutline::Doctype {
                 name,
                 public_id,
                 system_id,
@@ -137,11 +145,6 @@ impl TokenCapture {
                     lexeme.opt_part(system_id),
                     force_quirks
                 ));
-            }
-
-            TokenOutline::Eof if self.capture_flags.contains(TokenCaptureFlags::EOF) => {
-                event_handler(TokenCaptureEvent::LexemeConsumed);
-                event_handler(TokenCaptureEvent::TokenProduced(Token::Eof));
             }
             _ => (),
         }

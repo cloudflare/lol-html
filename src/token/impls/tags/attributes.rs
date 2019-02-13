@@ -28,12 +28,7 @@ pub struct Attribute<'i> {
 }
 
 impl<'i> Attribute<'i> {
-    fn new_parsed(
-        name: Bytes<'i>,
-        value: Bytes<'i>,
-        raw: Bytes<'i>,
-        encoding: &'static Encoding,
-    ) -> Self {
+    fn new(name: Bytes<'i>, value: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
         Attribute {
             name,
             value,
@@ -71,19 +66,6 @@ impl<'i> Attribute<'i> {
             raw: None,
             encoding,
         })
-    }
-
-    // NOTE: not a trait implementation due to the `Borrow` constraint for
-    // the `Owned` associated type.
-    // See: https://github.com/rust-lang/rust/issues/44950
-    #[inline]
-    pub fn to_owned(&self) -> Attribute<'static> {
-        Attribute {
-            name: self.name.to_owned(),
-            value: self.value.to_owned(),
-            raw: Bytes::opt_to_owned(&self.raw),
-            encoding: self.encoding,
-        }
     }
 
     #[inline]
@@ -131,92 +113,24 @@ impl Debug for Attribute<'_> {
     }
 }
 
-pub struct ParsedAttributeList<'i> {
+pub struct Attributes<'i> {
     input: &'i Chunk<'i>,
     attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
     items: LazyCell<Vec<Attribute<'i>>>,
     encoding: &'static Encoding,
 }
 
-impl<'i> ParsedAttributeList<'i> {
+impl<'i> Attributes<'i> {
     pub(in crate::token) fn new(
         input: &'i Chunk<'i>,
         attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
         encoding: &'static Encoding,
     ) -> Self {
-        ParsedAttributeList {
+        Attributes {
             input,
             attribute_views,
             items: LazyCell::default(),
             encoding,
-        }
-    }
-
-    fn init_items(&self) -> Vec<Attribute<'i>> {
-        self.attribute_views
-            .borrow()
-            .iter()
-            .map(|a| {
-                Attribute::new_parsed(
-                    self.input.slice(a.name),
-                    self.input.slice(a.value),
-                    self.input.slice(a.raw_range),
-                    self.encoding,
-                )
-            })
-            .collect()
-    }
-
-    #[inline]
-    fn as_mut_vec(&mut self) -> &mut Vec<Attribute<'i>> {
-        // NOTE: we can't use borrow_mut_with here as we'll need
-        // because `self` is a mutable reference and we'll have
-        // two mutable references by passing it to the initializer
-        // closure.
-        if !self.items.filled() {
-            self.items
-                .fill(self.init_items())
-                .expect("Cell should be empty at this point");
-        }
-
-        self.items
-            .borrow_mut()
-            .expect("Items should be initialized")
-    }
-}
-
-impl<'i> Deref for ParsedAttributeList<'i> {
-    type Target = [Attribute<'i>];
-
-    #[inline]
-    fn deref(&self) -> &[Attribute<'i>] {
-        self.items.borrow_with(|| self.init_items())
-    }
-}
-
-pub enum Attributes<'i> {
-    Parsed(ParsedAttributeList<'i>),
-    Custom(Vec<Attribute<'i>>),
-}
-
-impl<'i> Attributes<'i> {
-    pub(super) fn try_from(
-        items: &[(&str, &str)],
-        encoding: &'static Encoding,
-    ) -> Result<Self, Error> {
-        Ok(Attributes::Custom(
-            items
-                .iter()
-                .map(|(name, value)| Attribute::try_from(name, value, encoding))
-                .collect::<Result<_, _>>()?,
-        ))
-    }
-
-    #[inline]
-    fn as_mut_vec(&mut self) -> &mut Vec<Attribute<'i>> {
-        match self {
-            Attributes::Parsed(l) => l.as_mut_vec(),
-            Attributes::Custom(l) => l,
         }
     }
 
@@ -256,12 +170,45 @@ impl<'i> Attributes<'i> {
         false
     }
 
-    // NOTE: not a trait implementation due to the `Borrow` constraint for
-    // the `Owned` associated type.
-    // See: https://github.com/rust-lang/rust/issues/44950
+    fn init_items(&self) -> Vec<Attribute<'i>> {
+        self.attribute_views
+            .borrow()
+            .iter()
+            .map(|a| {
+                Attribute::new(
+                    self.input.slice(a.name),
+                    self.input.slice(a.value),
+                    self.input.slice(a.raw_range),
+                    self.encoding,
+                )
+            })
+            .collect()
+    }
+
     #[inline]
-    pub fn to_owned(&self) -> Attributes<'static> {
-        Attributes::Custom(self.iter().map(|a| a.to_owned()).collect())
+    fn as_mut_vec(&mut self) -> &mut Vec<Attribute<'i>> {
+        // NOTE: we can't use borrow_mut_with here as we'll need
+        // because `self` is a mutable reference and we'll have
+        // two mutable references by passing it to the initializer
+        // closure.
+        if !self.items.filled() {
+            self.items
+                .fill(self.init_items())
+                .expect("Cell should be empty at this point");
+        }
+
+        self.items
+            .borrow_mut()
+            .expect("Items should be initialized")
+    }
+}
+
+impl<'i> Deref for Attributes<'i> {
+    type Target = [Attribute<'i>];
+
+    #[inline]
+    fn deref(&self) -> &[Attribute<'i>] {
+        self.items.borrow_with(|| self.init_items())
     }
 }
 
@@ -278,24 +225,6 @@ impl Serialize for Attributes<'_> {
                     output_handler(b" ");
                 }
             }
-        }
-    }
-}
-
-impl<'i> From<ParsedAttributeList<'i>> for Attributes<'i> {
-    fn from(list: ParsedAttributeList<'i>) -> Self {
-        Attributes::Parsed(list)
-    }
-}
-
-impl<'i> Deref for Attributes<'i> {
-    type Target = [Attribute<'i>];
-
-    #[inline]
-    fn deref(&self) -> &[Attribute<'i>] {
-        match self {
-            Attributes::Parsed(l) => l,
-            Attributes::Custom(l) => l,
         }
     }
 }

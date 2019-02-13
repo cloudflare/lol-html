@@ -85,8 +85,6 @@ fn get_test_cases() -> Vec<TestCase> {
                 );
                 None
             } else {
-                // NOTE: parser should always produce EOF token
-                t.expected_tokens.push(TestToken::Eof);
                 Some(t)
             }
         })
@@ -96,7 +94,7 @@ fn get_test_cases() -> Vec<TestCase> {
                 .filter_map(|encoding| {
                     let mut t = t.to_owned();
 
-                    match t.input.init(encoding) {
+                    match t.input.init(encoding, false) {
                         Ok(chunk_size) => {
                             let mut new_descr = String::new();
 

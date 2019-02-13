@@ -19,7 +19,6 @@ fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<
             TestToken::EndTag { .. } if capture_flags.contains(TokenCaptureFlags::END_TAGS) => true,
             TestToken::Comment(_) if capture_flags.contains(TokenCaptureFlags::COMMENTS) => true,
             TestToken::Text(_) if capture_flags.contains(TokenCaptureFlags::TEXT) => true,
-            TestToken::Eof if capture_flags.contains(TokenCaptureFlags::EOF) => true,
             _ => false,
         })
         .collect()
@@ -73,7 +72,7 @@ impl FunctionalTestFixture for TokenCaptureTests {
                 capture_flags,
                 initial_text_type,
                 last_start_tag_name_hash,
-                Box::new(|t| token_list.push(t.to_owned())),
+                Box::new(|t| token_list.push(t)),
             );
 
             let mut actual_tokens = token_list.into();

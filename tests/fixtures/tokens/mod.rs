@@ -1,51 +1,64 @@
-macro_rules! serialization_test {
-    ($TokenType:ident, $CAPTURE_FLAG:ident, $input:expr, $get_test_cases:expr) => {
+macro_rules! parse_token {
+    ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
         use crate::harness::parsing::{parse, ChunkedInput};
-        use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
         use cool_thing::parser::TextType;
-        use cool_thing::token::{Serialize, Token, TokenCaptureFlags, TokenFactory};
-        use encoding_rs::Encoding;
+        use cool_thing::token::{Token, TokenCaptureFlags};
 
-        fn get_tokens(input: &'static str, enc: &'static Encoding) -> Vec<$TokenType<'static>> {
-            let mut input: ChunkedInput = String::from(input).into();
-            let mut tokens = Vec::new();
+        let mut input: ChunkedInput = String::from($input).into();
+        let mut emitted = false;
 
-            input.init(enc).unwrap();
+        input.init($encoding, true).unwrap();
 
-            parse(
-                &input,
-                TokenCaptureFlags::$CAPTURE_FLAG,
-                TextType::Data,
-                None,
-                Box::new(|t| match t {
-                    Token::$TokenType(t) => tokens.push(t.to_owned()),
-                    _ => unreachable!(),
-                }),
-            )
-            .unwrap();
+        parse(
+            &input,
+            TokenCaptureFlags::all(),
+            TextType::Data,
+            None,
+            Box::new(|t| match t {
+                Token::$TokenType(t) => {
+                    // NOTE: we always have two text chunks:
+                    // one with the actual text and the second is emitted
+                    // on EOF to signify the end of the text node.
+                    // We need to invoke callback only for the first one.
+                    if !emitted {
+                        $callback(t);
+                        emitted = true;
+                    }
+                }
+                _ => unreachable!("Input should contain only tokens of the requested type"),
+            }),
+        )
+        .unwrap();
+    }};
+}
 
-            tokens
-        }
+macro_rules! serialization_test {
+    ($input:expr, $TokenType:ident, $test_cases:expr) => {
+        use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
+        use cool_thing::token::Serialize;
 
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let tokens = get_tokens($input, enc);
-            let get_test_cases = $get_test_cases;
-            let factory = TokenFactory::new(enc);
+        // NOTE: give test cases type annotation to avoid boilerplate code in tests.
+        let test_cases: &[(&'static str, Box<Fn(&mut $TokenType<'_>)>, &'static str)] = $test_cases;
 
-            for (case_name, tokens, expected) in get_test_cases(tokens, factory).into_iter() {
-                let mut bytes = Vec::new();
+        for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            for (case_name, transform, expected) in test_cases {
+                parse_token!($input, encoding, $TokenType, |t: &mut $TokenType<'_>| {
+                    let mut bytes = Vec::new();
 
-                tokens.to_bytes(&mut |c| bytes.extend_from_slice(c));
+                    transform(t);
 
-                let actual = enc.decode(&bytes).0.into_owned();
+                    t.to_bytes(&mut |c| bytes.extend_from_slice(c));
 
-                assert_eq!(
-                    actual,
-                    expected,
-                    "Test case: {} Encoding: {}",
-                    case_name,
-                    enc.name()
-                );
+                    let actual = encoding.decode(&bytes).0.into_owned();
+
+                    assert_eq!(
+                        actual,
+                        *expected,
+                        "Test case: {} Encoding: {}",
+                        case_name,
+                        encoding.name()
+                    );
+                });
             }
         }
     };

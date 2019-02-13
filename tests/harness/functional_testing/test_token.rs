@@ -39,8 +39,6 @@ pub enum TestToken {
         system_id: Option<String>,
         force_quirks: bool,
     },
-
-    Eof,
 }
 
 impl<'de> Deserialize<'de> for TestToken {
@@ -160,7 +158,6 @@ impl Unescape for TestToken {
                 public_id.unescape()?;
                 system_id.unescape()?;
             }
-            TestToken::Eof => (),
         }
         Ok(())
     }
@@ -170,7 +167,7 @@ impl Unescape for TestToken {
 pub struct TestTokenList(Vec<TestToken>);
 
 impl TestTokenList {
-    pub fn push(&mut self, token: Token<'_>) {
+    pub fn push(&mut self, token: &Token<'_>) {
         match token {
             Token::TextChunk(t) => {
                 let text = t.as_str();
@@ -215,8 +212,6 @@ impl TestTokenList {
                 system_id: t.system_id().map(|s| to_null_decoded(&s)),
                 force_quirks: t.force_quirks(),
             }),
-
-            Token::Eof => self.0.push(TestToken::Eof),
         }
     }
 }
