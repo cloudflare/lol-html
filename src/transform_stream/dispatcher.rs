@@ -21,7 +21,7 @@ pub trait TransformController {
     fn handle_token(&mut self, token: &mut Token<'_>);
 }
 
-pub struct Writer<C, O>
+pub struct Dispatcher<C, O>
 where
     C: TransformController,
     O: OutputSink,
@@ -32,7 +32,7 @@ where
     token_capture: TokenCapture,
 }
 
-impl<C, O> Writer<C, O>
+impl<C, O> Dispatcher<C, O>
 where
     C: TransformController,
     O: OutputSink,
@@ -40,7 +40,7 @@ where
     pub fn new(transform_controller: C, output_sink: O, encoding: &'static Encoding) -> Self {
         let initial_capture_flags = transform_controller.get_initial_token_capture_flags();
 
-        Writer {
+        Dispatcher {
             transform_controller: RefCell::new(transform_controller),
             output_sink: RefCell::new(output_sink),
             last_consumed_lexeme_end: 0,
@@ -48,7 +48,6 @@ where
         }
     }
 
-    #[inline]
     pub fn flush_remaining_input(&mut self, input: &Chunk<'_>, blocked_byte_count: usize) {
         let output = input.slice(Range {
             start: self.last_consumed_lexeme_end,
@@ -93,7 +92,7 @@ where
     }
 }
 
-impl<C, O> LexemeSink for Writer<C, O>
+impl<C, O> LexemeSink for Dispatcher<C, O>
 where
     C: TransformController,
     O: OutputSink,
@@ -116,7 +115,7 @@ where
     }
 }
 
-impl<C, O> TagHintSink for Writer<C, O>
+impl<C, O> TagHintSink for Dispatcher<C, O>
 where
     C: TransformController,
     O: OutputSink,
@@ -129,7 +128,7 @@ where
     }
 }
 
-impl<C, O> ParserOutputSink for Writer<C, O>
+impl<C, O> ParserOutputSink for Dispatcher<C, O>
 where
     C: TransformController,
     O: OutputSink,

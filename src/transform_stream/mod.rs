@@ -1,6 +1,6 @@
-mod writer;
+mod dispatcher;
 
-use self::writer::{OutputSink, Writer};
+use self::dispatcher::{Dispatcher, OutputSink};
 use crate::base::{Buffer, Chunk};
 use crate::parser::{NextOutputType, Parser};
 use encoding_rs::Encoding;
@@ -8,7 +8,7 @@ use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::writer::TransformController;
+pub use self::dispatcher::TransformController;
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
@@ -28,8 +28,8 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    writer: Rc<RefCell<Writer<C, O>>>,
-    parser: Parser<Writer<C, O>>,
+    dispatcher: Rc<RefCell<Dispatcher<C, O>>>,
+    parser: Parser<Dispatcher<C, O>>,
     buffer: Buffer,
     has_buffered_data: bool,
     finished: bool,
@@ -55,15 +55,15 @@ where
             NextOutputType::Lexeme
         };
 
-        let writer = Rc::new(RefCell::new(Writer::new(
+        let dispatcher = Rc::new(RefCell::new(Dispatcher::new(
             transform_controller,
             output_sink,
             encoding,
         )));
 
         TransformStream {
-            parser: Parser::new(&writer, initial_output_type),
-            writer,
+            parser: Parser::new(&dispatcher, initial_output_type),
+            dispatcher,
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
             finished: false,
@@ -111,7 +111,7 @@ where
 
         let blocked_byte_count = self.parser.parse(&chunk)?;
 
-        self.writer
+        self.dispatcher
             .borrow_mut()
             .flush_remaining_input(&chunk, blocked_byte_count);
 
@@ -141,13 +141,16 @@ where
         trace!(@chunk chunk);
 
         self.parser.parse(&chunk)?;
-        self.writer.borrow_mut().flush_remaining_input(&chunk, 0);
+
+        self.dispatcher
+            .borrow_mut()
+            .flush_remaining_input(&chunk, 0);
 
         Ok(())
     }
 
     #[cfg(feature = "testing_api")]
-    pub fn parser(&mut self) -> &mut Parser<Writer<C, O>> {
+    pub fn parser(&mut self) -> &mut Parser<Dispatcher<C, O>> {
         &mut self.parser
     }
 }
