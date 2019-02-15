@@ -76,15 +76,17 @@ impl<S: TagHintSink> EagerStateMachine<S> {
             end: self.input_cursor.pos(),
         };
 
-        let tag_type = if self.is_in_end_tag {
+        let name_info = TagNameInfo::new(input, name_range, self.tag_name_hash);
+
+        if self.is_in_end_tag {
             self.is_in_end_tag = false;
-            TagType::EndTag
+
+            TagHint::EndTag(name_info)
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;
-            TagType::StartTag
-        };
 
-        TagHint::new(input, tag_type, name_range, self.tag_name_hash)
+            TagHint::StartTag(name_info)
+        }
     }
 
     fn get_feedback_for_tag(
@@ -92,10 +94,11 @@ impl<S: TagHintSink> EagerStateMachine<S> {
         tag_hint: &TagHint<'_>,
     ) -> Result<TreeBuilderFeedback, Error> {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
-        let name_hash = tag_hint.name_hash();
 
-        Ok(match tag_hint.tag_type() {
-            TagType::StartTag => {
+        Ok(match tag_hint {
+            TagHint::StartTag(name_info) => {
+                let name_hash = name_info.name_hash();
+
                 feedback_providers
                     .ambiguity_guard
                     .track_start_tag(name_hash)?;
@@ -104,7 +107,9 @@ impl<S: TagHintSink> EagerStateMachine<S> {
                     .tree_builder_simulator
                     .get_feedback_for_start_tag_name(name_hash)
             }
-            TagType::EndTag => {
+            TagHint::EndTag(name_info) => {
+                let name_hash = name_info.name_hash();
+
                 feedback_providers.ambiguity_guard.track_end_tag(name_hash);
 
                 feedback_providers
