@@ -1,6 +1,7 @@
+use super::TransformController;
 use crate::base::{Chunk, Range};
 use crate::parser::{Lexeme, LexemeSink, NextOutputType, ParserOutputSink, TagHint, TagHintSink};
-use crate::token::{Serialize, Token, TokenCapture, TokenCaptureEvent, TokenCaptureFlags};
+use crate::token::{Serialize, TokenCapture, TokenCaptureEvent};
 use encoding_rs::Encoding;
 use std::cell::RefCell;
 
@@ -14,12 +15,15 @@ impl<F: FnMut(&[u8])> OutputSink for F {
     }
 }
 
-pub trait TransformController {
-    fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags;
-    fn get_token_capture_flags_for_tag(&mut self, tag_lexeme: &Lexeme<'_>) -> NextOutputType;
-    fn get_token_capture_flags_for_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> NextOutputType;
-    fn handle_token(&mut self, token: &mut Token<'_>);
-}
+// handle_element_start(tag_name, tag_name_hash, ns)
+// -> ElementStartResponse {
+//  GetFullInfo(Fn -> ElementContentSettings) //attrs, self closing, ns
+//  ElementContentSettings
+// }
+
+// handle_element_end(tag_name)
+// -> ElementEndContentSettings
+// TrasformController - separate file
 
 pub struct Dispatcher<C, O>
 where

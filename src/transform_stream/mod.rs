@@ -1,4 +1,5 @@
 mod dispatcher;
+mod transform_controller;
 
 use self::dispatcher::{Dispatcher, OutputSink};
 use crate::base::{Buffer, Chunk};
@@ -8,7 +9,7 @@ use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::dispatcher::TransformController;
+pub use self::transform_controller::TransformController;
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
