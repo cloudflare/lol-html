@@ -1,7 +1,7 @@
 mod capture;
 mod impls;
 
-pub use self::capture::{TokenCapture, TokenCaptureEvent, TokenCaptureFlags};
+pub use self::capture::*;
 pub use self::impls::*;
 
 pub trait Serialize {

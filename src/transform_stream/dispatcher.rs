@@ -15,14 +15,14 @@ impl<F: FnMut(&[u8])> OutputSink for F {
     }
 }
 
-// handle_element_start(tag_name, tag_name_hash, ns)
+// handle_element_start(tag_name_info)
 // -> ElementStartResponse {
-//  GetFullInfo(Fn -> ElementContentSettings) //attrs, self closing, ns
-//  ElementContentSettings
+//  GetFullInfo(Fn -> StartTagResponse) //attrs, self closing, ns
+//  ContentSettingsOnElementStart
 // }
 
-// handle_element_end(tag_name)
-// -> ElementEndContentSettings
+// handle_element_end(tag_name_info)
+// -> ContentSettingsOnElementEnd
 // TrasformController - separate file
 
 pub struct Dispatcher<C, O>

@@ -5,14 +5,19 @@ use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use std::rc::Rc;
 
+pub const CAPTURE_TEXT: u8 = 0b0000_0001;
+pub const CAPTURE_COMMENTS: u8 = 0b0000_0010;
+pub const CAPTURE_START_TAGS: u8 = 0b0000_0100;
+pub const CAPTURE_END_TAGS: u8 = 0b0000_1000;
+pub const CAPTURE_DOCTYPES: u8 = 0b0001_0000;
+
 bitflags! {
     pub struct TokenCaptureFlags: u8 {
-        const TEXT = 0b0000_0001;
-        const COMMENTS = 0b0000_0010;
-        const START_TAGS = 0b0000_0100;
-        const END_TAGS = 0b0000_1000;
-        const DOCTYPES = 0b0001_0000;
-        const EOF = 0b0010_0000;
+        const TEXT = CAPTURE_TEXT;
+        const COMMENTS = CAPTURE_COMMENTS;
+        const START_TAGS = CAPTURE_START_TAGS;
+        const END_TAGS = CAPTURE_END_TAGS;
+        const DOCTYPES = CAPTURE_DOCTYPES;
     }
 }
 
