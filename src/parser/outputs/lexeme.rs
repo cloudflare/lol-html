@@ -2,18 +2,17 @@ use super::token_outline::*;
 use crate::base::{Bytes, Chunk, Range};
 use std::fmt::{self, Debug, Write};
 
-pub struct Lexeme<'i> {
+pub struct Lexeme<'i, T> {
     input: &'i Chunk<'i>,
     raw_range: Range,
-    token_outline: Option<TokenOutline>,
+    token_outline: T,
 }
 
-impl<'i> Lexeme<'i> {
-    pub fn new(
-        input: &'i Chunk<'i>,
-        token_outline: Option<TokenOutline>,
-        raw_range: Range,
-    ) -> Self {
+pub type TagLexeme<'i> = Lexeme<'i, TagTokenOutline>;
+pub type NonTagContentLexeme<'i> = Lexeme<'i, Option<NonTagContentTokenOutline>>;
+
+impl<'i, T> Lexeme<'i, T> {
+    pub fn new(input: &'i Chunk<'i>, token_outline: T, raw_range: Range) -> Self {
         Lexeme {
             input,
             raw_range,
@@ -27,8 +26,8 @@ impl<'i> Lexeme<'i> {
     }
 
     #[inline]
-    pub fn token_outline(&self) -> Option<&TokenOutline> {
-        self.token_outline.as_ref()
+    pub fn token_outline(&self) -> &T {
+        &self.token_outline
     }
 
     #[inline]
@@ -52,7 +51,7 @@ impl<'i> Lexeme<'i> {
     }
 }
 
-impl Debug for Lexeme<'_> {
+impl<T: Debug> Debug for Lexeme<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut builder = f.debug_struct("Lexeme");
         let mut pretty_raw = self.input.as_debug_string();
@@ -65,12 +64,9 @@ impl Debug for Lexeme<'_> {
         pretty_raw.insert_str(self.raw_range.end, &end);
         pretty_raw.insert_str(self.raw_range.start, &start);
 
-        builder.field("raw", &pretty_raw);
-
-        if let Some(token_outline) = self.token_outline() {
-            builder.field("token_outline", token_outline);
-        }
-
-        builder.finish()
+        builder
+            .field("raw", &pretty_raw)
+            .field("token_outline", self.token_outline())
+            .finish()
     }
 }

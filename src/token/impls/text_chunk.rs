@@ -1,6 +1,6 @@
 use crate::base::Bytes;
 use crate::parser::TextType;
-use crate::token::OrderingMutations;
+use crate::token::{OrderingMutations, Token};
 use encoding_rs::Encoding;
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
@@ -16,19 +16,19 @@ pub struct TextChunk<'i> {
 impl_common_token_api!(TextChunk);
 
 impl<'i> TextChunk<'i> {
-    pub(in crate::token) fn new(
+    pub(in crate::token) fn new_token(
         text: &'i str,
         text_type: TextType,
         last_in_text_node: bool,
         encoding: &'static Encoding,
-    ) -> Self {
-        TextChunk {
+    ) -> Token<'i> {
+        Token::TextChunk(TextChunk {
             text: text.into(),
             text_type,
             last_in_text_node,
             encoding,
             ordering_mutations: OrderingMutations::default(),
-        }
+        })
     }
 
     #[inline]

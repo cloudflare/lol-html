@@ -19,14 +19,8 @@ impl Align for AttributeOultine {
     }
 }
 
-// TODO create shortcuts for id and class attributes
-// without necessity to iterate over attributes vector.
 #[derive(Debug)]
-pub enum TokenOutline {
-    Text(TextType),
-
-    Comment(Range),
-
+pub enum TagTokenOutline {
     StartTag {
         name: Range,
         name_hash: Option<u64>,
@@ -38,6 +32,12 @@ pub enum TokenOutline {
         name: Range,
         name_hash: Option<u64>,
     },
+}
+
+#[derive(Debug)]
+pub enum NonTagContentTokenOutline {
+    Text(TextType),
+    Comment(Range),
 
     Doctype {
         name: Option<Range>,
@@ -49,19 +49,27 @@ pub enum TokenOutline {
     Eof,
 }
 
-impl Align for TokenOutline {
+impl Align for TagTokenOutline {
     #[inline]
     fn align(&mut self, offset: usize) {
         match self {
-            TokenOutline::Comment(text) => text.align(offset),
-            TokenOutline::StartTag {
+            TagTokenOutline::StartTag {
                 name, attributes, ..
             } => {
                 name.align(offset);
                 attributes.borrow_mut().align(offset);
             }
-            TokenOutline::EndTag { name, .. } => name.align(offset),
-            TokenOutline::Doctype {
+            TagTokenOutline::EndTag { name, .. } => name.align(offset),
+        }
+    }
+}
+
+impl Align for NonTagContentTokenOutline {
+    #[inline]
+    fn align(&mut self, offset: usize) {
+        match self {
+            NonTagContentTokenOutline::Comment(text) => text.align(offset),
+            NonTagContentTokenOutline::Doctype {
                 name,
                 public_id,
                 system_id,

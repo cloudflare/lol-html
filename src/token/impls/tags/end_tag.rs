@@ -1,6 +1,6 @@
 use super::try_tag_name_from_str;
 use crate::base::Bytes;
-use crate::token::OrderingMutations;
+use crate::token::{OrderingMutations, Token};
 use encoding_rs::Encoding;
 use failure::Error;
 use std::fmt::{self, Debug};
@@ -15,17 +15,17 @@ pub struct EndTag<'i> {
 impl_common_token_api!(EndTag);
 
 impl<'i> EndTag<'i> {
-    pub(in crate::token) fn new(
+    pub(in crate::token) fn new_token(
         name: Bytes<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
-    ) -> Self {
-        EndTag {
+    ) -> Token<'i> {
+        Token::EndTag(EndTag {
             name,
             raw: Some(raw),
             encoding,
             ordering_mutations: OrderingMutations::default(),
-        }
+        })
     }
 
     implement_tag_name_accessors!();

@@ -18,8 +18,8 @@ use std::rc::Rc;
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 pub trait LexemeSink {
-    fn handle_tag(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType;
-    fn handle_non_tag_content(&mut self, lexeme: &Lexeme<'_>);
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> NextOutputType;
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>);
 }
 
 pub type State<S> = fn(&mut FullStateMachine<S>, &Chunk<'_>) -> StateResult;
@@ -32,7 +32,8 @@ pub struct FullStateMachine<S: LexemeSink> {
     cdata_allowed: bool,
     lexeme_sink: S,
     state: State<S>,
-    current_token: Option<TokenOutline>,
+    current_tag_token: Option<TagTokenOutline>,
+    current_non_tag_content_token: Option<NonTagContentTokenOutline>,
     current_attr: Option<AttributeOultine>,
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
@@ -52,7 +53,8 @@ impl<S: LexemeSink> FullStateMachine<S> {
             cdata_allowed: false,
             lexeme_sink,
             state: FullStateMachine::data_state,
-            current_token: None,
+            current_tag_token: None,
+            current_non_tag_content_token: None,
             current_attr: None,
             last_start_tag_name_hash: None,
             closing_quote: b'"',
@@ -76,47 +78,45 @@ impl<S: LexemeSink> FullStateMachine<S> {
         self.continue_from_bookmark(input, bookmark)
     }
 
-    fn get_feedback_for_tag(
+    fn get_feedback_for_start_tag(
         &mut self,
-        token: &Option<TokenOutline>,
+        name_hash: Option<u64>,
     ) -> Result<TreeBuilderFeedback, Error> {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
 
-        match *token {
-            Some(TokenOutline::StartTag { name_hash, .. }) => {
-                // NOTE: if we are silently parsing the tag to get tree builder
-                // feedback for the eager state machine then guard check has been
-                // already activated by the eager state machine.
-                if !self.should_silently_consume_current_tag_only {
-                    feedback_providers
-                        .ambiguity_guard
-                        .track_start_tag(name_hash)?;
-                }
-
-                Ok(feedback_providers
-                    .tree_builder_simulator
-                    .get_feedback_for_start_tag_name(name_hash))
-            }
-            Some(TokenOutline::EndTag { name_hash, .. }) => {
-                // NOTE: if we are silently parsing the tag to get tree builder
-                // feedback for the eager state machine then guard check has been
-                // already activated by the eager state machine.
-                if !self.should_silently_consume_current_tag_only {
-                    feedback_providers.ambiguity_guard.track_end_tag(name_hash);
-                }
-
-                Ok(feedback_providers
-                    .tree_builder_simulator
-                    .get_feedback_for_end_tag_name(name_hash))
-            }
-            _ => unreachable!("Token should be a start or an end tag at this point"),
+        // NOTE: if we are silently parsing the tag to get tree builder
+        // feedback for the eager state machine then guard check has been
+        // already activated by the eager state machine.
+        if !self.should_silently_consume_current_tag_only {
+            feedback_providers
+                .ambiguity_guard
+                .track_start_tag(name_hash)?;
         }
+
+        Ok(feedback_providers
+            .tree_builder_simulator
+            .get_feedback_for_start_tag_name(name_hash))
+    }
+
+    fn get_feedback_for_end_tag(&mut self, name_hash: Option<u64>) -> TreeBuilderFeedback {
+        let mut feedback_providers = self.feedback_providers.borrow_mut();
+
+        // NOTE: if we are silently parsing the tag to get tree builder
+        // feedback for the eager state machine then guard check has been
+        // already activated by the eager state machine.
+        if !self.should_silently_consume_current_tag_only {
+            feedback_providers.ambiguity_guard.track_end_tag(name_hash);
+        }
+
+        feedback_providers
+            .tree_builder_simulator
+            .get_feedback_for_end_tag_name(name_hash)
     }
 
     fn handle_tree_builder_feedback(
         &mut self,
         feedback: TreeBuilderFeedback,
-        lexeme: &Lexeme<'_>,
+        lexeme: &TagLexeme<'_>,
     ) -> ParsingLoopDirective {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
@@ -142,23 +142,18 @@ impl<S: LexemeSink> FullStateMachine<S> {
     }
 
     #[inline]
-    fn set_next_lexeme_start(&mut self, curr_lexeme: &Lexeme<'_>) {
-        self.lexeme_start = curr_lexeme.raw_range().end;
-    }
-
-    #[inline]
-    fn emit_lexeme(&mut self, lexeme: &Lexeme<'_>) {
+    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme<'_>) {
         trace!(@output lexeme);
 
-        self.set_next_lexeme_start(lexeme);
+        self.lexeme_start = lexeme.raw_range().end;
         self.lexeme_sink.handle_non_tag_content(lexeme);
     }
 
     #[inline]
-    fn emit_tag_lexeme(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType {
+    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) -> NextOutputType {
         trace!(@output lexeme);
 
-        self.set_next_lexeme_start(lexeme);
+        self.lexeme_start = lexeme.raw_range().end;
 
         if self.should_silently_consume_current_tag_only {
             self.should_silently_consume_current_tag_only = false;
@@ -169,26 +164,44 @@ impl<S: LexemeSink> FullStateMachine<S> {
     }
 
     #[inline]
+    fn create_tag_lexeme<'i>(
+        &mut self,
+        input: &'i Chunk<'i>,
+        token: TagTokenOutline,
+    ) -> TagLexeme<'i> {
+        TagLexeme::new(
+            input,
+            token,
+            Range {
+                start: self.lexeme_start,
+                end: self.input_cursor.pos() + 1,
+            },
+        )
+    }
+
+    #[inline]
     fn create_lexeme_with_raw<'i>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<TokenOutline>,
+        token: Option<NonTagContentTokenOutline>,
         raw_end: usize,
-    ) -> Lexeme<'i> {
-        let raw_range = Range {
-            start: self.lexeme_start,
-            end: raw_end,
-        };
-
-        Lexeme::new(input, token, raw_range)
+    ) -> NonTagContentLexeme<'i> {
+        NonTagContentLexeme::new(
+            input,
+            token,
+            Range {
+                start: self.lexeme_start,
+                end: raw_end,
+            },
+        )
     }
 
     #[inline]
     fn create_lexeme_with_raw_inclusive<'i>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<TokenOutline>,
-    ) -> Lexeme<'i> {
+        token: Option<NonTagContentTokenOutline>,
+    ) -> NonTagContentLexeme<'i> {
         let raw_end = self.input_cursor.pos() + 1;
 
         self.create_lexeme_with_raw(input, token, raw_end)
@@ -198,8 +211,8 @@ impl<S: LexemeSink> FullStateMachine<S> {
     fn create_lexeme_with_raw_exclusive<'i>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<TokenOutline>,
-    ) -> Lexeme<'i> {
+        token: Option<NonTagContentTokenOutline>,
+    ) -> NonTagContentLexeme<'i> {
         let raw_end = self.input_cursor.pos();
 
         self.create_lexeme_with_raw(input, token, raw_end)
@@ -227,7 +240,8 @@ impl<S: LexemeSink> StateMachine for FullStateMachine<S> {
     fn adjust_for_next_input(&mut self) {
         self.input_cursor.align(self.lexeme_start);
         self.token_part_start.align(self.lexeme_start);
-        self.current_token.align(self.lexeme_start);
+        self.current_tag_token.align(self.lexeme_start);
+        self.current_non_tag_content_token.align(self.lexeme_start);
         self.current_attr.align(self.lexeme_start);
 
         self.lexeme_start = 0;

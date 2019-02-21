@@ -1,10 +1,10 @@
 use super::transform_controller::*;
 use crate::base::{Chunk, Range};
 use crate::parser::{
-    Lexeme, LexemeSink, NextOutputType, ParserOutputSink, TagHint, TagHintSink, TagNameInfo,
-    TokenOutline,
+    Lexeme, LexemeSink, NextOutputType, NonTagContentLexeme, ParserOutputSink, TagHint,
+    TagHintSink, TagLexeme, TagNameInfo, TagTokenOutline,
 };
-use crate::token::{Serialize, TokenCapturer, TokenCapturerEvent};
+use crate::token::{Serialize, ToToken, TokenCapturer, TokenCapturerEvent};
 use encoding_rs::Encoding;
 use std::rc::Rc;
 
@@ -64,7 +64,10 @@ where
         self.last_consumed_lexeme_end = 0;
     }
 
-    fn try_produce_token_from_lexeme(&mut self, lexeme: &Lexeme<'_>) {
+    fn try_produce_token_from_lexeme<'i, T>(&mut self, lexeme: &Lexeme<'i, T>)
+    where
+        Lexeme<'i, T>: ToToken,
+    {
         let transform_controller = &mut self.transform_controller;
         let output_sink = &mut self.output_sink;
         let lexeme_range = lexeme.raw_range();
@@ -103,7 +106,7 @@ where
         }
     }
 
-    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &Lexeme<'_>) {
+    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) {
         let input = lexeme.input();
 
         macro_rules! get_flags_from_handler {
@@ -123,11 +126,11 @@ where
             // Case 1: we have a start tag and attributes and self closing flags
             // information has been requested in the tag hint handler.
             (
-                Some(TokenOutline::StartTag {
+                TagTokenOutline::StartTag {
                     attributes,
                     self_closing,
                     ..
-                }),
+                },
                 Some(ref mut handler),
             ) => get_flags_from_handler!(handler, attributes, *self_closing),
 
@@ -135,12 +138,12 @@ where
             // because parser uses full state machine at the moment and it doesn't
             // produce hints.
             (
-                Some(TokenOutline::StartTag {
+                TagTokenOutline::StartTag {
                     name,
                     name_hash,
                     attributes,
                     self_closing,
-                }),
+                },
                 None,
             ) => {
                 let name_info = TagNameInfo::new(input, *name, *name_hash);
@@ -156,7 +159,7 @@ where
             // Case 3: we have an end tag for which tag hint handler hasn't been called,
             // because parser uses full state machine at the moment and it doesn't
             // produce hints.
-            (Some(TokenOutline::EndTag { name, name_hash }), None) => {
+            (TagTokenOutline::EndTag { name, name_hash }, None) => {
                 let name_info = TagNameInfo::new(input, *name, *name_hash);
 
                 self.transform_controller
@@ -177,7 +180,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_tag(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType {
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> NextOutputType {
         if self.got_capture_flags_from_tag_hint {
             self.got_capture_flags_from_tag_hint = false;
         } else {
@@ -195,7 +198,7 @@ where
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lexeme: &Lexeme<'_>) {
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>) {
         self.try_produce_token_from_lexeme(lexeme);
     }
 }

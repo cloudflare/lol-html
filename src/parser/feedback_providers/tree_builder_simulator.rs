@@ -13,7 +13,7 @@
 // (see `AmbiguityGuard` for the details).
 
 use crate::base::Bytes;
-use crate::parser::outputs::{Lexeme, TokenOutline};
+use crate::parser::outputs::{TagLexeme, TagTokenOutline};
 use crate::parser::{TagName, TextType};
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
@@ -29,13 +29,13 @@ enum Namespace {
 pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
-    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &Lexeme<'_>) -> TreeBuilderFeedback>),
+    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback>),
     None,
 }
 
 #[inline]
 fn request_lexeme(
-    callback: impl FnMut(&mut TreeBuilderSimulator, &Lexeme<'_>) -> TreeBuilderFeedback + 'static,
+    callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback + 'static,
 ) -> TreeBuilderFeedback {
     TreeBuilderFeedback::RequestLexeme(Box::new(callback))
 }
@@ -90,14 +90,6 @@ fn is_text_integration_point_in_math_ml(tag_name_hash: u64) -> bool {
 
 fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
     tag_is_one_of!(tag_name_hash, [Desc, Title, ForeignObject])
-}
-
-macro_rules! expect_token_outline {
-    ($lexeme: ident) => {
-        *$lexeme
-            .token_outline()
-            .expect("There should be a token view at this point")
-    };
 }
 
 // TODO limit ns stack
@@ -193,8 +185,8 @@ impl TreeBuilderSimulator {
 
             // NOTE: <annotation-xml> case
             None if prev_ns == Namespace::MathML => {
-                request_lexeme(|this, lexeme| match expect_token_outline!(lexeme) {
-                    TokenOutline::EndTag { name, .. } => {
+                request_lexeme(|this, lexeme| match *lexeme.token_outline() {
+                    TagTokenOutline::EndTag { name, .. } => {
                         let name = lexeme.input().slice(name);
 
                         if eq_case_insensitive(&name, b"annotation-xml") {
@@ -221,8 +213,8 @@ impl TreeBuilderSimulator {
             // NOTE: <font> tag special case requires attributes
             // to decide on foreign context exit
             Some(t) if t == TagName::Font => request_lexeme(|this, lexeme| {
-                match expect_token_outline!(lexeme) {
-                    TokenOutline::StartTag { ref attributes, .. } => {
+                match lexeme.token_outline() {
+                    TagTokenOutline::StartTag { ref attributes, .. } => {
                         for attr in attributes.borrow().iter() {
                             let name = lexeme.input().slice(attr.name);
 
@@ -241,8 +233,8 @@ impl TreeBuilderSimulator {
             }),
 
             Some(t) if self.is_integration_point_enter(t) => {
-                request_lexeme(|this, lexeme| match expect_token_outline!(lexeme) {
-                    TokenOutline::StartTag { self_closing, .. } => {
+                request_lexeme(|this, lexeme| match *lexeme.token_outline() {
+                    TagTokenOutline::StartTag { self_closing, .. } => {
                         if self_closing {
                             TreeBuilderFeedback::None
                         } else {
@@ -255,8 +247,8 @@ impl TreeBuilderSimulator {
 
             // NOTE: integration point check <annotation-xml> case
             None if self.current_ns == Namespace::MathML => request_lexeme(|this, lexeme| {
-                match expect_token_outline!(lexeme) {
-                    TokenOutline::StartTag {
+                match *lexeme.token_outline() {
+                    TagTokenOutline::StartTag {
                         name,
                         ref attributes,
                         self_closing,

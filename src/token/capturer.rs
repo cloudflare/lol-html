@@ -1,6 +1,8 @@
 use super::*;
 use crate::base::Bytes;
-use crate::parser::{Lexeme, TextType, TokenOutline};
+use crate::parser::{
+    Lexeme, NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, TagTokenOutline, TextType,
+};
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use std::rc::Rc;
@@ -25,6 +27,91 @@ bitflags! {
 pub enum TokenCapturerEvent<'i> {
     LexemeConsumed,
     TokenProduced(Box<Token<'i>>),
+}
+
+pub enum ToTokenResult<'i> {
+    Token(Box<Token<'i>>),
+    Text(TextType),
+    None,
+}
+
+impl<'i> From<Token<'i>> for ToTokenResult<'i> {
+    #[inline]
+    fn from(token: Token<'i>) -> Self {
+        ToTokenResult::Token(Box::new(token))
+    }
+}
+
+pub trait ToToken {
+    fn to_token(
+        &self,
+        capture_flags: TokenCaptureFlags,
+        encoding: &'static Encoding,
+    ) -> ToTokenResult<'_>;
+}
+
+impl ToToken for TagLexeme<'_> {
+    fn to_token(
+        &self,
+        capture_flags: TokenCaptureFlags,
+        encoding: &'static Encoding,
+    ) -> ToTokenResult<'_> {
+        match *self.token_outline() {
+            TagTokenOutline::StartTag {
+                name,
+                ref attributes,
+                self_closing,
+                ..
+            } if capture_flags.contains(TokenCaptureFlags::START_TAGS) => StartTag::new_token(
+                self.part(name),
+                Attributes::new(self.input(), Rc::clone(attributes), encoding),
+                self_closing,
+                self.raw(),
+                encoding,
+            )
+            .into(),
+
+            TagTokenOutline::EndTag { name, .. }
+                if capture_flags.contains(TokenCaptureFlags::END_TAGS) =>
+            {
+                EndTag::new_token(self.part(name), self.raw(), encoding).into()
+            }
+            _ => ToTokenResult::None,
+        }
+    }
+}
+
+impl ToToken for NonTagContentLexeme<'_> {
+    fn to_token(
+        &self,
+        capture_flags: TokenCaptureFlags,
+        encoding: &'static Encoding,
+    ) -> ToTokenResult<'_> {
+        match *self.token_outline() {
+            Some(NonTagContentTokenOutline::Text(text_type)) => ToTokenResult::Text(text_type),
+            Some(NonTagContentTokenOutline::Comment(text))
+                if capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
+            {
+                Comment::new_token(self.part(text), self.raw(), encoding).into()
+            }
+
+            Some(NonTagContentTokenOutline::Doctype {
+                name,
+                public_id,
+                system_id,
+                force_quirks,
+            }) if capture_flags.contains(TokenCaptureFlags::DOCTYPES) => Doctype::new_token(
+                self.opt_part(name),
+                self.opt_part(public_id),
+                self.opt_part(system_id),
+                force_quirks,
+                self.raw(),
+                encoding,
+            )
+            .into(),
+            _ => ToTokenResult::None,
+        }
+    }
 }
 
 pub struct TokenCapturer {
@@ -97,12 +184,8 @@ impl TokenCapturer {
             consumed += read;
 
             if written > 0 || last {
-                let token = Token::TextChunk(TextChunk::new(
-                    &buffer[..written],
-                    self.last_text_type,
-                    last,
-                    encoding,
-                ));
+                let token =
+                    TextChunk::new_token(&buffer[..written], self.last_text_type, last, encoding);
 
                 event_handler(TokenCapturerEvent::TokenProduced(Box::new(token)));
             }
@@ -113,92 +196,29 @@ impl TokenCapturer {
         }
     }
 
-    fn handle_non_textual_content(
+    pub fn feed<'i, T>(
         &mut self,
-        lexeme: &Lexeme<'_>,
-        token_outline: &TokenOutline,
+        lexeme: &Lexeme<'i, T>,
         event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>),
-    ) {
-        macro_rules! capture {
-            ( $Type:ident ($($args:expr),+) ) => {
+    ) where
+        Lexeme<'i, T>: ToToken,
+    {
+        match lexeme.to_token(self.capture_flags, self.encoding) {
+            ToTokenResult::Token(token) => {
+                self.flush_pending_text(event_handler);
                 event_handler(TokenCapturerEvent::LexemeConsumed);
-
-                let token = Token::$Type($Type::new(
-                    $($args),+,
-                    lexeme.raw(),
-                    self.encoding
-                ));
-
-                event_handler(TokenCapturerEvent::TokenProduced(Box::new(token)));
-            };
-        }
-
-        match *token_outline {
-            TokenOutline::Comment(text)
-                if self.capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
-            {
-                capture!(Comment(lexeme.part(text)));
+                event_handler(TokenCapturerEvent::TokenProduced(token));
             }
-
-            TokenOutline::StartTag {
-                name,
-                ref attributes,
-                self_closing,
-                ..
-            } if self.capture_flags.contains(TokenCaptureFlags::START_TAGS) => {
-                capture!(StartTag(
-                    lexeme.part(name),
-                    Attributes::new(lexeme.input(), Rc::clone(attributes), self.encoding),
-                    self_closing
-                ));
-            }
-
-            TokenOutline::EndTag { name, .. }
-                if self.capture_flags.contains(TokenCaptureFlags::END_TAGS) =>
-            {
-                capture!(EndTag(lexeme.part(name)));
-            }
-
-            TokenOutline::Doctype {
-                name,
-                public_id,
-                system_id,
-                force_quirks,
-            } if self.capture_flags.contains(TokenCaptureFlags::DOCTYPES) => {
-                capture!(Doctype(
-                    lexeme.opt_part(name),
-                    lexeme.opt_part(public_id),
-                    lexeme.opt_part(system_id),
-                    force_quirks
-                ));
-            }
-            _ => (),
-        }
-    }
-
-    pub fn feed(
-        &mut self,
-        lexeme: &Lexeme<'_>,
-        event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>),
-    ) {
-        match lexeme.token_outline() {
-            Some(token_outline) => match *token_outline {
-                TokenOutline::Text(text_type)
-                    if self.capture_flags.contains(TokenCaptureFlags::TEXT) =>
-                {
+            ToTokenResult::Text(text_type) => {
+                if self.capture_flags.contains(TokenCaptureFlags::TEXT) {
                     self.last_text_type = text_type;
 
                     event_handler(TokenCapturerEvent::LexemeConsumed);
 
                     self.emit_text(&lexeme.raw(), false, event_handler);
                 }
-                TokenOutline::Text(_) => (),
-                _ => {
-                    self.flush_pending_text(event_handler);
-                    self.handle_non_textual_content(lexeme, token_outline, event_handler);
-                }
-            },
-            None => self.flush_pending_text(event_handler),
+            }
+            ToTokenResult::None => self.flush_pending_text(event_handler),
         }
     }
 }

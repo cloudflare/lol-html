@@ -1,5 +1,5 @@
 use crate::base::Bytes;
-use crate::token::Serialize;
+use crate::token::{Serialize, Token};
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -13,22 +13,22 @@ pub struct Doctype<'i> {
 }
 
 impl<'i> Doctype<'i> {
-    pub(in crate::token) fn new(
+    pub(in crate::token) fn new_token(
         name: Option<Bytes<'i>>,
         public_id: Option<Bytes<'i>>,
         system_id: Option<Bytes<'i>>,
         force_quirks: bool,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
-    ) -> Self {
-        Doctype {
+    ) -> Token<'i> {
+        Token::Doctype(Doctype {
             name,
             public_id,
             system_id,
             force_quirks,
             raw,
             encoding,
-        }
+        })
     }
 
     #[inline]

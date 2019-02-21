@@ -1,5 +1,5 @@
 use crate::base::Bytes;
-use crate::token::OrderingMutations;
+use crate::token::{OrderingMutations, Token};
 use encoding_rs::Encoding;
 use failure::Error;
 use std::fmt::{self, Debug};
@@ -23,17 +23,17 @@ pub struct Comment<'i> {
 impl_common_token_api!(Comment);
 
 impl<'i> Comment<'i> {
-    pub(in crate::token) fn new(
+    pub(in crate::token) fn new_token(
         text: Bytes<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
-    ) -> Self {
-        Comment {
+    ) -> Token<'i> {
+        Token::Comment(Comment {
             text,
             raw: Some(raw),
             encoding,
             ordering_mutations: OrderingMutations::default(),
-        }
+        })
     }
 
     #[inline]

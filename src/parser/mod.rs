@@ -30,12 +30,12 @@ pub enum NextOutputType {
 
 impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_tag(&mut self, lexeme: &Lexeme<'_>) -> NextOutputType {
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> NextOutputType {
         self.borrow_mut().handle_tag(lexeme)
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lexeme: &Lexeme<'_>) {
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>) {
         self.borrow_mut().handle_non_tag_content(lexeme);
     }
 }
