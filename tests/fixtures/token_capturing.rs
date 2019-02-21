@@ -40,9 +40,9 @@ fn fold_text_tokens(tokens: Vec<TestToken>) -> Vec<TestToken> {
     })
 }
 
-pub struct TokenCapturerTests;
+pub struct TokenCapturingTests;
 
-impl FunctionalTestFixture for TokenCapturerTests {
+impl FunctionalTestFixture for TokenCapturingTests {
     fn get_test_description_suffix() -> &'static str {
         "Token capture"
     }
@@ -125,4 +125,4 @@ impl FunctionalTestFixture for TokenCapturerTests {
     }
 }
 
-functional_test_fixture!(TokenCapturerTests);
+functional_test_fixture!(TokenCapturingTests);

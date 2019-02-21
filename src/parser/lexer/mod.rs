@@ -8,7 +8,7 @@ use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
 use crate::parser::{
-    FeedbackProviders, NextOutputType, ParsingLoopTerminationReason, TagName, TextType,
+    FeedbackProviders, ParserDirective, ParsingLoopTerminationReason, TagName, TextType,
     TreeBuilderFeedback,
 };
 use failure::Error;
@@ -18,13 +18,13 @@ use std::rc::Rc;
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 pub trait LexemeSink {
-    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> NextOutputType;
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective;
     fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>);
 }
 
-pub type State<S> = fn(&mut FullStateMachine<S>, &Chunk<'_>) -> StateResult;
+pub type State<S> = fn(&mut Lexer<S>, &Chunk<'_>) -> StateResult;
 
-pub struct FullStateMachine<S: LexemeSink> {
+pub struct Lexer<S: LexemeSink> {
     input_cursor: Cursor,
     lexeme_start: usize,
     token_part_start: usize,
@@ -43,16 +43,16 @@ pub struct FullStateMachine<S: LexemeSink> {
     should_silently_consume_current_tag_only: bool,
 }
 
-impl<S: LexemeSink> FullStateMachine<S> {
+impl<S: LexemeSink> Lexer<S> {
     pub fn new(lexeme_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
-        FullStateMachine {
+        Lexer {
             input_cursor: Cursor::default(),
             lexeme_start: 0,
             token_part_start: 0,
             is_state_enter: true,
             cdata_allowed: false,
             lexeme_sink,
-            state: FullStateMachine::data_state,
+            state: Lexer::data_state,
             current_tag_token: None,
             current_non_tag_content_token: None,
             current_attr: None,
@@ -85,8 +85,8 @@ impl<S: LexemeSink> FullStateMachine<S> {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
 
         // NOTE: if we are silently parsing the tag to get tree builder
-        // feedback for the eager state machine then guard check has been
-        // already activated by the eager state machine.
+        // feedback for the tag scanner then guard check has been
+        // already activated by the tag scanner.
         if !self.should_silently_consume_current_tag_only {
             feedback_providers
                 .ambiguity_guard
@@ -95,22 +95,22 @@ impl<S: LexemeSink> FullStateMachine<S> {
 
         Ok(feedback_providers
             .tree_builder_simulator
-            .get_feedback_for_start_tag_name(name_hash))
+            .get_feedback_for_start_tag(name_hash))
     }
 
     fn get_feedback_for_end_tag(&mut self, name_hash: Option<u64>) -> TreeBuilderFeedback {
         let mut feedback_providers = self.feedback_providers.borrow_mut();
 
         // NOTE: if we are silently parsing the tag to get tree builder
-        // feedback for the eager state machine then guard check has been
-        // already activated by the eager state machine.
+        // feedback for the tag scanner then guard check has been
+        // already activated by the tag scanner.
         if !self.should_silently_consume_current_tag_only {
             feedback_providers.ambiguity_guard.track_end_tag(name_hash);
         }
 
         feedback_providers
             .tree_builder_simulator
-            .get_feedback_for_end_tag_name(name_hash)
+            .get_feedback_for_end_tag(name_hash)
     }
 
     fn handle_tree_builder_feedback(
@@ -150,14 +150,14 @@ impl<S: LexemeSink> FullStateMachine<S> {
     }
 
     #[inline]
-    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) -> NextOutputType {
+    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;
 
         if self.should_silently_consume_current_tag_only {
             self.should_silently_consume_current_tag_only = false;
-            NextOutputType::TagHint
+            ParserDirective::ScanForTags
         } else {
             self.lexeme_sink.handle_tag(lexeme)
         }
@@ -219,7 +219,7 @@ impl<S: LexemeSink> FullStateMachine<S> {
     }
 }
 
-impl<S: LexemeSink> StateMachine for FullStateMachine<S> {
+impl<S: LexemeSink> StateMachine for Lexer<S> {
     impl_common_sm_accessors!();
 
     #[inline]

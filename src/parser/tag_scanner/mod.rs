@@ -8,30 +8,30 @@ use crate::parser::outputs::*;
 use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
-use crate::parser::{FeedbackProviders, NextOutputType, TagName, TextType, TreeBuilderFeedback};
+use crate::parser::{FeedbackProviders, ParserDirective, TagName, TextType, TreeBuilderFeedback};
 use failure::Error;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;
 
 pub trait TagHintSink {
-    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> NextOutputType;
+    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> ParserDirective;
 }
 
-pub type State<S> = fn(&mut EagerStateMachine<S>, &Chunk<'_>) -> StateResult;
+pub type State<S> = fn(&mut TagScanner<S>, &Chunk<'_>) -> StateResult;
 
-// Eager state machine skips the majority of full state machine operations and, thus,
+// Tag scanner skips the majority of lexer operations and, thus,
 // is faster. It also has much less requirements for buffering which makes it more
 // prone to bailouts caused by buffer exhaustion (actually it buffers only tag names).
 //
-// Eager state machine produces tag previews as an output which serve as a hint for
-// the matcher which can then switch to the full state machine if required.
+// Tag scanner produces tag previews as an output which serve as a hint for
+// the matcher which can then switch to the lexer if required.
 //
 // It's not guaranteed that tag preview will actually produce the token in the end
 // of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
 // it's not a concern for our use case as no content will be erroneously captured
 // in this case.
-pub struct EagerStateMachine<S: TagHintSink> {
+pub struct TagScanner<S: TagHintSink> {
     input_cursor: Cursor,
     tag_start: Option<usize>,
     ch_sequence_matching_start: Option<usize>,
@@ -49,9 +49,9 @@ pub struct EagerStateMachine<S: TagHintSink> {
     last_text_type: TextType,
 }
 
-impl<S: TagHintSink> EagerStateMachine<S> {
+impl<S: TagHintSink> TagScanner<S> {
     pub fn new(tag_hint_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
-        EagerStateMachine {
+        TagScanner {
             input_cursor: Cursor::default(),
             tag_start: None,
             ch_sequence_matching_start: None,
@@ -62,7 +62,7 @@ impl<S: TagHintSink> EagerStateMachine<S> {
             is_state_enter: true,
             cdata_allowed: false,
             tag_hint_sink,
-            state: EagerStateMachine::data_state,
+            state: TagScanner::data_state,
             closing_quote: b'"',
             feedback_providers,
             pending_text_type_change: None,
@@ -89,6 +89,11 @@ impl<S: TagHintSink> EagerStateMachine<S> {
         }
     }
 
+    // Foo
+    // FeedbackProviders -> FeedbackProvider, get feedback for start tag and end tag
+    // Get rid of tag hint
+    // Separate lexemes for start and end tag
+
     fn get_feedback_for_tag(
         &mut self,
         tag_hint: &TagHint<'_>,
@@ -105,7 +110,7 @@ impl<S: TagHintSink> EagerStateMachine<S> {
 
                 feedback_providers
                     .tree_builder_simulator
-                    .get_feedback_for_start_tag_name(name_hash)
+                    .get_feedback_for_start_tag(name_hash)
             }
             TagHint::EndTag(name_info) => {
                 let name_hash = name_info.name_hash();
@@ -114,7 +119,7 @@ impl<S: TagHintSink> EagerStateMachine<S> {
 
                 feedback_providers
                     .tree_builder_simulator
-                    .get_feedback_for_end_tag_name(name_hash)
+                    .get_feedback_for_end_tag(name_hash)
             }
         })
     }
@@ -146,7 +151,7 @@ impl<S: TagHintSink> EagerStateMachine<S> {
     }
 }
 
-impl<S: TagHintSink> StateMachine for EagerStateMachine<S> {
+impl<S: TagHintSink> StateMachine for TagScanner<S> {
     impl_common_sm_accessors!();
 
     #[inline]
@@ -163,7 +168,7 @@ impl<S: TagHintSink> StateMachine for EagerStateMachine<S> {
     fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize {
         // NOTE: if we are in character sequence matching we need
         // to block from the position where matching starts. We don't
-        // need to do that manually in full state machine because it
+        // need to do that manually in the lexer because it
         // always blocks all bytes starting from lexeme start and it's
         // guaranteed that character sequence matching occurs withih
         // lexeme boundaries.

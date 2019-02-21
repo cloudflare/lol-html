@@ -1,7 +1,7 @@
 use super::*;
 use crate::parser::state_machine::StateMachineConditions;
 
-impl<S: LexemeSink> StateMachineConditions for FullStateMachine<S> {
+impl<S: LexemeSink> StateMachineConditions for Lexer<S> {
     #[inline]
     fn is_appropriate_end_tag(&self, _ch: Option<u8>) -> bool {
         match self.current_tag_token {

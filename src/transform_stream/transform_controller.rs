@@ -8,7 +8,7 @@ use bitflags::bitflags;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-macro_rules! impl_into_token_capture_flags {
+macro_rules! impl_into_token_capturer_flags {
     ($Flags:ident) => {
         impl Into<TokenCaptureFlags> for $Flags {
             #[inline]
@@ -27,7 +27,7 @@ bitflags! {
     }
 }
 
-impl_into_token_capture_flags!(DocumentLevelContentSettings);
+impl_into_token_capturer_flags!(DocumentLevelContentSettings);
 
 bitflags! {
     pub struct ContentSettingsOnElementStart: u8 {
@@ -37,7 +37,7 @@ bitflags! {
     }
 }
 
-impl_into_token_capture_flags!(ContentSettingsOnElementStart);
+impl_into_token_capturer_flags!(ContentSettingsOnElementStart);
 
 bitflags! {
     pub struct ContentSettingsOnElementEnd: u8 {
@@ -47,7 +47,7 @@ bitflags! {
     }
 }
 
-impl_into_token_capture_flags!(ContentSettingsOnElementEnd);
+impl_into_token_capturer_flags!(ContentSettingsOnElementEnd);
 
 pub struct ElementModifiersInfo<'i> {
     input: &'i Chunk<'i>,

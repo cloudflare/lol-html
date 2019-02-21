@@ -16,6 +16,8 @@ use crate::base::Bytes;
 use crate::parser::outputs::{TagLexeme, TagTokenOutline};
 use crate::parser::{TagName, TextType};
 
+use TagTokenOutline::*;
+
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -112,7 +114,7 @@ impl Default for TreeBuilderSimulator {
 }
 
 impl TreeBuilderSimulator {
-    pub fn get_feedback_for_start_tag_name(
+    pub fn get_feedback_for_start_tag(
         &mut self,
         tag_name_hash: Option<u64>,
     ) -> TreeBuilderFeedback {
@@ -127,10 +129,7 @@ impl TreeBuilderSimulator {
         }
     }
 
-    pub fn get_feedback_for_end_tag_name(
-        &mut self,
-        tag_name_hash: Option<u64>,
-    ) -> TreeBuilderFeedback {
+    pub fn get_feedback_for_end_tag(&mut self, tag_name_hash: Option<u64>) -> TreeBuilderFeedback {
         match tag_name_hash {
             Some(t) if self.current_ns == Namespace::Svg && t == TagName::Svg => self.leave_ns(),
             Some(t) if self.current_ns == Namespace::MathML && t == TagName::Math => {
@@ -186,10 +185,8 @@ impl TreeBuilderSimulator {
             // NOTE: <annotation-xml> case
             None if prev_ns == Namespace::MathML => {
                 request_lexeme(|this, lexeme| match *lexeme.token_outline() {
-                    TagTokenOutline::EndTag { name, .. } => {
-                        let name = lexeme.input().slice(name);
-
-                        if eq_case_insensitive(&name, b"annotation-xml") {
+                    EndTag { name, .. } => {
+                        if eq_case_insensitive(&lexeme.part(name), b"annotation-xml") {
                             this.leave_ns()
                         } else {
                             TreeBuilderFeedback::None
@@ -214,9 +211,9 @@ impl TreeBuilderSimulator {
             // to decide on foreign context exit
             Some(t) if t == TagName::Font => request_lexeme(|this, lexeme| {
                 match lexeme.token_outline() {
-                    TagTokenOutline::StartTag { ref attributes, .. } => {
+                    StartTag { ref attributes, .. } => {
                         for attr in attributes.borrow().iter() {
-                            let name = lexeme.input().slice(attr.name);
+                            let name = lexeme.part(attr.name);
 
                             if eq_case_insensitive(&name, b"color")
                                 || eq_case_insensitive(&name, b"size")
@@ -234,7 +231,7 @@ impl TreeBuilderSimulator {
 
             Some(t) if self.is_integration_point_enter(t) => {
                 request_lexeme(|this, lexeme| match *lexeme.token_outline() {
-                    TagTokenOutline::StartTag { self_closing, .. } => {
+                    StartTag { self_closing, .. } => {
                         if self_closing {
                             TreeBuilderFeedback::None
                         } else {
@@ -248,18 +245,18 @@ impl TreeBuilderSimulator {
             // NOTE: integration point check <annotation-xml> case
             None if self.current_ns == Namespace::MathML => request_lexeme(|this, lexeme| {
                 match *lexeme.token_outline() {
-                    TagTokenOutline::StartTag {
+                    StartTag {
                         name,
                         ref attributes,
                         self_closing,
                         ..
                     } => {
-                        let name = lexeme.input().slice(name);
+                        let name = lexeme.part(name);
 
                         if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
                             for attr in attributes.borrow().iter() {
-                                let name = lexeme.input().slice(attr.name);
-                                let value = lexeme.input().slice(attr.value);
+                                let name = lexeme.part(attr.name);
+                                let value = lexeme.part(attr.value);
 
                                 if eq_case_insensitive(&name, b"encoding")
                                     && (eq_case_insensitive(&value, b"text/html")

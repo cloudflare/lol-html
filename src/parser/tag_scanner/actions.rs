@@ -2,7 +2,7 @@ use super::*;
 use crate::base::Chunk;
 use crate::parser::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
-impl<S: TagHintSink> StateMachineActions for EagerStateMachine<S> {
+impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     impl_common_sm_actions!();
 
     #[inline]
@@ -38,7 +38,7 @@ impl<S: TagHintSink> StateMachineActions for EagerStateMachine<S> {
     #[inline]
     fn finish_tag_name(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
         let tag_hint = self.create_tag_hint(input);
-        let next_output_type = self.tag_hint_sink.handle_tag_hint(&tag_hint);
+        let parser_directive = self.tag_hint_sink.handle_tag_hint(&tag_hint);
 
         trace!(@output tag_hint);
 
@@ -47,17 +47,17 @@ impl<S: TagHintSink> StateMachineActions for EagerStateMachine<S> {
             .take()
             .expect("Tag start should be set at this point");
 
-        Ok(match next_output_type {
-            NextOutputType::TagHint => {
+        Ok(match parser_directive {
+            ParserDirective::ScanForTags => {
                 let feedback = self.get_feedback_for_tag(&tag_hint)?;
 
                 self.handle_tree_builder_feedback(feedback, tag_start)
             }
-            NextOutputType::Lexeme => {
+            ParserDirective::Lex => {
                 // NOTE: we don't need to take feedback from tree builder simulator
-                // here because tag will be re-parsed by the full state machine anyway.
-                ParsingLoopDirective::Break(ParsingLoopTerminationReason::OutputTypeSwitch(
-                    NextOutputType::Lexeme,
+                // here because tag will be re-parsed by the lexer anyway.
+                ParsingLoopDirective::Break(ParsingLoopTerminationReason::ParserDirectiveChange(
+                    ParserDirective::Lex,
                     self.create_bookmark(tag_start),
                 ))
             }

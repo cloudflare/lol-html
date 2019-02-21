@@ -1,7 +1,7 @@
 use super::*;
 use crate::parser::state_machine::StateMachineConditions;
 
-impl<S: TagHintSink> StateMachineConditions for EagerStateMachine<S> {
+impl<S: TagHintSink> StateMachineConditions for TagScanner<S> {
     #[inline]
     fn is_appropriate_end_tag(&self, _ch: Option<u8>) -> bool {
         self.tag_name_hash == self.last_start_tag_name_hash

@@ -3,7 +3,7 @@ mod transform_controller;
 
 use self::dispatcher::{Dispatcher, OutputSink};
 use crate::base::{Buffer, Chunk};
-use crate::parser::{NextOutputType, Parser};
+use crate::parser::{Parser, ParserDirective};
 use encoding_rs::Encoding;
 use failure::{Error, ResultExt};
 use std::cell::RefCell;
@@ -47,13 +47,13 @@ where
         buffer_capacity: usize,
         encoding: &'static Encoding,
     ) -> Self {
-        let initial_output_type = if transform_controller
+        let initial_parser_directive = if transform_controller
             .document_level_content_settings()
             .is_empty()
         {
-            NextOutputType::TagHint
+            ParserDirective::ScanForTags
         } else {
-            NextOutputType::Lexeme
+            ParserDirective::Lex
         };
 
         let dispatcher = Rc::new(RefCell::new(Dispatcher::new(
@@ -63,7 +63,7 @@ where
         )));
 
         TransformStream {
-            parser: Parser::new(&dispatcher, initial_output_type),
+            parser: Parser::new(&dispatcher, initial_parser_directive),
             dispatcher,
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,

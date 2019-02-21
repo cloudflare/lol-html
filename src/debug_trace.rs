@@ -39,11 +39,11 @@ cfg_if! {
 
             ( @noop ) => ( println!("NOOP"); );
 
-            ( @continue_from_bookmark $bookmark:expr, $next_output_type:expr, $chunk:expr ) => {
+            ( @continue_from_bookmark $bookmark:expr, $parser_directive:expr, $chunk:expr ) => {
                 println!();
                 println!("Continue from:");
                 println!("{:#?}", $bookmark);
-                println!("Next output type: `{:#?}`", $next_output_type);
+                println!("Parser directive: `{:#?}`", $parser_directive);
 
                 let mut chunk_str = $chunk.as_debug_string();
 

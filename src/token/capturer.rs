@@ -199,13 +199,13 @@ impl TokenCapturer {
     pub fn feed<'i, T>(
         &mut self,
         lexeme: &Lexeme<'i, T>,
-        event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>),
+        mut event_handler: impl FnMut(TokenCapturerEvent<'_>),
     ) where
         Lexeme<'i, T>: ToToken,
     {
         match lexeme.to_token(self.capture_flags, self.encoding) {
             ToTokenResult::Token(token) => {
-                self.flush_pending_text(event_handler);
+                self.flush_pending_text(&mut event_handler);
                 event_handler(TokenCapturerEvent::LexemeConsumed);
                 event_handler(TokenCapturerEvent::TokenProduced(token));
             }
@@ -215,10 +215,10 @@ impl TokenCapturer {
 
                     event_handler(TokenCapturerEvent::LexemeConsumed);
 
-                    self.emit_text(&lexeme.raw(), false, event_handler);
+                    self.emit_text(&lexeme.raw(), false, &mut event_handler);
                 }
             }
-            ToTokenResult::None => self.flush_pending_text(event_handler),
+            ToTokenResult::None => self.flush_pending_text(&mut event_handler),
         }
     }
 }
