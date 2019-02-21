@@ -127,7 +127,7 @@ impl<S: LexemeSink> FullStateMachine<S> {
                 self.cdata_allowed = cdata_allowed;
                 ParsingLoopDirective::None
             }
-            TreeBuilderFeedback::RequestLexeme(callback) => {
+            TreeBuilderFeedback::RequestLexeme(mut callback) => {
                 let feedback = {
                     let tree_builder_simulator =
                         &mut self.feedback_providers.borrow_mut().tree_builder_simulator;

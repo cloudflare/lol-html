@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate criterion;
 
-use cool_thing::token::TokenCaptureFlags;
+use cool_thing::transform_stream::{
+    ContentSettingsOnElementEnd, ContentSettingsOnElementStart, DocumentLevelContentSettings,
+};
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
 use encoding_rs::UTF_8;
 use glob::glob;
@@ -21,6 +23,13 @@ impl Debug for Input {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
+}
+
+#[derive(Copy, Clone)]
+pub struct CoolThingContentSettings {
+    pub document_level: DocumentLevelContentSettings,
+    pub on_element_start: ContentSettingsOnElementStart,
+    pub on_element_end: ContentSettingsOnElementEnd,
 }
 
 fn get_inputs() -> Vec<Input> {
@@ -49,49 +58,44 @@ fn get_inputs() -> Vec<Input> {
 }
 
 fn cool_thing_tokenizer_bench(
-    capture_flags: TokenCaptureFlags,
+    content_settings: CoolThingContentSettings,
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
-        use cool_thing::parser::{Lexeme, NextOutputType, TagHint};
+        use cool_thing::parser::TagNameInfo;
         use cool_thing::token::Token;
-        use cool_thing::transform_stream::{TransformController, TransformStream};
+        use cool_thing::transform_stream::{
+            ElementStartResponse, TransformController, TransformStream,
+        };
 
         struct BenchTransformController {
-            capture_flags: TokenCaptureFlags,
+            content_settings: CoolThingContentSettings,
         }
 
         impl BenchTransformController {
-            pub fn new(capture_flags: TokenCaptureFlags) -> Self {
-                BenchTransformController { capture_flags }
+            pub fn new(content_settings: CoolThingContentSettings) -> Self {
+                BenchTransformController { content_settings }
             }
         }
 
         impl TransformController for BenchTransformController {
-            fn get_initial_token_capture_flags(&self) -> TokenCaptureFlags {
-                self.capture_flags
+            fn document_level_content_settings(&self) -> DocumentLevelContentSettings {
+                self.content_settings.document_level
             }
 
-            fn get_token_capture_flags_for_tag(&mut self, tag_lexeme: &Lexeme) -> NextOutputType {
-                black_box(tag_lexeme);
-
-                if self.capture_flags.is_empty() {
-                    NextOutputType::TagHint
-                } else {
-                    NextOutputType::Lexeme
-                }
-            }
-
-            fn get_token_capture_flags_for_tag_hint(
+            fn handle_element_start(
                 &mut self,
-                tag_hint: &TagHint,
-            ) -> NextOutputType {
-                black_box(tag_hint);
+                name_info: TagNameInfo,
+            ) -> ElementStartResponse<Self> {
+                black_box(name_info);
+                ElementStartResponse::ContentSettings(self.content_settings.on_element_start)
+            }
 
-                if self.capture_flags.is_empty() {
-                    NextOutputType::TagHint
-                } else {
-                    NextOutputType::Lexeme
-                }
+            fn handle_element_end(
+                &mut self,
+                name_info: TagNameInfo,
+            ) -> ContentSettingsOnElementEnd {
+                black_box(name_info);
+                self.content_settings.on_element_end
             }
 
             fn handle_token(&mut self, token: &mut Token<'_>) {
@@ -101,7 +105,7 @@ fn cool_thing_tokenizer_bench(
 
         b.iter(|| {
             let mut transform_stream = TransformStream::new(
-                BenchTransformController::new(capture_flags),
+                BenchTransformController::new(content_settings),
                 |_: &[u8]| {},
                 2048,
                 UTF_8,
@@ -188,21 +192,29 @@ fn tokenization_benchmark(c: &mut Criterion) {
         "Tokenizer",
         ParameterizedBenchmark::new(
             "cool_thing - Fast scan",
-            cool_thing_tokenizer_bench(TokenCaptureFlags::empty()),
+            cool_thing_tokenizer_bench(CoolThingContentSettings {
+                document_level: DocumentLevelContentSettings::empty(),
+                on_element_start: ContentSettingsOnElementStart::empty(),
+                on_element_end: ContentSettingsOnElementEnd::empty(),
+            }),
             inputs,
         )
         .with_function(
             "cool_thing - Capture everything except text",
-            cool_thing_tokenizer_bench(
-                TokenCaptureFlags::DOCTYPES
-                    | TokenCaptureFlags::START_TAGS
-                    | TokenCaptureFlags::END_TAGS
-                    | TokenCaptureFlags::COMMENTS,
-            ),
+            cool_thing_tokenizer_bench(CoolThingContentSettings {
+                document_level: DocumentLevelContentSettings::CAPTURE_COMMENTS
+                    | DocumentLevelContentSettings::CAPTURE_DOCTYPES,
+                on_element_start: ContentSettingsOnElementStart::CAPTURE_START_TAG_FOR_ELEMENT,
+                on_element_end: ContentSettingsOnElementEnd::CAPTURE_END_TAG_FOR_ELEMENT,
+            }),
         )
         .with_function(
             "cool_thing - Capture everything",
-            cool_thing_tokenizer_bench(TokenCaptureFlags::all()),
+            cool_thing_tokenizer_bench(CoolThingContentSettings {
+                document_level: DocumentLevelContentSettings::all(),
+                on_element_start: ContentSettingsOnElementStart::all(),
+                on_element_end: ContentSettingsOnElementEnd::all(),
+            }),
         )
         .with_function("lazyhtml", lazyhtml_tokenizer_bench())
         .with_function("html5ever", html5ever_tokenizer_bench())

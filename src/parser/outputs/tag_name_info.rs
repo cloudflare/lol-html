@@ -1,7 +1,7 @@
-use super::{Lexeme, TokenOutline};
 use crate::base::{Bytes, Chunk, Range};
 use std::fmt::{self, Debug};
 
+#[derive(Copy, Clone)]
 pub struct TagNameInfo<'i> {
     input: &'i Chunk<'i>,
     name_range: Range,
@@ -15,19 +15,6 @@ impl<'i> TagNameInfo<'i> {
             input,
             name_range,
             name_hash,
-        }
-    }
-
-    #[inline]
-    pub fn from_tag_lexeme(lexeme: &'i Lexeme<'i>) -> Self {
-        match lexeme.token_outline() {
-            Some(TokenOutline::StartTag {
-                name, name_hash, ..
-            })
-            | Some(TokenOutline::EndTag { name, name_hash }) => {
-                TagNameInfo::new(lexeme.input(), *name, *name_hash)
-            }
-            _ => unreachable!("Lexeme should be a start or an end tag"),
         }
     }
 

@@ -1,7 +1,7 @@
 use crate::harness::functional_testing::{
     FunctionalTestFixture, TestCase, TestToken, TestTokenList,
 };
-use crate::harness::parsing::parse;
+use crate::harness::parsing::{parse, ContentSettings};
 use cool_thing::parser::TextType;
 use cool_thing::token::TokenCaptureFlags;
 
@@ -40,9 +40,9 @@ fn fold_text_tokens(tokens: Vec<TestToken>) -> Vec<TestToken> {
     })
 }
 
-pub struct TokenCaptureTests;
+pub struct TokenCapturerTests;
 
-impl FunctionalTestFixture for TokenCaptureTests {
+impl FunctionalTestFixture for TokenCapturerTests {
     fn get_test_description_suffix() -> &'static str {
         "Token capture"
     }
@@ -53,23 +53,22 @@ impl FunctionalTestFixture for TokenCaptureTests {
         last_start_tag_name_hash: Option<u64>,
     ) {
         [
-            TokenCaptureFlags::all(),
-            TokenCaptureFlags::START_TAGS,
-            TokenCaptureFlags::END_TAGS,
-            TokenCaptureFlags::TEXT,
-            TokenCaptureFlags::COMMENTS,
-            TokenCaptureFlags::DOCTYPES,
-            TokenCaptureFlags::empty(),
+            (ContentSettings::all(), TokenCaptureFlags::all()),
+            (ContentSettings::start_tags(), TokenCaptureFlags::START_TAGS),
+            (ContentSettings::end_tags(), TokenCaptureFlags::END_TAGS),
+            (ContentSettings::text(), TokenCaptureFlags::TEXT),
+            (ContentSettings::comments(), TokenCaptureFlags::COMMENTS),
+            (ContentSettings::doctypes(), TokenCaptureFlags::DOCTYPES),
         ]
         .iter()
         .cloned()
-        .for_each(|capture_flags| {
-            let mut expected_tokens = filter_tokens(&test.expected_tokens, capture_flags);
+        .for_each(|(content_settings, expected_token_flags)| {
+            let mut expected_tokens = filter_tokens(&test.expected_tokens, expected_token_flags);
             let mut token_list = TestTokenList::default();
 
             let parsing_result = parse(
                 &test.input,
-                capture_flags,
+                content_settings,
                 initial_text_type,
                 last_start_tag_name_hash,
                 Box::new(|t| token_list.push(t)),
@@ -87,7 +86,7 @@ impl FunctionalTestFixture for TokenCaptureTests {
             // tokens in the chain. So, for text tokens we fold both expected and actual
             // results to the single strings. It's not an ideal solution, but it's better
             // than nothing.
-            if capture_flags == TokenCaptureFlags::TEXT {
+            if expected_token_flags == TokenCaptureFlags::TEXT {
                 actual_tokens = fold_text_tokens(actual_tokens);
                 expected_tokens = fold_text_tokens(expected_tokens);
             }
@@ -99,7 +98,7 @@ impl FunctionalTestFixture for TokenCaptureTests {
                         expected_tokens,
                         initial_text_type,
                         test.input,
-                        format!("Token mismatch (capture: {:#?})", capture_flags)
+                        format!("Token mismatch (capture: {:#?})", expected_token_flags)
                     );
 
                     expect_eql!(
@@ -109,7 +108,7 @@ impl FunctionalTestFixture for TokenCaptureTests {
                         test.input,
                         format!(
                             "Serialized output doesn't match original input (capture: {:#?})",
-                            capture_flags
+                            expected_token_flags
                         )
                     );
                 }
@@ -118,7 +117,7 @@ impl FunctionalTestFixture for TokenCaptureTests {
                         test.expected_bailout.is_some(),
                         initial_text_type,
                         test.input,
-                        format!("Unexpected bailout (capture: {:#?})", capture_flags)
+                        format!("Unexpected bailout (capture: {:#?})", expected_token_flags)
                     );
                 }
             }
@@ -126,4 +125,4 @@ impl FunctionalTestFixture for TokenCaptureTests {
     }
 }
 
-functional_test_fixture!(TokenCaptureTests);
+functional_test_fixture!(TokenCapturerTests);

@@ -1,8 +1,8 @@
 macro_rules! parse_token {
     ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
-        use crate::harness::parsing::{parse, ChunkedInput};
+        use crate::harness::parsing::{parse, ChunkedInput, ContentSettings};
         use cool_thing::parser::TextType;
-        use cool_thing::token::{Token, TokenCaptureFlags};
+        use cool_thing::token::Token;
 
         let mut input: ChunkedInput = String::from($input).into();
         let mut emitted = false;
@@ -11,7 +11,7 @@ macro_rules! parse_token {
 
         parse(
             &input,
-            TokenCaptureFlags::all(),
+            ContentSettings::all(),
             TextType::Data,
             None,
             Box::new(|t| match t {

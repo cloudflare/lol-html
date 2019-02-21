@@ -22,33 +22,54 @@ bitflags! {
 }
 
 #[derive(Debug)]
-pub enum TokenCaptureEvent<'i> {
+pub enum TokenCapturerEvent<'i> {
     LexemeConsumed,
     TokenProduced(Box<Token<'i>>),
 }
 
-pub struct TokenCapture {
+pub struct TokenCapturer {
     encoding: &'static Encoding,
     pending_text_decoder: Option<Decoder>,
     text_buffer: String,
     capture_flags: TokenCaptureFlags,
+    document_level_capture_flags: TokenCaptureFlags,
     last_text_type: TextType,
 }
 
-impl TokenCapture {
-    pub fn new(initial_capture_flags: TokenCaptureFlags, encoding: &'static Encoding) -> Self {
-        TokenCapture {
+impl TokenCapturer {
+    pub fn new(
+        document_level_capture_flags: TokenCaptureFlags,
+        encoding: &'static Encoding,
+    ) -> Self {
+        TokenCapturer {
             encoding,
             pending_text_decoder: None,
             // TODO make adjustable
             text_buffer: String::from_utf8(vec![0u8; 1024]).unwrap(),
-            capture_flags: initial_capture_flags,
+            capture_flags: document_level_capture_flags,
+            document_level_capture_flags,
             last_text_type: TextType::Data,
         }
     }
 
     #[inline]
-    fn flush_pending_text(&mut self, event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>)) {
+    pub fn has_captures(&self) -> bool {
+        !self.capture_flags.is_empty()
+    }
+
+    #[inline]
+    pub fn set_capture_flags(&mut self, flags: TokenCaptureFlags) {
+        self.capture_flags = self.document_level_capture_flags | flags;
+    }
+
+    #[inline]
+    pub fn stop_capturing_tags(&mut self) {
+        self.capture_flags
+            .remove(TokenCaptureFlags::START_TAGS | TokenCaptureFlags::END_TAGS);
+    }
+
+    #[inline]
+    fn flush_pending_text(&mut self, event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>)) {
         if self.pending_text_decoder.is_some() {
             self.emit_text(&Bytes::empty(), true, event_handler);
             self.pending_text_decoder = None;
@@ -59,7 +80,7 @@ impl TokenCapture {
         &mut self,
         raw: &Bytes<'_>,
         last: bool,
-        event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>),
+        event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>),
     ) {
         let encoding = self.encoding;
         let buffer = self.text_buffer.as_mut_str();
@@ -83,7 +104,7 @@ impl TokenCapture {
                     encoding,
                 ));
 
-                event_handler(TokenCaptureEvent::TokenProduced(Box::new(token)));
+                event_handler(TokenCapturerEvent::TokenProduced(Box::new(token)));
             }
 
             if let CoderResult::InputEmpty = status {
@@ -96,11 +117,11 @@ impl TokenCapture {
         &mut self,
         lexeme: &Lexeme<'_>,
         token_outline: &TokenOutline,
-        event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>),
+        event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>),
     ) {
         macro_rules! capture {
             ( $Type:ident ($($args:expr),+) ) => {
-                event_handler(TokenCaptureEvent::LexemeConsumed);
+                event_handler(TokenCapturerEvent::LexemeConsumed);
 
                 let token = Token::$Type($Type::new(
                     $($args),+,
@@ -108,7 +129,7 @@ impl TokenCapture {
                     self.encoding
                 ));
 
-                event_handler(TokenCaptureEvent::TokenProduced(Box::new(token)));
+                event_handler(TokenCapturerEvent::TokenProduced(Box::new(token)));
             };
         }
 
@@ -158,7 +179,7 @@ impl TokenCapture {
     pub fn feed(
         &mut self,
         lexeme: &Lexeme<'_>,
-        event_handler: &mut dyn FnMut(TokenCaptureEvent<'_>),
+        event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>),
     ) {
         match lexeme.token_outline() {
             Some(token_outline) => match *token_outline {
@@ -167,7 +188,7 @@ impl TokenCapture {
                 {
                     self.last_text_type = text_type;
 
-                    event_handler(TokenCaptureEvent::LexemeConsumed);
+                    event_handler(TokenCapturerEvent::LexemeConsumed);
 
                     self.emit_text(&lexeme.raw(), false, event_handler);
                 }

@@ -26,12 +26,18 @@ enum Namespace {
 }
 
 #[must_use]
-#[derive(Copy, Clone)]
 pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
-    RequestLexeme(fn(&mut TreeBuilderSimulator, &Lexeme<'_>) -> TreeBuilderFeedback),
+    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &Lexeme<'_>) -> TreeBuilderFeedback>),
     None,
+}
+
+#[inline]
+fn request_lexeme(
+    callback: impl FnMut(&mut TreeBuilderSimulator, &Lexeme<'_>) -> TreeBuilderFeedback + 'static,
+) -> TreeBuilderFeedback {
+    TreeBuilderFeedback::RequestLexeme(Box::new(callback))
 }
 
 #[inline]
@@ -184,10 +190,23 @@ impl TreeBuilderSimulator {
             {
                 self.leave_ns()
             }
+
             // NOTE: <annotation-xml> case
-            None if prev_ns == Namespace::MathML =>TreeBuilderFeedback::RequestLexeme(
-                TreeBuilderSimulator::check_for_annotation_xml_end_tag_for_integration_point_exit_check,
-            ),
+            None if prev_ns == Namespace::MathML => {
+                request_lexeme(|this, lexeme| match expect_token_outline!(lexeme) {
+                    TokenOutline::EndTag { name, .. } => {
+                        let name = lexeme.input().slice(name);
+
+                        if eq_case_insensitive(&name, b"annotation-xml") {
+                            this.leave_ns()
+                        } else {
+                            TreeBuilderFeedback::None
+                        }
+                    }
+                    _ => unreachable!("Token should be an end tag at this point"),
+                })
+            }
+
             _ => TreeBuilderFeedback::None,
         }
     }
@@ -198,109 +217,74 @@ impl TreeBuilderSimulator {
     ) -> TreeBuilderFeedback {
         match tag_name_hash {
             Some(t) if causes_foreign_content_exit(t) => self.leave_ns(),
+
             // NOTE: <font> tag special case requires attributes
             // to decide on foreign context exit
-            Some(t) if t == TagName::Font => TreeBuilderFeedback::RequestLexeme(
-                TreeBuilderSimulator::check_font_start_tag_token_for_foreign_content_exit,
-            ),
-            Some(t) if self.is_integration_point_enter(t) => TreeBuilderFeedback::RequestLexeme(
-                TreeBuilderSimulator::check_tag_self_closing_flag_for_integration_point_check
-            ),
-            // NOTE: integration point check <annotation-xml> case
-            None if self.current_ns == Namespace::MathML => TreeBuilderFeedback::RequestLexeme(
-                TreeBuilderSimulator::check_for_annotation_xml_start_tag_for_integration_point_check,
-            ),
-            _ => TreeBuilderFeedback::None,
-        }
-    }
+            Some(t) if t == TagName::Font => request_lexeme(|this, lexeme| {
+                match expect_token_outline!(lexeme) {
+                    TokenOutline::StartTag { ref attributes, .. } => {
+                        for attr in attributes.borrow().iter() {
+                            let name = lexeme.input().slice(attr.name);
 
-    fn check_tag_self_closing_flag_for_integration_point_check(
-        &mut self,
-        lexeme: &Lexeme<'_>,
-    ) -> TreeBuilderFeedback {
-        match expect_token_outline!(lexeme) {
-            TokenOutline::StartTag { self_closing, .. } => {
-                if self_closing {
-                    TreeBuilderFeedback::None
-                } else {
-                    self.enter_ns(Namespace::Html)
-                }
-            }
-            _ => unreachable!("Token should be a start tag at this point"),
-        }
-    }
-
-    fn check_for_annotation_xml_end_tag_for_integration_point_exit_check(
-        &mut self,
-        lexeme: &Lexeme<'_>,
-    ) -> TreeBuilderFeedback {
-        match expect_token_outline!(lexeme) {
-            TokenOutline::EndTag { name, .. } => {
-                let name = lexeme.input().slice(name);
-
-                if eq_case_insensitive(&name, b"annotation-xml") {
-                    self.leave_ns()
-                } else {
-                    TreeBuilderFeedback::None
-                }
-            }
-            _ => unreachable!("Token should be an end tag at this point"),
-        }
-    }
-
-    fn check_for_annotation_xml_start_tag_for_integration_point_check(
-        &mut self,
-        lexeme: &Lexeme<'_>,
-    ) -> TreeBuilderFeedback {
-        match expect_token_outline!(lexeme) {
-            TokenOutline::StartTag {
-                name,
-                ref attributes,
-                self_closing,
-                ..
-            } => {
-                let name = lexeme.input().slice(name);
-
-                if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
-                    for attr in attributes.borrow().iter() {
-                        let name = lexeme.input().slice(attr.name);
-                        let value = lexeme.input().slice(attr.value);
-
-                        if eq_case_insensitive(&name, b"encoding")
-                            && (eq_case_insensitive(&value, b"text/html")
-                                || eq_case_insensitive(&value, b"application/xhtml+xml"))
-                        {
-                            return self.enter_ns(Namespace::Html);
+                            if eq_case_insensitive(&name, b"color")
+                                || eq_case_insensitive(&name, b"size")
+                                || eq_case_insensitive(&name, b"face")
+                            {
+                                return this.leave_ns();
+                            }
                         }
                     }
+                    _ => unreachable!("Token should be a start tag at this point"),
                 }
-            }
-            _ => unreachable!("Token should be a start tag at this point"),
-        }
 
-        TreeBuilderFeedback::None
-    }
+                TreeBuilderFeedback::None
+            }),
 
-    fn check_font_start_tag_token_for_foreign_content_exit(
-        &mut self,
-        lexeme: &Lexeme<'_>,
-    ) -> TreeBuilderFeedback {
-        match expect_token_outline!(lexeme) {
-            TokenOutline::StartTag { ref attributes, .. } => {
-                for attr in attributes.borrow().iter() {
-                    let name = lexeme.input().slice(attr.name);
-
-                    if eq_case_insensitive(&name, b"color")
-                        || eq_case_insensitive(&name, b"size")
-                        || eq_case_insensitive(&name, b"face")
-                    {
-                        return self.leave_ns();
+            Some(t) if self.is_integration_point_enter(t) => {
+                request_lexeme(|this, lexeme| match expect_token_outline!(lexeme) {
+                    TokenOutline::StartTag { self_closing, .. } => {
+                        if self_closing {
+                            TreeBuilderFeedback::None
+                        } else {
+                            this.enter_ns(Namespace::Html)
+                        }
                     }
-                }
+                    _ => unreachable!("Token should be a start tag at this point"),
+                })
             }
-            _ => unreachable!("Token should be a start tag at this point"),
-        }
 
-        TreeBuilderFeedback::None
+            // NOTE: integration point check <annotation-xml> case
+            None if self.current_ns == Namespace::MathML => request_lexeme(|this, lexeme| {
+                match expect_token_outline!(lexeme) {
+                    TokenOutline::StartTag {
+                        name,
+                        ref attributes,
+                        self_closing,
+                        ..
+                    } => {
+                        let name = lexeme.input().slice(name);
+
+                        if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
+                            for attr in attributes.borrow().iter() {
+                                let name = lexeme.input().slice(attr.name);
+                                let value = lexeme.input().slice(attr.value);
+
+                                if eq_case_insensitive(&name, b"encoding")
+                                    && (eq_case_insensitive(&value, b"text/html")
+                                        || eq_case_insensitive(&value, b"application/xhtml+xml"))
+                                {
+                                    return this.enter_ns(Namespace::Html);
+                                }
+                            }
+                        }
+                    }
+                    _ => unreachable!("Token should be a start tag at this point"),
+                }
+
+                TreeBuilderFeedback::None
+            }),
+
+            _ => TreeBuilderFeedback::None,
+        }
     }
 }

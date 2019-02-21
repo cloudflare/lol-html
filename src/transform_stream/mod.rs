@@ -9,7 +9,7 @@ use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::transform_controller::TransformController;
+pub use self::transform_controller::*;
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
@@ -48,7 +48,7 @@ where
         encoding: &'static Encoding,
     ) -> Self {
         let initial_output_type = if transform_controller
-            .get_initial_token_capture_flags()
+            .document_level_content_settings()
             .is_empty()
         {
             NextOutputType::TagHint

@@ -1,7 +1,7 @@
-mod capture;
+mod capturer;
 mod impls;
 
-pub use self::capture::*;
+pub use self::capturer::*;
 pub use self::impls::*;
 
 pub trait Serialize {
