@@ -54,12 +54,22 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             .take()
             .expect("Tag token should exist at this point");
 
+        // NOTE: if we are silently parsing the tag to get tree builder
+        // feedback for the tag scanner then the ambiguity check has been
+        // already made by the tag scanner.
+        let with_ambiguity_check = !self.should_silently_consume_current_tag_only;
+
         let feedback = match token {
             StartTag { name_hash, .. } => {
                 self.last_start_tag_name_hash = name_hash;
-                self.get_feedback_for_start_tag(name_hash)?
+                self.tree_builder_simulator
+                    .borrow_mut()
+                    .get_feedback_for_start_tag(name_hash, with_ambiguity_check)?
             }
-            EndTag { name_hash, .. } => self.get_feedback_for_end_tag(name_hash),
+            EndTag { name_hash, .. } => self
+                .tree_builder_simulator
+                .borrow_mut()
+                .get_feedback_for_end_tag(name_hash, with_ambiguity_check),
         };
 
         let lexeme = self.create_tag_lexeme(input, token);

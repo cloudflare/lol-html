@@ -8,10 +8,9 @@ use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
 use crate::parser::{
-    FeedbackProviders, ParserDirective, ParsingLoopTerminationReason, TagName, TextType,
-    TreeBuilderFeedback,
+    ParserDirective, ParsingLoopTerminationReason, TagName, TextType, TreeBuilderFeedback,
+    TreeBuilderSimulator,
 };
-use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -38,13 +37,13 @@ pub struct Lexer<S: LexemeSink> {
     last_start_tag_name_hash: Option<u64>,
     closing_quote: u8,
     attr_buffer: Rc<RefCell<Vec<AttributeOultine>>>,
-    feedback_providers: Rc<RefCell<FeedbackProviders>>,
+    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     last_text_type: TextType,
     should_silently_consume_current_tag_only: bool,
 }
 
 impl<S: LexemeSink> Lexer<S> {
-    pub fn new(lexeme_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
+    pub fn new(lexeme_sink: S, tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>) -> Self {
         Lexer {
             input_cursor: Cursor::default(),
             lexeme_start: 0,
@@ -61,7 +60,7 @@ impl<S: LexemeSink> Lexer<S> {
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
-            feedback_providers,
+            tree_builder_simulator,
             last_text_type: TextType::Data,
             should_silently_consume_current_tag_only: false,
         }
@@ -76,41 +75,6 @@ impl<S: LexemeSink> Lexer<S> {
         self.should_silently_consume_current_tag_only = true;
 
         self.continue_from_bookmark(input, bookmark)
-    }
-
-    fn get_feedback_for_start_tag(
-        &mut self,
-        name_hash: Option<u64>,
-    ) -> Result<TreeBuilderFeedback, Error> {
-        let mut feedback_providers = self.feedback_providers.borrow_mut();
-
-        // NOTE: if we are silently parsing the tag to get tree builder
-        // feedback for the tag scanner then guard check has been
-        // already activated by the tag scanner.
-        if !self.should_silently_consume_current_tag_only {
-            feedback_providers
-                .ambiguity_guard
-                .track_start_tag(name_hash)?;
-        }
-
-        Ok(feedback_providers
-            .tree_builder_simulator
-            .get_feedback_for_start_tag(name_hash))
-    }
-
-    fn get_feedback_for_end_tag(&mut self, name_hash: Option<u64>) -> TreeBuilderFeedback {
-        let mut feedback_providers = self.feedback_providers.borrow_mut();
-
-        // NOTE: if we are silently parsing the tag to get tree builder
-        // feedback for the tag scanner then guard check has been
-        // already activated by the tag scanner.
-        if !self.should_silently_consume_current_tag_only {
-            feedback_providers.ambiguity_guard.track_end_tag(name_hash);
-        }
-
-        feedback_providers
-            .tree_builder_simulator
-            .get_feedback_for_end_tag(name_hash)
     }
 
     fn handle_tree_builder_feedback(
@@ -128,12 +92,7 @@ impl<S: LexemeSink> Lexer<S> {
                 ParsingLoopDirective::None
             }
             TreeBuilderFeedback::RequestLexeme(mut callback) => {
-                let feedback = {
-                    let tree_builder_simulator =
-                        &mut self.feedback_providers.borrow_mut().tree_builder_simulator;
-
-                    callback(tree_builder_simulator, &lexeme)
-                };
+                let feedback = callback(&mut self.tree_builder_simulator.borrow_mut(), lexeme);
 
                 self.handle_tree_builder_feedback(feedback, lexeme)
             }

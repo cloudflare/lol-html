@@ -11,10 +11,13 @@
 // cases where we can't unambiguously determine parsing context and prefer
 // to bail out from the tokenization in such a case
 // (see `AmbiguityGuard` for the details).
+mod ambiguity_guard;
 
+use self::ambiguity_guard::AmbiguityGuard;
 use crate::base::Bytes;
 use crate::parser::outputs::{TagLexeme, TagTokenOutline};
 use crate::parser::{TagName, TextType};
+use failure::Error;
 
 use TagTokenOutline::*;
 
@@ -27,11 +30,14 @@ enum Namespace {
     MathML,
 }
 
+pub type LexemeRequestCallback =
+    Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback>;
+
 #[must_use]
 pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
-    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback>),
+    RequestLexeme(LexemeRequestCallback),
     None,
 }
 
@@ -98,6 +104,7 @@ fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
 pub struct TreeBuilderSimulator {
     ns_stack: Vec<Namespace>,
     current_ns: Namespace,
+    ambiguity_guard: AmbiguityGuard,
 }
 
 impl Default for TreeBuilderSimulator {
@@ -105,6 +112,7 @@ impl Default for TreeBuilderSimulator {
         let mut simulator = TreeBuilderSimulator {
             ns_stack: Vec::with_capacity(DEFAULT_NS_STACK_CAPACITY),
             current_ns: Namespace::Html,
+            ambiguity_guard: AmbiguityGuard::default(),
         };
 
         simulator.ns_stack.push(Namespace::Html);
@@ -117,8 +125,13 @@ impl TreeBuilderSimulator {
     pub fn get_feedback_for_start_tag(
         &mut self,
         tag_name_hash: Option<u64>,
-    ) -> TreeBuilderFeedback {
-        match tag_name_hash {
+        with_ambiguity_check: bool,
+    ) -> Result<TreeBuilderFeedback, Error> {
+        if with_ambiguity_check {
+            self.ambiguity_guard.track_start_tag(tag_name_hash)?;
+        }
+
+        Ok(match tag_name_hash {
             Some(t) if t == TagName::Svg => self.enter_ns(Namespace::Svg),
             Some(t) if t == TagName::Math => self.enter_ns(Namespace::MathML),
             Some(t) if self.current_ns == Namespace::Html => get_text_type_adjustment(t),
@@ -126,10 +139,18 @@ impl TreeBuilderSimulator {
                 self.get_feedback_for_start_tag_in_foreign_content(tag_name_hash)
             }
             _ => TreeBuilderFeedback::None,
-        }
+        })
     }
 
-    pub fn get_feedback_for_end_tag(&mut self, tag_name_hash: Option<u64>) -> TreeBuilderFeedback {
+    pub fn get_feedback_for_end_tag(
+        &mut self,
+        tag_name_hash: Option<u64>,
+        with_ambiguity_check: bool,
+    ) -> TreeBuilderFeedback {
+        if with_ambiguity_check {
+            self.ambiguity_guard.track_end_tag(tag_name_hash);
+        }
+
         match tag_name_hash {
             Some(t) if self.current_ns == Namespace::Svg && t == TagName::Svg => self.leave_ns(),
             Some(t) if self.current_ns == Namespace::MathML && t == TagName::Math => {

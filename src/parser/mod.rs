@@ -4,16 +4,16 @@ mod tag_name;
 #[macro_use]
 mod state_machine;
 
-mod feedback_providers;
 mod lexer;
 mod outputs;
 mod tag_scanner;
 mod text_type;
+mod tree_builder_simulator;
 
-use self::feedback_providers::*;
 use self::lexer::Lexer;
 use self::state_machine::{ParsingLoopTerminationReason, StateMachine};
 use self::tag_scanner::TagScanner;
+use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
 use crate::base::Chunk;
 use failure::Error;
 use std::cell::RefCell;
@@ -72,11 +72,14 @@ macro_rules! with_current_sm {
 
 impl<S: ParserOutputSink> Parser<S> {
     pub fn new(output_sink: &Rc<RefCell<S>>, initial_directive: ParserDirective) -> Self {
-        let feedback_providers = Rc::new(RefCell::new(FeedbackProviders::default()));
+        let tree_builder_simulator = Rc::new(RefCell::new(TreeBuilderSimulator::default()));
 
         Parser {
-            lexer: Lexer::new(Rc::clone(output_sink), Rc::clone(&feedback_providers)),
-            tag_scanner: TagScanner::new(Rc::clone(output_sink), Rc::clone(&feedback_providers)),
+            lexer: Lexer::new(Rc::clone(output_sink), Rc::clone(&tree_builder_simulator)),
+            tag_scanner: TagScanner::new(
+                Rc::clone(output_sink),
+                Rc::clone(&tree_builder_simulator),
+            ),
             current_directive: initial_directive,
         }
     }
@@ -86,11 +89,8 @@ impl<S: ParserOutputSink> Parser<S> {
 
         loop {
             match loop_termination_reason {
-                ParsingLoopTerminationReason::ParserDirectiveChange(
-                    next_directive,
-                    sm_bookmark,
-                ) => {
-                    self.current_directive = next_directive;
+                ParsingLoopTerminationReason::ParserDirectiveChange(new_directive, sm_bookmark) => {
+                    self.current_directive = new_directive;
 
                     trace!(@continue_from_bookmark sm_bookmark, self.current_directive, input);
 

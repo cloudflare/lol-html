@@ -8,7 +8,9 @@ use crate::parser::outputs::*;
 use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
-use crate::parser::{FeedbackProviders, ParserDirective, TagName, TextType, TreeBuilderFeedback};
+use crate::parser::{
+    ParserDirective, TagName, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
+};
 use failure::Error;
 use std::cell::RefCell;
 use std::cmp::min;
@@ -44,13 +46,16 @@ pub struct TagScanner<S: TagHintSink> {
     tag_hint_sink: S,
     state: State<S>,
     closing_quote: u8,
-    feedback_providers: Rc<RefCell<FeedbackProviders>>,
+    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     pending_text_type_change: Option<TextType>,
     last_text_type: TextType,
 }
 
 impl<S: TagHintSink> TagScanner<S> {
-    pub fn new(tag_hint_sink: S, feedback_providers: Rc<RefCell<FeedbackProviders>>) -> Self {
+    pub fn new(
+        tag_hint_sink: S,
+        tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    ) -> Self {
         TagScanner {
             input_cursor: Cursor::default(),
             tag_start: None,
@@ -64,7 +69,7 @@ impl<S: TagHintSink> TagScanner<S> {
             tag_hint_sink,
             state: TagScanner::data_state,
             closing_quote: b'"',
-            feedback_providers,
+            tree_builder_simulator,
             pending_text_type_change: None,
             last_text_type: TextType::Data,
         }
@@ -89,8 +94,7 @@ impl<S: TagHintSink> TagScanner<S> {
         }
     }
 
-    // Foo
-    // FeedbackProviders -> FeedbackProvider, get feedback for start tag and end tag
+    // TODO FeedbackProvider -> FeedbackProvider, get feedback for start tag and end tag
     // Get rid of tag hint
     // Separate lexemes for start and end tag
 
@@ -98,30 +102,20 @@ impl<S: TagHintSink> TagScanner<S> {
         &mut self,
         tag_hint: &TagHint<'_>,
     ) -> Result<TreeBuilderFeedback, Error> {
-        let mut feedback_providers = self.feedback_providers.borrow_mut();
+        let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
 
-        Ok(match tag_hint {
+        match tag_hint {
             TagHint::StartTag(name_info) => {
                 let name_hash = name_info.name_hash();
 
-                feedback_providers
-                    .ambiguity_guard
-                    .track_start_tag(name_hash)?;
-
-                feedback_providers
-                    .tree_builder_simulator
-                    .get_feedback_for_start_tag(name_hash)
+                tree_builder_simulator.get_feedback_for_start_tag(name_hash, true)
             }
             TagHint::EndTag(name_info) => {
                 let name_hash = name_info.name_hash();
 
-                feedback_providers.ambiguity_guard.track_end_tag(name_hash);
-
-                feedback_providers
-                    .tree_builder_simulator
-                    .get_feedback_for_end_tag(name_hash)
+                Ok(tree_builder_simulator.get_feedback_for_end_tag(name_hash, true))
             }
-        })
+        }
     }
 
     fn handle_tree_builder_feedback(
