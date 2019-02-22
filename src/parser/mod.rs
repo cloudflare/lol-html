@@ -45,8 +45,13 @@ impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
 
 impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> ParserDirective {
-        self.borrow_mut().handle_tag_hint(tag_hint)
+    fn handle_start_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
+        self.borrow_mut().handle_start_tag_hint(name_info)
+    }
+
+    #[inline]
+    fn handle_end_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
+        self.borrow_mut().handle_end_tag_hint(name_info)
     }
 }
 

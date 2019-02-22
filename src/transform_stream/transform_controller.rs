@@ -94,7 +94,7 @@ pub enum ElementStartResponse<C: TransformController> {
 
 pub trait TransformController: Sized {
     fn document_level_content_settings(&self) -> DocumentLevelContentSettings;
-    fn handle_element_start(&mut self, name_info: TagNameInfo<'_>) -> ElementStartResponse<Self>;
-    fn handle_element_end(&mut self, name_info: TagNameInfo<'_>) -> ContentSettingsOnElementEnd;
+    fn handle_element_start(&mut self, name_info: &TagNameInfo<'_>) -> ElementStartResponse<Self>;
+    fn handle_element_end(&mut self, name_info: &TagNameInfo<'_>) -> ContentSettingsOnElementEnd;
     fn handle_token(&mut self, token: &mut Token<'_>);
 }

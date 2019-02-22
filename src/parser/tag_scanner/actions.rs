@@ -37,31 +37,32 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
 
     #[inline]
     fn finish_tag_name(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
-        let tag_hint = self.create_tag_hint(input);
-        let parser_directive = self.tag_hint_sink.handle_tag_hint(&tag_hint);
-
-        trace!(@output tag_hint);
+        let parser_directive = self.emit_tag_hint(input);
 
         let tag_start = self
             .tag_start
             .take()
             .expect("Tag start should be set at this point");
 
-        Ok(match parser_directive {
+        let loop_directive = match parser_directive {
             ParserDirective::ScanForTags => {
-                let feedback = self.get_feedback_for_tag(&tag_hint)?;
-
-                self.handle_tree_builder_feedback(feedback, tag_start)
+                self.get_loop_directive_from_tree_builder_feedback(tag_start)
             }
             ParserDirective::Lex => {
                 // NOTE: we don't need to take feedback from tree builder simulator
                 // here because tag will be re-parsed by the lexer anyway.
-                ParsingLoopDirective::Break(ParsingLoopTerminationReason::ParserDirectiveChange(
-                    ParserDirective::Lex,
-                    self.create_bookmark(tag_start),
+                Ok(ParsingLoopDirective::Break(
+                    ParsingLoopTerminationReason::ParserDirectiveChange(
+                        ParserDirective::Lex,
+                        self.create_bookmark(tag_start),
+                    ),
                 ))
             }
-        })
+        };
+
+        self.is_in_end_tag = false;
+
+        loop_directive
     }
 
     #[inline]

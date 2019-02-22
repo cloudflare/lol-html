@@ -88,11 +88,11 @@ impl TransformController for TestTransformController<'_> {
     fn document_level_content_settings(&self) -> DocumentLevelContentSettings {
         self.content_settings.document_level
     }
-    fn handle_element_start(&mut self, _: TagNameInfo<'_>) -> ElementStartResponse<Self> {
+    fn handle_element_start(&mut self, _: &TagNameInfo<'_>) -> ElementStartResponse<Self> {
         ElementStartResponse::ContentSettings(self.content_settings.on_element_start)
     }
 
-    fn handle_element_end(&mut self, _: TagNameInfo<'_>) -> ContentSettingsOnElementEnd {
+    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> ContentSettingsOnElementEnd {
         self.content_settings.on_element_end
     }
 

@@ -17,7 +17,8 @@ use std::cmp::min;
 use std::rc::Rc;
 
 pub trait TagHintSink {
-    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> ParserDirective;
+    fn handle_start_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective;
+    fn handle_end_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective;
 }
 
 pub type State<S> = fn(&mut TagScanner<S>, &Chunk<'_>) -> StateResult;
@@ -75,7 +76,7 @@ impl<S: TagHintSink> TagScanner<S> {
         }
     }
 
-    fn create_tag_hint<'i>(&mut self, input: &'i Chunk<'i>) -> TagHint<'i> {
+    fn emit_tag_hint(&mut self, input: &Chunk<'_>) -> ParserDirective {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.input_cursor.pos(),
@@ -83,47 +84,32 @@ impl<S: TagHintSink> TagScanner<S> {
 
         let name_info = TagNameInfo::new(input, name_range, self.tag_name_hash);
 
-        if self.is_in_end_tag {
-            self.is_in_end_tag = false;
+        trace!(@output name_info);
 
-            TagHint::EndTag(name_info)
+        if self.is_in_end_tag {
+            self.tag_hint_sink.handle_end_tag_hint(&name_info)
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;
-
-            TagHint::StartTag(name_info)
+            self.tag_hint_sink.handle_start_tag_hint(&name_info)
         }
     }
 
-    // TODO FeedbackProvider -> FeedbackProvider, get feedback for start tag and end tag
-    // Get rid of tag hint
-    // Separate lexemes for start and end tag
-
-    fn get_feedback_for_tag(
-        &mut self,
-        tag_hint: &TagHint<'_>,
-    ) -> Result<TreeBuilderFeedback, Error> {
+    #[inline]
+    fn get_tree_builder_feedback(&mut self) -> Result<TreeBuilderFeedback, Error> {
         let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
 
-        match tag_hint {
-            TagHint::StartTag(name_info) => {
-                let name_hash = name_info.name_hash();
-
-                tree_builder_simulator.get_feedback_for_start_tag(name_hash, true)
-            }
-            TagHint::EndTag(name_info) => {
-                let name_hash = name_info.name_hash();
-
-                Ok(tree_builder_simulator.get_feedback_for_end_tag(name_hash, true))
-            }
+        if self.is_in_end_tag {
+            Ok(tree_builder_simulator.get_feedback_for_end_tag(self.tag_name_hash, true))
+        } else {
+            tree_builder_simulator.get_feedback_for_start_tag(self.tag_name_hash, true)
         }
     }
 
-    fn handle_tree_builder_feedback(
+    fn get_loop_directive_from_tree_builder_feedback(
         &mut self,
-        feedback: TreeBuilderFeedback,
         tag_start: usize,
-    ) -> ParsingLoopDirective {
-        match feedback {
+    ) -> Result<ParsingLoopDirective, Error> {
+        Ok(match self.get_tree_builder_feedback()? {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
                 // NOTE: we can't switch type immediately as we
                 // are in the middle of tag parsing. So, we need
@@ -141,7 +127,7 @@ impl<S: TagHintSink> TagScanner<S> {
                 ),
             ),
             TreeBuilderFeedback::None => ParsingLoopDirective::None,
-        }
+        })
     }
 }
 

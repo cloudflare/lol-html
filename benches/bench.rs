@@ -84,7 +84,7 @@ fn cool_thing_tokenizer_bench(
 
             fn handle_element_start(
                 &mut self,
-                name_info: TagNameInfo,
+                name_info: &TagNameInfo<'_>,
             ) -> ElementStartResponse<Self> {
                 black_box(name_info);
                 ElementStartResponse::ContentSettings(self.content_settings.on_element_start)
@@ -92,7 +92,7 @@ fn cool_thing_tokenizer_bench(
 
             fn handle_element_end(
                 &mut self,
-                name_info: TagNameInfo,
+                name_info: &TagNameInfo<'_>,
             ) -> ContentSettingsOnElementEnd {
                 black_box(name_info);
                 self.content_settings.on_element_end

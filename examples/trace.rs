@@ -66,7 +66,7 @@ impl TransformController for TraceTransformController {
         }
     }
 
-    fn handle_element_start(&mut self, _: TagNameInfo<'_>) -> ElementStartResponse<Self> {
+    fn handle_element_start(&mut self, _: &TagNameInfo<'_>) -> ElementStartResponse<Self> {
         ElementStartResponse::ContentSettings(if self.tag_hint_mode {
             ContentSettingsOnElementStart::empty()
         } else {
@@ -74,7 +74,7 @@ impl TransformController for TraceTransformController {
         })
     }
 
-    fn handle_element_end(&mut self, _: TagNameInfo<'_>) -> ContentSettingsOnElementEnd {
+    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> ContentSettingsOnElementEnd {
         if self.tag_hint_mode {
             ContentSettingsOnElementEnd::empty()
         } else {

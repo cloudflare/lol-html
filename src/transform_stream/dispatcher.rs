@@ -1,10 +1,10 @@
 use super::transform_controller::*;
 use crate::base::{Chunk, Range};
 use crate::parser::{
-    Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHint,
-    TagHintSink, TagLexeme, TagNameInfo, TagTokenOutline,
+    Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHintSink,
+    TagLexeme, TagNameInfo, TagTokenOutline,
 };
-use crate::token::{Serialize, ToToken, TokenCapturer, TokenCapturerEvent};
+use crate::token::{Serialize, ToToken, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent};
 use encoding_rs::Encoding;
 use std::rc::Rc;
 
@@ -29,7 +29,7 @@ where
     output_sink: O,
     last_consumed_lexeme_end: usize,
     token_capturer: TokenCapturer,
-    got_capture_flags_from_tag_hint: bool,
+    got_settings_from_hint: bool,
     pending_element_modifiers_info_handler: Option<ElementModifiersInfoHandler<C>>,
 }
 
@@ -48,7 +48,7 @@ where
             output_sink,
             last_consumed_lexeme_end: 0,
             token_capturer: TokenCapturer::new(initial_capture_flags, encoding),
-            got_capture_flags_from_tag_hint: false,
+            got_settings_from_hint: false,
             pending_element_modifiers_info_handler: None,
         }
     }
@@ -144,7 +144,7 @@ where
                 } => {
                     let name_info = TagNameInfo::new(input, *name, *name_hash);
 
-                    match self.transform_controller.handle_element_start(name_info) {
+                    match self.transform_controller.handle_element_start(&name_info) {
                         ElementStartResponse::ContentSettings(settings) => settings.into(),
                         ElementStartResponse::RequestElementModifiersInfo(mut handler) => {
                             get_flags_from_handler!(handler, attributes, *self_closing)
@@ -156,13 +156,23 @@ where
                     let name_info = TagNameInfo::new(input, *name, *name_hash);
 
                     self.transform_controller
-                        .handle_element_end(name_info)
+                        .handle_element_end(&name_info)
                         .into()
                 }
             },
         };
 
         self.token_capturer.set_capture_flags(capture_flags);
+    }
+
+    #[inline]
+    fn apply_settings_from_hint_and_get_next_parser_directive(
+        &mut self,
+        settings: impl Into<TokenCaptureFlags>,
+    ) -> ParserDirective {
+        self.token_capturer.set_capture_flags(settings.into());
+        self.got_settings_from_hint = true;
+        self.get_next_parser_directive()
     }
 }
 
@@ -172,8 +182,8 @@ where
     O: OutputSink,
 {
     fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective {
-        if self.got_capture_flags_from_tag_hint {
-            self.got_capture_flags_from_tag_hint = false;
+        if self.got_settings_from_hint {
+            self.got_settings_from_hint = false;
         } else {
             self.adjust_capture_flags_for_tag_lexeme(lexeme);
         }
@@ -199,27 +209,23 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_tag_hint(&mut self, tag_hint: &TagHint<'_>) -> ParserDirective {
-        let capture_flags = match *tag_hint {
-            TagHint::StartTag(name_info) => {
-                match self.transform_controller.handle_element_start(name_info) {
-                    ElementStartResponse::ContentSettings(settings) => settings.into(),
-                    ElementStartResponse::RequestElementModifiersInfo(handler) => {
-                        self.pending_element_modifiers_info_handler = Some(handler);
-
-                        return ParserDirective::Lex;
-                    }
-                }
+    fn handle_start_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
+        match self.transform_controller.handle_element_start(name_info) {
+            ElementStartResponse::ContentSettings(settings) => {
+                self.apply_settings_from_hint_and_get_next_parser_directive(settings)
             }
-            TagHint::EndTag(name_info) => self
-                .transform_controller
-                .handle_element_end(name_info)
-                .into(),
-        };
+            ElementStartResponse::RequestElementModifiersInfo(handler) => {
+                self.pending_element_modifiers_info_handler = Some(handler);
 
-        self.token_capturer.set_capture_flags(capture_flags);
-        self.got_capture_flags_from_tag_hint = true;
-        self.get_next_parser_directive()
+                ParserDirective::Lex
+            }
+        }
+    }
+
+    fn handle_end_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
+        let settings = self.transform_controller.handle_element_end(name_info);
+
+        self.apply_settings_from_hint_and_get_next_parser_directive(settings)
     }
 }
 
