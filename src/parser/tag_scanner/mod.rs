@@ -105,7 +105,7 @@ impl<S: TagHintSink> TagScanner<S> {
         }
     }
 
-    fn get_loop_directive_from_tree_builder_feedback(
+    fn get_loop_directive_for_tag(
         &mut self,
         tag_start: usize,
     ) -> Result<ParsingLoopDirective, Error> {

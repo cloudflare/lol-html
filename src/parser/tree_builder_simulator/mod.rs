@@ -30,14 +30,11 @@ enum Namespace {
     MathML,
 }
 
-pub type LexemeRequestCallback =
-    Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback>;
-
 #[must_use]
 pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
-    RequestLexeme(LexemeRequestCallback),
+    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback>),
     None,
 }
 

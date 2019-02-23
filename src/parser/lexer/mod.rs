@@ -8,8 +8,7 @@ use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
 use crate::parser::{
-    ParserDirective, ParsingLoopTerminationReason, TagName, TextType, TreeBuilderFeedback,
-    TreeBuilderSimulator,
+    ParserDirective, TagName, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -123,29 +122,13 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn create_tag_lexeme<'i>(
+    fn create_lexeme_with_raw<'i, T>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: TagTokenOutline,
-    ) -> TagLexeme<'i> {
-        TagLexeme::new(
-            input,
-            token,
-            Range {
-                start: self.lexeme_start,
-                end: self.input_cursor.pos() + 1,
-            },
-        )
-    }
-
-    #[inline]
-    fn create_lexeme_with_raw<'i>(
-        &mut self,
-        input: &'i Chunk<'i>,
-        token: Option<NonTagContentTokenOutline>,
+        token: T,
         raw_end: usize,
-    ) -> NonTagContentLexeme<'i> {
-        NonTagContentLexeme::new(
+    ) -> Lexeme<'i, T> {
+        Lexeme::new(
             input,
             token,
             Range {
@@ -156,22 +139,22 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn create_lexeme_with_raw_inclusive<'i>(
+    fn create_lexeme_with_raw_inclusive<'i, T>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<NonTagContentTokenOutline>,
-    ) -> NonTagContentLexeme<'i> {
+        token: T,
+    ) -> Lexeme<'i, T> {
         let raw_end = self.input_cursor.pos() + 1;
 
         self.create_lexeme_with_raw(input, token, raw_end)
     }
 
     #[inline]
-    fn create_lexeme_with_raw_exclusive<'i>(
+    fn create_lexeme_with_raw_exclusive<'i, T>(
         &mut self,
         input: &'i Chunk<'i>,
-        token: Option<NonTagContentTokenOutline>,
-    ) -> NonTagContentLexeme<'i> {
+        token: T,
+    ) -> Lexeme<'i, T> {
         let raw_end = self.input_cursor.pos();
 
         self.create_lexeme_with_raw(input, token, raw_end)

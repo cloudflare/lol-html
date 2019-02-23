@@ -124,36 +124,36 @@ where
         let capture_flags = match self.pending_element_modifiers_info_handler.take() {
             // NOTE: tag hint was produced for the tag, but
             // attributes and self closing flag were requested.
-            Some(mut handler) => match lexeme.token_outline() {
+            Some(mut handler) => match *lexeme.token_outline() {
                 StartTag {
-                    attributes,
+                    ref attributes,
                     self_closing,
                     ..
-                } => get_flags_from_handler!(handler, attributes, *self_closing),
+                } => get_flags_from_handler!(handler, attributes, self_closing),
                 _ => unreachable!("Tag should be a start tag at this point"),
             },
 
             // NOTE: tag hint hasn't been produced for the tag, because
             // parser is not in the tag scan mode.
-            None => match lexeme.token_outline() {
+            None => match *lexeme.token_outline() {
                 StartTag {
                     name,
                     name_hash,
-                    attributes,
+                    ref attributes,
                     self_closing,
                 } => {
-                    let name_info = TagNameInfo::new(input, *name, *name_hash);
+                    let name_info = TagNameInfo::new(input, name, name_hash);
 
                     match self.transform_controller.handle_element_start(&name_info) {
                         ElementStartResponse::ContentSettings(settings) => settings.into(),
                         ElementStartResponse::RequestElementModifiersInfo(mut handler) => {
-                            get_flags_from_handler!(handler, attributes, *self_closing)
+                            get_flags_from_handler!(handler, attributes, self_closing)
                         }
                     }
                 }
 
                 EndTag { name, name_hash } => {
-                    let name_info = TagNameInfo::new(input, *name, *name_hash);
+                    let name_info = TagNameInfo::new(input, name, name_hash);
 
                     self.transform_controller
                         .handle_element_end(&name_info)

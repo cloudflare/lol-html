@@ -90,11 +90,13 @@ impl<S: ParserOutputSink> Parser<S> {
     }
 
     pub fn parse(&mut self, input: &Chunk<'_>) -> Result<usize, Error> {
+        use ParsingLoopTerminationReason::*;
+
         let mut loop_termination_reason = with_current_sm!(self, sm.run_parsing_loop(input))?;
 
         loop {
             match loop_termination_reason {
-                ParsingLoopTerminationReason::ParserDirectiveChange(new_directive, sm_bookmark) => {
+                ParserDirectiveChange(new_directive, sm_bookmark) => {
                     self.current_directive = new_directive;
 
                     trace!(@continue_from_bookmark sm_bookmark, self.current_directive, input);
@@ -107,7 +109,7 @@ impl<S: ParserOutputSink> Parser<S> {
                 // parser. So we need to spin lexer and consume lexeme
                 // for the tag, but without emitting it to consumers as they don't expect
                 // lexemes at this point.
-                ParsingLoopTerminationReason::LexemeRequiredForAdjustment(sm_bookmark) => {
+                LexemeRequiredForAdjustment(sm_bookmark) => {
                     self.current_directive = ParserDirective::Lex;
 
                     trace!(@continue_from_bookmark sm_bookmark, self.current_directive, input);
@@ -117,7 +119,7 @@ impl<S: ParserOutputSink> Parser<S> {
                         .silently_consume_current_tag_only(input, sm_bookmark)?;
                 }
 
-                ParsingLoopTerminationReason::EndOfInput { blocked_byte_count } => {
+                EndOfInput { blocked_byte_count } => {
                     return Ok(blocked_byte_count);
                 }
             }

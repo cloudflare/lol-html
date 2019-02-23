@@ -155,6 +155,18 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
+    fn change_parser_directive(
+        &self,
+        pos: usize,
+        new_parser_directive: ParserDirective,
+    ) -> ParsingLoopDirective {
+        ParsingLoopDirective::Break(ParsingLoopTerminationReason::ParserDirectiveChange(
+            new_parser_directive,
+            self.create_bookmark(pos),
+        ))
+    }
+
+    #[inline]
     fn switch_state(&mut self, state: fn(&mut Self, &Chunk<'_>) -> StateResult) {
         self.set_state(state);
         self.set_is_state_enter(true);

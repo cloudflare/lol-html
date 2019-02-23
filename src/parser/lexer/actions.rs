@@ -5,6 +5,9 @@ use crate::parser::state_machine::StateMachineActions;
 use NonTagContentTokenOutline::*;
 use TagTokenOutline::*;
 
+// NOTE: use macro instead of the function to make borrow
+// checker happy with range construction inside match arm
+// with a mutable borrow of lexer.
 macro_rules! get_token_part_range {
     ($self:tt) => {
         Range {
@@ -62,6 +65,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         let feedback = match token {
             StartTag { name_hash, .. } => {
                 self.last_start_tag_name_hash = name_hash;
+
                 self.tree_builder_simulator
                     .borrow_mut()
                     .get_feedback_for_start_tag(name_hash, with_ambiguity_check)?
@@ -72,8 +76,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
                 .get_feedback_for_end_tag(name_hash, with_ambiguity_check),
         };
 
-        let lexeme = self.create_tag_lexeme(input, token);
-        let parser_directive = self.emit_tag_lexeme(&lexeme);
+        let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
 
         // NOTE: exit from any non-initial text parsing mode always happens on tag emission
         // (except for CDATA, but there is a special action to take care of it).
@@ -81,13 +84,10 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
         let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lexeme);
 
-        Ok(match parser_directive {
+        Ok(match self.emit_tag_lexeme(&lexeme) {
             ParserDirective::Lex => loop_directive_from_feedback,
             ParserDirective::ScanForTags => {
-                ParsingLoopDirective::Break(ParsingLoopTerminationReason::ParserDirectiveChange(
-                    ParserDirective::ScanForTags,
-                    self.create_bookmark(self.lexeme_start),
-                ))
+                self.change_parser_directive(self.lexeme_start, ParserDirective::ScanForTags)
             }
         })
     }
