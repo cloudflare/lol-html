@@ -1,6 +1,6 @@
+use super::{OrderingMutations, Token};
 use crate::base::Bytes;
 use crate::parser::TextType;
-use crate::token::{OrderingMutations, Token};
 use encoding_rs::Encoding;
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
@@ -16,7 +16,7 @@ pub struct TextChunk<'i> {
 impl_common_token_api!(TextChunk);
 
 impl<'i> TextChunk<'i> {
-    pub(in crate::token) fn new_token(
+    pub(in crate::content) fn new_token(
         text: &'i str,
         text_type: TextType,
         last_in_text_node: bool,

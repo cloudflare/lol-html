@@ -1,4 +1,4 @@
-use cool_thing::token::Doctype;
+use cool_thing::content::Doctype;
 
 test_fixture!("Doctype token", {
     test("Serialization", {

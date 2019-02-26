@@ -1,9 +1,9 @@
 use crate::base::Chunk;
-use crate::parser::{AttributeOultine, TagNameInfo};
-use crate::token::{
+use crate::content::{
     Token, TokenCaptureFlags, CAPTURE_COMMENTS, CAPTURE_DOCTYPES, CAPTURE_END_TAGS,
     CAPTURE_START_TAGS, CAPTURE_TEXT,
 };
+use crate::parser::{AttributeOultine, TagNameInfo};
 use bitflags::bitflags;
 use std::cell::RefCell;
 use std::rc::Rc;

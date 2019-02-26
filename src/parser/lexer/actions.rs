@@ -30,7 +30,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     #[inline]
     fn emit_text(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
         if self.input_cursor.pos() > self.lexeme_start {
-            // NOTE: unlike any other tokens, text tokens (except EOF) don't have
+            // NOTE: unlike any other tokens (except EOF), text tokens don't have
             // any lexical symbols that determine their bounds. Therefore,
             // representation of text token content is the raw slice.
             // Also, we always emit text if we encounter some other bounded

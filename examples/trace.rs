@@ -1,5 +1,5 @@
+use cool_thing::content::Token;
 use cool_thing::parser::*;
-use cool_thing::token::Token;
 use cool_thing::transform_stream::{
     ContentSettingsOnElementEnd, ContentSettingsOnElementStart, DocumentLevelContentSettings,
     ElementStartResponse, TransformController, TransformStream,

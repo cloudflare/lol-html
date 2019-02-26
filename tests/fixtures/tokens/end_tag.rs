@@ -1,4 +1,4 @@
-use cool_thing::token::{EndTag, TagNameError};
+use cool_thing::content::{EndTag, TagNameError};
 use encoding_rs::{EUC_JP, UTF_8};
 
 test_fixture!("End tag token", {

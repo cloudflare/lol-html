@@ -1,7 +1,6 @@
 use super::attributes::{Attribute, Attributes};
-use super::try_tag_name_from_str;
+use super::{try_tag_name_from_str, OrderingMutations, Serialize, Token};
 use crate::base::Bytes;
-use crate::token::{OrderingMutations, Serialize, Token};
 use encoding_rs::Encoding;
 use failure::Error;
 use std::fmt::{self, Debug};
@@ -18,7 +17,7 @@ pub struct StartTag<'i> {
 impl_common_token_api!(StartTag);
 
 impl<'i> StartTag<'i> {
-    pub(in crate::token) fn new_token(
+    pub(in crate::content) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         self_closing: bool,

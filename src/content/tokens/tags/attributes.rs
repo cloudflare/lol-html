@@ -1,6 +1,6 @@
 use crate::base::{Bytes, Chunk};
+use crate::content::Serialize;
 use crate::parser::AttributeOultine;
-use crate::token::Serialize;
 use encoding_rs::Encoding;
 use failure::Error;
 use lazycell::LazyCell;
@@ -121,7 +121,7 @@ pub struct Attributes<'i> {
 }
 
 impl<'i> Attributes<'i> {
-    pub(in crate::token) fn new(
+    pub(in crate::content) fn new(
         input: &'i Chunk<'i>,
         attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
         encoding: &'static Encoding,

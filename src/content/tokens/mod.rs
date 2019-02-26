@@ -1,5 +1,5 @@
 #[derive(Default)]
-pub struct OrderingMutations {
+struct OrderingMutations {
     content_before: Vec<u8>,
     replacements: Vec<u8>,
     content_after: Vec<u8>,
@@ -43,7 +43,7 @@ macro_rules! impl_common_token_api {
             }
         }
 
-        impl crate::token::Serialize for $Token<'_> {
+        impl crate::content::Serialize for $Token<'_> {
             #[inline]
             fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
                 let OrderingMutations {
@@ -83,3 +83,29 @@ pub use self::comment::{Comment, CommentTextError};
 pub use self::doctype::Doctype;
 pub use self::tags::*;
 pub use self::text_chunk::TextChunk;
+
+pub trait Serialize {
+    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8]));
+}
+
+#[derive(Debug)]
+pub enum Token<'i> {
+    TextChunk(TextChunk<'i>),
+    Comment(Comment<'i>),
+    StartTag(StartTag<'i>),
+    EndTag(EndTag<'i>),
+    Doctype(Doctype<'i>),
+}
+
+impl Serialize for Token<'_> {
+    #[inline]
+    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+        match self {
+            Token::TextChunk(t) => t.to_bytes(output_handler),
+            Token::Comment(t) => t.to_bytes(output_handler),
+            Token::StartTag(t) => t.to_bytes(output_handler),
+            Token::EndTag(t) => t.to_bytes(output_handler),
+            Token::Doctype(t) => t.to_bytes(output_handler),
+        }
+    }
+}

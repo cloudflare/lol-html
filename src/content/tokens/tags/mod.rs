@@ -2,6 +2,8 @@ use crate::base::Bytes;
 use encoding_rs::Encoding;
 use failure::Error;
 
+use super::*;
+
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum TagNameError {
     #[fail(display = "Tag name can't be empty.")]
@@ -64,7 +66,7 @@ mod attributes;
 mod end_tag;
 mod start_tag;
 
-pub(in crate::token) use self::attributes::Attributes;
+pub(in crate::content) use self::attributes::Attributes;
 
 pub use self::attributes::{Attribute, AttributeNameError};
 pub use self::end_tag::EndTag;

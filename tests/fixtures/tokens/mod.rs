@@ -2,7 +2,7 @@ macro_rules! parse_token {
     ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
         use crate::harness::parsing::{parse, ChunkedInput, ContentSettings};
         use cool_thing::parser::TextType;
-        use cool_thing::token::Token;
+        use cool_thing::content::Token;
 
         let mut input: ChunkedInput = String::from($input).into();
         let mut emitted = false;
@@ -35,7 +35,7 @@ macro_rules! parse_token {
 macro_rules! serialization_test {
     ($input:expr, $TokenType:ident, $test_cases:expr) => {
         use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
-        use cool_thing::token::Serialize;
+        use cool_thing::content::Serialize;
 
         // NOTE: give test cases type annotation to avoid boilerplate code in tests.
         let test_cases: &[(&'static str, Box<Fn(&mut $TokenType<'_>)>, &'static str)] = $test_cases;

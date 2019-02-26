@@ -1,4 +1,4 @@
-use cool_thing::token::TextChunk;
+use cool_thing::content::TextChunk;
 
 test_fixture!("Text chunk token", {
     test("Serialization", {

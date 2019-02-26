@@ -3,7 +3,7 @@ use crate::harness::functional_testing::{
 };
 use crate::harness::parsing::{parse, ContentSettings};
 use cool_thing::parser::TextType;
-use cool_thing::token::TokenCaptureFlags;
+use cool_thing::content::TokenCaptureFlags;
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens

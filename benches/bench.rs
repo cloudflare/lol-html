@@ -61,8 +61,8 @@ fn cool_thing_tokenizer_bench(
     content_settings: CoolThingContentSettings,
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
+        use cool_thing::content::Token;
         use cool_thing::parser::TagNameInfo;
-        use cool_thing::token::Token;
         use cool_thing::transform_stream::{
             ElementStartResponse, TransformController, TransformStream,
         };
