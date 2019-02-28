@@ -1,7 +1,6 @@
 use super::{OrderingMutations, Token};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
-use failure::Error;
 use std::fmt::{self, Debug};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
@@ -42,9 +41,9 @@ impl<'i> Comment<'i> {
     }
 
     #[inline]
-    pub fn set_text(&mut self, text: &str) -> Result<(), Error> {
+    pub fn set_text(&mut self, text: &str) -> Result<(), CommentTextError> {
         if text.find("-->").is_some() {
-            Err(CommentTextError::CommentClosingSequence.into())
+            Err(CommentTextError::CommentClosingSequence)
         } else {
             // NOTE: if character can't be represented in the given
             // encoding then encoding_rs replaces it with a numeric
@@ -57,7 +56,7 @@ impl<'i> Comment<'i> {
 
                     Ok(())
                 }
-                None => Err(CommentTextError::UnencodableCharacter.into()),
+                None => Err(CommentTextError::UnencodableCharacter),
             }
         }
     }

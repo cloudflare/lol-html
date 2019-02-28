@@ -1,13 +1,10 @@
 use crate::base::{Bytes, Chunk};
 use crate::content::Serialize;
-use crate::parser::AttributeOultine;
+use crate::parser::SharedAttributeBuffer;
 use encoding_rs::Encoding;
-use failure::Error;
 use lazycell::LazyCell;
-use std::cell::RefCell;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
-use std::rc::Rc;
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum AttributeNameError {
@@ -38,14 +35,17 @@ impl<'i> Attribute<'i> {
     }
 
     #[inline]
-    fn name_from_str(name: &str, encoding: &'static Encoding) -> Result<Bytes<'static>, Error> {
+    fn name_from_str(
+        name: &str,
+        encoding: &'static Encoding,
+    ) -> Result<Bytes<'static>, AttributeNameError> {
         if name.is_empty() {
-            Err(AttributeNameError::Empty.into())
+            Err(AttributeNameError::Empty)
         } else if let Some(ch) = name.chars().find(|&ch| match ch {
             ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>' | '=' => true,
             _ => false,
         }) {
-            Err(AttributeNameError::ForbiddenCharacter(ch).into())
+            Err(AttributeNameError::ForbiddenCharacter(ch))
         } else {
             // NOTE: if character can't be represented in the given
             // encoding then encoding_rs replaces it with a numeric
@@ -53,13 +53,17 @@ impl<'i> Attribute<'i> {
             // supported in attribute names, so we need to bail.
             match Bytes::from_str_without_replacements(name, encoding) {
                 Some(name) => Ok(name.into_owned()),
-                None => Err(AttributeNameError::UnencodableCharacter.into()),
+                None => Err(AttributeNameError::UnencodableCharacter),
             }
         }
     }
 
     #[inline]
-    fn try_from(name: &str, value: &str, encoding: &'static Encoding) -> Result<Self, Error> {
+    fn try_from(
+        name: &str,
+        value: &str,
+        encoding: &'static Encoding,
+    ) -> Result<Self, AttributeNameError> {
         Ok(Attribute {
             name: Attribute::name_from_str(name, encoding)?,
             value: Bytes::from_str(value, encoding).into_owned(),
@@ -115,7 +119,7 @@ impl Debug for Attribute<'_> {
 
 pub struct Attributes<'i> {
     input: &'i Chunk<'i>,
-    attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
+    attribute_buffer: SharedAttributeBuffer,
     items: LazyCell<Vec<Attribute<'i>>>,
     encoding: &'static Encoding,
 }
@@ -123,12 +127,12 @@ pub struct Attributes<'i> {
 impl<'i> Attributes<'i> {
     pub(in crate::content) fn new(
         input: &'i Chunk<'i>,
-        attribute_views: Rc<RefCell<Vec<AttributeOultine>>>,
+        attribute_buffer: SharedAttributeBuffer,
         encoding: &'static Encoding,
     ) -> Self {
         Attributes {
             input,
-            attribute_views,
+            attribute_buffer,
             items: LazyCell::default(),
             encoding,
         }
@@ -139,7 +143,7 @@ impl<'i> Attributes<'i> {
         name: &str,
         value: &str,
         encoding: &'static Encoding,
-    ) -> Result<(), Error> {
+    ) -> Result<(), AttributeNameError> {
         let name = name.to_ascii_lowercase();
         let items = self.as_mut_vec();
 
@@ -171,7 +175,7 @@ impl<'i> Attributes<'i> {
     }
 
     fn init_items(&self) -> Vec<Attribute<'i>> {
-        self.attribute_views
+        self.attribute_buffer
             .borrow()
             .iter()
             .map(|a| {

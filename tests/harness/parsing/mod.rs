@@ -67,16 +67,15 @@ impl ContentSettings {
     }
 }
 
+type TokenHandler<'h> = Box<dyn FnMut(&mut Token<'_>) + 'h>;
+
 struct TestTransformController<'h> {
-    token_handler: Box<dyn FnMut(&mut Token<'_>) + 'h>,
+    token_handler: TokenHandler<'h>,
     content_settings: ContentSettings,
 }
 
 impl<'h> TestTransformController<'h> {
-    pub fn new(
-        token_handler: Box<dyn FnMut(&mut Token<'_>) + 'h>,
-        content_settings: ContentSettings,
-    ) -> Self {
+    pub fn new(token_handler: TokenHandler<'h>, content_settings: ContentSettings) -> Self {
         TestTransformController {
             token_handler,
             content_settings,
@@ -96,17 +95,17 @@ impl TransformController for TestTransformController<'_> {
         self.content_settings.on_element_end
     }
 
-    fn handle_token(&mut self, token: &mut Token<'_>) {
+    fn handle_token(&mut self, token: &mut Token) {
         (self.token_handler)(token)
     }
 }
 
-pub fn parse<'h>(
+pub fn parse(
     input: &ChunkedInput,
     content_settings: ContentSettings,
     initial_text_type: TextType,
     last_start_tag_name_hash: Option<u64>,
-    token_handler: Box<dyn FnMut(&mut Token<'_>) + 'h>,
+    token_handler: TokenHandler<'_>,
 ) -> Result<String, Error> {
     let mut output = Vec::new();
 
@@ -135,4 +134,38 @@ pub fn parse<'h>(
     transform_stream.end()?;
 
     Ok(encoding.decode_without_bom_handling(&output).0.to_string())
+}
+
+macro_rules! parse_token {
+    ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
+        use crate::harness::parsing::{parse, ChunkedInput, ContentSettings};
+        use cool_thing::content::Token;
+        use cool_thing::parser::TextType;
+
+        let mut input: ChunkedInput = String::from($input).into();
+        let mut emitted = false;
+
+        input.init($encoding, true).unwrap();
+
+        parse(
+            &input,
+            ContentSettings::all(),
+            TextType::Data,
+            None,
+            Box::new(move |t| match t {
+                Token::$TokenType(t) => {
+                    // NOTE: we always have two text chunks:
+                    // one with the actual text and the second is emitted
+                    // on EOF to signify the end of the text node.
+                    // We need to invoke callback only for the first one.
+                    if !emitted {
+                        $callback(t);
+                        emitted = true;
+                    }
+                }
+                _ => unreachable!("Input should contain only tokens of the requested type"),
+            }),
+        )
+        .unwrap();
+    }};
 }

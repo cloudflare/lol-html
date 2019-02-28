@@ -32,6 +32,8 @@ macro_rules! impl_common_token_api {
             pub fn replace(&mut self, html: &str) {
                 let encoding = self.encoding;
 
+                self.ordering_mutations.removed = true;
+
                 self.ordering_mutations
                     .replacements
                     .extend_from_slice(&crate::base::Bytes::from_str(html, encoding));
@@ -40,6 +42,11 @@ macro_rules! impl_common_token_api {
             #[inline]
             pub fn remove(&mut self) {
                 self.ordering_mutations.removed = true;
+            }
+
+            #[inline]
+            pub fn removed(&self) -> bool {
+                self.ordering_mutations.removed
             }
         }
 
@@ -57,13 +64,13 @@ macro_rules! impl_common_token_api {
                     output_handler(content_before);
                 }
 
-                if !replacements.is_empty() {
-                    output_handler(replacements);
-                } else if !removed {
+                if !removed {
                     match self.raw() {
                         Some(raw) => output_handler(raw),
                         None => self.serialize_from_parts(output_handler),
                     }
+                } else if !replacements.is_empty() {
+                    output_handler(replacements);
                 }
 
                 if !content_after.is_empty() {
@@ -74,14 +81,20 @@ macro_rules! impl_common_token_api {
     };
 }
 
+mod attributes;
 mod comment;
 mod doctype;
-mod tags;
+mod end_tag;
+mod start_tag;
 mod text_chunk;
 
+pub(super) use self::attributes::Attributes;
+
+pub use self::attributes::{Attribute, AttributeNameError};
 pub use self::comment::{Comment, CommentTextError};
 pub use self::doctype::Doctype;
-pub use self::tags::*;
+pub use self::end_tag::EndTag;
+pub use self::start_tag::StartTag;
 pub use self::text_chunk::TextChunk;
 
 pub trait Serialize {

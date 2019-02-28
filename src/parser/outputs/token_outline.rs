@@ -1,7 +1,5 @@
 use crate::base::{Align, Range};
-use crate::parser::TextType;
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::parser::{SharedAttributeBuffer, TextType};
 
 #[derive(Debug, Default)]
 pub struct AttributeOultine {
@@ -24,7 +22,7 @@ pub enum TagTokenOutline {
     StartTag {
         name: Range,
         name_hash: Option<u64>,
-        attributes: Rc<RefCell<Vec<AttributeOultine>>>,
+        attributes: SharedAttributeBuffer,
         self_closing: bool,
     },
 

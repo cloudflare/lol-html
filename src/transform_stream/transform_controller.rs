@@ -3,10 +3,8 @@ use crate::content::{
     Token, TokenCaptureFlags, CAPTURE_COMMENTS, CAPTURE_DOCTYPES, CAPTURE_END_TAGS,
     CAPTURE_START_TAGS, CAPTURE_TEXT,
 };
-use crate::parser::{AttributeOultine, TagNameInfo};
+use crate::parser::{SharedAttributeBuffer, TagNameInfo};
 use bitflags::bitflags;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 macro_rules! impl_into_token_capturer_flags {
     ($Flags:ident) => {
@@ -51,7 +49,7 @@ impl_into_token_capturer_flags!(ContentSettingsOnElementEnd);
 
 pub struct ElementModifiersInfo<'i> {
     input: &'i Chunk<'i>,
-    attributes: Rc<RefCell<Vec<AttributeOultine>>>,
+    attributes: SharedAttributeBuffer,
     self_closing: bool,
 }
 
@@ -59,7 +57,7 @@ impl<'i> ElementModifiersInfo<'i> {
     #[inline]
     pub fn new(
         input: &'i Chunk<'i>,
-        attributes: Rc<RefCell<Vec<AttributeOultine>>>,
+        attributes: SharedAttributeBuffer,
         self_closing: bool,
     ) -> Self {
         ElementModifiersInfo {
@@ -74,7 +72,7 @@ impl<'i> ElementModifiersInfo<'i> {
     }
 
     #[inline]
-    pub fn attributes(&self) -> &Rc<RefCell<Vec<AttributeOultine>>> {
+    pub fn attributes(&self) -> &SharedAttributeBuffer {
         &self.attributes
     }
 

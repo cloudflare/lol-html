@@ -11,10 +11,10 @@ test_fixture!("Text chunk token", {
             src,
             TextChunk,
             &[
-                ("Parsed", Box::new(|_| {}), src),
+                ("Parsed", Box::new(|_, _| {}), src),
                 (
                     "With prepends and appends",
-                    Box::new(|c| {
+                    Box::new(|c, _| {
                         c.before("<div>Hey</div>");
                         c.before("<foo>");
                         c.after("</foo>");
@@ -31,20 +31,30 @@ test_fixture!("Text chunk token", {
                 ),
                 (
                     "Removed",
-                    Box::new(|c| {
+                    Box::new(|c, _| {
+                        assert!(!c.removed());
+
+                        c.remove();
+
+                        assert!(c.removed());
+
                         c.before("<before>");
                         c.after("<after>");
-                        c.remove();
                     }),
                     "<before><after>",
                 ),
                 (
                     "Replaced",
-                    Box::new(|c| {
+                    Box::new(|c, _| {
                         c.before("<before>");
                         c.after("<after>");
+
+                        assert!(!c.removed());
+
                         c.replace("<div></div>");
                         c.replace("<!--42-->");
+
+                        assert!(c.removed());
                     }),
                     "<before><div></div><!--42--><after>",
                 ),

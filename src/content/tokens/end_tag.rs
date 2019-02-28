@@ -1,8 +1,6 @@
-use super::try_tag_name_from_str;
 use super::{OrderingMutations, Token};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
-use failure::Error;
 use std::fmt::{self, Debug};
 
 pub struct EndTag<'i> {
@@ -28,7 +26,20 @@ impl<'i> EndTag<'i> {
         })
     }
 
-    implement_tag_name_accessors!();
+    #[inline]
+    pub fn name(&self) -> String {
+        let mut name = self.name.as_string(self.encoding);
+
+        name.make_ascii_lowercase();
+
+        name
+    }
+
+    #[inline]
+    pub fn set_name(&mut self, name: Bytes<'static>) {
+        self.name = name;
+        self.raw = None;
+    }
 
     #[inline]
     fn raw(&self) -> Option<&Bytes<'_>> {

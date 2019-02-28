@@ -19,11 +19,12 @@ use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::lexer::LexemeSink;
+pub use self::lexer::{LexemeSink, SharedAttributeBuffer};
 pub use self::outputs::*;
 pub use self::tag_name::TagName;
 pub use self::tag_scanner::TagHintSink;
 pub use self::text_type::*;
+pub use self::tree_builder_simulator::AmbiguityGuardError;
 
 #[derive(Debug, Copy, Clone)]
 pub enum ParserDirective {

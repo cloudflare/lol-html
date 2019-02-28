@@ -1,1 +1,1 @@
-test_modules!(tag_name_hash, token_capturing, tokens);
+test_modules!(tag_name_hash, token_capturing, tokens, element);

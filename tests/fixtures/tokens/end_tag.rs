@@ -1,77 +1,23 @@
-use cool_thing::content::{EndTag, TagNameError};
-use encoding_rs::{EUC_JP, UTF_8};
+use cool_thing::base::Bytes;
+use cool_thing::content::EndTag;
 
 test_fixture!("End tag token", {
-    test("Empty tag name", {
-        parse_token!("</div>", UTF_8, EndTag, |t: &mut EndTag<'_>| {
-            let err = t
-                .set_name("")
-                .unwrap_err()
-                .downcast_ref::<TagNameError>()
-                .cloned()
-                .unwrap();
-
-            assert_eq!(err, TagNameError::Empty);
-        });
-    });
-
-    test("Forbidden characters in tag name", {
-        parse_token!("</div>", UTF_8, EndTag, |t: &mut EndTag<'_>| for &ch in
-            &[' ', '\n', '\r', '\t', '\x0C', '/', '>']
-        {
-            let err = t
-                .set_name(&format!("foo{}bar", ch))
-                .unwrap_err()
-                .downcast_ref::<TagNameError>()
-                .cloned()
-                .unwrap();
-
-            assert_eq!(err, TagNameError::ForbiddenCharacter(ch));
-        });
-    });
-
-    test("Encoding-unmappable characters in tag name", {
-        parse_token!("</div>", EUC_JP, EndTag, |t: &mut EndTag<'_>| {
-            let err = t
-                .set_name("foo\u{00F8}bar")
-                .unwrap_err()
-                .downcast_ref::<TagNameError>()
-                .cloned()
-                .unwrap();
-
-            assert_eq!(err, TagNameError::UnencodableCharacter);
-        });
-    });
-
-    test("Invalid first character of tag name", {
-        parse_token!("</div>", UTF_8, EndTag, |t: &mut EndTag<'_>| {
-            let err = t
-                .set_name("1foo")
-                .unwrap_err()
-                .downcast_ref::<TagNameError>()
-                .cloned()
-                .unwrap();
-
-            assert_eq!(err, TagNameError::InvalidFirstCharacter);
-        });
-    });
-
     test("Serialization", {
         serialization_test!(
             "</div foo=bar>",
             EndTag,
             &[
-                ("Parsed", Box::new(|_| {}), "</div foo=bar>"),
+                ("Parsed", Box::new(|_, _| {}), "</div foo=bar>"),
                 (
                     "Modified name",
-                    Box::new(|t| {
-                        t.set_name("span").unwrap();
+                    Box::new(|t, encoding| {
+                        t.set_name(Bytes::from_str("span", encoding));
                     }),
                     "</span>",
                 ),
                 (
                     "With prepends and appends",
-                    Box::new(|t| {
+                    Box::new(|t, _| {
                         t.before("<div>Hey</div>");
                         t.before("<foo>");
                         t.after("</foo>");
@@ -81,8 +27,13 @@ test_fixture!("End tag token", {
                 ),
                 (
                     "Removed",
-                    Box::new(|t| {
+                    Box::new(|t, _| {
+                        assert!(!t.removed());
+
                         t.remove();
+
+                        assert!(t.removed());
+
                         t.before("<before>");
                         t.after("<after>");
                     }),
@@ -90,11 +41,16 @@ test_fixture!("End tag token", {
                 ),
                 (
                     "Replaced",
-                    Box::new(|t| {
+                    Box::new(|t, _| {
                         t.before("<before>");
                         t.after("<after>");
+
+                        assert!(!t.removed());
+
                         t.replace("<div></div>");
                         t.replace("<!--42-->");
+
+                        assert!(t.removed());
                     }),
                     "<before><div></div><!--42--><after>",
                 ),

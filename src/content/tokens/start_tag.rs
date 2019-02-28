@@ -1,8 +1,7 @@
-use super::attributes::{Attribute, Attributes};
-use super::{try_tag_name_from_str, OrderingMutations, Serialize, Token};
+use super::{Attribute, AttributeNameError, Attributes};
+use super::{OrderingMutations, Serialize, Token};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
-use failure::Error;
 use std::fmt::{self, Debug};
 
 pub struct StartTag<'i> {
@@ -34,7 +33,25 @@ impl<'i> StartTag<'i> {
         })
     }
 
-    implement_tag_name_accessors!();
+    #[inline]
+    pub(in crate::content) fn encoding(&self) -> &'static Encoding {
+        self.encoding
+    }
+
+    #[inline]
+    pub fn name(&self) -> String {
+        let mut name = self.name.as_string(self.encoding);
+
+        name.make_ascii_lowercase();
+
+        name
+    }
+
+    #[inline]
+    pub fn set_name(&mut self, name: Bytes<'static>) {
+        self.name = name;
+        self.raw = None;
+    }
 
     #[inline]
     pub fn attributes(&self) -> &[Attribute<'i>] {
@@ -42,27 +59,7 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    pub fn get_attribute(&self, name: &str) -> Option<String> {
-        let name = name.to_ascii_lowercase();
-
-        self.attributes().iter().find_map(|attr| {
-            if attr.name() == name {
-                Some(attr.value())
-            } else {
-                None
-            }
-        })
-    }
-
-    #[inline]
-    pub fn has_attribute(&self, name: &str) -> bool {
-        let name = name.to_ascii_lowercase();
-
-        self.attributes().iter().any(|attr| attr.name() == name)
-    }
-
-    #[inline]
-    pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), Error> {
+    pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
         self.attributes.set_attribute(name, value, self.encoding)?;
         self.raw = None;
 

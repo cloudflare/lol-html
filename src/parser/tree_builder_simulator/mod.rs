@@ -17,9 +17,9 @@ use self::ambiguity_guard::AmbiguityGuard;
 use crate::base::Bytes;
 use crate::parser::outputs::{TagLexeme, TagTokenOutline};
 use crate::parser::{TagName, TextType};
-use failure::Error;
-
 use TagTokenOutline::*;
+
+pub use self::ambiguity_guard::AmbiguityGuardError;
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
@@ -141,7 +141,7 @@ impl TreeBuilderSimulator {
         &mut self,
         tag_name_hash: Option<u64>,
         with_ambiguity_check: bool,
-    ) -> Result<TreeBuilderFeedback, Error> {
+    ) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
         if with_ambiguity_check {
             self.ambiguity_guard.track_start_tag(tag_name_hash)?;
         }

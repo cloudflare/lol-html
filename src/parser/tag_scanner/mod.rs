@@ -9,9 +9,9 @@ use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
 use crate::parser::{
-    ParserDirective, TagName, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
+    AmbiguityGuardError, ParserDirective, TagName, TextType, TreeBuilderFeedback,
+    TreeBuilderSimulator,
 };
-use failure::Error;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;
@@ -95,7 +95,7 @@ impl<S: TagHintSink> TagScanner<S> {
     }
 
     #[inline]
-    fn get_tree_builder_feedback(&mut self) -> Result<TreeBuilderFeedback, Error> {
+    fn get_tree_builder_feedback(&mut self) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
         let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
 
         if self.is_in_end_tag {
@@ -108,7 +108,7 @@ impl<S: TagHintSink> TagScanner<S> {
     fn get_loop_directive_for_tag(
         &mut self,
         tag_start: usize,
-    ) -> Result<ParsingLoopDirective, Error> {
+    ) -> Result<ParsingLoopDirective, AmbiguityGuardError> {
         Ok(match self.get_tree_builder_feedback()? {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
                 // NOTE: we can't switch type immediately as we

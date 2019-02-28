@@ -7,7 +7,7 @@ test_fixture!("Doctype token", {
             Doctype,
             &[(
                 "Parsed",
-                Box::new(|_| {}),
+                Box::new(|_, _| {}),
                 r#"<!DOCTYPE html SYSTEM "hey">"#,
             )]
         );

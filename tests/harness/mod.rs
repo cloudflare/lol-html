@@ -2,7 +2,10 @@ use encoding_rs::*;
 
 #[macro_use]
 pub mod functional_testing;
+
+#[macro_use]
 pub mod parsing;
+
 mod unescape;
 
 pub static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
