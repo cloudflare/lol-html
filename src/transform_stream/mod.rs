@@ -16,14 +16,6 @@ const BUFFER_ERROR_CONTEXT: &str = concat!(
     "tag or a comment that is captured by the specified selector."
 );
 
-#[derive(Fail, Debug)]
-pub enum TransformStreamError {
-    #[fail(display = "Data was written into the stream after it has ended.")]
-    WriteCallAfterEnd,
-    #[fail(display = "Stream was ended twice.")]
-    EndCallAfterEnd,
-}
-
 pub struct TransformStream<C, O>
 where
     C: TransformController,
@@ -94,9 +86,10 @@ where
     }
 
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
-        if self.finished {
-            return Err(TransformStreamError::WriteCallAfterEnd.into());
-        }
+        assert!(
+            !self.finished,
+            "Data was written into the stream after it has ended."
+        );
 
         trace!(@write data);
 
@@ -126,12 +119,10 @@ where
     }
 
     pub fn end(&mut self) -> Result<(), Error> {
-        if self.finished {
-            return Err(TransformStreamError::EndCallAfterEnd.into());
-        }
+        assert!(!self.finished, "Stream was ended twice.");
+        trace!(@end);
 
         self.finished = true;
-        trace!(@end);
 
         let chunk = if self.has_buffered_data {
             Chunk::last(self.buffer.bytes())
