@@ -1,4 +1,4 @@
-use cool_thing::content::{Comment, CommentTextError};
+use cool_thing::{Comment, CommentTextError};
 use encoding_rs::{EUC_JP, UTF_8};
 
 test_fixture!("Comment token", {

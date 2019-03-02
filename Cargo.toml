@@ -10,7 +10,7 @@ doctest = false
 
 [features]
 debug_trace = []
-testing_api = []
+test_api = []
 
 [[test]]
 harness = false

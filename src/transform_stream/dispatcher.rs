@@ -1,4 +1,4 @@
-use super::transform_controller::*;
+use super::*;
 use crate::base::{Chunk, Range};
 use crate::content::{Serialize, ToToken, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent};
 use crate::parser::{
@@ -9,16 +9,6 @@ use encoding_rs::Encoding;
 use std::rc::Rc;
 
 use TagTokenOutline::*;
-
-pub trait OutputSink {
-    fn handle_chunk(&mut self, chunk: &[u8]);
-}
-
-impl<F: FnMut(&[u8])> OutputSink for F {
-    fn handle_chunk(&mut self, chunk: &[u8]) {
-        self(chunk);
-    }
-}
 
 pub struct Dispatcher<C, O>
 where

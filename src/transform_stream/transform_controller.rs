@@ -18,6 +18,7 @@ macro_rules! impl_into_token_capturer_flags {
 }
 
 bitflags! {
+    #[derive(Default)]
     pub struct DocumentLevelContentSettings: u8 {
         const CAPTURE_TEXT = CAPTURE_TEXT;
         const CAPTURE_COMMENTS = CAPTURE_COMMENTS;

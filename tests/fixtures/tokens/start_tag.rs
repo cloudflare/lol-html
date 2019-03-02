@@ -1,5 +1,4 @@
-use cool_thing::base::Bytes;
-use cool_thing::content::StartTag;
+use cool_thing::{Bytes, StartTag};
 
 test_fixture!("Start tag token", {
     test("Serialization", {

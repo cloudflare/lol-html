@@ -1,7 +1,7 @@
 mod dispatcher;
 mod transform_controller;
 
-use self::dispatcher::{Dispatcher, OutputSink};
+use self::dispatcher::Dispatcher;
 use crate::base::{Buffer, Chunk};
 use crate::parser::{Parser, ParserDirective};
 use encoding_rs::Encoding;
@@ -15,6 +15,16 @@ const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
     "tag or a comment that is captured by the specified selector."
 );
+
+pub trait OutputSink {
+    fn handle_chunk(&mut self, chunk: &[u8]);
+}
+
+impl<F: FnMut(&[u8])> OutputSink for F {
+    fn handle_chunk(&mut self, chunk: &[u8]) {
+        self(chunk);
+    }
+}
 
 pub struct TransformStream<C, O>
 where
@@ -141,7 +151,7 @@ where
         Ok(())
     }
 
-    #[cfg(feature = "testing_api")]
+    #[cfg(feature = "test_api")]
     pub fn parser(&mut self) -> &mut Parser<Dispatcher<C, O>> {
         &mut self.parser
     }

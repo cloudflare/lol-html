@@ -1,16 +1,3 @@
-#[macro_use]
-extern crate failure;
-
-#[macro_use]
-mod debug_trace;
-
-#[macro_use]
-pub mod base;
-
-pub mod content;
-pub mod parser;
-pub mod transform_stream;
-
 // TODO test all errors!!!x
 
 // TODO
@@ -33,3 +20,48 @@ pub mod transform_stream;
 // 8.Lazily initialize buffer
 // 9.Use smaller buffer for attributes (default?), it will grow proportional to
 // to the buffer size, add the comment.
+#[macro_use]
+extern crate failure;
+
+#[macro_use]
+mod debug_trace;
+
+#[macro_use]
+mod base;
+
+mod content;
+mod parser;
+mod rewriter;
+mod transform_stream;
+
+use cfg_if::cfg_if;
+
+pub use self::rewriter::{
+    DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, HtmlRewriterBuilder,
+};
+
+pub use self::content::{
+    Attribute, AttributeNameError, Comment, CommentTextError, Doctype, Element, TagNameError,
+    TextChunk,
+};
+
+pub use self::parser::TextType;
+
+cfg_if! {
+    if #[cfg(feature = "test_api")] {
+        pub use self::transform_stream::{
+            ContentSettingsOnElementEnd, ContentSettingsOnElementStart,
+            DocumentLevelContentSettings, ElementStartResponse, TransformController,
+            TransformStream,
+        };
+
+        pub use self::parser::{TagName, TagNameInfo};
+        pub use self::content::{EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element};
+        pub use self::base::Bytes;
+    }
+}
+
+#[inline]
+pub fn html_rewriter<'h>() -> HtmlRewriterBuilder<'h> {
+    HtmlRewriterBuilder::new()
+}

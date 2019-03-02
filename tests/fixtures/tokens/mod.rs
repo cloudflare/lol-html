@@ -1,7 +1,7 @@
 macro_rules! serialization_test {
     ($input:expr, $TokenType:ident, $test_cases:expr) => {
         use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
-        use cool_thing::content::Serialize;
+        use cool_thing::Serialize;
         use encoding_rs::Encoding;
 
         // NOTE: give test cases type annotation to avoid boilerplate code in tests.

@@ -1,4 +1,4 @@
-use cool_thing::parser::TextType;
+use cool_thing::TextType;
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
 use std::iter::Peekable;

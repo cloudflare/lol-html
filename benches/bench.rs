@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
-use cool_thing::transform_stream::{
+use cool_thing::{
     ContentSettingsOnElementEnd, ContentSettingsOnElementStart, DocumentLevelContentSettings,
 };
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
@@ -61,10 +61,8 @@ fn cool_thing_tokenizer_bench(
     content_settings: CoolThingContentSettings,
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
-        use cool_thing::content::Token;
-        use cool_thing::parser::TagNameInfo;
-        use cool_thing::transform_stream::{
-            ElementStartResponse, TransformController, TransformStream,
+        use cool_thing::{
+            ElementStartResponse, TagNameInfo, Token, TransformController, TransformStream,
         };
 
         struct BenchTransformController {

@@ -2,8 +2,7 @@ use crate::harness::functional_testing::{
     FunctionalTestFixture, TestCase, TestToken, TestTokenList,
 };
 use crate::harness::parsing::{parse, ContentSettings};
-use cool_thing::parser::TextType;
-use cool_thing::content::TokenCaptureFlags;
+use cool_thing::{TokenCaptureFlags, TextType};
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens

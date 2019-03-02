@@ -128,7 +128,7 @@ impl<S: ParserOutputSink> Parser<S> {
     }
 }
 
-#[cfg(feature = "testing_api")]
+#[cfg(feature = "test_api")]
 impl<S: ParserOutputSink> Parser<S> {
     pub fn switch_text_type(&mut self, text_type: TextType) {
         with_current_sm!(self, sm.switch_text_type(text_type));

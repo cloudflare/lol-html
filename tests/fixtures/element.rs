@@ -1,5 +1,5 @@
 use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
-use cool_thing::content::{AttributeNameError, Element, StartTag, TagNameError};
+use cool_thing::{create_element, AttributeNameError, Element, StartTag, TagNameError};
 use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
 fn parse_element(
@@ -8,7 +8,7 @@ fn parse_element(
     mut handler: impl FnMut(Element<'_, '_>),
 ) {
     parse_token!(input, encoding, StartTag, |t: &mut StartTag<'_>| {
-        handler(Element::new(t));
+        handler(create_element(t));
     });
 }
 

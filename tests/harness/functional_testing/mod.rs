@@ -3,7 +3,7 @@ mod test_cases;
 mod test_token;
 
 use crate::harness::parsing::ChunkedInput;
-use cool_thing::parser::{TagName, TextType};
+use cool_thing::{TagName, TextType};
 use std::fmt::Write;
 
 pub use self::test_cases::*;

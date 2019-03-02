@@ -15,13 +15,13 @@ pub enum TagNameError {
     UnencodableCharacter,
 }
 
-pub struct Element<'r, 't: 'r> {
+pub struct Element<'r, 't> {
     start_tag: &'r mut StartTag<'t>,
     encoding: &'static Encoding,
 }
 
-impl<'r, 't: 'r> Element<'r, 't> {
-    pub fn new(start_tag: &'r mut StartTag<'t>) -> Self {
+impl<'r, 't> Element<'r, 't> {
+    pub(crate) fn new(start_tag: &'r mut StartTag<'t>) -> Self {
         let encoding = start_tag.encoding();
 
         Element {
@@ -152,4 +152,9 @@ impl<'r, 't: 'r> Element<'r, 't> {
     pub fn removed(&mut self, _html: &str) -> bool {
         unimplemented!()
     }
+}
+
+#[cfg(feature = "test_api")]
+pub fn create_element<'r, 't>(start_tag: &'r mut StartTag<'t>) -> Element<'r, 't> {
+    Element::new(start_tag)
 }

@@ -1,11 +1,6 @@
 mod chunked_input;
 
-use cool_thing::content::Token;
-use cool_thing::parser::{TagNameInfo, TextType};
-use cool_thing::transform_stream::{
-    ContentSettingsOnElementEnd, ContentSettingsOnElementStart, DocumentLevelContentSettings,
-    ElementStartResponse, TransformController, TransformStream,
-};
+use cool_thing::*;
 use failure::Error;
 
 pub use self::chunked_input::ChunkedInput;
@@ -139,8 +134,7 @@ pub fn parse(
 macro_rules! parse_token {
     ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
         use crate::harness::parsing::{parse, ChunkedInput, ContentSettings};
-        use cool_thing::content::Token;
-        use cool_thing::parser::TextType;
+        use cool_thing::{TextType, Token};
 
         let mut input: ChunkedInput = String::from($input).into();
         let mut emitted = false;

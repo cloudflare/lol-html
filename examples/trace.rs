@@ -1,9 +1,4 @@
-use cool_thing::content::Token;
-use cool_thing::parser::*;
-use cool_thing::transform_stream::{
-    ContentSettingsOnElementEnd, ContentSettingsOnElementStart, DocumentLevelContentSettings,
-    ElementStartResponse, TransformController, TransformStream,
-};
+use cool_thing::*;
 use encoding_rs::UTF_8;
 use getopts::{Matches, Options};
 use std::env::args;

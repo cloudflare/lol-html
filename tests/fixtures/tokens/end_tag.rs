@@ -1,5 +1,4 @@
-use cool_thing::base::Bytes;
-use cool_thing::content::EndTag;
+use cool_thing::{Bytes, EndTag};
 
 test_fixture!("End tag token", {
     test("Serialization", {
