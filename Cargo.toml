@@ -1,5 +1,5 @@
 [package]
-name = "cool-thing"
+name = "cool_thing"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 autotests = false
