@@ -1,5 +1,6 @@
 mod chunked_input;
 
+use super::TestOutput;
 use cool_thing::*;
 use failure::Error;
 
@@ -90,7 +91,7 @@ impl TransformController for TestTransformController<'_> {
         self.content_settings.on_element_end
     }
 
-    fn handle_token(&mut self, token: &mut Token) {
+    fn handle_token(&mut self, token: &mut Token<'_>) {
         (self.token_handler)(token)
     }
 }
@@ -102,17 +103,17 @@ pub fn parse(
     last_start_tag_name_hash: Option<u64>,
     token_handler: TokenHandler<'_>,
 ) -> Result<String, Error> {
-    let mut output = Vec::new();
-
     let encoding = input
         .encoding()
         .expect("Input should be initialized before parsing");
+
+    let mut output = TestOutput::new(encoding);
 
     let transform_controller = TestTransformController::new(token_handler, content_settings);
 
     let mut transform_stream = TransformStream::new(
         transform_controller,
-        |chunk: &[u8]| output.extend_from_slice(chunk),
+        |chunk: &[u8]| output.push(chunk),
         2048,
         encoding,
     );
@@ -128,7 +129,7 @@ pub fn parse(
 
     transform_stream.end()?;
 
-    Ok(encoding.decode_without_bom_handling(&output).0.to_string())
+    Ok(output.into())
 }
 
 macro_rules! parse_token {

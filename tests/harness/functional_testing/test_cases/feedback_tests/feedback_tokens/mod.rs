@@ -8,7 +8,7 @@ use html5ever::tokenizer::{BufferQueue, Tokenizer, TokenizerOpts, TokenizerResul
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
 
 pub fn get_expected_tokens_with_feedback(input: &str) -> Vec<TestToken> {
-    let mut tokens = Vec::new();
+    let mut tokens = Vec::default();
     let mut b = BufferQueue::new();
 
     b.push_back(StrTendril::from(input));

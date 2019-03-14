@@ -9,7 +9,7 @@ struct Suite {
 }
 
 pub fn get_test_cases() -> Vec<TestCase> {
-    let mut tests = Vec::new();
+    let mut tests = Vec::default();
 
     for file in read_test_data!("html5lib-tests/tokenizer/*.test") {
         tests.extend(from_reader::<_, Suite>(file).unwrap().tests);

@@ -1,4 +1,4 @@
-use cool_thing::{Bytes, StartTag};
+use cool_thing::{Bytes, StartTag, ContentType};
 
 test_fixture!("Start tag token", {
     test("Serialization", {
@@ -88,15 +88,17 @@ test_fixture!("Start tag token", {
             (
                 "With prepends and appends",
                 Box::new(|t, _| {
-                    t.before("<div>Hey</div>");
-                    t.before("<foo>");
-                    t.after("</foo>");
-                    t.after("<!-- 42 -->");
+                    t.insert_before("<span>", ContentType::Text);
+                    t.insert_before("<div>Hey</div>", ContentType::Html);
+                    t.insert_before("<foo>", ContentType::Html);
+                    t.insert_after("</foo>", ContentType::Html);
+                    t.insert_after("<!-- 42 -->", ContentType::Html);
+                    t.insert_after("<foo & bar>", ContentType::Text);
                 }),
                 concat!(
-                    "<div>Hey</div><foo>",
+                    "&lt;span&gt;<div>Hey</div><foo>",
                     r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
-                    "<!-- 42 --></foo>"
+                    "&lt;foo &amp; bar&gt;<!-- 42 --></foo>"
                 ),
             ),
             (
@@ -108,25 +110,26 @@ test_fixture!("Start tag token", {
 
                     assert!(t.removed());
 
-                    t.before("<before>");
-                    t.after("<after>");
+                    t.insert_before("<before>", ContentType::Html);
+                    t.insert_after("<after>", ContentType::Html);
                 }),
                 "<before><after>",
             ),
             (
                 "Replaced",
                 Box::new(|t, _| {
-                    t.before("<before>");
-                    t.after("<after>");
+                    t.insert_before("<before>", ContentType::Html);
+                    t.insert_after("<after>", ContentType::Html);
 
                     assert!(!t.removed());
 
-                    t.replace("<div></div>");
-                    t.replace("<!--42-->");
+                    t.replace("<div></div>", ContentType::Html);
+                    t.replace("<!--42-->", ContentType::Html);
+                    t.replace("<foo & bar>", ContentType::Text);
 
                     assert!(t.removed());
                 }),
-                "<before><div></div><!--42--><after>",
+                "<before><div></div><!--42-->&lt;foo &amp; bar&gt;<after>",
             ),
         ]);
     });

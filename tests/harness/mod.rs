@@ -47,6 +47,33 @@ pub static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
     X_USER_DEFINED,
 ];
 
+pub struct TestOutput {
+    bytes: Vec<u8>,
+    encoding: &'static Encoding,
+}
+
+impl TestOutput {
+    pub fn new(encoding: &'static Encoding) -> Self {
+        TestOutput {
+            bytes: Vec::default(),
+            encoding,
+        }
+    }
+
+    pub fn push(&mut self, chunk: &[u8]) {
+        self.bytes.extend_from_slice(chunk);
+    }
+}
+
+impl Into<String> for TestOutput {
+    fn into(self) -> String {
+        self.encoding
+            .decode_without_bom_handling(&self.bytes)
+            .0
+            .into_owned()
+    }
+}
+
 macro_rules! create_test {
     ($name:expr, $body:tt) => {{
         use test::{ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};
@@ -69,7 +96,7 @@ macro_rules! test_fixture {
         use std::fmt::Write;
 
         pub fn get_tests() -> Vec<TestDescAndFn> {
-            let mut tests = Vec::new();
+            let mut tests = Vec::default();
 
             $({
                 let mut name = String::new();
@@ -91,7 +118,7 @@ macro_rules! test_modules {
         use test::TestDescAndFn;
 
         pub fn get_tests() -> Vec<TestDescAndFn> {
-            let mut tests = Vec::new();
+            let mut tests = Vec::default();
 
             $(tests.extend($m::get_tests());)+
 

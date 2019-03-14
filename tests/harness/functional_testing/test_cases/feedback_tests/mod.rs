@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 fn parse_inputs(file: BufReader<File>) -> Vec<String> {
-    let mut inputs = Vec::new();
+    let mut inputs = Vec::default();
     let mut in_data = 0;
 
     for line in file.lines().map(|line| line.unwrap()) {
@@ -42,7 +42,7 @@ fn load_expected_bailouts() -> ExpectedBailouts {
 }
 
 pub fn get_test_cases() -> Vec<TestCase> {
-    let mut tests = Vec::new();
+    let mut tests = Vec::default();
     let expected_bailouts = load_expected_bailouts();
 
     for test_files in vec![

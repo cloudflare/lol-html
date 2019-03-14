@@ -37,15 +37,17 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, HtmlRewriterBuilder,
+    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter,
+    HtmlRewriterBuilder, SelectorError,
 };
 
 pub use self::content::{
-    Attribute, AttributeNameError, Comment, CommentTextError, Doctype, Element, TagNameError,
-    TextChunk,
+    Attribute, AttributeNameError, Comment, CommentTextError, ContentType, Doctype, Element,
+    TagNameError, TextChunk,
 };
 
 pub use self::parser::TextType;
+pub use self::transform_stream::OutputSink;
 
 cfg_if! {
     if #[cfg(feature = "test_api")] {
@@ -55,13 +57,11 @@ cfg_if! {
             TransformStream,
         };
 
+        pub use self::content::{
+            EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element
+        };
+
         pub use self::parser::{TagName, TagNameInfo};
-        pub use self::content::{EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element};
         pub use self::base::Bytes;
     }
-}
-
-#[inline]
-pub fn html_rewriter<'h>() -> HtmlRewriterBuilder<'h> {
-    HtmlRewriterBuilder::new()
 }

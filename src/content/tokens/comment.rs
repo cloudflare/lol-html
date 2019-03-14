@@ -19,8 +19,6 @@ pub struct Comment<'i> {
     ordering_mutations: OrderingMutations,
 }
 
-impl_common_token_api!(Comment);
-
 impl<'i> Comment<'i> {
     pub(in crate::content) fn new_token(
         text: Bytes<'i>,
@@ -73,6 +71,8 @@ impl<'i> Comment<'i> {
         output_handler(b"-->");
     }
 }
+
+impl_common_token_api!(Comment);
 
 impl Debug for Comment<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

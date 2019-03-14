@@ -20,7 +20,7 @@ impl From<String> for ChunkedInput {
     fn from(input: String) -> Self {
         ChunkedInput {
             input,
-            chunks: Vec::new(),
+            chunks: Vec::default(),
             initialized: false,
             encoding: None,
         }

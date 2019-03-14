@@ -1,4 +1,4 @@
-use super::{Attribute, AttributeNameError, StartTag};
+use super::{Attribute, AttributeNameError, ContentType, StartTag};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 
@@ -100,7 +100,7 @@ impl<'r, 't> Element<'r, 't> {
 
     #[inline]
     pub fn remove_attribute(&mut self, name: &str) {
-        self.start_tag.remove_attribute(name)
+        self.start_tag.remove_attribute(name);
     }
 
     #[inline]
@@ -114,42 +114,42 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
-    pub fn before(&mut self, html: &str) {
-        self.start_tag.before(html);
+    pub fn insert_before(&mut self, content: &str, content_type: ContentType) {
+        self.start_tag.insert_before(content, content_type);
     }
 
     #[inline]
-    pub fn after(&mut self, _html: &str) {
+    pub fn insert_after(&mut self, _content: &str, _content_type: ContentType) {
         unimplemented!()
     }
 
     #[inline]
-    pub fn prepend(&mut self, html: &str) {
-        self.start_tag.after(html)
+    pub fn prepend(&mut self, content: &str, content_type: ContentType) {
+        self.start_tag.insert_after(content, content_type);
     }
 
     #[inline]
-    pub fn append(&mut self, _html: &str) {
+    pub fn append(&mut self, _content: &str, _content_type: ContentType) {
         unimplemented!()
     }
 
     #[inline]
-    pub fn replace(&mut self, _html: &str) {
+    pub fn replace(&mut self, _content: &str, _content_type: ContentType) {
         unimplemented!()
     }
 
     #[inline]
-    pub fn remove(&mut self, _html: &str) {
+    pub fn remove(&mut self, _content: &str, _content_type: ContentType) {
         unimplemented!()
     }
 
     #[inline]
-    pub fn remove_and_keep_content(&mut self, _html: &str) {
+    pub fn remove_and_keep_content(&mut self, _content: &str, _content_type: ContentType) {
         unimplemented!()
     }
 
     #[inline]
-    pub fn removed(&mut self, _html: &str) -> bool {
+    pub fn removed(&mut self) -> bool {
         unimplemented!()
     }
 }

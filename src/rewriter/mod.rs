@@ -5,6 +5,7 @@ use crate::parser::TagNameInfo;
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;
+use std::fmt::{self, Debug};
 
 pub use self::builder::*;
 
@@ -102,5 +103,14 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     #[inline]
     pub fn end(&mut self) -> Result<(), Error> {
         self.0.end()
+    }
+}
+
+// NOTE: this opaque Debug implementation is required to make
+// `.unwrap()` and `.expect()` methods available on Result
+// returned by the `HtmlRewriterBuilder.build()` method.
+impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "HtmlRewriter")
     }
 }

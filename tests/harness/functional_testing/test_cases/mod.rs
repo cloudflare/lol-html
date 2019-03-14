@@ -70,7 +70,7 @@ impl Unescape for TestCase {
 }
 
 fn get_test_cases() -> Vec<TestCase> {
-    let mut tests = Vec::new();
+    let mut tests = Vec::default();
 
     tests.append(&mut self::html5lib_tests::get_test_cases());
     tests.append(&mut self::feedback_tests::get_test_cases());
@@ -88,7 +88,7 @@ fn get_test_cases() -> Vec<TestCase> {
                 Some(t)
             }
         })
-        .fold(Vec::new(), |mut cases, t| {
+        .fold(Vec::default(), |mut cases, t| {
             let mut encoding_variations = ASCII_COMPATIBLE_ENCODINGS
                 .iter()
                 .filter_map(|encoding| {

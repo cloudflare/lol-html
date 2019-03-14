@@ -13,8 +13,6 @@ pub struct StartTag<'i> {
     ordering_mutations: OrderingMutations,
 }
 
-impl_common_token_api!(StartTag);
-
 impl<'i> StartTag<'i> {
     pub(in crate::content) fn new_token(
         name: Bytes<'i>,
@@ -116,6 +114,8 @@ impl<'i> StartTag<'i> {
         }
     }
 }
+
+impl_common_token_api!(StartTag);
 
 impl Debug for StartTag<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -53,6 +53,7 @@ impl<'i> Doctype<'i> {
     }
 
     #[inline]
+    #[cfg(feature = "test_api")]
     pub fn force_quirks(&self) -> bool {
         self.force_quirks
     }

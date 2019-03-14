@@ -13,8 +13,6 @@ pub struct TextChunk<'i> {
     ordering_mutations: OrderingMutations,
 }
 
-impl_common_token_api!(TextChunk);
-
 impl<'i> TextChunk<'i> {
     pub(in crate::content) fn new_token(
         text: &'i str,
@@ -58,6 +56,8 @@ impl<'i> TextChunk<'i> {
         }
     }
 }
+
+impl_common_token_api!(TextChunk);
 
 impl Debug for TextChunk<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

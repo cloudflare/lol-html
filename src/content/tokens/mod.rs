@@ -10,33 +10,40 @@ macro_rules! impl_common_token_api {
     ($Token:ident) => {
         impl<'i> $Token<'i> {
             #[inline]
-            pub fn before(&mut self, html: &str) {
-                let encoding = self.encoding;
-
-                self.ordering_mutations
-                    .content_before
-                    .extend_from_slice(&crate::base::Bytes::from_str(html, encoding));
+            pub fn insert_before(
+                &mut self,
+                content: &str,
+                content_type: crate::content::ContentType,
+            ) {
+                crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {
+                    self.ordering_mutations.content_before.extend_from_slice(c)
+                });
             }
 
             #[inline]
-            pub fn after(&mut self, html: &str) {
-                let encoding = self.encoding;
+            pub fn insert_after(
+                &mut self,
+                content: &str,
+                content_type: crate::content::ContentType,
+            ) {
+                let mut pos = 0;
 
-                self.ordering_mutations.content_after.splice(
-                    0..0,
-                    crate::base::Bytes::from_str(html, encoding).iter().cloned(),
-                );
+                crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {
+                    self.ordering_mutations
+                        .content_after
+                        .splice(pos..pos, c.iter().cloned());
+
+                    pos += c.len();
+                });
             }
 
             #[inline]
-            pub fn replace(&mut self, html: &str) {
-                let encoding = self.encoding;
+            pub fn replace(&mut self, content: &str, content_type: crate::content::ContentType) {
+                crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {
+                    self.ordering_mutations.replacements.extend_from_slice(c)
+                });
 
                 self.ordering_mutations.removed = true;
-
-                self.ordering_mutations
-                    .replacements
-                    .extend_from_slice(&crate::base::Bytes::from_str(html, encoding));
             }
 
             #[inline]

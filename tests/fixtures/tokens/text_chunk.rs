@@ -1,4 +1,4 @@
-use cool_thing::TextChunk;
+use cool_thing::{TextChunk, ContentType};
 
 test_fixture!("Text chunk token", {
     test("Serialization", {
@@ -15,18 +15,20 @@ test_fixture!("Text chunk token", {
                 (
                     "With prepends and appends",
                     Box::new(|c, _| {
-                        c.before("<div>Hey</div>");
-                        c.before("<foo>");
-                        c.after("</foo>");
-                        c.after("<!-- 42 -->");
+                        c.insert_before("<span>", ContentType::Text);
+                        c.insert_before("<div>Hey</div>", ContentType::Html);
+                        c.insert_before("<foo>", ContentType::Html);
+                        c.insert_after("</foo>", ContentType::Html);
+                        c.insert_after("<!-- 42 -->", ContentType::Html);
+                        c.insert_after("<foo & bar>", ContentType::Text);
                     }),
                     concat!(
-                        "<div>Hey</div><foo>",
+                        "&lt;span&gt;<div>Hey</div><foo>",
                         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod \
                          tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim \
                          veniam, quis nostrud exercitation & ullamco laboris nisi ut aliquip \
                          ex ea commodo > consequat.",
-                        "<!-- 42 --></foo>"
+                        "&lt;foo &amp; bar&gt;<!-- 42 --></foo>"
                     )
                 ),
                 (
@@ -38,21 +40,21 @@ test_fixture!("Text chunk token", {
 
                         assert!(c.removed());
 
-                        c.before("<before>");
-                        c.after("<after>");
+                        c.insert_before("<before>", ContentType::Html);
+                        c.insert_after("<after>", ContentType::Html);
                     }),
                     "<before><after>",
                 ),
                 (
                     "Replaced",
                     Box::new(|c, _| {
-                        c.before("<before>");
-                        c.after("<after>");
+                        c.insert_before("<before>", ContentType::Html);
+                        c.insert_after("<after>", ContentType::Html);
 
                         assert!(!c.removed());
 
-                        c.replace("<div></div>");
-                        c.replace("<!--42-->");
+                        c.replace("<div></div>", ContentType::Html);
+                        c.replace("<!--42-->", ContentType::Html);
 
                         assert!(c.removed());
                     }),

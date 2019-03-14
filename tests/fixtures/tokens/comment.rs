@@ -1,4 +1,4 @@
-use cool_thing::{Comment, CommentTextError};
+use cool_thing::{Comment, CommentTextError, ContentType};
 use encoding_rs::{EUC_JP, UTF_8};
 
 test_fixture!("Comment token", {
@@ -34,12 +34,17 @@ test_fixture!("Comment token", {
                 (
                     "With prepends and appends",
                     Box::new(|c, _| {
-                        c.before("<div>Hey</div>");
-                        c.before("<foo>");
-                        c.after("</foo>");
-                        c.after("<!-- 42 -->");
+                        c.insert_before("<span>", ContentType::Text);
+                        c.insert_before("<div>Hey</div>", ContentType::Html);
+                        c.insert_before("<foo>", ContentType::Html);
+                        c.insert_after("</foo>", ContentType::Html);
+                        c.insert_after("<!-- 42 -->", ContentType::Html);
+                        c.insert_after("<foo & bar>", ContentType::Text);
                     }),
-                    "<div>Hey</div><foo><!-- foo -- bar --><!-- 42 --></foo>",
+                    concat!(
+                        "&lt;span&gt;<div>Hey</div><foo><!-- foo -- bar -->",
+                        "&lt;foo &amp; bar&gt;<!-- 42 --></foo>",
+                    )
                 ),
                 (
                     "Removed",
@@ -50,25 +55,26 @@ test_fixture!("Comment token", {
 
                         assert!(c.removed());
 
-                        c.before("<before>");
-                        c.after("<after>");
+                        c.insert_before("<before>", ContentType::Html);
+                        c.insert_after("<after>", ContentType::Html);
                     }),
                     "<before><after>",
                 ),
                 (
                     "Replaced",
                     Box::new(|c, _| {
-                        c.before("<before>");
-                        c.after("<after>");
+                        c.insert_before("<before>", ContentType::Html);
+                        c.insert_after("<after>", ContentType::Html);
 
                         assert!(!c.removed());
 
-                        c.replace("<div></div>");
-                        c.replace("<!--42-->");
+                        c.replace("<div></div>", ContentType::Html);
+                        c.replace("<!--42-->", ContentType::Html);
+                        c.replace("<foo & bar>", ContentType::Text);
 
                         assert!(c.removed());
                     }),
-                    "<before><div></div><!--42--><after>",
+                    "<before><div></div><!--42-->&lt;foo &amp; bar&gt;<after>",
                 ),
             ]
         );

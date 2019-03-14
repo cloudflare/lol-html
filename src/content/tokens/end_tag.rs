@@ -10,8 +10,6 @@ pub struct EndTag<'i> {
     ordering_mutations: OrderingMutations,
 }
 
-impl_common_token_api!(EndTag);
-
 impl<'i> EndTag<'i> {
     pub(in crate::content) fn new_token(
         name: Bytes<'i>,
@@ -53,6 +51,8 @@ impl<'i> EndTag<'i> {
         output_handler(b">");
     }
 }
+
+impl_common_token_api!(EndTag);
 
 impl Debug for EndTag<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
