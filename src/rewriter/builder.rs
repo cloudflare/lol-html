@@ -83,7 +83,7 @@ impl<'h> DocumentContentHandlers<'h> {
 pub struct HtmlRewriterBuilder<'h>(HtmlRewriteController<'h>);
 
 impl<'h> HtmlRewriterBuilder<'h> {
-    pub fn on_document(mut self, handlers: DocumentContentHandlers<'h>) -> Self {
+    pub fn on_document(&mut self, handlers: DocumentContentHandlers<'h>) {
         if let Some(handler) = handlers.doctype {
             self.0.doctype_handlers.push(handler);
             self.0.document_level_content_settings |=
@@ -100,15 +100,13 @@ impl<'h> HtmlRewriterBuilder<'h> {
             self.0.text_handlers.push(handler);
             self.0.document_level_content_settings |= DocumentLevelContentSettings::CAPTURE_TEXT;
         }
-
-        self
     }
 
     pub fn on(
-        mut self,
+        &mut self,
         _selector: &str,
         handlers: ElementContentHandlers<'h>,
-    ) -> Result<Self, SelectorError> {
+    ) -> Result<(), SelectorError> {
         if let Some(handler) = handlers.element {
             self.0.element_handlers.push(handler);
         }
@@ -121,7 +119,7 @@ impl<'h> HtmlRewriterBuilder<'h> {
             self.0.text_handlers.push(handler);
         }
 
-        Ok(self)
+        Ok(())
     }
 
     #[inline]

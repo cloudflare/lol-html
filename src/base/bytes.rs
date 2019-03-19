@@ -7,7 +7,6 @@ use std::str;
 
 // Bytes is a thin wrapper around either byte slice or
 // owned bytes with some handy APIs attached
-#[repr(transparent)]
 pub struct Bytes<'b>(Cow<'b, [u8]>);
 
 impl<'b> Bytes<'b> {

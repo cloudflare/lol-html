@@ -154,6 +154,8 @@ impl<'r, 't> Element<'r, 't> {
     }
 }
 
+// TODO impl Debug
+
 #[cfg(feature = "test_api")]
 pub fn create_element<'r, 't>(start_tag: &'r mut StartTag<'t>) -> Element<'r, 't> {
     Element::new(start_tag)

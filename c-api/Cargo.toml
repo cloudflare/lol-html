@@ -1,15 +1,17 @@
 [package]
-name = "cool_thing_c_api"
+name = "coolthing"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 edition = "2018"
 
 [dependencies]
 cool_thing = { path = "../" }
+failure = "0.1.3"
+libc = "0"
 
 [profile.release]
 panic = "abort"
 lto = true
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "cdylib"]

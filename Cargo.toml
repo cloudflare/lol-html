@@ -44,7 +44,7 @@ rand = "0.5.5"
 itertools = "0.6.0"
 
 [package.metadata.precommit]
-fmt = "cargo fmt && git add -u"
+fmt = "cd c-api && cargo fmt && cd ../ && cargo fmt && git add -u"
 
 [dev-dependencies.rustc-test]
 version = "0.2.0"
