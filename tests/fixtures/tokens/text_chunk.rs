@@ -15,12 +15,12 @@ test_fixture!("Text chunk token", {
                 (
                     "With prepends and appends",
                     Box::new(|c, _| {
-                        c.insert_before("<span>", ContentType::Text);
-                        c.insert_before("<div>Hey</div>", ContentType::Html);
-                        c.insert_before("<foo>", ContentType::Html);
-                        c.insert_after("</foo>", ContentType::Html);
-                        c.insert_after("<!-- 42 -->", ContentType::Html);
-                        c.insert_after("<foo & bar>", ContentType::Text);
+                        c.before("<span>", ContentType::Text);
+                        c.before("<div>Hey</div>", ContentType::Html);
+                        c.before("<foo>", ContentType::Html);
+                        c.after("</foo>", ContentType::Html);
+                        c.after("<!-- 42 -->", ContentType::Html);
+                        c.after("<foo & bar>", ContentType::Text);
                     }),
                     concat!(
                         "&lt;span&gt;<div>Hey</div><foo>",
@@ -40,16 +40,16 @@ test_fixture!("Text chunk token", {
 
                         assert!(c.removed());
 
-                        c.insert_before("<before>", ContentType::Html);
-                        c.insert_after("<after>", ContentType::Html);
+                        c.before("<before>", ContentType::Html);
+                        c.after("<after>", ContentType::Html);
                     }),
                     "<before><after>",
                 ),
                 (
                     "Replaced",
                     Box::new(|c, _| {
-                        c.insert_before("<before>", ContentType::Html);
-                        c.insert_after("<after>", ContentType::Html);
+                        c.before("<before>", ContentType::Html);
+                        c.after("<after>", ContentType::Html);
 
                         assert!(!c.removed());
 

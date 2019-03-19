@@ -114,18 +114,18 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
-    pub fn insert_before(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.insert_before(content, content_type);
+    pub fn before(&mut self, content: &str, content_type: ContentType) {
+        self.start_tag.before(content, content_type);
     }
 
     #[inline]
-    pub fn insert_after(&mut self, _content: &str, _content_type: ContentType) {
+    pub fn after(&mut self, _content: &str, _content_type: ContentType) {
         unimplemented!()
     }
 
     #[inline]
     pub fn prepend(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.insert_after(content, content_type);
+        self.start_tag.after(content, content_type);
     }
 
     #[inline]

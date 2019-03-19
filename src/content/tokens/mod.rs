@@ -10,22 +10,14 @@ macro_rules! impl_common_token_api {
     ($Token:ident) => {
         impl<'i> $Token<'i> {
             #[inline]
-            pub fn insert_before(
-                &mut self,
-                content: &str,
-                content_type: crate::content::ContentType,
-            ) {
+            pub fn before(&mut self, content: &str, content_type: crate::content::ContentType) {
                 crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {
                     self.ordering_mutations.content_before.extend_from_slice(c)
                 });
             }
 
             #[inline]
-            pub fn insert_after(
-                &mut self,
-                content: &str,
-                content_type: crate::content::ContentType,
-            ) {
+            pub fn after(&mut self, content: &str, content_type: crate::content::ContentType) {
                 let mut pos = 0;
 
                 crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {

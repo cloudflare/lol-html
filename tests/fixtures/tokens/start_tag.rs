@@ -88,12 +88,12 @@ test_fixture!("Start tag token", {
             (
                 "With prepends and appends",
                 Box::new(|t, _| {
-                    t.insert_before("<span>", ContentType::Text);
-                    t.insert_before("<div>Hey</div>", ContentType::Html);
-                    t.insert_before("<foo>", ContentType::Html);
-                    t.insert_after("</foo>", ContentType::Html);
-                    t.insert_after("<!-- 42 -->", ContentType::Html);
-                    t.insert_after("<foo & bar>", ContentType::Text);
+                    t.before("<span>", ContentType::Text);
+                    t.before("<div>Hey</div>", ContentType::Html);
+                    t.before("<foo>", ContentType::Html);
+                    t.after("</foo>", ContentType::Html);
+                    t.after("<!-- 42 -->", ContentType::Html);
+                    t.after("<foo & bar>", ContentType::Text);
                 }),
                 concat!(
                     "&lt;span&gt;<div>Hey</div><foo>",
@@ -110,16 +110,16 @@ test_fixture!("Start tag token", {
 
                     assert!(t.removed());
 
-                    t.insert_before("<before>", ContentType::Html);
-                    t.insert_after("<after>", ContentType::Html);
+                    t.before("<before>", ContentType::Html);
+                    t.after("<after>", ContentType::Html);
                 }),
                 "<before><after>",
             ),
             (
                 "Replaced",
                 Box::new(|t, _| {
-                    t.insert_before("<before>", ContentType::Html);
-                    t.insert_after("<after>", ContentType::Html);
+                    t.before("<before>", ContentType::Html);
+                    t.after("<after>", ContentType::Html);
 
                     assert!(!t.removed());
 

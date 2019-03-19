@@ -141,7 +141,7 @@ test_fixture!("Rewriter", {
                         })
                         .text(|c| {
                             if c.last_in_text_node() {
-                                c.insert_after("BAZ", ContentType::Text);
+                                c.after("BAZ", ContentType::Text);
                             }
                         }),
                 );
