@@ -149,7 +149,7 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
-    pub fn removed(&mut self) -> bool {
+    pub fn removed(&self) -> bool {
         unimplemented!()
     }
 }
