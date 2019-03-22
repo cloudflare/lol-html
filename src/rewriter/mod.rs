@@ -1,6 +1,8 @@
 mod builder;
+mod content_handlers;
 
-use crate::content::{Comment, Doctype, Element, TextChunk, Token};
+use self::content_handlers::*;
+use crate::content::{Element, Token};
 use crate::parser::TagNameInfo;
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
@@ -8,11 +10,6 @@ use failure::Error;
 use std::fmt::{self, Debug};
 
 pub use self::builder::*;
-
-type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype<'_>) + 'h>;
-type CommentHandler<'h> = Box<dyn FnMut(&mut Comment<'_>) + 'h>;
-type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk<'_>) + 'h>;
-type ElementHandler<'h> = Box<dyn FnMut(&mut Element<'_, '_>) + 'h>;
 
 #[derive(Default)]
 struct HtmlRewriteController<'h> {
