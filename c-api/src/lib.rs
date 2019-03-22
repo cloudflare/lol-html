@@ -96,7 +96,7 @@ macro_rules! to_str {
     };
 }
 
-macro_rules! safe_unwrap {
+macro_rules! unwrap_or_ret {
     ($expr:expr, $ret_val:expr) => {
         match $expr {
             Ok(v) => v,
@@ -110,13 +110,13 @@ macro_rules! safe_unwrap {
 
 macro_rules! unwrap_or_ret_err_code {
     ($expr:expr) => {
-        safe_unwrap!($expr, -1)
+        unwrap_or_ret!($expr, -1)
     };
 }
 
 macro_rules! unwrap_or_ret_null {
     ($expr:expr) => {
-        safe_unwrap!($expr, ptr::null_mut())
+        unwrap_or_ret!($expr, ptr::null_mut())
     };
 }
 

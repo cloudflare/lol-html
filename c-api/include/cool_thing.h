@@ -127,6 +127,8 @@ int cool_thing_rewriter_builder_add_element_content_handlers(
 //
 // This function deallocates the builder, so it can't be used after the call.
 //
+// `output_sink` receives a zero-length chunk on the end of the output.
+//
 // In case of an error the function returns a NULL pointer.
 cool_thing_rewriter_t *cool_thing_rewriter_build(
     cool_thing_rewriter_builder_t *builder,
@@ -321,9 +323,15 @@ int cool_thing_element_tag_name_set(
 //
 // WARNING: The iterator is valid only during the handler execution and
 // should never be leaked outside of it.
+//
+// Use `cool_thing_attributes_iterator_free` function to deallocate
+// returned iterator.
 cool_thing_attributes_iterator_t *cool_thing_attributes_iterator_get(
     const cool_thing_element_t *element
 );
+
+// Frees memory held by the attribute iterator.
+void cool_thing_attributes_iterator_free(cool_thing_attributes_iterator_t *iterator);
 
 // Advances the iterator and returns next attribute.
 //
@@ -348,13 +356,21 @@ cool_thing_str_t cool_thing_attribute_value_get(const cool_thing_attribute_t *at
 //
 // If the provided name is invalid UTF8-string the function returns NULL as well.
 // Therefore one should always check `cool_thing_take_last_error` result after the call.
-cool_thing_str_t *cool_thing_element_get_attribute(const cool_thing_element_t *element);
+cool_thing_str_t *cool_thing_element_get_attribute(
+    const cool_thing_element_t *element,
+    const char *name,
+    size_t name_len
+);
 
 // Returns 1 if element has attribute with the given name, and 0 otherwise.
 // Returns -1 in case of an error.
 //
 // Name should be a valid UTF8-string.
-int cool_thing_element_has_attribute(const cool_thing_element_t *element);
+int cool_thing_element_has_attribute(
+    const cool_thing_element_t *element,
+    const char *name,
+    size_t name_len
+);
 
 // Updates the attribute value if attribute with the given name already exists on
 // the element, or creates adds new attribute with given name and value otherwise.

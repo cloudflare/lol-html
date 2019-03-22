@@ -44,6 +44,11 @@ pub extern "C" fn cool_thing_attributes_iterator_next<'r, 't>(
 }
 
 #[no_mangle]
+pub extern "C" fn cool_thing_attributes_iterator_free(iterator: *mut Iter<Attribute<'_>>) {
+    drop(to_box!(iterator));
+}
+
+#[no_mangle]
 pub extern "C" fn cool_thing_attribute_name_get(attribute: *const Attribute<'_>) -> Str {
     let attribute = to_ref!(attribute);
 

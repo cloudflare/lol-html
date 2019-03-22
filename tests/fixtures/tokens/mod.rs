@@ -20,6 +20,9 @@ macro_rules! serialization_test {
 
                     t.to_bytes(&mut |c| output.push(c));
 
+                    // NOTE: add finalizing chunk to the output.
+                    output.push(&[]);
+
                     let actual: String = output.into();
 
                     assert_eq!(

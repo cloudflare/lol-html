@@ -56,6 +56,13 @@ where
         self.last_consumed_lexeme_end = 0;
     }
 
+    pub fn finish(&mut self, input: &Chunk<'_>) {
+        self.flush_remaining_input(input, 0);
+
+        // NOTE: output the finalizing chunk.
+        self.output_sink.handle_chunk(&[]);
+    }
+
     fn try_produce_token_from_lexeme<'i, T>(&mut self, lexeme: &Lexeme<'i, T>)
     where
         Lexeme<'i, T>: ToToken,
@@ -74,7 +81,10 @@ where
                 });
 
                 lexeme_consumed = true;
-                output_sink.handle_chunk(&chunk);
+
+                if chunk.len() > 0 {
+                    output_sink.handle_chunk(&chunk);
+                }
             }
             TokenCapturerEvent::TokenProduced(mut token) => {
                 trace!(@output token);

@@ -143,10 +143,7 @@ where
         trace!(@chunk chunk);
 
         self.parser.parse(&chunk)?;
-
-        self.dispatcher
-            .borrow_mut()
-            .flush_remaining_input(&chunk, 0);
+        self.dispatcher.borrow_mut().finish(&chunk);
 
         Ok(())
     }

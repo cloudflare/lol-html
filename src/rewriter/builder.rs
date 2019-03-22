@@ -104,9 +104,14 @@ impl<'h> HtmlRewriterBuilder<'h> {
 
     pub fn on(
         &mut self,
-        _selector: &str,
+        selector: &str,
         handlers: ElementContentHandlers<'h>,
     ) -> Result<(), SelectorError> {
+        // TODO
+        if selector != "*" {
+            return Err(SelectorError::UnsupportedSelector);
+        }
+
         if let Some(handler) = handlers.element {
             self.0.element_handlers.push(handler);
         }
