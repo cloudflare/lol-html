@@ -2,7 +2,7 @@ mod builder;
 mod content_handlers;
 
 use self::content_handlers::*;
-use crate::content::{Element, Token};
+use crate::content::{Token, TokenCaptureFlags};
 use crate::parser::TagNameInfo;
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
@@ -10,68 +10,36 @@ use failure::Error;
 use std::fmt::{self, Debug};
 
 pub use self::builder::*;
+use self::content_handlers::{ContentHandlersDispatcher, ElementContentHandlersLocator};
 
 #[derive(Default)]
 struct HtmlRewriteController<'h> {
-    document_level_content_settings: DocumentLevelContentSettings,
-    doctype_handlers: Vec<DoctypeHandler<'h>>,
-    element_handlers: Vec<ElementHandler<'h>>,
-    comment_handlers: Vec<CommentHandler<'h>>,
-    text_handlers: Vec<TextHandler<'h>>,
+    handlers_dispatcher: ContentHandlersDispatcher<'h>,
+    element_handler_locators: Vec<ElementContentHandlersLocator>,
 }
 
 impl TransformController for HtmlRewriteController<'_> {
     #[inline]
-    fn document_level_content_settings(&self) -> DocumentLevelContentSettings {
-        self.document_level_content_settings
+    fn initial_capture_flags(&self) -> TokenCaptureFlags {
+        self.handlers_dispatcher.get_token_capture_flags()
     }
 
     fn handle_element_start(&mut self, _: &TagNameInfo<'_>) -> ElementStartResponse<Self> {
-        let mut settings = ContentSettingsOnElementStart::empty();
-
-        if !self.element_handlers.is_empty() {
-            settings |= ContentSettingsOnElementStart::CAPTURE_START_TAG_FOR_ELEMENT;
+        for &locator in &self.element_handler_locators {
+            self.handlers_dispatcher
+                .set_element_handlers_active(locator, true);
         }
 
-        if !self.text_handlers.is_empty() {
-            settings |= ContentSettingsOnElementStart::CAPTURE_TEXT;
-        }
-
-        if !self.comment_handlers.is_empty() {
-            settings |= ContentSettingsOnElementStart::CAPTURE_COMMENTS;
-        }
-
-        ElementStartResponse::ContentSettings(settings)
+        ElementStartResponse::CaptureFlags(self.handlers_dispatcher.get_token_capture_flags())
     }
 
-    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> ContentSettingsOnElementEnd {
-        let mut settings = ContentSettingsOnElementEnd::empty();
-
-        if !self.text_handlers.is_empty() {
-            settings |= ContentSettingsOnElementEnd::CAPTURE_TEXT;
-        }
-
-        if !self.comment_handlers.is_empty() {
-            settings |= ContentSettingsOnElementEnd::CAPTURE_COMMENTS;
-        }
-
-        settings
+    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> TokenCaptureFlags {
+        self.handlers_dispatcher.get_token_capture_flags()
     }
 
+    #[inline]
     fn handle_token(&mut self, token: &mut Token<'_>) {
-        match token {
-            Token::StartTag(start_tag) => {
-                let mut element = Element::new(start_tag);
-
-                self.element_handlers
-                    .iter_mut()
-                    .for_each(|h| h(&mut element));
-            }
-            Token::Doctype(doctype) => self.doctype_handlers.iter_mut().for_each(|h| h(doctype)),
-            Token::TextChunk(text) => self.text_handlers.iter_mut().for_each(|h| h(text)),
-            Token::Comment(comment) => self.comment_handlers.iter_mut().for_each(|h| h(comment)),
-            _ => (),
-        }
+        self.handlers_dispatcher.handle_token(token);
     }
 }
 

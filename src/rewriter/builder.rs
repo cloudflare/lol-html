@@ -84,22 +84,11 @@ pub struct HtmlRewriterBuilder<'h>(HtmlRewriteController<'h>);
 
 impl<'h> HtmlRewriterBuilder<'h> {
     pub fn on_document(&mut self, handlers: DocumentContentHandlers<'h>) {
-        if let Some(handler) = handlers.doctype {
-            self.0.doctype_handlers.push(handler);
-            self.0.document_level_content_settings |=
-                DocumentLevelContentSettings::CAPTURE_DOCTYPES;
-        }
-
-        if let Some(handler) = handlers.comments {
-            self.0.comment_handlers.push(handler);
-            self.0.document_level_content_settings |=
-                DocumentLevelContentSettings::CAPTURE_COMMENTS;
-        }
-
-        if let Some(handler) = handlers.text {
-            self.0.text_handlers.push(handler);
-            self.0.document_level_content_settings |= DocumentLevelContentSettings::CAPTURE_TEXT;
-        }
+        self.0.handlers_dispatcher.add_document_content_handlers(
+            handlers.doctype,
+            handlers.comments,
+            handlers.text,
+        )
     }
 
     pub fn on(
@@ -112,17 +101,13 @@ impl<'h> HtmlRewriterBuilder<'h> {
             return Err(SelectorError::UnsupportedSelector);
         }
 
-        if let Some(handler) = handlers.element {
-            self.0.element_handlers.push(handler);
-        }
+        let locator = self.0.handlers_dispatcher.add_element_content_handlers(
+            handlers.element,
+            handlers.comments,
+            handlers.text,
+        );
 
-        if let Some(handler) = handlers.comments {
-            self.0.comment_handlers.push(handler);
-        }
-
-        if let Some(handler) = handlers.text {
-            self.0.text_handlers.push(handler);
-        }
+        self.0.element_handler_locators.push(locator);
 
         Ok(())
     }

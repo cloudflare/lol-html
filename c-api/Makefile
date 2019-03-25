@@ -1,4 +1,4 @@
-OUT = target/release
+OUT = target/debug
 LIB := ../src/*.rs ../src/**/*.rs
 C_API := src/*.rs
 CFLAGS = -g -O0 -std=c99 -Wall -Wextra -Wcast-qual -Wwrite-strings -Wshadow -Winline -Wdisabled-optimization -Wuninitialized -Wcast-align -Wno-missing-field-initializers -Werror
@@ -10,7 +10,7 @@ $(OUT)/test-runner: $(OUT)/test.o $(OUT)/picotest.o $(OUT)/libcoolthing.a
 	$(CC) -lm -L$(OUT) -lcoolthing -o $@ $^
 
 $(OUT)/libcoolthing.a: $(LIB) $(C_API)
-	cargo clippy && cargo build --release
+	cargo clippy && cargo build
 
 $(OUT)/test.o: tests/test.c include/cool_thing.h | $(OUT)
 	$(CC) $(CFLAGS) -c $< -o $@

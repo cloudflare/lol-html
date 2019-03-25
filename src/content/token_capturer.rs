@@ -7,19 +7,13 @@ use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use std::rc::Rc;
 
-pub const CAPTURE_TEXT: u8 = 0b0000_0001;
-pub const CAPTURE_COMMENTS: u8 = 0b0000_0010;
-pub const CAPTURE_START_TAGS: u8 = 0b0000_0100;
-pub const CAPTURE_END_TAGS: u8 = 0b0000_1000;
-pub const CAPTURE_DOCTYPES: u8 = 0b0001_0000;
-
 bitflags! {
     pub struct TokenCaptureFlags: u8 {
-        const TEXT = CAPTURE_TEXT;
-        const COMMENTS = CAPTURE_COMMENTS;
-        const START_TAGS = CAPTURE_START_TAGS;
-        const END_TAGS = CAPTURE_END_TAGS;
-        const DOCTYPES = CAPTURE_DOCTYPES;
+        const TEXT = 0b0000_0001;
+        const COMMENTS = 0b0000_0010;
+        const NEXT_START_TAG = 0b0000_0100;
+        const NEXT_END_TAG = 0b0000_1000;
+        const DOCTYPES = 0b0001_0000;
     }
 }
 
@@ -45,7 +39,7 @@ impl<'i> From<Token<'i>> for ToTokenResult<'i> {
 pub trait ToToken {
     fn to_token(
         &self,
-        capture_flags: TokenCaptureFlags,
+        capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
     ) -> ToTokenResult<'_>;
 }
@@ -53,7 +47,7 @@ pub trait ToToken {
 impl ToToken for TagLexeme<'_> {
     fn to_token(
         &self,
-        capture_flags: TokenCaptureFlags,
+        capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
     ) -> ToTokenResult<'_> {
         match *self.token_outline() {
@@ -62,18 +56,26 @@ impl ToToken for TagLexeme<'_> {
                 ref attributes,
                 self_closing,
                 ..
-            } if capture_flags.contains(TokenCaptureFlags::START_TAGS) => StartTag::new_token(
-                self.part(name),
-                Attributes::new(self.input(), Rc::clone(attributes), encoding),
-                self_closing,
-                self.raw(),
-                encoding,
-            )
-            .into(),
+            } if capture_flags.contains(TokenCaptureFlags::NEXT_START_TAG) => {
+                // NOTE: clear the flag once we've seen required start tag.
+                capture_flags.remove(TokenCaptureFlags::NEXT_START_TAG);
+
+                StartTag::new_token(
+                    self.part(name),
+                    Attributes::new(self.input(), Rc::clone(attributes), encoding),
+                    self_closing,
+                    self.raw(),
+                    encoding,
+                )
+                .into()
+            }
 
             TagTokenOutline::EndTag { name, .. }
-                if capture_flags.contains(TokenCaptureFlags::END_TAGS) =>
+                if capture_flags.contains(TokenCaptureFlags::NEXT_END_TAG) =>
             {
+                // NOTE: clear the flag once we've seen required end tag.
+                capture_flags.remove(TokenCaptureFlags::NEXT_END_TAG);
+
                 EndTag::new_token(self.part(name), self.raw(), encoding).into()
             }
             _ => ToTokenResult::None,
@@ -84,7 +86,7 @@ impl ToToken for TagLexeme<'_> {
 impl ToToken for NonTagContentLexeme<'_> {
     fn to_token(
         &self,
-        capture_flags: TokenCaptureFlags,
+        capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
     ) -> ToTokenResult<'_> {
         match *self.token_outline() {
@@ -119,22 +121,17 @@ pub struct TokenCapturer {
     pending_text_decoder: Option<Decoder>,
     text_buffer: String,
     capture_flags: TokenCaptureFlags,
-    document_level_capture_flags: TokenCaptureFlags,
     last_text_type: TextType,
 }
 
 impl TokenCapturer {
-    pub fn new(
-        document_level_capture_flags: TokenCaptureFlags,
-        encoding: &'static Encoding,
-    ) -> Self {
+    pub fn new(capture_flags: TokenCaptureFlags, encoding: &'static Encoding) -> Self {
         TokenCapturer {
             encoding,
             pending_text_decoder: None,
             // TODO make adjustable
             text_buffer: String::from_utf8(vec![0u8; 1024]).unwrap(),
-            capture_flags: document_level_capture_flags,
-            document_level_capture_flags,
+            capture_flags,
             last_text_type: TextType::Data,
         }
     }
@@ -146,13 +143,7 @@ impl TokenCapturer {
 
     #[inline]
     pub fn set_capture_flags(&mut self, flags: TokenCaptureFlags) {
-        self.capture_flags = self.document_level_capture_flags | flags;
-    }
-
-    #[inline]
-    pub fn stop_capturing_tags(&mut self) {
-        self.capture_flags
-            .remove(TokenCaptureFlags::START_TAGS | TokenCaptureFlags::END_TAGS);
+        self.capture_flags = flags;
     }
 
     #[inline]
@@ -203,7 +194,7 @@ impl TokenCapturer {
     ) where
         Lexeme<'i, T>: ToToken,
     {
-        match lexeme.to_token(self.capture_flags, self.encoding) {
+        match lexeme.to_token(&mut self.capture_flags, self.encoding) {
             ToTokenResult::Token(token) => {
                 self.flush_pending_text(&mut event_handler);
                 event_handler(TokenCapturerEvent::LexemeConsumed);

@@ -19,7 +19,7 @@ where
     output_sink: O,
     last_consumed_lexeme_end: usize,
     token_capturer: TokenCapturer,
-    got_settings_from_hint: bool,
+    got_flags_from_hint: bool,
     pending_element_modifiers_info_handler: Option<ElementModifiersInfoHandler<C>>,
 }
 
@@ -29,16 +29,14 @@ where
     O: OutputSink,
 {
     pub fn new(transform_controller: C, output_sink: O, encoding: &'static Encoding) -> Self {
-        let initial_capture_flags = transform_controller
-            .document_level_content_settings()
-            .into();
+        let initial_capture_flags = transform_controller.initial_capture_flags();
 
         Dispatcher {
             transform_controller,
             output_sink,
             last_consumed_lexeme_end: 0,
             token_capturer: TokenCapturer::new(initial_capture_flags, encoding),
-            got_settings_from_hint: false,
+            got_flags_from_hint: false,
             pending_element_modifiers_info_handler: None,
         }
     }
@@ -145,7 +143,7 @@ where
                     let name_info = TagNameInfo::new(input, name, name_hash);
 
                     match self.transform_controller.handle_element_start(&name_info) {
-                        ElementStartResponse::ContentSettings(settings) => settings.into(),
+                        ElementStartResponse::CaptureFlags(flags) => flags,
                         ElementStartResponse::RequestElementModifiersInfo(mut handler) => {
                             get_flags_from_handler!(handler, attributes, self_closing)
                         }
@@ -155,9 +153,7 @@ where
                 EndTag { name, name_hash } => {
                     let name_info = TagNameInfo::new(input, name, name_hash);
 
-                    self.transform_controller
-                        .handle_element_end(&name_info)
-                        .into()
+                    self.transform_controller.handle_element_end(&name_info)
                 }
             },
         };
@@ -166,12 +162,12 @@ where
     }
 
     #[inline]
-    fn apply_settings_from_hint_and_get_next_parser_directive(
+    fn apply_capture_flags_from_hint_and_get_next_parser_directive(
         &mut self,
         settings: impl Into<TokenCaptureFlags>,
     ) -> ParserDirective {
         self.token_capturer.set_capture_flags(settings.into());
-        self.got_settings_from_hint = true;
+        self.got_flags_from_hint = true;
         self.get_next_parser_directive()
     }
 }
@@ -182,19 +178,13 @@ where
     O: OutputSink,
 {
     fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective {
-        if self.got_settings_from_hint {
-            self.got_settings_from_hint = false;
+        if self.got_flags_from_hint {
+            self.got_flags_from_hint = false;
         } else {
             self.adjust_capture_flags_for_tag_lexeme(lexeme);
         }
 
         self.try_produce_token_from_lexeme(lexeme);
-
-        // NOTE: we capture tag tokens only for the current lexeme and
-        // only if it has been requested in content setting. So, once we've
-        // handled lexeme for the tag we should disable tag capturing.
-        self.token_capturer.stop_capturing_tags();
-
         self.get_next_parser_directive()
     }
 
@@ -211,8 +201,8 @@ where
 {
     fn handle_start_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
         match self.transform_controller.handle_element_start(name_info) {
-            ElementStartResponse::ContentSettings(settings) => {
-                self.apply_settings_from_hint_and_get_next_parser_directive(settings)
+            ElementStartResponse::CaptureFlags(flags) => {
+                self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)
             }
             ElementStartResponse::RequestElementModifiersInfo(handler) => {
                 self.pending_element_modifiers_info_handler = Some(handler);
@@ -225,7 +215,7 @@ where
     fn handle_end_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
         let settings = self.transform_controller.handle_element_end(name_info);
 
-        self.apply_settings_from_hint_and_get_next_parser_directive(settings)
+        self.apply_capture_flags_from_hint_and_get_next_parser_directive(settings)
     }
 }
 

@@ -43,38 +43,32 @@ fn parse_options() -> Option<Matches> {
 }
 
 struct TraceTransformController {
-    tag_hint_mode: bool,
+    capture_flags: TokenCaptureFlags,
 }
 
 impl TraceTransformController {
     pub fn new(tag_hint_mode: bool) -> Self {
-        TraceTransformController { tag_hint_mode }
+        TraceTransformController {
+            capture_flags: if tag_hint_mode {
+                TokenCaptureFlags::empty()
+            } else {
+                TokenCaptureFlags::all()
+            },
+        }
     }
 }
 
 impl TransformController for TraceTransformController {
-    fn document_level_content_settings(&self) -> DocumentLevelContentSettings {
-        if self.tag_hint_mode {
-            DocumentLevelContentSettings::empty()
-        } else {
-            DocumentLevelContentSettings::all()
-        }
+    fn initial_capture_flags(&self) -> TokenCaptureFlags {
+        self.capture_flags
     }
 
     fn handle_element_start(&mut self, _: &TagNameInfo<'_>) -> ElementStartResponse<Self> {
-        ElementStartResponse::ContentSettings(if self.tag_hint_mode {
-            ContentSettingsOnElementStart::empty()
-        } else {
-            ContentSettingsOnElementStart::CAPTURE_START_TAG_FOR_ELEMENT
-        })
+        ElementStartResponse::CaptureFlags(self.capture_flags)
     }
 
-    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> ContentSettingsOnElementEnd {
-        if self.tag_hint_mode {
-            ContentSettingsOnElementEnd::empty()
-        } else {
-            ContentSettingsOnElementEnd::CAPTURE_END_TAG_FOR_ELEMENT
-        }
+    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> TokenCaptureFlags {
+        self.capture_flags
     }
 
     fn handle_token(&mut self, _: &mut Token<'_>) {}

@@ -6,89 +6,32 @@ use failure::Error;
 
 pub use self::chunked_input::ChunkedInput;
 
-#[derive(Copy, Clone)]
-pub struct ContentSettings {
-    pub document_level: DocumentLevelContentSettings,
-    pub on_element_start: ContentSettingsOnElementStart,
-    pub on_element_end: ContentSettingsOnElementEnd,
-}
-
-impl ContentSettings {
-    pub fn all() -> Self {
-        ContentSettings {
-            document_level: DocumentLevelContentSettings::all(),
-            on_element_start: ContentSettingsOnElementStart::CAPTURE_START_TAG_FOR_ELEMENT,
-            on_element_end: ContentSettingsOnElementEnd::CAPTURE_END_TAG_FOR_ELEMENT,
-        }
-    }
-
-    pub fn start_tags() -> Self {
-        ContentSettings {
-            document_level: DocumentLevelContentSettings::empty(),
-            on_element_start: ContentSettingsOnElementStart::CAPTURE_START_TAG_FOR_ELEMENT,
-            on_element_end: ContentSettingsOnElementEnd::empty(),
-        }
-    }
-
-    pub fn end_tags() -> Self {
-        ContentSettings {
-            document_level: DocumentLevelContentSettings::empty(),
-            on_element_start: ContentSettingsOnElementStart::empty(),
-            on_element_end: ContentSettingsOnElementEnd::CAPTURE_END_TAG_FOR_ELEMENT,
-        }
-    }
-
-    pub fn text() -> Self {
-        ContentSettings {
-            document_level: DocumentLevelContentSettings::CAPTURE_TEXT,
-            on_element_start: ContentSettingsOnElementStart::empty(),
-            on_element_end: ContentSettingsOnElementEnd::empty(),
-        }
-    }
-
-    pub fn comments() -> Self {
-        ContentSettings {
-            document_level: DocumentLevelContentSettings::CAPTURE_COMMENTS,
-            on_element_start: ContentSettingsOnElementStart::empty(),
-            on_element_end: ContentSettingsOnElementEnd::empty(),
-        }
-    }
-
-    pub fn doctypes() -> Self {
-        ContentSettings {
-            document_level: DocumentLevelContentSettings::CAPTURE_DOCTYPES,
-            on_element_start: ContentSettingsOnElementStart::empty(),
-            on_element_end: ContentSettingsOnElementEnd::empty(),
-        }
-    }
-}
-
 type TokenHandler<'h> = Box<dyn FnMut(&mut Token<'_>) + 'h>;
 
 struct TestTransformController<'h> {
     token_handler: TokenHandler<'h>,
-    content_settings: ContentSettings,
+    capture_flags: TokenCaptureFlags,
 }
 
 impl<'h> TestTransformController<'h> {
-    pub fn new(token_handler: TokenHandler<'h>, content_settings: ContentSettings) -> Self {
+    pub fn new(token_handler: TokenHandler<'h>, capture_flags: TokenCaptureFlags) -> Self {
         TestTransformController {
             token_handler,
-            content_settings,
+            capture_flags,
         }
     }
 }
 
 impl TransformController for TestTransformController<'_> {
-    fn document_level_content_settings(&self) -> DocumentLevelContentSettings {
-        self.content_settings.document_level
+    fn initial_capture_flags(&self) -> TokenCaptureFlags {
+        self.capture_flags
     }
     fn handle_element_start(&mut self, _: &TagNameInfo<'_>) -> ElementStartResponse<Self> {
-        ElementStartResponse::ContentSettings(self.content_settings.on_element_start)
+        ElementStartResponse::CaptureFlags(self.capture_flags)
     }
 
-    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> ContentSettingsOnElementEnd {
-        self.content_settings.on_element_end
+    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> TokenCaptureFlags {
+        self.capture_flags
     }
 
     fn handle_token(&mut self, token: &mut Token<'_>) {
@@ -98,7 +41,7 @@ impl TransformController for TestTransformController<'_> {
 
 pub fn parse(
     input: &ChunkedInput,
-    content_settings: ContentSettings,
+    capture_flags: TokenCaptureFlags,
     initial_text_type: TextType,
     last_start_tag_name_hash: Option<u64>,
     token_handler: TokenHandler<'_>,
@@ -109,7 +52,7 @@ pub fn parse(
 
     let mut output = TestOutput::new(encoding);
 
-    let transform_controller = TestTransformController::new(token_handler, content_settings);
+    let transform_controller = TestTransformController::new(token_handler, capture_flags);
 
     let mut transform_stream = TransformStream::new(
         transform_controller,
@@ -134,8 +77,8 @@ pub fn parse(
 
 macro_rules! parse_token {
     ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
-        use crate::harness::parsing::{parse, ChunkedInput, ContentSettings};
-        use cool_thing::{TextType, Token};
+        use crate::harness::parsing::{parse, ChunkedInput};
+        use cool_thing::{TextType, Token, TokenCaptureFlags};
 
         let mut input: ChunkedInput = String::from($input).into();
         let mut emitted = false;
@@ -144,7 +87,7 @@ macro_rules! parse_token {
 
         parse(
             &input,
-            ContentSettings::all(),
+            TokenCaptureFlags::all(),
             TextType::Data,
             None,
             Box::new(move |t| match t {

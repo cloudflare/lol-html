@@ -52,13 +52,11 @@ pub use self::transform_stream::OutputSink;
 cfg_if! {
     if #[cfg(feature = "test_api")] {
         pub use self::transform_stream::{
-            ContentSettingsOnElementEnd, ContentSettingsOnElementStart,
-            DocumentLevelContentSettings, ElementStartResponse, TransformController,
-            TransformStream,
+            ElementStartResponse, TransformController, TransformStream,
         };
 
         pub use self::content::{
-            EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element
+            EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element,
         };
 
         pub use self::parser::{TagName, TagNameInfo};

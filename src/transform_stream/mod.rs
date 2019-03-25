@@ -49,10 +49,7 @@ where
         buffer_capacity: usize,
         encoding: &'static Encoding,
     ) -> Self {
-        let initial_parser_directive = if transform_controller
-            .document_level_content_settings()
-            .is_empty()
-        {
+        let initial_parser_directive = if transform_controller.initial_capture_flags().is_empty() {
             ParserDirective::ScanForTags
         } else {
             ParserDirective::Lex

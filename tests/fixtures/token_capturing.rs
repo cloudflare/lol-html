@@ -1,8 +1,8 @@
 use crate::harness::functional_testing::{
     FunctionalTestFixture, TestCase, TestToken, TestTokenList,
 };
-use crate::harness::parsing::{parse, ContentSettings};
-use cool_thing::{TokenCaptureFlags, TextType};
+use crate::harness::parsing::parse;
+use cool_thing::{TextType, TokenCaptureFlags};
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens
@@ -12,10 +12,14 @@ fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<
             TestToken::Doctype { .. } if capture_flags.contains(TokenCaptureFlags::DOCTYPES) => {
                 true
             }
-            TestToken::StartTag { .. } if capture_flags.contains(TokenCaptureFlags::START_TAGS) => {
+            TestToken::StartTag { .. }
+                if capture_flags.contains(TokenCaptureFlags::NEXT_START_TAG) =>
+            {
                 true
             }
-            TestToken::EndTag { .. } if capture_flags.contains(TokenCaptureFlags::END_TAGS) => true,
+            TestToken::EndTag { .. } if capture_flags.contains(TokenCaptureFlags::NEXT_END_TAG) => {
+                true
+            }
             TestToken::Comment(_) if capture_flags.contains(TokenCaptureFlags::COMMENTS) => true,
             TestToken::Text(_) if capture_flags.contains(TokenCaptureFlags::TEXT) => true,
             _ => false,
@@ -52,22 +56,23 @@ impl FunctionalTestFixture for TokenCapturingTests {
         last_start_tag_name_hash: Option<u64>,
     ) {
         [
-            (ContentSettings::all(), TokenCaptureFlags::all()),
-            (ContentSettings::start_tags(), TokenCaptureFlags::START_TAGS),
-            (ContentSettings::end_tags(), TokenCaptureFlags::END_TAGS),
-            (ContentSettings::text(), TokenCaptureFlags::TEXT),
-            (ContentSettings::comments(), TokenCaptureFlags::COMMENTS),
-            (ContentSettings::doctypes(), TokenCaptureFlags::DOCTYPES),
+            TokenCaptureFlags::all(),
+            TokenCaptureFlags::NEXT_START_TAG,
+            TokenCaptureFlags::NEXT_END_TAG,
+            TokenCaptureFlags::TEXT,
+            TokenCaptureFlags::COMMENTS,
+            TokenCaptureFlags::DOCTYPES,
+            TokenCaptureFlags::empty(),
         ]
         .iter()
         .cloned()
-        .for_each(|(content_settings, expected_token_flags)| {
-            let mut expected_tokens = filter_tokens(&test.expected_tokens, expected_token_flags);
+        .for_each(|capture_flags| {
+            let mut expected_tokens = filter_tokens(&test.expected_tokens, capture_flags);
             let mut token_list = TestTokenList::default();
 
             let parsing_result = parse(
                 &test.input,
-                content_settings,
+                capture_flags,
                 initial_text_type,
                 last_start_tag_name_hash,
                 Box::new(|t| token_list.push(t)),
@@ -85,7 +90,7 @@ impl FunctionalTestFixture for TokenCapturingTests {
             // tokens in the chain. So, for text tokens we fold both expected and actual
             // results to the single strings. It's not an ideal solution, but it's better
             // than nothing.
-            if expected_token_flags == TokenCaptureFlags::TEXT {
+            if capture_flags == TokenCaptureFlags::TEXT {
                 actual_tokens = fold_text_tokens(actual_tokens);
                 expected_tokens = fold_text_tokens(expected_tokens);
             }
@@ -97,7 +102,7 @@ impl FunctionalTestFixture for TokenCapturingTests {
                         expected_tokens,
                         initial_text_type,
                         test.input,
-                        format!("Token mismatch (capture: {:#?})", expected_token_flags)
+                        format!("Token mismatch (capture: {:#?})", capture_flags)
                     );
 
                     expect_eql!(
@@ -107,7 +112,7 @@ impl FunctionalTestFixture for TokenCapturingTests {
                         test.input,
                         format!(
                             "Serialized output doesn't match original input (capture: {:#?})",
-                            expected_token_flags
+                            capture_flags
                         )
                     );
                 }
@@ -116,7 +121,7 @@ impl FunctionalTestFixture for TokenCapturingTests {
                         test.expected_bailout.is_some(),
                         initial_text_type,
                         test.input,
-                        format!("Unexpected bailout (capture: {:#?})", expected_token_flags)
+                        format!("Unexpected bailout (capture: {:#?})", capture_flags)
                     );
                 }
             }
