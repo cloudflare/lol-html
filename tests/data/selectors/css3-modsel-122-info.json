@@ -1,0 +1,6 @@
+{
+  "title": "NEGATED universal selector with universal namespace",
+  "selectors": [
+    "div.stub > *|*:not(*|*)"
+  ]
+}

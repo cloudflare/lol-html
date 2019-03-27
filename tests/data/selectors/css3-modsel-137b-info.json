@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED Attribute existence selector without declared namespace",
+  "selectors": [
+    "*|q, *|r",
+    "*|q",
+    "div.stub *|*:not([|title])"
+  ]
+}

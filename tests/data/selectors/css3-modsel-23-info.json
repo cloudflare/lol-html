@@ -1,0 +1,9 @@
+{
+  "title": ":enabled pseudo-class",
+  "selectors": [
+    "button",
+    "input",
+    "button:enabled",
+    "input:enabled"
+  ]
+}

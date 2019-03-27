@@ -1,0 +1,7 @@
+{
+  "title": "Substring matching attribute selector (beginning)",
+  "selectors": [
+    "p",
+    "p[title^=\"foo\"]"
+  ]
+}

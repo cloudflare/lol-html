@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED attribute space-separated value selector",
+  "selectors": [
+    "div.stub p",
+    "div.stub *|*:not([test~=\"foo\"])",
+    "div.stub *|p:not([class~=\"foo\"])"
+  ]
+}

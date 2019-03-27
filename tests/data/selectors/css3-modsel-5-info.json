@@ -1,0 +1,7 @@
+{
+  "title": "Attribute existence selector",
+  "selectors": [
+    "p",
+    "p[title]"
+  ]
+}

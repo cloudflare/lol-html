@@ -1,0 +1,7 @@
+{
+  "title": "Omitted universal selector",
+  "selectors": [
+    "#foo",
+    "p"
+  ]
+}

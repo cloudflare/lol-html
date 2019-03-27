@@ -1,0 +1,8 @@
+{
+  "title": ":nth-last-of-type() pseudo-class",
+  "selectors": [
+    ".red",
+    "p:nth-last-of-type(3)",
+    "dl > :nth-last-of-type(3n+1)"
+  ]
+}

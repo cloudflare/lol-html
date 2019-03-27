@@ -1,0 +1,17 @@
+{
+  "title": "Case sensitivity",
+  "selectors": [
+    ".cs",
+    ".cs P",
+    ".cs .a",
+    ".cs .span1 span",
+    ".cs .span2",
+    ".cs .span2 SPAN",
+    ".cs .span2 span",
+    ".ci",
+    ".ci P",
+    ".ci .a",
+    ".ci .span1 span",
+    ".ci .span2 SPAN"
+  ]
+}

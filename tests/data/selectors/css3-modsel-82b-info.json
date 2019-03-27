@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :only-of-type pseudo-class",
+  "selectors": [
+    ".green",
+    ".t1 *:not(:only-of-type)"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title": "Universal selector (no namespaces)",
+  "selectors": [
+    "*",
+    "ul, p",
+    "*.t1"
+  ]
+}

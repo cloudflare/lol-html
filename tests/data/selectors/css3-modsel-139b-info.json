@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED Attribute space-separated value selector without declared namespace",
+  "selectors": [
+    "*|p, *|address, *|q, *|r",
+    "*|address, *|r",
+    "div.stub *|*:not([|class~=\"foo\"])"
+  ]
+}

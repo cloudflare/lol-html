@@ -1,0 +1,13 @@
+{
+  "title": "Namespaced attribute selectors",
+  "selectors": [
+    "tests, tests *",
+    "testA[*|attribute]",
+    "testB[*|attribute=\"pass\"]",
+    "testC[*|attribute~=\"pass\"]",
+    "testD[*|attribute^=\"pass\"]",
+    "testE[*|attribute*=\"pass\"]",
+    "testF[*|attribute$=\"pass\"]",
+    "testG[*|attribute|=\"pass\"]"
+  ]
+}

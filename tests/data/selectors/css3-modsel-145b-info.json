@@ -1,0 +1,9 @@
+{
+  "title": ":nth-of-type() pseudo-class with hidden elements",
+  "selectors": [
+    "line",
+    "[type~=odd]",
+    "line:nth-of-type(odd)",
+    "[hidden]"
+  ]
+}

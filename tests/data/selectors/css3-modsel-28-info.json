@@ -1,0 +1,10 @@
+{
+  "title": ":nth-child() pseudo-class",
+  "selectors": [
+    ".red",
+    "ul > li:nth-child(odd)",
+    "ol > li:nth-child(even)",
+    "table.t1 tr:nth-child(-n+4)",
+    "table.t2 td:nth-child(3n+1)"
+  ]
+}

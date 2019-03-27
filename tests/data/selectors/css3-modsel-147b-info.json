@@ -1,0 +1,9 @@
+{
+  "title": ":nth-last-of-type() pseudo-class with collapsed elements",
+  "selectors": [
+    "line",
+    "[type~=match]",
+    "line:nth-last-of-type(3n-1)",
+    "[hidden]"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": ":disabled pseudo-class",
+  "selectors": [
+    "button",
+    "input",
+    "button:disabled",
+    "input:disabled"
+  ]
+}

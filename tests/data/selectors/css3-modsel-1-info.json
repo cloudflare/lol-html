@@ -1,0 +1,6 @@
+{
+  "title": "Groups of selectors",
+  "selectors": [
+    "li,p"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "title": "Simple combination of descendant and child combinators",
+  "selectors": [
+    "p",
+    "blockquote div > p"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED Substring matching attribute selector on beginning with universal namespace",
+  "selectors": [
+    "*|p, *|q, *|r, *|s, *|t",
+    "*|p.red, *|q, *|t",
+    "div.stub *|*:not([*|title^=\"si on\"])"
+  ]
+}

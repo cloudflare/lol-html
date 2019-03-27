@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED Attribute dash-separated value selector without declared namespace",
+  "selectors": [
+    "*|p, *|address, *|q, *|r",
+    "*|address, *|r",
+    "div.stub *|*:not([|lang|=\"foo-bar\"])"
+  ]
+}

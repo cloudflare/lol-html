@@ -1,0 +1,7 @@
+{
+  "title": "Indirect adjacent combinator",
+  "selectors": [
+    ".red",
+    "div.stub > p ~ p"
+  ]
+}

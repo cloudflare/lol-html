@@ -1,0 +1,8 @@
+{
+  "title": "Attribute value selector without declared namespace",
+  "selectors": [
+    "*|p, *|q, *|r, *|s, *|t",
+    "*|p, *|r",
+    "*|*[|title=\"si on chantait\"]"
+  ]
+}

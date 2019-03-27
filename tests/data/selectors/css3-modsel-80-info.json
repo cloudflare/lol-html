@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED :last-of-type pseudo-class",
+  "selectors": [
+    ".red",
+    "address",
+    "address:not(:last-of-type)"
+  ]
+}

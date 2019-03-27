@@ -1,0 +1,8 @@
+{
+  "title": "::first-line on inlines",
+  "selectors": [
+    "p",
+    "span:first-line",
+    "span::first-line"
+  ]
+}

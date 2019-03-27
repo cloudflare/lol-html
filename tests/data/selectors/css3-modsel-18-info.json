@@ -1,0 +1,10 @@
+{
+  "title": ":hover pseudo-class",
+  "selectors": [
+    "p:hover",
+    "a:hover",
+    "tr:hover",
+    "td:hover",
+    "table"
+  ]
+}

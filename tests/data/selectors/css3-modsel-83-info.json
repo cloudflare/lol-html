@@ -1,0 +1,6 @@
+{
+  "title": "Negation pseudo-class can be an argument of itself",
+  "selectors": [
+    "p"
+  ]
+}

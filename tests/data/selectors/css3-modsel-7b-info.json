@@ -1,0 +1,7 @@
+{
+  "title": "Attribute multivalue selector",
+  "selectors": [
+    "p",
+    "[title~=\"hello world\"]"
+  ]
+}

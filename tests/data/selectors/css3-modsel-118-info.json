@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED type element selector with declared namespace",
+  "selectors": [
+    "*|p, *|l",
+    "div.test *"
+  ]
+}

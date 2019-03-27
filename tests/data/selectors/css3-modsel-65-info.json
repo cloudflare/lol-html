@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :focus pseudo-class",
+  "selectors": [
+    "a:not(:focus)",
+    "a"
+  ]
+}

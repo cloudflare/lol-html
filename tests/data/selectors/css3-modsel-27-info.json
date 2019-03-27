@@ -1,0 +1,7 @@
+{
+  "title": ":root pseudo-class",
+  "selectors": [
+    "html",
+    "*:root"
+  ]
+}

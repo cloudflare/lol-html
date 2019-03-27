@@ -1,0 +1,10 @@
+{
+  "title": "Syntax and parsing of unknown pseudo-classes and pseudo-elements",
+  "selectors": [
+    "p",
+    "p   *",
+    "p > *",
+    "p + *",
+    "p ~ *"
+  ]
+}

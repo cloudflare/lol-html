@@ -1,0 +1,7 @@
+{
+  "title": ":only-of-type pseudo-class",
+  "selectors": [
+    ".red",
+    ".t1 :only-of-type"
+  ]
+}

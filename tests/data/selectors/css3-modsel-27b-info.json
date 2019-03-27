@@ -1,0 +1,8 @@
+{
+  "title": "Impossible rules (* html, * :root)",
+  "selectors": [
+    "* html",
+    "* :root",
+    "p"
+  ]
+}

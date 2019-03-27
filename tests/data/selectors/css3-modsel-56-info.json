@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED substring matching attribute selector on middle",
+  "selectors": [
+    "div.stub > *",
+    "div.stub *:not([title*=\" on\"])"
+  ]
+}

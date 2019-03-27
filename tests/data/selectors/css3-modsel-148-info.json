@@ -1,0 +1,7 @@
+{
+  "title": ":empty pseudo-class and text",
+  "selectors": [
+    "p",
+    "p:empty"
+  ]
+}

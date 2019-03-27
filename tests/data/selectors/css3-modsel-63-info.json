@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :hover pseudo-class",
+  "selectors": [
+    "div.stub *",
+    "div.stub > * > *:not(:hover)"
+  ]
+}

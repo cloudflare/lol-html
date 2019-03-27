@@ -1,0 +1,8 @@
+{
+  "title": "Child combinator",
+  "selectors": [
+    ".white",
+    ".green",
+    "div > p.test"
+  ]
+}

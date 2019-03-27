@@ -1,0 +1,7 @@
+{
+  "title": "Starts-with attribute selector with empty value",
+  "selectors": [
+    "p",
+    "p[class^=\"\"]"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED attribute dash-separated value selector",
+  "selectors": [
+    "div.stub p",
+    "div.stub *|*:not([test|=\"foo-bar\"])",
+    "div.stub *|p:not([lang|=\"en-us\"])"
+  ]
+}

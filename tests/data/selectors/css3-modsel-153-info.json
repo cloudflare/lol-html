@@ -1,0 +1,8 @@
+{
+  "title": ":empty pseudo-class and CDATA",
+  "selectors": [
+    "address",
+    "address:empty",
+    ".text"
+  ]
+}

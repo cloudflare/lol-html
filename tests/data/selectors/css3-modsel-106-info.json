@@ -1,0 +1,8 @@
+{
+  "title": "Attribute space-separated value selector with universal namespace",
+  "selectors": [
+    "*|p, *|q, *|r, *|s",
+    "*|p, *|r, *|s",
+    "*|*[*|class~=\"deux\"], *|*[*|foo~=\"deux\"]"
+  ]
+}

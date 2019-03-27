@@ -1,0 +1,6 @@
+{
+  "title": ":hover pseudo-class",
+  "selectors": [
+    "div:hover > p:first-child"
+  ]
+}

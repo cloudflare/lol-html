@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :enabled:disabled pseudo-classes",
+  "selectors": [
+    "div :not(:enabled):not(:disabled)",
+    "p"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title": "Substring matching attribute selector on end without declared namespace",
+  "selectors": [
+    "*|p, *|q, *|r, *|s, *|t",
+    "*|p, *|r",
+    "*|*[|title$=\"tait\"]"
+  ]
+}

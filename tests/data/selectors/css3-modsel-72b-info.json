@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :root pseudo-class",
+  "selectors": [
+    "html:not(:root), test:not(:root)",
+    "p"
+  ]
+}

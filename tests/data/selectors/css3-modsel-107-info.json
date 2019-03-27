@@ -1,0 +1,7 @@
+{
+  "title": "Attribute dash-separated value selector with universal namespace",
+  "selectors": [
+    "*|p, *|q, *|r, *|s",
+    "*|p, *|r"
+  ]
+}

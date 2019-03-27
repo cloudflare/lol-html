@@ -1,0 +1,7 @@
+{
+  "title": ":lang() pseudo-class",
+  "selectors": [
+    "ul > li",
+    "li:lang(en-GB)"
+  ]
+}

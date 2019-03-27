@@ -1,0 +1,11 @@
+{
+  "title": "NEGATED :nth-child() pseudo-class",
+  "selectors": [
+    ".red",
+    "ul > li:not(:nth-child(odd))",
+    "ol > li:not(:nth-child(even))",
+    "table.t1 tr:not(:nth-child(-n+4))",
+    "table.t2 td:not(:nth-child(3n+1))",
+    "table.t1 td, table.t2 td"
+  ]
+}

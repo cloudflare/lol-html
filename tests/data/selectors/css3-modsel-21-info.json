@@ -1,0 +1,6 @@
+{
+  "title": ":target pseudo-class",
+  "selectors": [
+    "p:target"
+  ]
+}

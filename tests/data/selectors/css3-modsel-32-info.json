@@ -1,0 +1,8 @@
+{
+  "title": ":first-child pseudo-class",
+  "selectors": [
+    ".red",
+    ".t1 td:first-child",
+    "p > *:first-child"
+  ]
+}

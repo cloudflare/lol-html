@@ -1,0 +1,13 @@
+{
+  "title": "More than one class selector",
+  "selectors": [
+    "p",
+    "p.t1",
+    "p.t2",
+    "div",
+    "div.teST",
+    "div.te",
+    "div.st",
+    "div.te.st"
+  ]
+}

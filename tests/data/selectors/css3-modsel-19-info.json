@@ -1,0 +1,6 @@
+{
+  "title": ":active pseudo-class",
+  "selectors": [
+    "a:active"
+  ]
+}

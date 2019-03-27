@@ -1,0 +1,8 @@
+{
+  "title": "Universal selector without declared namespace",
+  "selectors": [
+    "div.green *",
+    "div.test *",
+    "div.test |*"
+  ]
+}

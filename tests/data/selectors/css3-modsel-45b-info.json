@@ -1,0 +1,8 @@
+{
+  "title": "Direct adjacent combinator",
+  "selectors": [
+    ".green",
+    ".white",
+    "div.stub > p + p"
+  ]
+}

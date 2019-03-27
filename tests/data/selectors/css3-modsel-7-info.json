@@ -1,0 +1,10 @@
+{
+  "title": "Attribute multivalue selector",
+  "selectors": [
+    "p",
+    "p[class~=\"b\"]",
+    "address",
+    "address[title~=\"foo\"]",
+    "span[class~=\"b\"]"
+  ]
+}

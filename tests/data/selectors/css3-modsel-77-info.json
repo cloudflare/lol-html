@@ -1,0 +1,9 @@
+{
+  "title": "NEGATED :first-child pseudo-class",
+  "selectors": [
+    ".red",
+    ".t1 td:not(:first-child)",
+    "p > *:not(:first-child)",
+    "table.t1 td"
+  ]
+}

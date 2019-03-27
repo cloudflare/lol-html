@@ -1,0 +1,8 @@
+{
+  "title": "Attribute space-separated value selector without declared namespace",
+  "selectors": [
+    "*|p, *|address, *|q, *|r",
+    "*|p, *|q",
+    "*|*[|class~=\"foo\"]"
+  ]
+}

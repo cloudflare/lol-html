@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED type element selector without declared namespace",
+  "selectors": [
+    "div.stub > *:not(|p)",
+    "div.stub > *|l > *:not(|p)"
+  ]
+}

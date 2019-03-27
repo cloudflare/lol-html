@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED ID selector",
+  "selectors": [
+    "div.stub > *",
+    "div.stub *:not(#foo)"
+  ]
+}

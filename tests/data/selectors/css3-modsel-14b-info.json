@@ -1,0 +1,10 @@
+{
+  "title": "More than one class selector",
+  "selectors": [
+    "p",
+    ".t1.fail",
+    ".fail.t1",
+    ".t2.fail",
+    ".fail.t2"
+  ]
+}

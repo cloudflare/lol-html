@@ -1,0 +1,10 @@
+{
+  "title": ":nth-last-child() pseudo-class",
+  "selectors": [
+    ".green",
+    "ul > li:nth-last-child(odd)",
+    "ol > li:nth-last-child(even)",
+    "table.t1 tr:nth-last-child(-n+4)",
+    "table.t2 td:nth-last-child(3n+1)"
+  ]
+}

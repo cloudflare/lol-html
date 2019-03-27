@@ -1,0 +1,8 @@
+{
+  "title": ":empty pseudo-class and empty elements",
+  "selectors": [
+    "address:empty",
+    "address",
+    ".text"
+  ]
+}

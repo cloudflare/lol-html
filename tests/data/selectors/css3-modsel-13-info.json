@@ -1,0 +1,9 @@
+{
+  "title": "Class selectors",
+  "selectors": [
+    "li",
+    ".t1",
+    "li.t2",
+    ".t3"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED type element selector with universal namespace",
+  "selectors": [
+    "div.test > *:not(*|p):not(*|div)",
+    "div.stub > *:not(*|div)"
+  ]
+}

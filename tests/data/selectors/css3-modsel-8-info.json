@@ -1,0 +1,10 @@
+{
+  "title": "Attribute value selectors (hyphen-separated attributes)",
+  "selectors": [
+    "p",
+    "p[lang|=\"en\"]",
+    "address",
+    "address[lang=\"fi\"]",
+    "span[lang|=\"fr\"]"
+  ]
+}

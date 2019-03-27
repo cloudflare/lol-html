@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :checked pseudo-class",
+  "selectors": [
+    "input, span",
+    "input:not(:checked), input:not(:checked) + span"
+  ]
+}

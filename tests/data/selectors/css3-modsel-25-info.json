@@ -1,0 +1,7 @@
+{
+  "title": ":checked pseudo-class",
+  "selectors": [
+    "input, span",
+    "input:checked, input:checked + span"
+  ]
+}

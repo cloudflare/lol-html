@@ -1,0 +1,13 @@
+{
+  "title": "Combinations: classes and IDs",
+  "selectors": [
+    "p",
+    "p:not(#other).class:not(.fail).test#id#id",
+    "div",
+    "div:not(#theid).class:not(.fail).test#theid#theid",
+    "div:not(#other).notclass:not(.fail).test#theid#theid",
+    "div:not(#other).class:not(.test).test#theid#theid",
+    "div:not(#other).class:not(.fail).nottest#theid#theid",
+    "div:not(#other).class:not(.fail).nottest#theid#other"
+  ]
+}

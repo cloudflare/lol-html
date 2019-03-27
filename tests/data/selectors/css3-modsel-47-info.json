@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED type element selector",
+  "selectors": [
+    "div.stub span, div.stub address, div.stub *|q, div.stub *|r",
+    "address, *|q, *|r",
+    "div.stub *:not(p)"
+  ]
+}

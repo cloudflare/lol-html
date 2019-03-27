@@ -1,0 +1,7 @@
+{
+  "title": "Direct adjacent combinator and classes",
+  "selectors": [
+    ".fail + div",
+    ".control"
+  ]
+}

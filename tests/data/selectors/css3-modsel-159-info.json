@@ -1,0 +1,6 @@
+{
+  "title": "Syntax and parsing of new pseudo-elements",
+  "selectors": [
+    "::selection"
+  ]
+}

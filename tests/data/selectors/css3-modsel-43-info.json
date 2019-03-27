@@ -1,0 +1,8 @@
+{
+  "title": "Descendant combinator",
+  "selectors": [
+    ".white",
+    ".red",
+    "div.t1 p"
+  ]
+}

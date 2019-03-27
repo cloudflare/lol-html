@@ -1,0 +1,29 @@
+<html><head>
+  <title>Namespaced attribute selectors</title>
+  <style type="text/css">
+ tests, tests * { display: block; color: red; }
+ testA[*|attribute] { color: green; }
+ testB[*|attribute="pass"] { color: green; }
+ testC[*|attribute~="pass"] { color: green; }
+ testD[*|attribute^="pass"] { color: green; }
+ testE[*|attribute*="pass"] { color: green; }
+ testF[*|attribute$="pass"] { color: green; }
+ testG[*|attribute|="pass"] { color: green; }
+</style>
+  <link rel="author" title="Ian Hickson" href="mailto:ian@hixie.ch">
+  <link rel="help" href="https://www.w3.org/TR/css3-selectors/#selectors"> <!-- bogus link to make sure it gets found -->
+  <link rel="match" href="reference/seven-green-divs.xht">
+  <meta name="flags" content=" namespace">
+ </head>
+ <body>
+  <!--[ELEMENT('tests, tests *')]--><tests xmlns="http://css.example.net/" xmlns:test="http://css.example.net/"><!--[TEXT('tests, tests *')]-->
+   <!--[/TEXT('tests, tests *')]--><!--[ELEMENT('tests, tests *')]--><!--[ELEMENT('testA[*|attribute]')]--><testa attribute="pass"><!--[TEXT('tests, tests *')]--><!--[TEXT('tests, tests *')]--><!--[TEXT('testA[*|attribute]')]-->This should be green.<!--[/TEXT('testA[*|attribute]')]--><!--[/TEXT('tests, tests *')]--><!--[/TEXT('tests, tests *')]--></testa><!--[/ELEMENT('testA[*|attribute]')]--><!--[/ELEMENT('tests, tests *')]--><!--[TEXT('tests, tests *')]-->
+   <!--[/TEXT('tests, tests *')]--><!--[ELEMENT('tests, tests *')]--><!--[ELEMENT('testB[*|attribute="pass"]')]--><testb attribute="pass"><!--[TEXT('tests, tests *')]--><!--[TEXT('tests, tests *')]--><!--[TEXT('testB[*|attribute="pass"]')]-->This should be green.<!--[/TEXT('testB[*|attribute="pass"]')]--><!--[/TEXT('tests, tests *')]--><!--[/TEXT('tests, tests *')]--></testb><!--[/ELEMENT('testB[*|attribute="pass"]')]--><!--[/ELEMENT('tests, tests *')]--><!--[TEXT('tests, tests *')]-->
+   <!--[/TEXT('tests, tests *')]--><!--[ELEMENT('tests, tests *')]--><!--[ELEMENT('testC[*|attribute~="pass"]')]--><testc attribute="pass"><!--[TEXT('tests, tests *')]--><!--[TEXT('tests, tests *')]--><!--[TEXT('testC[*|attribute~="pass"]')]-->This should be green.<!--[/TEXT('testC[*|attribute~="pass"]')]--><!--[/TEXT('tests, tests *')]--><!--[/TEXT('tests, tests *')]--></testc><!--[/ELEMENT('testC[*|attribute~="pass"]')]--><!--[/ELEMENT('tests, tests *')]--><!--[TEXT('tests, tests *')]-->
+   <!--[/TEXT('tests, tests *')]--><!--[ELEMENT('tests, tests *')]--><!--[ELEMENT('testD[*|attribute^="pass"]')]--><testd attribute="pass"><!--[TEXT('tests, tests *')]--><!--[TEXT('tests, tests *')]--><!--[TEXT('testD[*|attribute^="pass"]')]-->This should be green.<!--[/TEXT('testD[*|attribute^="pass"]')]--><!--[/TEXT('tests, tests *')]--><!--[/TEXT('tests, tests *')]--></testd><!--[/ELEMENT('testD[*|attribute^="pass"]')]--><!--[/ELEMENT('tests, tests *')]--><!--[TEXT('tests, tests *')]-->
+   <!--[/TEXT('tests, tests *')]--><!--[ELEMENT('tests, tests *')]--><!--[ELEMENT('testE[*|attribute*="pass"]')]--><teste attribute="pass"><!--[TEXT('tests, tests *')]--><!--[TEXT('tests, tests *')]--><!--[TEXT('testE[*|attribute*="pass"]')]-->This should be green.<!--[/TEXT('testE[*|attribute*="pass"]')]--><!--[/TEXT('tests, tests *')]--><!--[/TEXT('tests, tests *')]--></teste><!--[/ELEMENT('testE[*|attribute*="pass"]')]--><!--[/ELEMENT('tests, tests *')]--><!--[TEXT('tests, tests *')]-->
+   <!--[/TEXT('tests, tests *')]--><!--[ELEMENT('tests, tests *')]--><!--[ELEMENT('testF[*|attribute$="pass"]')]--><testf attribute="pass"><!--[TEXT('tests, tests *')]--><!--[TEXT('tests, tests *')]--><!--[TEXT('testF[*|attribute$="pass"]')]-->This should be green.<!--[/TEXT('testF[*|attribute$="pass"]')]--><!--[/TEXT('tests, tests *')]--><!--[/TEXT('tests, tests *')]--></testf><!--[/ELEMENT('testF[*|attribute$="pass"]')]--><!--[/ELEMENT('tests, tests *')]--><!--[TEXT('tests, tests *')]-->
+   <!--[/TEXT('tests, tests *')]--><!--[ELEMENT('tests, tests *')]--><!--[ELEMENT('testG[*|attribute|="pass"]')]--><testg attribute="pass"><!--[TEXT('tests, tests *')]--><!--[TEXT('tests, tests *')]--><!--[TEXT('testG[*|attribute|="pass"]')]-->This should be green.<!--[/TEXT('testG[*|attribute|="pass"]')]--><!--[/TEXT('tests, tests *')]--><!--[/TEXT('tests, tests *')]--></testg><!--[/ELEMENT('testG[*|attribute|="pass"]')]--><!--[/ELEMENT('tests, tests *')]--><!--[TEXT('tests, tests *')]-->
+  <!--[/TEXT('tests, tests *')]--></tests><!--[/ELEMENT('tests, tests *')]-->
+
+</body></html>

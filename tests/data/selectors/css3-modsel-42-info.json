@@ -1,0 +1,6 @@
+{
+  "title": "::after pseudo-element",
+  "selectors": [
+    "p::after"
+  ]
+}

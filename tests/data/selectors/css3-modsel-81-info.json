@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED :only-child pseudo-class",
+  "selectors": [
+    ".red",
+    "p:not(:only-child)",
+    "div.testText > div > p"
+  ]
+}

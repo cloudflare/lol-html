@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :visited pseudo-class",
+  "selectors": [
+    "div.stub > *",
+    "div.stub *:not(:visited)"
+  ]
+}

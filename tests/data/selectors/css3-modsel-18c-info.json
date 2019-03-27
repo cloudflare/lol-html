@@ -1,0 +1,7 @@
+{
+  "title": ":hover pseudo-class on links",
+  "selectors": [
+    ":link, :visited",
+    ":link:hover span"
+  ]
+}

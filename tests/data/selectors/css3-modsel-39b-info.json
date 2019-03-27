@@ -1,0 +1,6 @@
+{
+  "title": "::first-letter pseudo-element",
+  "selectors": [
+    "p::first-letter"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title": ":only-child pseudo-class",
+  "selectors": [
+    ".red",
+    "p:only-child",
+    "div.testText > div > p"
+  ]
+}

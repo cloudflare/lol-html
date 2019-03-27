@@ -1,0 +1,8 @@
+{
+  "title": "Attribute value selector",
+  "selectors": [
+    "address",
+    "address[title=\"foo\"]",
+    "span[title=\"a\"]"
+  ]
+}

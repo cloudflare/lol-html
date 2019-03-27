@@ -1,0 +1,8 @@
+{
+  "title": ":empty pseudo-class and XML/SGML constructs",
+  "selectors": [
+    "address:empty",
+    "address",
+    ".text"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "title": "::first-line pseudo-element",
+  "selectors": [
+    "p:first-line"
+  ]
+}

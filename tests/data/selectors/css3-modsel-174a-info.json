@@ -1,0 +1,8 @@
+{
+  "title": "Attribute selectors with multiple attributes",
+  "selectors": [
+    "tests, tests *",
+    "testA[*|attribute=\"pass\"]",
+    "testB[*|attribute=\"pass\"]"
+  ]
+}

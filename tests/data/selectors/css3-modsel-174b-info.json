@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED Attribute selectors with multiple attributes",
+  "selectors": [
+    "tests, tests *",
+    "testA:not([*|attribute=\"pass\"])",
+    "testB:not([*|attribute=\"pass\"])"
+  ]
+}

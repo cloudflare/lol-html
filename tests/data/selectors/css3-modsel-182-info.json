@@ -1,0 +1,7 @@
+{
+  "title": "Namespaces and \\: in selectors",
+  "selectors": [
+    "p",
+    "foo\\:bar"
+  ]
+}

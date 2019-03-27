@@ -1,0 +1,9 @@
+{
+  "title": "NEGATED :last-child pseudo-class",
+  "selectors": [
+    ".green",
+    ".t1 td:not(:last-child)",
+    "p > *:not(:last-child)",
+    "table.t1 td"
+  ]
+}

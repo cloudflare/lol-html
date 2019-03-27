@@ -1,0 +1,11 @@
+{
+  "title": "Multiple ID selectors",
+  "selectors": [
+    "p",
+    "#test#fail",
+    "#fail#test",
+    "#fail",
+    "div",
+    "#pass#pass"
+  ]
+}

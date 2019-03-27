@@ -1,0 +1,20 @@
+{
+  "title": "Impossible rules (:root:first-child, etc)",
+  "selectors": [
+    ":root:first-child",
+    ":root:last-child",
+    ":root:only-child",
+    ":root:nth-child(1)",
+    ":root:nth-child(n)",
+    ":root:nth-last-child(1)",
+    ":root:nth-last-child(n)",
+    ":root:first-of-type",
+    ":root:last-of-type",
+    ":root:only-of-type",
+    ":root:nth-of-type(1)",
+    ":root:nth-of-type(n)",
+    ":root:nth-last-of-type(1)",
+    ":root:nth-last-of-type(n)",
+    "p"
+  ]
+}

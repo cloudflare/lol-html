@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED :target pseudo-class",
+  "selectors": [
+    "p",
+    "p:not(:target)"
+  ]
+}

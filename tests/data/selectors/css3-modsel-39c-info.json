@@ -1,0 +1,7 @@
+{
+  "title": "::first-letter pseudo-element with ::before pseudo-element",
+  "selectors": [
+    "p::first-letter",
+    "p::before"
+  ]
+}

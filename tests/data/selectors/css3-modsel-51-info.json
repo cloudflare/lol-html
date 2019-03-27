@@ -1,0 +1,7 @@
+{
+  "title": "NEGATED attribute value selector",
+  "selectors": [
+    "div.stub > p",
+    "div.stub *|*:not([test=\"1\"])"
+  ]
+}

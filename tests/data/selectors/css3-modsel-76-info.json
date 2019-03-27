@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED :nth-last-of-type() pseudo-class",
+  "selectors": [
+    ".red",
+    "p:not(:nth-last-of-type(3))",
+    "dl > *:not(:nth-last-of-type(3n+1))"
+  ]
+}

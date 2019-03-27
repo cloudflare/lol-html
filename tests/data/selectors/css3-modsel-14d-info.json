@@ -1,0 +1,10 @@
+{
+  "title": "NEGATED More than one class selector",
+  "selectors": [
+    "p",
+    ".t1:not(.t2)",
+    ":not(.t2).t1",
+    ".t2:not(.t1)",
+    ":not(.t1).t2"
+  ]
+}

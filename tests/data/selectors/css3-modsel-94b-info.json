@@ -1,0 +1,7 @@
+{
+  "title": "Universal selector with declared namespace",
+  "selectors": [
+    "p, q",
+    "[test]"
+  ]
+}

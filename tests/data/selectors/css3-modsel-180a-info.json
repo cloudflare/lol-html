@@ -1,0 +1,8 @@
+{
+  "title": "::first-letter after &lt;br&gt;",
+  "selectors": [
+    "p",
+    "p:first-letter",
+    "p::first-letter"
+  ]
+}

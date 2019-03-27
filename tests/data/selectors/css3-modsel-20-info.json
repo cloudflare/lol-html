@@ -1,0 +1,6 @@
+{
+  "title": ":focus pseudo-class",
+  "selectors": [
+    "a:focus"
+  ]
+}

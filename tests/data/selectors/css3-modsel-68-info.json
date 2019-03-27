@@ -1,0 +1,9 @@
+{
+  "title": "NEGATED :enabled pseudo-class",
+  "selectors": [
+    "button",
+    "input",
+    "button:not(:enabled)",
+    "input:not(:enabled)"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "title": ":link pseudo-class",
+  "selectors": [
+    "p.test a",
+    "p.test *:link"
+  ]
+}

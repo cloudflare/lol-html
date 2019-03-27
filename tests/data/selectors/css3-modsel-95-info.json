@@ -1,0 +1,7 @@
+{
+  "title": "Universal selector with universal namespace",
+  "selectors": [
+    "div.test *",
+    "div.test *|*"
+  ]
+}

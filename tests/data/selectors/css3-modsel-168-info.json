@@ -1,0 +1,7 @@
+{
+  "title": ":before with ::before",
+  "selectors": [
+    "span:before",
+    "span::before"
+  ]
+}

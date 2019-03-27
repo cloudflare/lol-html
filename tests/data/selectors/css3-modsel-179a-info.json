@@ -1,0 +1,8 @@
+{
+  "title": "::first-line after &lt;br&gt;",
+  "selectors": [
+    "p",
+    "p:first-line",
+    "p::first-line"
+  ]
+}

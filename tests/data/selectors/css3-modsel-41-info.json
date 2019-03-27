@@ -1,0 +1,6 @@
+{
+  "title": "::before pseudo-element",
+  "selectors": [
+    "p::before"
+  ]
+}

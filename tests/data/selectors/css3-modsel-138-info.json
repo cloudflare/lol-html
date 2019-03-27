@@ -1,0 +1,8 @@
+{
+  "title": "NEGATED Attribute value selector without declared namespace",
+  "selectors": [
+    "*|q, *|r, *|s, *|t",
+    "*|q, *|s, *|t",
+    "div.stub *|*:not([|title=\"si on chantait\"])"
+  ]
+}

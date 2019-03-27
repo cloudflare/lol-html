@@ -1,0 +1,6 @@
+{
+  "title": ":active pseudo-class on controls",
+  "selectors": [
+    "button:active"
+  ]
+}

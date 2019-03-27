@@ -1,0 +1,7 @@
+{
+  "title": "Simple combination of direct and indirect adjacent combinators",
+  "selectors": [
+    "p",
+    "blockquote ~ div + p"
+  ]
+}

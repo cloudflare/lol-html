@@ -1,0 +1,7 @@
+{
+  "title": ":first-line with ::first-line",
+  "selectors": [
+    "p:first-line",
+    "p::first-line"
+  ]
+}

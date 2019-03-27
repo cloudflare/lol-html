@@ -1,0 +1,7 @@
+{
+  "title": ":first-letter with ::first-letter",
+  "selectors": [
+    "p:first-letter",
+    "p::first-letter"
+  ]
+}

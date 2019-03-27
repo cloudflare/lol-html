@@ -1,0 +1,7 @@
+{
+  "title": "Child combinator and classes",
+  "selectors": [
+    ".fail > div",
+    ".control"
+  ]
+}

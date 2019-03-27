@@ -1,0 +1,11 @@
+{
+  "title": ":hover pseudo-class on links",
+  "selectors": [
+    "p",
+    ".a a:hover",
+    ".b a:hover",
+    ".b a:link",
+    ".c :link",
+    ".c :visited:hover"
+  ]
+}

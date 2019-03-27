@@ -1,0 +1,7 @@
+{
+  "title": "Type element selector without declared namespace",
+  "selectors": [
+    "*|testA",
+    "|testA"
+  ]
+}

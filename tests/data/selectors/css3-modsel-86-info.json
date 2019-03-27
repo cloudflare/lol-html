@@ -1,0 +1,7 @@
+{
+  "title": "Nondeterministic matching of descendant and child combinators",
+  "selectors": [
+    "p",
+    "blockquote > div p"
+  ]
+}
