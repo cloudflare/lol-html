@@ -1,8 +1,10 @@
 {
-  "title": ":empty pseudo-class and CDATA",
+  "description": "Selectors - :empty pseudo-class and CDATA (css3-modsel-153)",
   "selectors": [
     "address",
     "address:empty",
     ".text"
-  ]
+  ],
+  "src": "css3-modsel-153.src.html",
+  "expected": "css3-modsel-153.expected.html"
 }

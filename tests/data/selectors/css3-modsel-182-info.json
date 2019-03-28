@@ -1,7 +1,9 @@
 {
-  "title": "Namespaces and \\: in selectors",
+  "description": "Selectors - Namespaces and \\: in selectors (css3-modsel-182)",
   "selectors": [
     "p",
     "foo\\:bar"
-  ]
+  ],
+  "src": "css3-modsel-182.src.html",
+  "expected": "css3-modsel-182.expected.html"
 }

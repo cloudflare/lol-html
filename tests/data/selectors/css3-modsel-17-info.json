@@ -1,7 +1,9 @@
 {
-  "title": ":visited pseudo-class",
+  "description": "Selectors - :visited pseudo-class (css3-modsel-17)",
   "selectors": [
     "p.test a",
     "p.test *:visited"
-  ]
+  ],
+  "src": "css3-modsel-17.src.html",
+  "expected": "css3-modsel-17.expected.html"
 }

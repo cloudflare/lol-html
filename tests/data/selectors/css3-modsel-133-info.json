@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED Attribute dash-separated value selector with universal namespace",
+  "description": "Selectors - NEGATED Attribute dash-separated value selector with universal namespace (css3-modsel-133)",
   "selectors": [
     "*|p, *|q, *|r, *|s",
     "*|p.foo, *|q, *|s"
-  ]
+  ],
+  "src": "css3-modsel-133.src.html",
+  "expected": "css3-modsel-133.expected.html"
 }

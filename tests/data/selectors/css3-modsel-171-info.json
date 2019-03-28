@@ -1,7 +1,9 @@
 {
-  "title": "Classes: XHTML global class attribute",
+  "description": "Selectors - Classes: XHTML global class attribute (css3-modsel-171)",
   "selectors": [
     "p",
     ".fail"
-  ]
+  ],
+  "src": "css3-modsel-171.src.html",
+  "expected": "css3-modsel-171.expected.html"
 }

@@ -1,8 +1,10 @@
 {
-  "title": ":only-child pseudo-class",
+  "description": "Selectors - :only-child pseudo-class (css3-modsel-36)",
   "selectors": [
     ".red",
     "p:only-child",
     "div.testText > div > p"
-  ]
+  ],
+  "src": "css3-modsel-36.src.html",
+  "expected": "css3-modsel-36.expected.html"
 }

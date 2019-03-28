@@ -1,8 +1,10 @@
 {
-  "title": "Attribute value selector",
+  "description": "Selectors - Attribute value selector (css3-modsel-6)",
   "selectors": [
     "address",
     "address[title=\"foo\"]",
     "span[title=\"a\"]"
-  ]
+  ],
+  "src": "css3-modsel-6.src.html",
+  "expected": "css3-modsel-6.expected.html"
 }

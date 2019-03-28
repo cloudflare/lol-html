@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED Substring matching attribute value selector on beginning with declared namespace",
+  "description": "Selectors - NEGATED Substring matching attribute value selector on beginning with declared namespace (css3-modsel-127)",
   "selectors": [
     "*|p, *|q, *|r, *|s",
     "*|q, *|s"
-  ]
+  ],
+  "src": "css3-modsel-127.src.html",
+  "expected": "css3-modsel-127.expected.html"
 }

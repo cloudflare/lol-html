@@ -35,7 +35,6 @@ getopts = "0.2.15"
 glob = "0.2.11"
 html5ever = "0.21.0"
 lazyhtml = { path = "benches/deps/lazyhtml/rust" }
-lazy_static = "1.2.0"
 serde = "1.0.19"
 serde_derive = "1.0.19"
 serde_json = "1.0.5"

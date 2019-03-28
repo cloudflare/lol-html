@@ -1,7 +1,9 @@
 {
-  "title": "Attribute existence selector with declared namespace",
+  "description": "Selectors - Attribute existence selector with declared namespace (css3-modsel-97b)",
   "selectors": [
     "*|p, *|q, *|r",
     "*|q"
-  ]
+  ],
+  "src": "css3-modsel-97b.src.html",
+  "expected": "css3-modsel-97b.expected.html"
 }

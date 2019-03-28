@@ -1,8 +1,10 @@
 {
-  "title": "::first-line on inlines",
+  "description": "Selectors - ::first-line on inlines (css3-modsel-179)",
   "selectors": [
     "p",
     "span:first-line",
     "span::first-line"
-  ]
+  ],
+  "src": "css3-modsel-179.src.html",
+  "expected": "css3-modsel-179.expected.html"
 }

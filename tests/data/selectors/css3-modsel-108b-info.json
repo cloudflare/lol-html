@@ -1,8 +1,10 @@
 {
-  "title": "Substring matching attribute selector on beginning with universal namespace",
+  "description": "Selectors - Substring matching attribute selector on beginning with universal namespace (css3-modsel-108b)",
   "selectors": [
     "*|p, *|q, *|r, *|s, *|t",
     "*|p, *|r, *|s",
     "*|*[*|title^=\"si on\"]"
-  ]
+  ],
+  "src": "css3-modsel-108b.src.html",
+  "expected": "css3-modsel-108b.expected.html"
 }

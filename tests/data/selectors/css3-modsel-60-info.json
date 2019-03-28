@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED ID selector",
+  "description": "Selectors - NEGATED ID selector (css3-modsel-60)",
   "selectors": [
     "div.stub > *",
     "div.stub *:not(#foo)"
-  ]
+  ],
+  "src": "css3-modsel-60.src.html",
+  "expected": "css3-modsel-60.expected.html"
 }

@@ -1,8 +1,10 @@
 {
-  "title": ":first-of-type pseudo-class",
+  "description": "Selectors - :first-of-type pseudo-class (css3-modsel-34)",
   "selectors": [
     ".red",
     "address",
     "address:first-of-type"
-  ]
+  ],
+  "src": "css3-modsel-34.src.html",
+  "expected": "css3-modsel-34.expected.html"
 }

@@ -1,8 +1,10 @@
 {
-  "title": "Attribute value selector with universal namespace",
+  "description": "Selectors - Attribute value selector with universal namespace (css3-modsel-105)",
   "selectors": [
     "*|p, *|q, *|r, *|s",
     "*|p, *|r, *|s",
     "*|*[*|title=\"si on chantait\"]"
-  ]
+  ],
+  "src": "css3-modsel-105.src.html",
+  "expected": "css3-modsel-105.expected.html"
 }

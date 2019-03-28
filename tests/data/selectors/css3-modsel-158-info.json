@@ -1,6 +1,8 @@
 {
-  "title": "Syntax and parsing",
+  "description": "Selectors - Syntax and parsing (css3-modsel-158)",
   "selectors": [
     "p"
-  ]
+  ],
+  "src": "css3-modsel-158.src.html",
+  "expected": "css3-modsel-158.expected.html"
 }

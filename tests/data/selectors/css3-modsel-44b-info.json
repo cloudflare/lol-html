@@ -1,8 +1,10 @@
 {
-  "title": "Child combinator",
+  "description": "Selectors - Child combinator (css3-modsel-44b)",
   "selectors": [
     ".white",
     ".green",
     "div > p.test"
-  ]
+  ],
+  "src": "css3-modsel-44b.src.html",
+  "expected": "css3-modsel-44b.expected.html"
 }

@@ -1,8 +1,10 @@
 {
-  "title": "NEGATED attribute dash-separated value selector",
+  "description": "Selectors - NEGATED attribute dash-separated value selector (css3-modsel-53)",
   "selectors": [
     "div.stub p",
     "div.stub *|*:not([test|=\"foo-bar\"])",
     "div.stub *|p:not([lang|=\"en-us\"])"
-  ]
+  ],
+  "src": "css3-modsel-53.src.html",
+  "expected": "css3-modsel-53.expected.html"
 }

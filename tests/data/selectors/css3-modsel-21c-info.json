@@ -1,7 +1,9 @@
 {
-  "title": ":target pseudo-class",
+  "description": "Selectors - :target pseudo-class (css3-modsel-21c)",
   "selectors": [
     ":root",
     ":target"
-  ]
+  ],
+  "src": "css3-modsel-21c.src.html",
+  "expected": "css3-modsel-21c.expected.html"
 }

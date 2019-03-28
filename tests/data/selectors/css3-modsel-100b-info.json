@@ -1,7 +1,9 @@
 {
-  "title": "Attribute dash-separated value selector with declared namespace",
+  "description": "Selectors - Attribute dash-separated value selector with declared namespace (css3-modsel-100b)",
   "selectors": [
     "*|p, *|q, *|r, *|s",
     "*|p, *|r"
-  ]
+  ],
+  "src": "css3-modsel-100b.src.html",
+  "expected": "css3-modsel-100b.expected.html"
 }

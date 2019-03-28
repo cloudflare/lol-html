@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED substring matching attribute selector on end",
+  "description": "Selectors - NEGATED substring matching attribute selector on end (css3-modsel-55)",
   "selectors": [
     "div.stub > *",
     "div.stub *:not([title$=\"tait\"])"
-  ]
+  ],
+  "src": "css3-modsel-55.src.html",
+  "expected": "css3-modsel-55.expected.html"
 }

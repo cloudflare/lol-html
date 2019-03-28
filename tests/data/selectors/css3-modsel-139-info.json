@@ -1,8 +1,10 @@
 {
-  "title": "NEGATED Attribute space-separated value selector without declared namespace",
+  "description": "Selectors - NEGATED Attribute space-separated value selector without declared namespace (css3-modsel-139)",
   "selectors": [
     "*|p, *|address, *|q, *|r",
     "*|address, *|r",
     "div.stub *|*:not([|class~=\"foo\"])"
-  ]
+  ],
+  "src": "css3-modsel-139.src.html",
+  "expected": "css3-modsel-139.expected.html"
 }

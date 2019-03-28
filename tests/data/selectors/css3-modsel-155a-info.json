@@ -1,7 +1,9 @@
 {
-  "title": "Syntax and parsing",
+  "description": "Selectors - Syntax and parsing (css3-modsel-155a)",
   "selectors": [
     "p",
     ".\\5cm"
-  ]
+  ],
+  "src": "css3-modsel-155a.src.html",
+  "expected": "css3-modsel-155a.expected.html"
 }

@@ -1,10 +1,12 @@
 {
-  "title": ":nth-last-child() pseudo-class",
+  "description": "Selectors - :nth-last-child() pseudo-class (css3-modsel-29)",
   "selectors": [
     ".red",
     "ul > li:nth-last-child(odd)",
     "ol > li:nth-last-child(even)",
     "table.t1 tr:nth-last-child(-n+4)",
     "table.t2 td:nth-last-child(3n+1)"
-  ]
+  ],
+  "src": "css3-modsel-29.src.html",
+  "expected": "css3-modsel-29.expected.html"
 }

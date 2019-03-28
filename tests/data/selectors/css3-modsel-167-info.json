@@ -1,7 +1,9 @@
 {
-  "title": ":first-line with ::first-line",
+  "description": "Selectors - :first-line with ::first-line (css3-modsel-167)",
   "selectors": [
     "p:first-line",
     "p::first-line"
-  ]
+  ],
+  "src": "css3-modsel-167.src.html",
+  "expected": "css3-modsel-167.expected.html"
 }

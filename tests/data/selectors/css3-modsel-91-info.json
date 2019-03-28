@@ -1,6 +1,8 @@
 {
-  "title": "Type element selector with declared namespace",
+  "description": "Selectors - Type element selector with declared namespace (css3-modsel-91)",
   "selectors": [
     "testa"
-  ]
+  ],
+  "src": "css3-modsel-91.src.html",
+  "expected": "css3-modsel-91.expected.html"
 }

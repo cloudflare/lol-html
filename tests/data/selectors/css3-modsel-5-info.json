@@ -1,7 +1,9 @@
 {
-  "title": "Attribute existence selector",
+  "description": "Selectors - Attribute existence selector (css3-modsel-5)",
   "selectors": [
     "p",
     "p[title]"
-  ]
+  ],
+  "src": "css3-modsel-5.src.html",
+  "expected": "css3-modsel-5.expected.html"
 }

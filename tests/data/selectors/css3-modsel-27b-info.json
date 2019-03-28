@@ -1,8 +1,10 @@
 {
-  "title": "Impossible rules (* html, * :root)",
+  "description": "Selectors - Impossible rules (* html, * :root) (css3-modsel-27b)",
   "selectors": [
     "* html",
     "* :root",
     "p"
-  ]
+  ],
+  "src": "css3-modsel-27b.src.html",
+  "expected": "css3-modsel-27b.expected.html"
 }

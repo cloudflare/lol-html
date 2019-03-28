@@ -1,10 +1,12 @@
 {
-  "title": "Attribute multivalue selector",
+  "description": "Selectors - Attribute multivalue selector (css3-modsel-7)",
   "selectors": [
     "p",
     "p[class~=\"b\"]",
     "address",
     "address[title~=\"foo\"]",
     "span[class~=\"b\"]"
-  ]
+  ],
+  "src": "css3-modsel-7.src.html",
+  "expected": "css3-modsel-7.expected.html"
 }

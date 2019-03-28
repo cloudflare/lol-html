@@ -1,6 +1,8 @@
 {
-  "title": "NEGATED universal selector",
+  "description": "Selectors - NEGATED universal selector (css3-modsel-48)",
   "selectors": [
     "div.stub > *|*:not(*)"
-  ]
+  ],
+  "src": "css3-modsel-48.src.html",
+  "expected": "css3-modsel-48.expected.html"
 }

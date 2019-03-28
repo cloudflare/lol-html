@@ -1,7 +1,9 @@
 {
-  "title": "Syntax and parsing",
+  "description": "Selectors - Syntax and parsing (css3-modsel-155b)",
   "selectors": [
     "p",
     ".two\\ words"
-  ]
+  ],
+  "src": "css3-modsel-155b.src.html",
+  "expected": "css3-modsel-155b.expected.html"
 }

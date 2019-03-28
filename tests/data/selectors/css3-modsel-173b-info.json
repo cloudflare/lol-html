@@ -1,5 +1,5 @@
 {
-  "title": "Namespaced attribute selectors",
+  "description": "Selectors - Namespaced attribute selectors (css3-modsel-173b)",
   "selectors": [
     "tests, tests *",
     "testA[*|attribute]",
@@ -9,5 +9,7 @@
     "testE[*|attribute*=\"pass\"]",
     "testF[*|attribute$=\"pass\"]",
     "testG[*|attribute|=\"pass\"]"
-  ]
+  ],
+  "src": "css3-modsel-173b.src.html",
+  "expected": "css3-modsel-173b.expected.html"
 }

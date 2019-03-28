@@ -1,5 +1,5 @@
 {
-  "title": "NEGATED More than one class selector",
+  "description": "Selectors - NEGATED More than one class selector (css3-modsel-14e)",
   "selectors": [
     "p",
     "p:not(.t1):not(.t2)",
@@ -7,5 +7,7 @@
     "div:not(.t1)",
     "address",
     "address:not(.t5):not(.t5)"
-  ]
+  ],
+  "src": "css3-modsel-14e.src.html",
+  "expected": "css3-modsel-14e.expected.html"
 }

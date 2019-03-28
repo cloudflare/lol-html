@@ -1,6 +1,8 @@
 {
-  "title": "::first-letter pseudo-element",
+  "description": "Selectors - ::first-letter pseudo-element (css3-modsel-39b)",
   "selectors": [
     "p::first-letter"
-  ]
+  ],
+  "src": "css3-modsel-39b.src.html",
+  "expected": "css3-modsel-39b.expected.html"
 }

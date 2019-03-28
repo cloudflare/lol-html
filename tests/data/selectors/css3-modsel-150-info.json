@@ -1,8 +1,10 @@
 {
-  "title": ":empty pseudo-class and XML/SGML constructs",
+  "description": "Selectors - :empty pseudo-class and XML/SGML constructs (css3-modsel-150)",
   "selectors": [
     "address:empty",
     "address",
     ".text"
-  ]
+  ],
+  "src": "css3-modsel-150.src.html",
+  "expected": "css3-modsel-150.expected.html"
 }

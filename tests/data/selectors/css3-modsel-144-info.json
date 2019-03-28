@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :enabled:disabled pseudo-classes",
+  "description": "Selectors - NEGATED :enabled:disabled pseudo-classes (css3-modsel-144)",
   "selectors": [
     "div :not(:enabled):not(:disabled)",
     "p"
-  ]
+  ],
+  "src": "css3-modsel-144.src.html",
+  "expected": "css3-modsel-144.expected.html"
 }

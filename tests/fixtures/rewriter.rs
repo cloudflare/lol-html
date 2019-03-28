@@ -1,4 +1,4 @@
-use crate::harness::{TestOutput, ASCII_COMPATIBLE_ENCODINGS};
+use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
 use cool_thing::{
     Bytes, ContentType, DocumentContentHandlers, ElementContentHandlers, EncodingError,
     HtmlRewriter, HtmlRewriterBuilder, OutputSink,
@@ -79,7 +79,7 @@ test_fixture!("Rewriter", {
     test("Rewrite all element start tags", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let actual: String = {
-                let mut output = TestOutput::new(enc);
+                let mut output = Output::new(enc);
                 let mut builder = HtmlRewriterBuilder::default();
 
                 builder
@@ -131,7 +131,7 @@ test_fixture!("Rewriter", {
     test("Rewrite document content", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let actual: String = {
-                let mut output = TestOutput::new(enc);
+                let mut output = Output::new(enc);
                 let mut builder = HtmlRewriterBuilder::default();
 
                 builder.on_document(

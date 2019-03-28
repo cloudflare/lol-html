@@ -1,5 +1,5 @@
 {
-  "title": "Case sensitivity",
+  "description": "Selectors - Case sensitivity (css3-modsel-181)",
   "selectors": [
     ".cs",
     ".cs P",
@@ -13,5 +13,7 @@
     ".ci .a",
     ".ci .span1 span",
     ".ci .span2 SPAN"
-  ]
+  ],
+  "src": "css3-modsel-181.src.html",
+  "expected": "css3-modsel-181.expected.html"
 }

@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :hover pseudo-class",
+  "description": "Selectors - NEGATED :hover pseudo-class (css3-modsel-63)",
   "selectors": [
     "div.stub *",
     "div.stub > * > *:not(:hover)"
-  ]
+  ],
+  "src": "css3-modsel-63.src.html",
+  "expected": "css3-modsel-63.expected.html"
 }

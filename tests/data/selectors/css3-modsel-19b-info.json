@@ -1,6 +1,8 @@
 {
-  "title": ":active pseudo-class on controls",
+  "description": "Selectors - :active pseudo-class on controls (css3-modsel-19b)",
   "selectors": [
     "button:active"
-  ]
+  ],
+  "src": "css3-modsel-19b.src.html",
+  "expected": "css3-modsel-19b.expected.html"
 }

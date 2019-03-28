@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :target pseudo-class",
+  "description": "Selectors - NEGATED :target pseudo-class (css3-modsel-66b)",
   "selectors": [
     "p",
     "p:not(:target)"
-  ]
+  ],
+  "src": "css3-modsel-66b.src.html",
+  "expected": "css3-modsel-66b.expected.html"
 }

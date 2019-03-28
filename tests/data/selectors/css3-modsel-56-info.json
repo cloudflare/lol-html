@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED substring matching attribute selector on middle",
+  "description": "Selectors - NEGATED substring matching attribute selector on middle (css3-modsel-56)",
   "selectors": [
     "div.stub > *",
     "div.stub *:not([title*=\" on\"])"
-  ]
+  ],
+  "src": "css3-modsel-56.src.html",
+  "expected": "css3-modsel-56.expected.html"
 }

@@ -1,6 +1,8 @@
 {
-  "title": "Negation pseudo-class can be an argument of itself",
+  "description": "Selectors - Negation pseudo-class can be an argument of itself (css3-modsel-83)",
   "selectors": [
     "p"
-  ]
+  ],
+  "src": "css3-modsel-83.src.html",
+  "expected": "css3-modsel-83.expected.html"
 }

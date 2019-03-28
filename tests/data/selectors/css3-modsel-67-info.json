@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :lang() pseudo-class",
+  "description": "Selectors - NEGATED :lang() pseudo-class (css3-modsel-67)",
   "selectors": [
     "div.stub *",
     "div.stub *:not(:lang(fr))"
-  ]
+  ],
+  "src": "css3-modsel-67.src.html",
+  "expected": "css3-modsel-67.expected.html"
 }

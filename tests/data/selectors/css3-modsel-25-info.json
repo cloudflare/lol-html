@@ -1,7 +1,9 @@
 {
-  "title": ":checked pseudo-class",
+  "description": "Selectors - :checked pseudo-class (css3-modsel-25)",
   "selectors": [
     "input, span",
     "input:checked, input:checked + span"
-  ]
+  ],
+  "src": "css3-modsel-25.src.html",
+  "expected": "css3-modsel-25.expected.html"
 }

@@ -1,91 +1,20 @@
-mod decoder;
-mod test_cases;
-mod test_token;
+use std::fs::File;
+use std::io::BufReader;
 
-use crate::harness::parsing::ChunkedInput;
-use cool_thing::{TagName, TextType};
-use std::fmt::Write;
-
-pub use self::test_cases::*;
-pub use self::test_token::*;
-
-pub trait FunctionalTestFixture {
-    fn get_test_description_suffix() -> &'static str;
-
-    fn run_test_case(
-        test: &TestCase,
-        initial_text_type: TextType,
-        last_start_tag_name_hash: Option<u64>,
-    );
-
-    fn get_test_description(test: &TestCase) -> String {
-        let mut descr = String::new();
-
-        write!(
-            &mut descr,
-            "{} - {}",
-            test.description,
-            Self::get_test_description_suffix()
-        )
-        .unwrap();
-
-        descr
-    }
-
-    fn run(test: &TestCase) {
-        for cs in &test.initial_states {
-            Self::run_test_case(
-                test,
-                TextType::from(cs.as_str()),
-                TagName::get_hash(&test.last_start_tag),
-            );
-        }
-    }
-}
-
-macro_rules! expect_eql {
-    ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {
-        assert!(
-            $actual == $expected,
-            "{}\n\
-             actual: {:#?}\n\
-             expected: {:#?}\n\
-             state: {:?}\n\
-             input: {:?}\n\
-             ",
-            $msg,
-            $actual,
-            $expected,
-            $state,
-            $input,
-        );
-    };
-}
-
-macro_rules! expect {
-    ($actual:expr, $state:expr, $input:expr, $msg:expr) => {
-        assert!(
-            $actual,
-            "{}\n\
-             state: {:?}\n\
-             input: {:?}\n\
-             ",
-            $msg, $state, $input,
-        );
-    };
+pub trait FunctionalTestFixture<T> {
+    fn test_cases() -> Vec<T>;
+    fn run(test: &T);
 }
 
 macro_rules! functional_test_fixture {
     ($fixture:ident) => {
-        use crate::harness::functional_testing::TEST_CASES;
         use test::TestDescAndFn;
 
         pub fn get_tests() -> Vec<TestDescAndFn> {
-            TEST_CASES
-                .iter()
-                .cloned()
+            $fixture::test_cases()
+                .into_iter()
                 .map(|t| {
-                    create_test!($fixture::get_test_description(&t), {
+                    create_test!(t.description.to_owned(), {
                         $fixture::run(&t);
                     })
                 })
@@ -93,3 +22,20 @@ macro_rules! functional_test_fixture {
         }
     };
 }
+
+fn data_dir_path(path: &str) -> String {
+    format!("{}/tests/data/{}", env!("CARGO_MANIFEST_DIR"), path)
+}
+
+fn for_each_test_file(path: &str, handler: &mut dyn FnMut(BufReader<File>)) {
+    glob::glob(&data_dir_path(path)).unwrap().for_each(|path| {
+        handler(BufReader::new(File::open(path.unwrap()).unwrap()));
+    });
+}
+
+fn get_test_file_reader(path: &str) -> BufReader<File> {
+    BufReader::new(File::open(data_dir_path(path)).unwrap())
+}
+
+pub mod html5lib_tests;
+pub mod selectors_tests;

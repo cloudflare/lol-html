@@ -1,5 +1,5 @@
 {
-  "title": "Impossible rules (:root:first-child, etc)",
+  "description": "Selectors - Impossible rules (:root:first-child, etc) (css3-modsel-27a)",
   "selectors": [
     ":root:first-child",
     ":root:last-child",
@@ -16,5 +16,7 @@
     ":root:nth-last-of-type(1)",
     ":root:nth-last-of-type(n)",
     "p"
-  ]
+  ],
+  "src": "css3-modsel-27a.src.html",
+  "expected": "css3-modsel-27a.expected.html"
 }

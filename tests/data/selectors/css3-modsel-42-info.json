@@ -1,6 +1,8 @@
 {
-  "title": "::after pseudo-element",
+  "description": "Selectors - ::after pseudo-element (css3-modsel-42)",
   "selectors": [
     "p::after"
-  ]
+  ],
+  "src": "css3-modsel-42.src.html",
+  "expected": "css3-modsel-42.expected.html"
 }

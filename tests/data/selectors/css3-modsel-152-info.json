@@ -1,8 +1,10 @@
 {
-  "title": ":empty pseudo-class and elements",
+  "description": "Selectors - :empty pseudo-class and elements (css3-modsel-152)",
   "selectors": [
     "address",
     "address:empty",
     ".text"
-  ]
+  ],
+  "src": "css3-modsel-152.src.html",
+  "expected": "css3-modsel-152.expected.html"
 }

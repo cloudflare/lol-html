@@ -1,8 +1,10 @@
 {
-  "title": ":last-child pseudo-class",
+  "description": "Selectors - :last-child pseudo-class (css3-modsel-33)",
   "selectors": [
     ".red",
     ".t1 td:last-child",
     "p > *:last-child"
-  ]
+  ],
+  "src": "css3-modsel-33.src.html",
+  "expected": "css3-modsel-33.expected.html"
 }

@@ -1,7 +1,9 @@
 {
-  "title": ":before with ::before",
+  "description": "Selectors - :before with ::before (css3-modsel-168)",
   "selectors": [
     "span:before",
     "span::before"
-  ]
+  ],
+  "src": "css3-modsel-168.src.html",
+  "expected": "css3-modsel-168.expected.html"
 }

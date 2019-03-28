@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :visited pseudo-class",
+  "description": "Selectors - NEGATED :visited pseudo-class (css3-modsel-62)",
   "selectors": [
     "div.stub > *",
     "div.stub *:not(:visited)"
-  ]
+  ],
+  "src": "css3-modsel-62.src.html",
+  "expected": "css3-modsel-62.expected.html"
 }

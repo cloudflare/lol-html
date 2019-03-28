@@ -1,5 +1,5 @@
 {
-  "title": "Combinations: classes and IDs",
+  "description": "Selectors - Combinations: classes and IDs (css3-modsel-176)",
   "selectors": [
     "p",
     "p:not(#other).class:not(.fail).test#id#id",
@@ -9,5 +9,7 @@
     "div:not(#other).class:not(.test).test#theid#theid",
     "div:not(#other).class:not(.fail).nottest#theid#theid",
     "div:not(#other).class:not(.fail).nottest#theid#other"
-  ]
+  ],
+  "src": "css3-modsel-176.src.html",
+  "expected": "css3-modsel-176.expected.html"
 }

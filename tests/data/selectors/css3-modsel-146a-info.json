@@ -1,9 +1,11 @@
 {
-  "title": ":nth-child() pseudo-class with hidden elements",
+  "description": "Selectors - :nth-child() pseudo-class with hidden elements (css3-modsel-146a)",
   "selectors": [
     "line",
     "[type~=match]",
     "line:nth-child(3n-1)",
     "[hidden]"
-  ]
+  ],
+  "src": "css3-modsel-146a.src.html",
+  "expected": "css3-modsel-146a.expected.html"
 }

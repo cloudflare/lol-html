@@ -1,7 +1,9 @@
 {
-  "title": "Direct adjacent combinator",
+  "description": "Selectors - Direct adjacent combinator (css3-modsel-45)",
   "selectors": [
     ".red",
     "div.stub > p + p"
-  ]
+  ],
+  "src": "css3-modsel-45.src.html",
+  "expected": "css3-modsel-45.expected.html"
 }

@@ -1,7 +1,9 @@
 {
-  "title": ":root pseudo-class",
+  "description": "Selectors - :root pseudo-class (css3-modsel-27)",
   "selectors": [
     "html",
     "*:root"
-  ]
+  ],
+  "src": "css3-modsel-27.src.html",
+  "expected": "css3-modsel-27.expected.html"
 }

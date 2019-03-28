@@ -1,8 +1,10 @@
 {
-  "title": ":last-of-type pseudo-class",
+  "description": "Selectors - :last-of-type pseudo-class (css3-modsel-35)",
   "selectors": [
     ".red",
     "address",
     "address:last-of-type"
-  ]
+  ],
+  "src": "css3-modsel-35.src.html",
+  "expected": "css3-modsel-35.expected.html"
 }

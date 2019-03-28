@@ -1,8 +1,10 @@
 {
-  "title": "Universal selector without declared namespace",
+  "description": "Selectors - Universal selector without declared namespace (css3-modsel-96)",
   "selectors": [
     "div.green *",
     "div.test *",
     "div.test |*"
-  ]
+  ],
+  "src": "css3-modsel-96.src.html",
+  "expected": "css3-modsel-96.expected.html"
 }

@@ -1,6 +1,8 @@
 {
-  "title": "::first-line pseudo-element",
+  "description": "Selectors - ::first-line pseudo-element (css3-modsel-38)",
   "selectors": [
     "p:first-line"
-  ]
+  ],
+  "src": "css3-modsel-38.src.html",
+  "expected": "css3-modsel-38.expected.html"
 }

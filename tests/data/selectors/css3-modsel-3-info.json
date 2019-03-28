@@ -1,8 +1,10 @@
 {
-  "title": "Universal selector",
+  "description": "Selectors - Universal selector (css3-modsel-3)",
   "selectors": [
     "*",
     "ul, p",
     "*.t1"
-  ]
+  ],
+  "src": "css3-modsel-3.src.html",
+  "expected": "css3-modsel-3.expected.html"
 }

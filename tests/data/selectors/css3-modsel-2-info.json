@@ -1,6 +1,8 @@
 {
-  "title": "Type element selectors",
+  "description": "Selectors - Type element selectors (css3-modsel-2)",
   "selectors": [
     "address"
-  ]
+  ],
+  "src": "css3-modsel-2.src.html",
+  "expected": "css3-modsel-2.expected.html"
 }

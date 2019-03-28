@@ -1,6 +1,8 @@
 {
-  "title": ":focus pseudo-class",
+  "description": "Selectors - :focus pseudo-class (css3-modsel-20)",
   "selectors": [
     "a:focus"
-  ]
+  ],
+  "src": "css3-modsel-20.src.html",
+  "expected": "css3-modsel-20.expected.html"
 }

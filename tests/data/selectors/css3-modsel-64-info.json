@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :active pseudo-class",
+  "description": "Selectors - NEGATED :active pseudo-class (css3-modsel-64)",
   "selectors": [
     "div.stub *",
     "div.stub > * > *:not(:active)"
-  ]
+  ],
+  "src": "css3-modsel-64.src.html",
+  "expected": "css3-modsel-64.expected.html"
 }

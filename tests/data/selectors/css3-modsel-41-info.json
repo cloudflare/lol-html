@@ -1,6 +1,8 @@
 {
-  "title": "::before pseudo-element",
+  "description": "Selectors - ::before pseudo-element (css3-modsel-41)",
   "selectors": [
     "p::before"
-  ]
+  ],
+  "src": "css3-modsel-41.src.html",
+  "expected": "css3-modsel-41.expected.html"
 }

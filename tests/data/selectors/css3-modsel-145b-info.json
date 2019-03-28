@@ -1,9 +1,11 @@
 {
-  "title": ":nth-of-type() pseudo-class with hidden elements",
+  "description": "Selectors - :nth-of-type() pseudo-class with hidden elements (css3-modsel-145b)",
   "selectors": [
     "line",
     "[type~=odd]",
     "line:nth-of-type(odd)",
     "[hidden]"
-  ]
+  ],
+  "src": "css3-modsel-145b.src.html",
+  "expected": "css3-modsel-145b.expected.html"
 }

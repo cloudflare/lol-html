@@ -1,10 +1,12 @@
 {
-  "title": "ID selectors",
+  "description": "Selectors - ID selectors (css3-modsel-15)",
   "selectors": [
     "li",
     "#t1",
     "li#t2",
     "li#t3",
     "#t4"
-  ]
+  ],
+  "src": "css3-modsel-15.src.html",
+  "expected": "css3-modsel-15.expected.html"
 }

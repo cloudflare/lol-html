@@ -1,9 +1,11 @@
 {
-  "title": "Class selectors",
+  "description": "Selectors - Class selectors (css3-modsel-13)",
   "selectors": [
     "li",
     ".t1",
     "li.t2",
     ".t3"
-  ]
+  ],
+  "src": "css3-modsel-13.src.html",
+  "expected": "css3-modsel-13.expected.html"
 }

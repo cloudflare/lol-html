@@ -1,8 +1,10 @@
 {
-  "title": ":nth-of-type() pseudo-class",
+  "description": "Selectors - :nth-of-type() pseudo-class (css3-modsel-30)",
   "selectors": [
     ".red",
     "p:nth-of-type(3)",
     "dl > :nth-of-type(3n+1)"
-  ]
+  ],
+  "src": "css3-modsel-30.src.html",
+  "expected": "css3-modsel-30.expected.html"
 }

@@ -1,5 +1,5 @@
 {
-  "title": "NEGATED :nth-child() pseudo-class",
+  "description": "Selectors - NEGATED :nth-child() pseudo-class (css3-modsel-73)",
   "selectors": [
     ".red",
     "ul > li:not(:nth-child(odd))",
@@ -7,5 +7,7 @@
     "table.t1 tr:not(:nth-child(-n+4))",
     "table.t2 td:not(:nth-child(3n+1))",
     "table.t1 td, table.t2 td"
-  ]
+  ],
+  "src": "css3-modsel-73.src.html",
+  "expected": "css3-modsel-73.expected.html"
 }

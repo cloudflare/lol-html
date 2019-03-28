@@ -1,7 +1,9 @@
 {
-  "title": ":lang() pseudo-class",
+  "description": "Selectors - :lang() pseudo-class (css3-modsel-22)",
   "selectors": [
     "ul > li",
     "li:lang(en-GB)"
-  ]
+  ],
+  "src": "css3-modsel-22.src.html",
+  "expected": "css3-modsel-22.expected.html"
 }

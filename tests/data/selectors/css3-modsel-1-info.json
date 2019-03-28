@@ -1,6 +1,8 @@
 {
-  "title": "Groups of selectors",
+  "description": "Selectors - Groups of selectors (css3-modsel-1)",
   "selectors": [
     "li,p"
-  ]
+  ],
+  "src": "css3-modsel-1.src.html",
+  "expected": "css3-modsel-1.expected.html"
 }

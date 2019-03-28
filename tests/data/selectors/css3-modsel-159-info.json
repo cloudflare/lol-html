@@ -1,6 +1,8 @@
 {
-  "title": "Syntax and parsing of new pseudo-elements",
+  "description": "Selectors - Syntax and parsing of new pseudo-elements (css3-modsel-159)",
   "selectors": [
     "::selection"
-  ]
+  ],
+  "src": "css3-modsel-159.src.html",
+  "expected": "css3-modsel-159.expected.html"
 }

@@ -1,9 +1,11 @@
 {
-  "title": "NEGATED :first-child pseudo-class",
+  "description": "Selectors - NEGATED :first-child pseudo-class (css3-modsel-77b)",
   "selectors": [
     ".green",
     ".t1 td:not(:first-child)",
     "p > *:not(:first-child)",
     "table.t1 td"
-  ]
+  ],
+  "src": "css3-modsel-77b.src.html",
+  "expected": "css3-modsel-77b.expected.html"
 }

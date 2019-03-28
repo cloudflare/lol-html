@@ -1,5 +1,5 @@
 {
-  "title": ":hover pseudo-class on links",
+  "description": "Selectors - :hover pseudo-class on links (css3-modsel-18a)",
   "selectors": [
     "p",
     ".a a:hover",
@@ -7,5 +7,7 @@
     ".b a:link",
     ".c :link",
     ".c :visited:hover"
-  ]
+  ],
+  "src": "css3-modsel-18a.src.html",
+  "expected": "css3-modsel-18a.expected.html"
 }

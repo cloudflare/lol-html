@@ -1,7 +1,9 @@
 {
-  "title": "Simple combination of direct and indirect adjacent combinators",
+  "description": "Selectors - Simple combination of direct and indirect adjacent combinators (css3-modsel-90)",
   "selectors": [
     "p",
     "blockquote ~ div + p"
-  ]
+  ],
+  "src": "css3-modsel-90.src.html",
+  "expected": "css3-modsel-90.expected.html"
 }

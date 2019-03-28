@@ -1,8 +1,10 @@
 {
-  "title": "Attribute value selector without declared namespace",
+  "description": "Selectors - Attribute value selector without declared namespace (css3-modsel-112)",
   "selectors": [
     "*|p, *|q, *|r, *|s, *|t",
     "*|p, *|r",
     "*|*[|title=\"si on chantait\"]"
-  ]
+  ],
+  "src": "css3-modsel-112.src.html",
+  "expected": "css3-modsel-112.expected.html"
 }

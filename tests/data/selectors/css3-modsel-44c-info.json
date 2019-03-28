@@ -1,7 +1,9 @@
 {
-  "title": "Child combinator and classes",
+  "description": "Selectors - Child combinator and classes (css3-modsel-44c)",
   "selectors": [
     ".fail > div",
     ".control"
-  ]
+  ],
+  "src": "css3-modsel-44c.src.html",
+  "expected": "css3-modsel-44c.expected.html"
 }

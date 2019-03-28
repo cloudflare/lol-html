@@ -1,7 +1,9 @@
 {
-  "title": "Substring matching attribute selector (contains)",
+  "description": "Selectors - Substring matching attribute selector (contains) (css3-modsel-11)",
   "selectors": [
     "p",
     "p[title*=\"bar\"]"
-  ]
+  ],
+  "src": "css3-modsel-11.src.html",
+  "expected": "css3-modsel-11.expected.html"
 }

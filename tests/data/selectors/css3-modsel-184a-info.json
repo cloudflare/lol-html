@@ -1,7 +1,9 @@
 {
-  "title": "Ends-with attribute selector with empty value",
+  "description": "Selectors - Ends-with attribute selector with empty value (css3-modsel-184a)",
   "selectors": [
     "p",
     "p[class$=\"\"]"
-  ]
+  ],
+  "src": "css3-modsel-184a.src.html",
+  "expected": "css3-modsel-184a.expected.html"
 }

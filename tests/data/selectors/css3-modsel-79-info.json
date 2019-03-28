@@ -1,8 +1,10 @@
 {
-  "title": "NEGATED :first-of-type pseudo-class",
+  "description": "Selectors - NEGATED :first-of-type pseudo-class (css3-modsel-79)",
   "selectors": [
     ".red",
     "address",
     "address:not(:first-of-type)"
-  ]
+  ],
+  "src": "css3-modsel-79.src.html",
+  "expected": "css3-modsel-79.expected.html"
 }

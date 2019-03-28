@@ -1,8 +1,10 @@
 {
-  "title": "NEGATED :nth-of-type() pseudo-class",
+  "description": "Selectors - NEGATED :nth-of-type() pseudo-class (css3-modsel-75)",
   "selectors": [
     ".red",
     "p:not(:nth-of-type(3))",
     "dl > *:not(:nth-of-type(3n+1))"
-  ]
+  ],
+  "src": "css3-modsel-75.src.html",
+  "expected": "css3-modsel-75.expected.html"
 }

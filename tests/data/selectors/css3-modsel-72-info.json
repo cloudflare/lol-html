@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :root pseudo-class",
+  "description": "Selectors - NEGATED :root pseudo-class (css3-modsel-72)",
   "selectors": [
     "p:not(:root)",
     "div *"
-  ]
+  ],
+  "src": "css3-modsel-72.src.html",
+  "expected": "css3-modsel-72.expected.html"
 }

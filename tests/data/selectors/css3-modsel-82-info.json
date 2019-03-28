@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED :only-of-type pseudo-class",
+  "description": "Selectors - NEGATED :only-of-type pseudo-class (css3-modsel-82)",
   "selectors": [
     ".red",
     ".t1 *:not(:only-of-type)"
-  ]
+  ],
+  "src": "css3-modsel-82.src.html",
+  "expected": "css3-modsel-82.expected.html"
 }

@@ -1,6 +1,8 @@
 {
-  "title": ":hover pseudo-class",
+  "description": "Selectors - :hover pseudo-class (css3-modsel-18b)",
   "selectors": [
     "div:hover > p:first-child"
-  ]
+  ],
+  "src": "css3-modsel-18b.src.html",
+  "expected": "css3-modsel-18b.expected.html"
 }

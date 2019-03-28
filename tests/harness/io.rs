@@ -1,5 +1,4 @@
-use crate::harness::unescape::Unescape;
-
+use crate::harness::functional_testing::html5lib_tests::Unescape;
 use encoding_rs::Encoding;
 use failure::{ensure, Error};
 use rand::{thread_rng, Rng};
@@ -9,16 +8,16 @@ use std::env;
 use std::fmt::{self, Formatter};
 
 #[derive(Debug, Clone)]
-pub struct ChunkedInput {
+pub struct Input {
     input: String,
     chunks: Vec<Vec<u8>>,
     initialized: bool,
     encoding: Option<&'static Encoding>,
 }
 
-impl From<String> for ChunkedInput {
+impl From<String> for Input {
     fn from(input: String) -> Self {
-        ChunkedInput {
+        Input {
             input,
             chunks: Vec::default(),
             initialized: false,
@@ -27,7 +26,7 @@ impl From<String> for ChunkedInput {
     }
 }
 
-impl ChunkedInput {
+impl Input {
     pub fn init(
         &mut self,
         encoding: &'static Encoding,
@@ -88,7 +87,7 @@ impl ChunkedInput {
     }
 }
 
-impl<'de> Deserialize<'de> for ChunkedInput {
+impl<'de> Deserialize<'de> for Input {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -96,7 +95,7 @@ impl<'de> Deserialize<'de> for ChunkedInput {
         struct StringVisitor;
 
         impl<'de> Visitor<'de> for StringVisitor {
-            type Value = ChunkedInput;
+            type Value = Input;
 
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a string")
@@ -114,7 +113,7 @@ impl<'de> Deserialize<'de> for ChunkedInput {
     }
 }
 
-impl Unescape for ChunkedInput {
+impl Unescape for Input {
     fn unescape(&mut self) -> Result<(), SerdeError> {
         assert!(
             !self.initialized,
@@ -124,5 +123,48 @@ impl Unescape for ChunkedInput {
         self.input.unescape()?;
 
         Ok(())
+    }
+}
+
+pub struct Output {
+    bytes: Vec<u8>,
+    encoding: &'static Encoding,
+    finalizing_chunk_received: bool,
+}
+
+impl Output {
+    pub fn new(encoding: &'static Encoding) -> Self {
+        Output {
+            bytes: Vec::default(),
+            encoding,
+            finalizing_chunk_received: false,
+        }
+    }
+
+    pub fn push(&mut self, chunk: &[u8]) {
+        if chunk.is_empty() {
+            self.finalizing_chunk_received = true;
+        } else {
+            assert!(
+                !self.finalizing_chunk_received,
+                "Chunk written to the output after the finalizing chunk."
+            );
+
+            self.bytes.extend_from_slice(chunk);
+        }
+    }
+}
+
+impl Into<String> for Output {
+    fn into(self) -> String {
+        assert!(
+            self.finalizing_chunk_received,
+            "Finalizing chunk for the output hasn't been received."
+        );
+
+        self.encoding
+            .decode_without_bom_handling(&self.bytes)
+            .0
+            .into_owned()
     }
 }

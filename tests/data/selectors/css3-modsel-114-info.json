@@ -1,8 +1,10 @@
 {
-  "title": "Attribute dash-separated value selector without declared namespace",
+  "description": "Selectors - Attribute dash-separated value selector without declared namespace (css3-modsel-114)",
   "selectors": [
     "*|p, *|address, *|q, *|r",
     "*|p, *|q",
     "*|*[|lang|=\"foo-bar\"], *|*[|myattr|=\"tat-tut\"]"
-  ]
+  ],
+  "src": "css3-modsel-114.src.html",
+  "expected": "css3-modsel-114.expected.html"
 }

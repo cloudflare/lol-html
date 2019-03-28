@@ -1,5 +1,5 @@
 {
-  "title": "NEGATED :nth-last-child() pseudo-class",
+  "description": "Selectors - NEGATED :nth-last-child() pseudo-class (css3-modsel-74)",
   "selectors": [
     ".red",
     "ul > li:not(:nth-last-child(odd))",
@@ -7,5 +7,7 @@
     "table.t1 tr:not(:nth-last-child(-n+4))",
     "table.t2 td:not(:nth-last-child(3n+1))",
     "table.t1 td, table.t2 td"
-  ]
+  ],
+  "src": "css3-modsel-74.src.html",
+  "expected": "css3-modsel-74.expected.html"
 }

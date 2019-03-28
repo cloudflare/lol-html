@@ -1,8 +1,10 @@
 {
-  "title": "NEGATED Substring matching attribute selector on end without declared namespace",
+  "description": "Selectors - NEGATED Substring matching attribute selector on end without declared namespace (css3-modsel-142)",
   "selectors": [
     "*|p, *|q, *|r, *|s, *|t",
     "*|q, *|s, *|t",
     "div.stub *|*:not([|title$=\"tait\"])"
-  ]
+  ],
+  "src": "css3-modsel-142.src.html",
+  "expected": "css3-modsel-142.expected.html"
 }

@@ -1,7 +1,9 @@
 {
-  "title": "Attribute space-separated value selector with declared namespace",
+  "description": "Selectors - Attribute space-separated value selector with declared namespace (css3-modsel-99b)",
   "selectors": [
     "*|p, *|q, *|r, *|s",
     "*|p, *|r"
-  ]
+  ],
+  "src": "css3-modsel-99b.src.html",
+  "expected": "css3-modsel-99b.expected.html"
 }

@@ -1,8 +1,10 @@
 {
-  "title": "Attribute existence selector with universal namespace",
+  "description": "Selectors - Attribute existence selector with universal namespace (css3-modsel-104b)",
   "selectors": [
     "*|p, *|q, *|r, *|s",
     "*|p, *|r, *|s",
     "*|*[*|title]"
-  ]
+  ],
+  "src": "css3-modsel-104b.src.html",
+  "expected": "css3-modsel-104b.expected.html"
 }

@@ -1,9 +1,11 @@
 {
-  "title": ":nth-last-of-type() pseudo-class with collapsed elements",
+  "description": "Selectors - :nth-last-of-type() pseudo-class with collapsed elements (css3-modsel-147a)",
   "selectors": [
     "line",
     "[type~=match]",
     "line:nth-last-of-type(3n-1)",
     "[hidden]"
-  ]
+  ],
+  "src": "css3-modsel-147a.src.html",
+  "expected": "css3-modsel-147a.expected.html"
 }

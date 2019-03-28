@@ -1,5 +1,5 @@
 {
-  "title": "More than one class selector",
+  "description": "Selectors - More than one class selector (css3-modsel-14c)",
   "selectors": [
     "p",
     "p.t1.t2",
@@ -7,5 +7,7 @@
     "div.t1",
     "address",
     "address.t5.t5"
-  ]
+  ],
+  "src": "css3-modsel-14c.src.html",
+  "expected": "css3-modsel-14c.expected.html"
 }

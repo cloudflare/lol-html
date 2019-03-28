@@ -1,5 +1,11 @@
-use crate::harness::functional_testing::TestToken;
-use html5ever::tokenizer::{TagKind, Token, TokenSink, TokenSinkResult};
+use super::super::TestToken;
+use html5ever::rcdom::RcDom;
+use html5ever::tendril::StrTendril;
+use html5ever::tokenizer::{
+    BufferQueue, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
+    TokenizerResult,
+};
+use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
@@ -75,4 +81,29 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
         self.inner
             .adjusted_current_node_present_but_not_in_html_namespace()
     }
+}
+
+pub fn get(input: &str) -> Vec<TestToken> {
+    let mut tokens = Vec::default();
+    let mut b = BufferQueue::new();
+
+    b.push_back(StrTendril::from(input));
+
+    {
+        let mut t = Tokenizer::new(
+            TokenSinkProxy {
+                inner: TreeBuilder::new(RcDom::default(), TreeBuilderOpts::default()),
+                tokens: &mut tokens,
+            },
+            TokenizerOpts::default(),
+        );
+
+        while let TokenizerResult::Script(_) = t.feed(&mut b) {
+            // ignore script markers
+        }
+
+        t.end();
+    }
+
+    tokens
 }

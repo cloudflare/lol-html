@@ -1,10 +1,12 @@
 {
-  "title": "Attribute value selectors (hyphen-separated attributes)",
+  "description": "Selectors - Attribute value selectors (hyphen-separated attributes) (css3-modsel-8)",
   "selectors": [
     "p",
     "p[lang|=\"en\"]",
     "address",
     "address[lang=\"fi\"]",
     "span[lang|=\"fr\"]"
-  ]
+  ],
+  "src": "css3-modsel-8.src.html",
+  "expected": "css3-modsel-8.expected.html"
 }

@@ -1,9 +1,11 @@
 {
-  "title": "NEGATED :last-child pseudo-class",
+  "description": "Selectors - NEGATED :last-child pseudo-class (css3-modsel-78)",
   "selectors": [
     ".red",
     ".t1 td:not(:last-child)",
     "p > *:not(:last-child)",
     "table.t1 td"
-  ]
+  ],
+  "src": "css3-modsel-78.src.html",
+  "expected": "css3-modsel-78.expected.html"
 }

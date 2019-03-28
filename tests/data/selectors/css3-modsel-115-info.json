@@ -1,8 +1,10 @@
 {
-  "title": "Substring matching attribute selector on beginning without declared namespace",
+  "description": "Selectors - Substring matching attribute selector on beginning without declared namespace (css3-modsel-115)",
   "selectors": [
     "*|p, *|q, *|r, *|s, *|t",
     "*|p, *|r",
     "*|*[|title^=\"si on\"]"
-  ]
+  ],
+  "src": "css3-modsel-115.src.html",
+  "expected": "css3-modsel-115.expected.html"
 }

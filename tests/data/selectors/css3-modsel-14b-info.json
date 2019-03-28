@@ -1,10 +1,12 @@
 {
-  "title": "More than one class selector",
+  "description": "Selectors - More than one class selector (css3-modsel-14b)",
   "selectors": [
     "p",
     ".t1.fail",
     ".fail.t1",
     ".t2.fail",
     ".fail.t2"
-  ]
+  ],
+  "src": "css3-modsel-14b.src.html",
+  "expected": "css3-modsel-14b.expected.html"
 }

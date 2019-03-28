@@ -1,5 +1,5 @@
 {
-  "title": "Multiple ID selectors",
+  "description": "Selectors - Multiple ID selectors (css3-modsel-15b)",
   "selectors": [
     "p",
     "#test#fail",
@@ -7,5 +7,7 @@
     "#fail",
     "div",
     "#pass#pass"
-  ]
+  ],
+  "src": "css3-modsel-15b.src.html",
+  "expected": "css3-modsel-15b.expected.html"
 }

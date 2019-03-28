@@ -1,9 +1,11 @@
 {
-  "title": "NEGATED :disabled pseudo-class",
+  "description": "Selectors - NEGATED :disabled pseudo-class (css3-modsel-69)",
   "selectors": [
     "button",
     "input",
     "button:not(:disabled)",
     "input:not(:disabled)"
-  ]
+  ],
+  "src": "css3-modsel-69.src.html",
+  "expected": "css3-modsel-69.expected.html"
 }

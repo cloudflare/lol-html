@@ -1,7 +1,9 @@
 {
-  "title": "Attribute value selector with declared namespace",
+  "description": "Selectors - Attribute value selector with declared namespace (css3-modsel-98)",
   "selectors": [
     "*|p, *|q, *|r, *|s",
     "*|q, *|t"
-  ]
+  ],
+  "src": "css3-modsel-98.src.html",
+  "expected": "css3-modsel-98.expected.html"
 }

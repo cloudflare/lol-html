@@ -1,7 +1,9 @@
 {
-  "title": "Universal selector with universal namespace",
+  "description": "Selectors - Universal selector with universal namespace (css3-modsel-95)",
   "selectors": [
     "div.test *",
     "div.test *|*"
-  ]
+  ],
+  "src": "css3-modsel-95.src.html",
+  "expected": "css3-modsel-95.expected.html"
 }

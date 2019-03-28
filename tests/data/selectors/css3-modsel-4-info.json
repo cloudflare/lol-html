@@ -1,7 +1,9 @@
 {
-  "title": "Omitted universal selector",
+  "description": "Selectors - Omitted universal selector (css3-modsel-4)",
   "selectors": [
     "#foo",
     "p"
-  ]
+  ],
+  "src": "css3-modsel-4.src.html",
+  "expected": "css3-modsel-4.expected.html"
 }

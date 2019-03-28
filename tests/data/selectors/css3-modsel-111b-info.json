@@ -1,8 +1,10 @@
 {
-  "title": "Attribute existence selector without declared namespace",
+  "description": "Selectors - Attribute existence selector without declared namespace (css3-modsel-111b)",
   "selectors": [
     "*|p, *|q, *|r, *|s, *|t",
     "*|p, *|r",
     "*|*[|title]"
-  ]
+  ],
+  "src": "css3-modsel-111b.src.html",
+  "expected": "css3-modsel-111b.expected.html"
 }

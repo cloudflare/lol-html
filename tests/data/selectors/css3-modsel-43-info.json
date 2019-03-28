@@ -1,8 +1,10 @@
 {
-  "title": "Descendant combinator",
+  "description": "Selectors - Descendant combinator (css3-modsel-43)",
   "selectors": [
     ".white",
     ".red",
     "div.t1 p"
-  ]
+  ],
+  "src": "css3-modsel-43.src.html",
+  "expected": "css3-modsel-43.expected.html"
 }

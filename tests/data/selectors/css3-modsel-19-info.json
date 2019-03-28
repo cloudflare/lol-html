@@ -1,6 +1,8 @@
 {
-  "title": ":active pseudo-class",
+  "description": "Selectors - :active pseudo-class (css3-modsel-19)",
   "selectors": [
     "a:active"
-  ]
+  ],
+  "src": "css3-modsel-19.src.html",
+  "expected": "css3-modsel-19.expected.html"
 }

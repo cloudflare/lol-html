@@ -1,7 +1,9 @@
 {
-  "title": ":only-of-type pseudo-class",
+  "description": "Selectors - :only-of-type pseudo-class (css3-modsel-37)",
   "selectors": [
     ".red",
     ".t1 :only-of-type"
-  ]
+  ],
+  "src": "css3-modsel-37.src.html",
+  "expected": "css3-modsel-37.expected.html"
 }

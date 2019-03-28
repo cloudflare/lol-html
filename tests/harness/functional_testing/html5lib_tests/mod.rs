@@ -1,25 +1,16 @@
-use super::{ChunkedInput, TestToken};
-use crate::harness::unescape::Unescape;
-use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
+mod decoder;
+mod feedback_tests;
+mod test_token;
+mod unescape;
 
-use lazy_static::lazy_static;
-use serde_json;
+pub use self::unescape::Unescape;
+use super::for_each_test_file;
+use crate::harness::Input;
+use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
+use serde_json::{self, from_reader};
 use std::fmt::Write;
 
-macro_rules! read_test_data {
-    ($path:expr) => {{
-        use std::fs::File;
-        use std::io::BufReader;
-
-        glob::glob(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/", $path))
-            .unwrap()
-            .map(|path| BufReader::new(File::open(path.unwrap()).unwrap()))
-            .collect::<Vec<BufReader<File>>>()
-    }};
-}
-
-mod feedback_tests;
-mod html5lib_tests;
+pub use self::test_token::{TestToken, TestTokenList};
 
 pub fn default_initial_states() -> Vec<String> {
     vec![String::from("Data state")]
@@ -36,7 +27,7 @@ pub struct Bailout {
 #[serde(rename_all = "camelCase")]
 pub struct TestCase {
     pub description: String,
-    pub input: ChunkedInput,
+    pub input: Input,
 
     #[serde(rename = "output")]
     pub expected_tokens: Vec<TestToken>,
@@ -69,10 +60,19 @@ impl Unescape for TestCase {
     }
 }
 
-fn get_test_cases() -> Vec<TestCase> {
+pub fn get_test_cases() -> Vec<TestCase> {
     let mut tests = Vec::default();
 
-    tests.append(&mut self::html5lib_tests::get_test_cases());
+    #[derive(Deserialize)]
+    struct Suite {
+        #[serde(default)]
+        pub tests: Vec<TestCase>,
+    }
+
+    for_each_test_file("html5lib-tests/tokenizer/*.test", &mut |file| {
+        tests.extend(from_reader::<_, Suite>(file).unwrap().tests);
+    });
+
     tests.append(&mut self::feedback_tests::get_test_cases());
 
     tests
@@ -127,8 +127,4 @@ fn get_test_cases() -> Vec<TestCase> {
 
             cases
         })
-}
-
-lazy_static! {
-    pub static ref TEST_CASES: Vec<TestCase> = get_test_cases();
 }

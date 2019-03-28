@@ -1,10 +1,12 @@
 {
-  "title": "Syntax and parsing of unknown pseudo-classes and pseudo-elements",
+  "description": "Selectors - Syntax and parsing of unknown pseudo-classes and pseudo-elements (css3-modsel-161)",
   "selectors": [
     "p",
     "p   *",
     "p > *",
     "p + *",
     "p ~ *"
-  ]
+  ],
+  "src": "css3-modsel-161.src.html",
+  "expected": "css3-modsel-161.expected.html"
 }

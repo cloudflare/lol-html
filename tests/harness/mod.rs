@@ -1,12 +1,15 @@
 use encoding_rs::*;
 
+mod io;
+
 #[macro_use]
 pub mod functional_testing;
 
 #[macro_use]
-pub mod parsing;
+mod parse;
 
-mod unescape;
+pub use self::io::{Input, Output};
+pub use self::parse::parse;
 
 pub static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
     BIG5,
@@ -46,49 +49,6 @@ pub static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
     X_MAC_CYRILLIC,
     X_USER_DEFINED,
 ];
-
-pub struct TestOutput {
-    bytes: Vec<u8>,
-    encoding: &'static Encoding,
-    finalizing_chunk_received: bool,
-}
-
-impl TestOutput {
-    pub fn new(encoding: &'static Encoding) -> Self {
-        TestOutput {
-            bytes: Vec::default(),
-            encoding,
-            finalizing_chunk_received: false,
-        }
-    }
-
-    pub fn push(&mut self, chunk: &[u8]) {
-        if chunk.is_empty() {
-            self.finalizing_chunk_received = true;
-        } else {
-            assert!(
-                !self.finalizing_chunk_received,
-                "Chunk written to the output after the finalizing chunk."
-            );
-
-            self.bytes.extend_from_slice(chunk);
-        }
-    }
-}
-
-impl Into<String> for TestOutput {
-    fn into(self) -> String {
-        assert!(
-            self.finalizing_chunk_received,
-            "Finalizing chunk for the output hasn't been received."
-        );
-
-        self.encoding
-            .decode_without_bom_handling(&self.bytes)
-            .0
-            .into_owned()
-    }
-}
 
 macro_rules! create_test {
     ($name:expr, $body:tt) => {{

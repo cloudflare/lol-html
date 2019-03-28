@@ -1,7 +1,9 @@
 {
-  "title": ":link pseudo-class",
+  "description": "Selectors - :link pseudo-class (css3-modsel-16)",
   "selectors": [
     "p.test a",
     "p.test *:link"
-  ]
+  ],
+  "src": "css3-modsel-16.src.html",
+  "expected": "css3-modsel-16.expected.html"
 }

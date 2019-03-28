@@ -1,10 +1,12 @@
 {
-  "title": ":hover pseudo-class",
+  "description": "Selectors - :hover pseudo-class (css3-modsel-18)",
   "selectors": [
     "p:hover",
     "a:hover",
     "tr:hover",
     "td:hover",
     "table"
-  ]
+  ],
+  "src": "css3-modsel-18.src.html",
+  "expected": "css3-modsel-18.expected.html"
 }

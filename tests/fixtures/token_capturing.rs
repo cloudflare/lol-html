@@ -1,8 +1,41 @@
-use crate::harness::functional_testing::{
-    FunctionalTestFixture, TestCase, TestToken, TestTokenList,
+use crate::harness::functional_testing::html5lib_tests::{
+    get_test_cases, TestCase, TestToken, TestTokenList,
 };
-use crate::harness::parsing::parse;
-use cool_thing::{TextType, TokenCaptureFlags};
+use crate::harness::functional_testing::FunctionalTestFixture;
+use crate::harness::parse;
+use cool_thing::{TagName, TextType, TokenCaptureFlags};
+
+macro_rules! expect_eql {
+    ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {
+        assert!(
+            $actual == $expected,
+            "{}\n\
+             actual: {:#?}\n\
+             expected: {:#?}\n\
+             state: {:?}\n\
+             input: {:?}\n\
+             ",
+            $msg,
+            $actual,
+            $expected,
+            $state,
+            $input,
+        );
+    };
+}
+
+macro_rules! expect {
+    ($actual:expr, $state:expr, $input:expr, $msg:expr) => {
+        assert!(
+            $actual,
+            "{}\n\
+             state: {:?}\n\
+             input: {:?}\n\
+             ",
+            $msg, $state, $input,
+        );
+    };
+}
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens
@@ -45,11 +78,7 @@ fn fold_text_tokens(tokens: Vec<TestToken>) -> Vec<TestToken> {
 
 pub struct TokenCapturingTests;
 
-impl FunctionalTestFixture for TokenCapturingTests {
-    fn get_test_description_suffix() -> &'static str {
-        "Token capture"
-    }
-
+impl TokenCapturingTests {
     fn run_test_case(
         test: &TestCase,
         initial_text_type: TextType,
@@ -126,6 +155,22 @@ impl FunctionalTestFixture for TokenCapturingTests {
                 }
             }
         });
+    }
+}
+
+impl FunctionalTestFixture<TestCase> for TokenCapturingTests {
+    fn test_cases() -> Vec<TestCase> {
+        get_test_cases()
+    }
+
+    fn run(test: &TestCase) {
+        for cs in &test.initial_states {
+            Self::run_test_case(
+                test,
+                TextType::from(cs.as_str()),
+                TagName::get_hash(&test.last_start_tag),
+            );
+        }
     }
 }
 

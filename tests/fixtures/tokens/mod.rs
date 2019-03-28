@@ -1,6 +1,6 @@
 macro_rules! serialization_test {
     ($input:expr, $TokenType:ident, $test_cases:expr) => {
-        use crate::harness::{ASCII_COMPATIBLE_ENCODINGS, TestOutput};
+        use crate::harness::{ASCII_COMPATIBLE_ENCODINGS, Output};
         use cool_thing::Serialize;
         use encoding_rs::Encoding;
 
@@ -14,7 +14,7 @@ macro_rules! serialization_test {
         for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
             for (case_name, transform, expected) in test_cases {
                 parse_token!($input, encoding, $TokenType, |t: &mut $TokenType<'_>| {
-                    let mut output = TestOutput::new(encoding);
+                    let mut output = Output::new(encoding);
 
                     transform(t, encoding);
 

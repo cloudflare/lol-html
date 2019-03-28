@@ -1,5 +1,5 @@
 use super::decoder::{decode_attr_value, decode_text, to_null_decoded};
-use crate::harness::unescape::Unescape;
+use super::Unescape;
 use cool_thing::Token;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;

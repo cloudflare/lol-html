@@ -1,7 +1,9 @@
 {
-  "title": "NEGATED type element selector without declared namespace",
+  "description": "Selectors - NEGATED type element selector without declared namespace (css3-modsel-120)",
   "selectors": [
     "div.stub > *:not(|p)",
     "div.stub > *|l > *:not(|p)"
-  ]
+  ],
+  "src": "css3-modsel-120.src.html",
+  "expected": "css3-modsel-120.expected.html"
 }

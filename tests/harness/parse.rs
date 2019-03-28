@@ -1,10 +1,6 @@
-mod chunked_input;
-
-use super::TestOutput;
+use super::{Input, Output};
 use cool_thing::*;
 use failure::Error;
-
-pub use self::chunked_input::ChunkedInput;
 
 type TokenHandler<'h> = Box<dyn FnMut(&mut Token<'_>) + 'h>;
 
@@ -40,7 +36,7 @@ impl TransformController for TestTransformController<'_> {
 }
 
 pub fn parse(
-    input: &ChunkedInput,
+    input: &Input,
     capture_flags: TokenCaptureFlags,
     initial_text_type: TextType,
     last_start_tag_name_hash: Option<u64>,
@@ -50,7 +46,7 @@ pub fn parse(
         .encoding()
         .expect("Input should be initialized before parsing");
 
-    let mut output = TestOutput::new(encoding);
+    let mut output = Output::new(encoding);
 
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
 
@@ -77,10 +73,10 @@ pub fn parse(
 
 macro_rules! parse_token {
     ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
-        use crate::harness::parsing::{parse, ChunkedInput};
+        use crate::harness::{parse, Input};
         use cool_thing::{TextType, Token, TokenCaptureFlags};
 
-        let mut input: ChunkedInput = String::from($input).into();
+        let mut input: Input = String::from($input).into();
         let mut emitted = false;
 
         input.init($encoding, true).unwrap();
