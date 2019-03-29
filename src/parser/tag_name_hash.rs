@@ -26,7 +26,7 @@
 // by the dedicated test.
 #[repr(u64)]
 #[derive(Debug, Copy, Clone)]
-pub enum TagName {
+pub enum TagNameHash {
     B = 7u64,
     Big = 7_628u64,
     Blockquote = 265_678_647_808_810u64,
@@ -98,21 +98,21 @@ pub enum TagName {
     Xmp = 30_293u64,
 }
 
-impl PartialEq<u64> for TagName {
+impl PartialEq<u64> for TagNameHash {
     fn eq(&self, hash: &u64) -> bool {
         *self as u64 == *hash
     }
 }
 
-impl PartialEq<TagName> for u64 {
-    fn eq(&self, hash: &TagName) -> bool {
+impl PartialEq<TagNameHash> for u64 {
+    fn eq(&self, hash: &TagNameHash) -> bool {
         *self == *hash as u64
     }
 }
 
-impl TagName {
+impl TagNameHash {
     #[inline]
-    pub fn update_hash(hash: &mut Option<u64>, ch: u8) {
+    pub fn update(hash: &mut Option<u64>, ch: u8) {
         if let Some(h) = *hash {
             // NOTE: check if we still have space for yet another
             // character and if not then invalidate the hash.
@@ -143,11 +143,11 @@ impl TagName {
         }
     }
 
-    pub fn get_hash(name: &str) -> Option<u64> {
+    pub fn get(name: &str) -> Option<u64> {
         let mut hash = Some(0);
 
         for ch in name.bytes() {
-            TagName::update_hash(&mut hash, ch);
+            TagNameHash::update(&mut hash, ch);
         }
 
         hash
@@ -156,6 +156,6 @@ impl TagName {
 
 macro_rules! tag_is_one_of {
     ($tag_name_hash:expr, [$($tag:ident),+]) => {
-        $($tag_name_hash == TagName::$tag)||+
+        $($tag_name_hash == TagNameHash::$tag)||+
     };
 }

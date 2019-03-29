@@ -230,7 +230,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
                 })
                 | Some(EndTag {
                     ref mut name_hash, ..
-                }) => TagName::update_hash(name_hash, ch),
+                }) => TagNameHash::update(name_hash, ch),
                 _ => unreachable!("Tag should exist at this point"),
             }
         }

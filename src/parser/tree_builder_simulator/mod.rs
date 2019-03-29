@@ -16,7 +16,7 @@ mod ambiguity_guard;
 use self::ambiguity_guard::AmbiguityGuard;
 use crate::base::Bytes;
 use crate::parser::outputs::{TagLexeme, TagTokenOutline};
-use crate::parser::{TagName, TextType};
+use crate::parser::{TagNameHash, TextType};
 use TagTokenOutline::*;
 
 pub use self::ambiguity_guard::AmbiguityGuardError;
@@ -82,9 +82,9 @@ fn get_text_type_adjustment(tag_name_hash: u64) -> TreeBuilderFeedback {
 
     if tag_is_one_of!(tag_name_hash, [Textarea, Title]) {
         RCData.into()
-    } else if tag_name_hash == TagName::Plaintext {
+    } else if tag_name_hash == TagNameHash::Plaintext {
         PlainText.into()
-    } else if tag_name_hash == TagName::Script {
+    } else if tag_name_hash == TagNameHash::Script {
         ScriptData.into()
     } else if tag_is_one_of!(
         tag_name_hash,
@@ -147,8 +147,8 @@ impl TreeBuilderSimulator {
         }
 
         Ok(match tag_name_hash {
-            Some(t) if t == TagName::Svg => self.enter_ns(Namespace::Svg),
-            Some(t) if t == TagName::Math => self.enter_ns(Namespace::MathML),
+            Some(t) if t == TagNameHash::Svg => self.enter_ns(Namespace::Svg),
+            Some(t) if t == TagNameHash::Math => self.enter_ns(Namespace::MathML),
             Some(t) if self.current_ns == Namespace::Html => get_text_type_adjustment(t),
             _ if self.current_ns != Namespace::Html => {
                 self.get_feedback_for_start_tag_in_foreign_content(tag_name_hash)
@@ -167,8 +167,10 @@ impl TreeBuilderSimulator {
         }
 
         match tag_name_hash {
-            Some(t) if self.current_ns == Namespace::Svg && t == TagName::Svg => self.leave_ns(),
-            Some(t) if self.current_ns == Namespace::MathML && t == TagName::Math => {
+            Some(t) if self.current_ns == Namespace::Svg && t == TagNameHash::Svg => {
+                self.leave_ns()
+            }
+            Some(t) if self.current_ns == Namespace::MathML && t == TagNameHash::Math => {
                 self.leave_ns()
             }
             _ if self.current_ns == Namespace::Html => {
@@ -242,7 +244,7 @@ impl TreeBuilderSimulator {
 
             // NOTE: <font> tag special case requires attributes
             // to decide on foreign context exit
-            Some(t) if t == TagName::Font => request_lexeme(|this, lexeme| {
+            Some(t) if t == TagNameHash::Font => request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag { ref attributes, .. } => {
                     for attr in attributes.borrow().iter() {
                         let name = lexeme.part(attr.name);

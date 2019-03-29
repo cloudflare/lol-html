@@ -98,7 +98,7 @@ fn main() {
     });
 
     if let Some(ref tag_name) = matches.opt_str("l") {
-        parser.set_last_start_tag_name_hash(TagName::get_hash(tag_name));
+        parser.set_last_start_tag_name_hash(TagNameHash::get(tag_name));
     }
 
     let chunks = if let Some(chunk_size) = matches.opt_get("c").unwrap() {

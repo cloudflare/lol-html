@@ -8,7 +8,7 @@ use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
 use crate::parser::{
-    ParserDirective, TagName, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
+    ParserDirective, TagNameHash, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use std::cell::RefCell;
 use std::rc::Rc;

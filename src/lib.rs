@@ -59,7 +59,7 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element,
         };
 
-        pub use self::parser::{TagName, TagNameInfo};
+        pub use self::parser::{TagNameHash, TagNameInfo};
         pub use self::base::Bytes;
     }
 }

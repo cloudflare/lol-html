@@ -9,7 +9,7 @@ use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
 use crate::parser::{
-    AmbiguityGuardError, ParserDirective, TagName, TextType, TreeBuilderFeedback,
+    AmbiguityGuardError, ParserDirective, TagNameHash, TextType, TreeBuilderFeedback,
     TreeBuilderSimulator,
 };
 use std::cell::RefCell;

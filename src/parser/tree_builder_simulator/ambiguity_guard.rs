@@ -34,7 +34,7 @@
 // construction state. Though, current assumption is that markup that can
 // trigger this bailout case should be seen quite rarely in the wild.
 
-use crate::parser::TagName;
+use crate::parser::TagNameHash;
 use std::fmt::{self, Display};
 
 macro_rules! err_msg_tmpl {
@@ -90,7 +90,7 @@ macro_rules! create_assert_for_tags {
         #[inline]
         fn tag_hash_to_string(tag_name_hash: u64) -> String {
             match tag_name_hash {
-                $(t if t == TagName::$tag => stringify!($tag).to_string().to_lowercase(),)+
+                $(t if t == TagNameHash::$tag => stringify!($tag).to_string().to_lowercase(),)+
                 _ => unreachable!("Error tag name should have a string representation")
             }
         }
@@ -142,9 +142,9 @@ impl AmbiguityGuard {
         if let Some(t) = tag_name_hash {
             match self.state {
                 State::Default => {
-                    if t == TagName::Select {
+                    if t == TagNameHash::Select {
                         self.state = State::InSelect;
-                    } else if t == TagName::Frameset {
+                    } else if t == TagNameHash::Frameset {
                         self.state = State::InOrAfterFrameset;
                     }
                 }
@@ -153,16 +153,16 @@ impl AmbiguityGuard {
                     // from "in select" insertion mode.
                     if tag_is_one_of!(t, [Select, Textarea, Input, Keygen]) {
                         self.state = State::Default;
-                    } else if t == TagName::Template {
+                    } else if t == TagNameHash::Template {
                         self.state = State::InTemplateInSelect(1);
                     }
                     // NOTE: <script> is allowed in "in select" insertion mode.
-                    else if t != TagName::Script {
+                    else if t != TagNameHash::Script {
                         assert_not_ambigious_text_type_switch(t)?;
                     }
                 }
                 State::InTemplateInSelect(depth) => {
-                    if t == TagName::Template {
+                    if t == TagNameHash::Template {
                         // TODO: make depth limit adjustable
                         if depth == u8::max_value() {
                             return Err(AmbiguityGuardError::MaxTemplateNestingReached {
@@ -177,7 +177,7 @@ impl AmbiguityGuard {
                 }
                 State::InOrAfterFrameset => {
                     // NOTE: <noframes> is allowed in and after <frameset>.
-                    if t != TagName::Noframes {
+                    if t != TagNameHash::Noframes {
                         assert_not_ambigious_text_type_switch(t)?
                     }
                 }
@@ -190,10 +190,10 @@ impl AmbiguityGuard {
     pub fn track_end_tag(&mut self, tag_name_hash: Option<u64>) {
         if let Some(t) = tag_name_hash {
             match self.state {
-                State::InSelect if t == TagName::Select => {
+                State::InSelect if t == TagNameHash::Select => {
                     self.state = State::Default;
                 }
-                State::InTemplateInSelect(depth) if t == TagName::Template => {
+                State::InTemplateInSelect(depth) if t == TagNameHash::Template => {
                     self.state = if depth == 1 {
                         State::InSelect
                     } else {

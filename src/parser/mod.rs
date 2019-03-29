@@ -1,5 +1,5 @@
 #[macro_use]
-mod tag_name;
+mod tag_name_hash;
 
 #[macro_use]
 mod state_machine;
@@ -21,7 +21,7 @@ use std::rc::Rc;
 
 pub use self::lexer::{LexemeSink, SharedAttributeBuffer};
 pub use self::outputs::*;
-pub use self::tag_name::TagName;
+pub use self::tag_name_hash::TagNameHash;
 pub use self::tag_scanner::TagHintSink;
 pub use self::text_type::*;
 pub use self::tree_builder_simulator::AmbiguityGuardError;

@@ -31,7 +31,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     #[inline]
     fn update_tag_name_hash(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
         if let Some(ch) = ch {
-            TagName::update_hash(&mut self.tag_name_hash, ch);
+            TagNameHash::update(&mut self.tag_name_hash, ch);
         }
     }
 
