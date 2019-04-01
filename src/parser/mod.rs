@@ -4,7 +4,6 @@ mod state_machine;
 mod lexer;
 mod outputs;
 mod tag_scanner;
-mod text_type;
 mod tree_builder_simulator;
 
 use self::lexer::Lexer;
@@ -20,7 +19,6 @@ use std::rc::Rc;
 pub use self::lexer::{LexemeSink, SharedAttributeBuffer};
 pub use self::outputs::*;
 pub use self::tag_scanner::TagHintSink;
-pub use self::text_type::*;
 pub use self::tree_builder_simulator::AmbiguityGuardError;
 
 #[derive(Debug, Copy, Clone)]
@@ -127,7 +125,7 @@ impl<S: ParserOutputSink> Parser<S> {
 
 cfg_if! {
     if #[cfg(feature = "test_api")] {
-        use crate::html::LocalNameHash;
+        use crate::html::{LocalNameHash, TextType};
 
         impl<S: ParserOutputSink> Parser<S> {
             pub fn switch_text_type(&mut self, text_type: TextType) {

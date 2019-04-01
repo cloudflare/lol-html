@@ -50,7 +50,7 @@ pub use self::content::{
     TagNameError, TextChunk,
 };
 
-pub use self::parser::TextType;
+pub use self::html::TextType;
 pub use self::transform_stream::OutputSink;
 
 cfg_if! {

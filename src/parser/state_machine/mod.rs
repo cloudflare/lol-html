@@ -5,8 +5,8 @@ mod syntax_dsl;
 mod syntax;
 
 use crate::base::{Chunk, Cursor};
-use crate::html::LocalNameHash;
-use crate::parser::{ParserDirective, TextType};
+use crate::html::{LocalNameHash, TextType};
+use crate::parser::ParserDirective;
 use failure::Error;
 
 #[derive(Debug, Copy, Clone)]

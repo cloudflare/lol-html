@@ -1,7 +1,8 @@
 use super::*;
 use crate::base::Bytes;
+use crate::html::TextType;
 use crate::parser::{
-    Lexeme, NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, TagTokenOutline, TextType,
+    Lexeme, NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, TagTokenOutline,
 };
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};

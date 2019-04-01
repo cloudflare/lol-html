@@ -15,21 +15,13 @@ mod ambiguity_guard;
 
 use self::ambiguity_guard::AmbiguityGuard;
 use crate::base::Bytes;
-use crate::html::{LocalNameHash, Tag};
+use crate::html::{LocalNameHash, Namespace, Tag, TextType};
 use crate::parser::outputs::{TagLexeme, TagTokenOutline};
-use crate::parser::TextType;
 use TagTokenOutline::*;
 
 pub use self::ambiguity_guard::AmbiguityGuardError;
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-enum Namespace {
-    Html,
-    Svg,
-    MathML,
-}
 
 #[must_use]
 pub enum TreeBuilderFeedback {

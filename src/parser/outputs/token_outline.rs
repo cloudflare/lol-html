@@ -1,6 +1,6 @@
 use crate::base::{Align, Range};
-use crate::html::LocalNameHash;
-use crate::parser::{SharedAttributeBuffer, TextType};
+use crate::html::{LocalNameHash, TextType};
+use crate::parser::SharedAttributeBuffer;
 
 #[derive(Debug, Default)]
 pub struct AttributeOultine {

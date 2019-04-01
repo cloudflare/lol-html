@@ -3,14 +3,13 @@ mod actions;
 mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
-use crate::html::LocalNameHash;
-
+use crate::html::{LocalNameHash, TextType};
 use crate::parser::outputs::*;
 use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
 use crate::parser::{
-    AmbiguityGuardError, ParserDirective, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
+    AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use std::cell::RefCell;
 use std::cmp::min;

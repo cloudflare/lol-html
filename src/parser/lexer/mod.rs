@@ -3,12 +3,12 @@ mod actions;
 mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
-use crate::html::LocalNameHash;
+use crate::html::{LocalNameHash, TextType};
 use crate::parser::outputs::*;
 use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
-use crate::parser::{ParserDirective, TextType, TreeBuilderFeedback, TreeBuilderSimulator};
+use crate::parser::{ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator};
 use std::cell::RefCell;
 use std::rc::Rc;
 

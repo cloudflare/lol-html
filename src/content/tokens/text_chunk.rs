@@ -1,6 +1,6 @@
 use super::{OrderingMutations, Token};
 use crate::base::Bytes;
-use crate::parser::TextType;
+use crate::html::TextType;
 use encoding_rs::Encoding;
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
