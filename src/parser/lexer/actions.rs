@@ -123,7 +123,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
         self.current_tag_token = Some(StartTag {
             name: Range::default(),
-            name_hash: Some(0),
+            name_hash: LocalNameHash::default(),
             attributes: Rc::clone(&self.attr_buffer),
             self_closing: false,
         });
@@ -133,7 +133,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     fn create_end_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.current_tag_token = Some(EndTag {
             name: Range::default(),
-            name_hash: Some(0),
+            name_hash: LocalNameHash::default(),
         });
     }
 
@@ -230,7 +230,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
                 })
                 | Some(EndTag {
                     ref mut name_hash, ..
-                }) => TagNameHash::update(name_hash, ch),
+                }) => name_hash.update(ch),
                 _ => unreachable!("Tag should exist at this point"),
             }
         }

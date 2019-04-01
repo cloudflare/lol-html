@@ -3,7 +3,7 @@ use crate::harness::functional_testing::html5lib_tests::{
 };
 use crate::harness::functional_testing::FunctionalTestFixture;
 use crate::harness::parse;
-use cool_thing::{TagNameHash, TextType, TokenCaptureFlags};
+use cool_thing::{LocalNameHash, TextType, TokenCaptureFlags};
 
 macro_rules! expect_eql {
     ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {
@@ -82,7 +82,7 @@ impl TokenCapturingTests {
     fn run_test_case(
         test: &TestCase,
         initial_text_type: TextType,
-        last_start_tag_name_hash: Option<u64>,
+        last_start_tag_name_hash: LocalNameHash,
     ) {
         [
             TokenCaptureFlags::all(),
@@ -168,7 +168,7 @@ impl FunctionalTestFixture<TestCase> for TokenCapturingTests {
             Self::run_test_case(
                 test,
                 TextType::from(cs.as_str()),
-                TagNameHash::get(&test.last_start_tag),
+                test.last_start_tag.as_str().into(),
             );
         }
     }

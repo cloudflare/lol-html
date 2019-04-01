@@ -3,14 +3,14 @@ mod actions;
 mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
+use crate::html::LocalNameHash;
 
 use crate::parser::outputs::*;
 use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
 };
 use crate::parser::{
-    AmbiguityGuardError, ParserDirective, TagNameHash, TextType, TreeBuilderFeedback,
-    TreeBuilderSimulator,
+    AmbiguityGuardError, ParserDirective, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use std::cell::RefCell;
 use std::cmp::min;
@@ -23,25 +23,25 @@ pub trait TagHintSink {
 
 pub type State<S> = fn(&mut TagScanner<S>, &Chunk<'_>) -> StateResult;
 
-// Tag scanner skips the majority of lexer operations and, thus,
-// is faster. It also has much less requirements for buffering which makes it more
-// prone to bailouts caused by buffer exhaustion (actually it buffers only tag names).
-//
-// Tag scanner produces tag previews as an output which serve as a hint for
-// the matcher which can then switch to the lexer if required.
-//
-// It's not guaranteed that tag preview will actually produce the token in the end
-// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
-// it's not a concern for our use case as no content will be erroneously captured
-// in this case.
+/// Tag scanner skips the majority of lexer operations and, thus,
+/// is faster. It also has much less requirements for buffering which makes it more
+/// prone to bailouts caused by buffer exhaustion (actually it buffers only tag names).
+///
+/// Tag scanner produces tag previews as an output which serve as a hint for
+/// the matcher which can then switch to the lexer if required.
+///
+/// It's not guaranteed that tag preview will actually produce the token in the end
+/// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
+/// it's not a concern for our use case as no content will be erroneously captured
+/// in this case.
 pub struct TagScanner<S: TagHintSink> {
     input_cursor: Cursor,
     tag_start: Option<usize>,
     ch_sequence_matching_start: Option<usize>,
     tag_name_start: usize,
     is_in_end_tag: bool,
-    tag_name_hash: Option<u64>,
-    last_start_tag_name_hash: Option<u64>,
+    tag_name_hash: LocalNameHash,
+    last_start_tag_name_hash: LocalNameHash,
     is_state_enter: bool,
     cdata_allowed: bool,
     tag_hint_sink: S,
@@ -63,8 +63,8 @@ impl<S: TagHintSink> TagScanner<S> {
             ch_sequence_matching_start: None,
             tag_name_start: 0,
             is_in_end_tag: false,
-            tag_name_hash: None,
-            last_start_tag_name_hash: None,
+            tag_name_hash: LocalNameHash::empty(),
+            last_start_tag_name_hash: LocalNameHash::empty(),
             is_state_enter: true,
             cdata_allowed: false,
             tag_hint_sink,

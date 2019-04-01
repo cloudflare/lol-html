@@ -5,6 +5,7 @@ mod syntax_dsl;
 mod syntax;
 
 use crate::base::{Chunk, Cursor};
+use crate::html::LocalNameHash;
 use crate::parser::{ParserDirective, TextType};
 use failure::Error;
 
@@ -12,7 +13,7 @@ use failure::Error;
 pub struct StateMachineBookmark {
     pub cdata_allowed: bool,
     pub text_type: TextType,
-    pub last_start_tag_name_hash: Option<u64>,
+    pub last_start_tag_name_hash: LocalNameHash,
     pub pos: usize,
 }
 
@@ -91,8 +92,8 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
 
-    fn last_start_tag_name_hash(&self) -> Option<u64>;
-    fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>);
+    fn last_start_tag_name_hash(&self) -> LocalNameHash;
+    fn set_last_start_tag_name_hash(&mut self, name_hash: LocalNameHash);
 
     fn set_last_text_type(&mut self, text_type: TextType);
     fn last_text_type(&self) -> TextType;
@@ -225,12 +226,12 @@ macro_rules! impl_common_sm_accessors {
         }
 
         #[inline]
-        fn last_start_tag_name_hash(&self) -> Option<u64> {
+        fn last_start_tag_name_hash(&self) -> LocalNameHash {
             self.last_start_tag_name_hash
         }
 
         #[inline]
-        fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
+        fn set_last_start_tag_name_hash(&mut self, name_hash: LocalNameHash) {
             self.last_start_tag_name_hash = name_hash;
         }
 

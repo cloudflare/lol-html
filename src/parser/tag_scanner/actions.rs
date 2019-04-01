@@ -8,13 +8,13 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     #[inline]
     fn create_start_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
-        self.tag_name_hash = Some(0);
+        self.tag_name_hash = LocalNameHash::default();
     }
 
     #[inline]
     fn create_end_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
-        self.tag_name_hash = Some(0);
+        self.tag_name_hash = LocalNameHash::default();
         self.is_in_end_tag = true;
     }
 
@@ -31,7 +31,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     #[inline]
     fn update_tag_name_hash(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
         if let Some(ch) = ch {
-            TagNameHash::update(&mut self.tag_name_hash, ch);
+            self.tag_name_hash.update(ch);
         }
     }
 

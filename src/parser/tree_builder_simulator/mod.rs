@@ -1,22 +1,23 @@
-// HTML parser has 6 different state machines for text parsing
-// purposes in different contexts. Switch between these state machines
-// usually performed by the tree construction stage depending on the
-// state of the stack of open elements (HTML is a context-sensitive grammar).
-//
-// Luckily, in the majority of cases this tree construction stage feedback
-// can be simulated without the stack of open elements and comlicated rules
-// required to maintain its state.
-//
-// This module implements such feedback simulation. However, there are few
-// cases where we can't unambiguously determine parsing context and prefer
-// to bail out from the tokenization in such a case
-// (see `AmbiguityGuard` for the details).
+//! HTML parser has 6 different state machines for text parsing
+//! purposes in different contexts. Switch between these state machines
+//! usually performed by the tree construction stage depending on the
+//! state of the stack of open elements (HTML is a context-sensitive grammar).
+//!
+//! Luckily, in the majority of cases this tree construction stage feedback
+//! can be simulated without the stack of open elements and comlicated rules
+//! required to maintain its state.
+//!
+//! This module implements such feedback simulation. However, there are few
+//! cases where we can't unambiguously determine parsing context and prefer
+//! to bail out from the tokenization in such a case
+//! (see `AmbiguityGuard` for the details).
 mod ambiguity_guard;
 
 use self::ambiguity_guard::AmbiguityGuard;
 use crate::base::Bytes;
+use crate::html::{LocalNameHash, Tag};
 use crate::parser::outputs::{TagLexeme, TagTokenOutline};
-use crate::parser::{TagNameHash, TextType};
+use crate::parser::TextType;
 use TagTokenOutline::*;
 
 pub use self::ambiguity_guard::AmbiguityGuardError;
@@ -77,28 +78,25 @@ fn eq_case_insensitive(actual: &Bytes<'_>, expected: &[u8]) -> bool {
 }
 
 #[inline]
-fn get_text_type_adjustment(tag_name_hash: u64) -> TreeBuilderFeedback {
+fn get_text_type_adjustment(tag_name: LocalNameHash) -> TreeBuilderFeedback {
     use TextType::*;
 
-    if tag_is_one_of!(tag_name_hash, [Textarea, Title]) {
+    if tag_is_one_of!(tag_name, [Textarea, Title]) {
         RCData.into()
-    } else if tag_name_hash == TagNameHash::Plaintext {
+    } else if tag_name == Tag::Plaintext {
         PlainText.into()
-    } else if tag_name_hash == TagNameHash::Script {
+    } else if tag_name == Tag::Script {
         ScriptData.into()
-    } else if tag_is_one_of!(
-        tag_name_hash,
-        [Style, Iframe, Xmp, Noembed, Noframes, Noscript]
-    ) {
+    } else if tag_is_one_of!(tag_name, [Style, Iframe, Xmp, Noembed, Noframes, Noscript]) {
         RawText.into()
     } else {
         TreeBuilderFeedback::None
     }
 }
 
-fn causes_foreign_content_exit(tag_name_hash: u64) -> bool {
+fn causes_foreign_content_exit(tag_name: LocalNameHash) -> bool {
     tag_is_one_of!(
-        tag_name_hash,
+        tag_name,
         [
             B, Big, Blockquote, Body, Br, Center, Code, Dd, Div, Dl, Dt, Em, Embed, H1, H2, H3, H4,
             H5, H6, Head, Hr, I, Img, Li, Listing, Menu, Meta, Nobr, Ol, P, Pre, Ruby, S, Small,
@@ -107,12 +105,12 @@ fn causes_foreign_content_exit(tag_name_hash: u64) -> bool {
     )
 }
 
-fn is_text_integration_point_in_math_ml(tag_name_hash: u64) -> bool {
-    tag_is_one_of!(tag_name_hash, [Mi, Mo, Mn, Ms, Mtext])
+fn is_text_integration_point_in_math_ml(tag_name: LocalNameHash) -> bool {
+    tag_is_one_of!(tag_name, [Mi, Mo, Mn, Ms, Mtext])
 }
 
-fn is_html_integration_point_in_svg(tag_name_hash: u64) -> bool {
-    tag_is_one_of!(tag_name_hash, [Desc, Title, ForeignObject])
+fn is_html_integration_point_in_svg(tag_name: LocalNameHash) -> bool {
+    tag_is_one_of!(tag_name, [Desc, Title, ForeignObject])
 }
 
 // TODO limit ns stack
@@ -139,44 +137,41 @@ impl Default for TreeBuilderSimulator {
 impl TreeBuilderSimulator {
     pub fn get_feedback_for_start_tag(
         &mut self,
-        tag_name_hash: Option<u64>,
+        tag_name: LocalNameHash,
         with_ambiguity_check: bool,
     ) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
         if with_ambiguity_check {
-            self.ambiguity_guard.track_start_tag(tag_name_hash)?;
+            self.ambiguity_guard.track_start_tag(tag_name)?;
         }
 
-        Ok(match tag_name_hash {
-            Some(t) if t == TagNameHash::Svg => self.enter_ns(Namespace::Svg),
-            Some(t) if t == TagNameHash::Math => self.enter_ns(Namespace::MathML),
-            Some(t) if self.current_ns == Namespace::Html => get_text_type_adjustment(t),
-            _ if self.current_ns != Namespace::Html => {
-                self.get_feedback_for_start_tag_in_foreign_content(tag_name_hash)
-            }
-            _ => TreeBuilderFeedback::None,
+        Ok(if tag_name == Tag::Svg {
+            self.enter_ns(Namespace::Svg)
+        } else if tag_name == Tag::Math {
+            self.enter_ns(Namespace::MathML)
+        } else if self.current_ns != Namespace::Html {
+            self.get_feedback_for_start_tag_in_foreign_content(tag_name)
+        } else {
+            get_text_type_adjustment(tag_name)
         })
     }
 
     pub fn get_feedback_for_end_tag(
         &mut self,
-        tag_name_hash: Option<u64>,
+        tag_name: LocalNameHash,
         with_ambiguity_check: bool,
     ) -> TreeBuilderFeedback {
         if with_ambiguity_check {
-            self.ambiguity_guard.track_end_tag(tag_name_hash);
+            self.ambiguity_guard.track_end_tag(tag_name);
         }
 
-        match tag_name_hash {
-            Some(t) if self.current_ns == Namespace::Svg && t == TagNameHash::Svg => {
-                self.leave_ns()
-            }
-            Some(t) if self.current_ns == Namespace::MathML && t == TagNameHash::Math => {
-                self.leave_ns()
-            }
-            _ if self.current_ns == Namespace::Html => {
-                self.check_integration_point_exit(tag_name_hash)
-            }
-            _ => TreeBuilderFeedback::None,
+        if self.current_ns == Namespace::Html {
+            self.check_integration_point_exit(tag_name)
+        } else if self.current_ns == Namespace::Svg && tag_name == Tag::Svg
+            || self.current_ns == Namespace::MathML && tag_name == Tag::Math
+        {
+            self.leave_ns()
+        } else {
+            TreeBuilderFeedback::None
         }
     }
 
@@ -197,13 +192,13 @@ impl TreeBuilderSimulator {
         TreeBuilderFeedback::SetAllowCdata(self.current_ns != Namespace::Html)
     }
 
-    fn is_integration_point_enter(&self, tag_name_hash: u64) -> bool {
-        self.current_ns == Namespace::Svg && is_html_integration_point_in_svg(tag_name_hash)
+    fn is_integration_point_enter(&self, tag_name: LocalNameHash) -> bool {
+        self.current_ns == Namespace::Svg && is_html_integration_point_in_svg(tag_name)
             || self.current_ns == Namespace::MathML
-                && is_text_integration_point_in_math_ml(tag_name_hash)
+                && is_text_integration_point_in_math_ml(tag_name)
     }
 
-    fn check_integration_point_exit(&mut self, tag_name_hash: Option<u64>) -> TreeBuilderFeedback {
+    fn check_integration_point_exit(&mut self, tag_name: LocalNameHash) -> TreeBuilderFeedback {
         let ns_stack_len = self.ns_stack.len();
 
         if ns_stack_len < 2 {
@@ -212,16 +207,13 @@ impl TreeBuilderSimulator {
 
         let prev_ns = self.ns_stack[ns_stack_len - 2];
 
-        match tag_name_hash {
-            Some(t)
-                if prev_ns == Namespace::MathML && is_text_integration_point_in_math_ml(t)
-                    || prev_ns == Namespace::Svg && is_html_integration_point_in_svg(t) =>
-            {
-                self.leave_ns()
-            }
-
-            // NOTE: <annotation-xml> case
-            None if prev_ns == Namespace::MathML => request_lexeme(|this, lexeme| {
+        if prev_ns == Namespace::MathML && is_text_integration_point_in_math_ml(tag_name)
+            || prev_ns == Namespace::Svg && is_html_integration_point_in_svg(tag_name)
+        {
+            self.leave_ns()
+        } else if tag_name.is_empty() && prev_ns == Namespace::MathML {
+            // NOTE: empty tag name hash - possibly <annotation-xml> case
+            request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, EndTag { name, .. } => {
                     if eq_case_insensitive(&lexeme.part(name), b"annotation-xml") {
                         this.leave_ns()
@@ -229,22 +221,32 @@ impl TreeBuilderSimulator {
                         TreeBuilderFeedback::None
                     }
                 })
-            }),
-
-            _ => TreeBuilderFeedback::None,
+            })
+        } else {
+            TreeBuilderFeedback::None
         }
     }
 
     fn get_feedback_for_start_tag_in_foreign_content(
         &mut self,
-        tag_name_hash: Option<u64>,
+        tag_name: LocalNameHash,
     ) -> TreeBuilderFeedback {
-        match tag_name_hash {
-            Some(t) if causes_foreign_content_exit(t) => self.leave_ns(),
-
+        if causes_foreign_content_exit(tag_name) {
+            self.leave_ns()
+        } else if self.is_integration_point_enter(tag_name) {
+            request_lexeme(|this, lexeme| {
+                expect_tag!(lexeme, StartTag { self_closing, .. } => {
+                    if self_closing {
+                        TreeBuilderFeedback::None
+                    } else {
+                        this.enter_ns(Namespace::Html)
+                    }
+                })
+            })
+        } else if tag_name == Tag::Font {
             // NOTE: <font> tag special case requires attributes
             // to decide on foreign context exit
-            Some(t) if t == TagNameHash::Font => request_lexeme(|this, lexeme| {
+            request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag { ref attributes, .. } => {
                     for attr in attributes.borrow().iter() {
                         let name = lexeme.part(attr.name);
@@ -259,20 +261,11 @@ impl TreeBuilderSimulator {
                 });
 
                 TreeBuilderFeedback::None
-            }),
-
-            Some(t) if self.is_integration_point_enter(t) => request_lexeme(|this, lexeme| {
-                expect_tag!(lexeme, StartTag { self_closing, .. } => {
-                    if self_closing {
-                        TreeBuilderFeedback::None
-                    } else {
-                        this.enter_ns(Namespace::Html)
-                    }
-                })
-            }),
-
-            // NOTE: integration point check <annotation-xml> case
-            None if self.current_ns == Namespace::MathML => request_lexeme(|this, lexeme| {
+            })
+        } else if tag_name.is_empty() && self.current_ns == Namespace::MathML {
+            // NOTE: tag name hash is empty - we need integration point check
+            // for the possible <annotation-xml> case
+            request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag {
                     name,
                     ref attributes,
@@ -297,9 +290,9 @@ impl TreeBuilderSimulator {
                 });
 
                 TreeBuilderFeedback::None
-            }),
-
-            _ => TreeBuilderFeedback::None,
+            })
+        } else {
+            TreeBuilderFeedback::None
         }
     }
 }

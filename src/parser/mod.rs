@@ -1,7 +1,4 @@
 #[macro_use]
-mod tag_name_hash;
-
-#[macro_use]
 mod state_machine;
 
 mod lexer;
@@ -15,13 +12,13 @@ use self::state_machine::{ParsingLoopTerminationReason, StateMachine};
 use self::tag_scanner::TagScanner;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
 use crate::base::Chunk;
+use cfg_if::cfg_if;
 use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::lexer::{LexemeSink, SharedAttributeBuffer};
 pub use self::outputs::*;
-pub use self::tag_name_hash::TagNameHash;
 pub use self::tag_scanner::TagHintSink;
 pub use self::text_type::*;
 pub use self::tree_builder_simulator::AmbiguityGuardError;
@@ -128,13 +125,18 @@ impl<S: ParserOutputSink> Parser<S> {
     }
 }
 
-#[cfg(feature = "test_api")]
-impl<S: ParserOutputSink> Parser<S> {
-    pub fn switch_text_type(&mut self, text_type: TextType) {
-        with_current_sm!(self, sm.switch_text_type(text_type));
-    }
+cfg_if! {
+    if #[cfg(feature = "test_api")] {
+        use crate::html::LocalNameHash;
 
-    pub fn set_last_start_tag_name_hash(&mut self, name_hash: Option<u64>) {
-        with_current_sm!(self, sm.set_last_start_tag_name_hash(name_hash));
+        impl<S: ParserOutputSink> Parser<S> {
+            pub fn switch_text_type(&mut self, text_type: TextType) {
+                with_current_sm!(self, sm.switch_text_type(text_type));
+            }
+
+            pub fn set_last_start_tag_name_hash(&mut self, name_hash: LocalNameHash) {
+                with_current_sm!(self, sm.set_last_start_tag_name_hash(name_hash));
+            }
+        }
     }
 }

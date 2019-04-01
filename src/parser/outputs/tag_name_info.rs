@@ -1,16 +1,17 @@
 use crate::base::{Bytes, Chunk, Range};
+use crate::html::LocalNameHash;
 use std::fmt::{self, Debug};
 
 #[derive(Copy, Clone)]
 pub struct TagNameInfo<'i> {
     input: &'i Chunk<'i>,
     name_range: Range,
-    name_hash: Option<u64>,
+    name_hash: LocalNameHash,
 }
 
 impl<'i> TagNameInfo<'i> {
     #[inline]
-    pub fn new(input: &'i Chunk<'i>, name_range: Range, name_hash: Option<u64>) -> Self {
+    pub fn new(input: &'i Chunk<'i>, name_range: Range, name_hash: LocalNameHash) -> Self {
         TagNameInfo {
             input,
             name_range,
@@ -24,7 +25,7 @@ impl<'i> TagNameInfo<'i> {
     }
 
     #[inline]
-    pub fn name_hash(&self) -> Option<u64> {
+    pub fn name_hash(&self) -> LocalNameHash {
         self.name_hash
     }
 }

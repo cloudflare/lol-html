@@ -3,13 +3,12 @@ mod actions;
 mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
+use crate::html::LocalNameHash;
 use crate::parser::outputs::*;
 use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
-use crate::parser::{
-    ParserDirective, TagNameHash, TextType, TreeBuilderFeedback, TreeBuilderSimulator,
-};
+use crate::parser::{ParserDirective, TextType, TreeBuilderFeedback, TreeBuilderSimulator};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -34,7 +33,7 @@ pub struct Lexer<S: LexemeSink> {
     current_tag_token: Option<TagTokenOutline>,
     current_non_tag_content_token: Option<NonTagContentTokenOutline>,
     current_attr: Option<AttributeOultine>,
-    last_start_tag_name_hash: Option<u64>,
+    last_start_tag_name_hash: LocalNameHash,
     closing_quote: u8,
     attr_buffer: SharedAttributeBuffer,
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
@@ -55,7 +54,7 @@ impl<S: LexemeSink> Lexer<S> {
             current_tag_token: None,
             current_non_tag_content_token: None,
             current_attr: None,
-            last_start_tag_name_hash: None,
+            last_start_tag_name_hash: LocalNameHash::empty(),
             closing_quote: b'"',
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,

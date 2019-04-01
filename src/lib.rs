@@ -29,10 +29,14 @@ mod debug_trace;
 #[macro_use]
 mod base;
 
+#[macro_use]
+mod html;
+
 mod content;
 mod parser;
 mod rewriter;
 mod transform_stream;
+mod virtual_tree;
 
 use cfg_if::cfg_if;
 
@@ -59,7 +63,8 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element,
         };
 
-        pub use self::parser::{TagNameHash, TagNameInfo};
+        pub use self::parser::TagNameInfo;
         pub use self::base::Bytes;
+        pub use self::html::{LocalNameHash, Tag};
     }
 }

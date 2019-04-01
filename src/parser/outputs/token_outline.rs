@@ -1,4 +1,5 @@
 use crate::base::{Align, Range};
+use crate::html::LocalNameHash;
 use crate::parser::{SharedAttributeBuffer, TextType};
 
 #[derive(Debug, Default)]
@@ -21,14 +22,14 @@ impl Align for AttributeOultine {
 pub enum TagTokenOutline {
     StartTag {
         name: Range,
-        name_hash: Option<u64>,
+        name_hash: LocalNameHash,
         attributes: SharedAttributeBuffer,
         self_closing: bool,
     },
 
     EndTag {
         name: Range,
-        name_hash: Option<u64>,
+        name_hash: LocalNameHash,
     },
 }
 

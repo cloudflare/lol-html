@@ -5,8 +5,8 @@ use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::str;
 
-// Bytes is a thin wrapper around either byte slice or
-// owned bytes with some handy APIs attached
+/// A thin wrapper around either byte slice or owned bytes with some handy APIs attached
+#[derive(Clone, PartialEq)]
 pub struct Bytes<'b>(Cow<'b, [u8]>);
 
 impl<'b> Bytes<'b> {

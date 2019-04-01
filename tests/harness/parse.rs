@@ -39,7 +39,7 @@ pub fn parse(
     input: &Input,
     capture_flags: TokenCaptureFlags,
     initial_text_type: TextType,
-    last_start_tag_name_hash: Option<u64>,
+    last_start_tag_name_hash: LocalNameHash,
     token_handler: TokenHandler<'_>,
 ) -> Result<String, Error> {
     let encoding = input
@@ -74,7 +74,7 @@ pub fn parse(
 macro_rules! parse_token {
     ($input:expr, $encoding:expr, $TokenType:ident, $callback:expr) => {{
         use crate::harness::{parse, Input};
-        use cool_thing::{TextType, Token, TokenCaptureFlags};
+        use cool_thing::{LocalNameHash, TextType, Token, TokenCaptureFlags};
 
         let mut input: Input = String::from($input).into();
         let mut emitted = false;
@@ -85,7 +85,7 @@ macro_rules! parse_token {
             &input,
             TokenCaptureFlags::all(),
             TextType::Data,
-            None,
+            LocalNameHash::empty(),
             Box::new(move |t| match t {
                 Token::$TokenType(t) => {
                     // NOTE: we always have two text chunks:
