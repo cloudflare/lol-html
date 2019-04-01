@@ -63,11 +63,11 @@ impl TransformController for TraceTransformController {
         self.capture_flags
     }
 
-    fn handle_element_start(&mut self, _: &TagNameInfo<'_>) -> ElementStartResponse<Self> {
+    fn handle_element_start(&mut self, _: &LocalName<'_>) -> ElementStartResponse<Self> {
         ElementStartResponse::CaptureFlags(self.capture_flags)
     }
 
-    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> TokenCaptureFlags {
+    fn handle_element_end(&mut self, _: &LocalName<'_>) -> TokenCaptureFlags {
         self.capture_flags
     }
 

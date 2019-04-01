@@ -1,6 +1,7 @@
 use crate::base::Chunk;
 use crate::content::{Token, TokenCaptureFlags};
-use crate::parser::{SharedAttributeBuffer, TagNameInfo};
+use crate::html::LocalName;
+use crate::parser::SharedAttributeBuffer;
 
 pub struct ElementModifiersInfo<'i> {
     input: &'i Chunk<'i>,
@@ -47,7 +48,7 @@ pub enum ElementStartResponse<C: TransformController> {
 
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
-    fn handle_element_start(&mut self, name_info: &TagNameInfo<'_>) -> ElementStartResponse<Self>;
-    fn handle_element_end(&mut self, name_info: &TagNameInfo<'_>) -> TokenCaptureFlags;
+    fn handle_element_start(&mut self, tag_name: &LocalName<'_>) -> ElementStartResponse<Self>;
+    fn handle_element_end(&mut self, tag_name: &LocalName<'_>) -> TokenCaptureFlags;
     fn handle_token(&mut self, token: &mut Token<'_>);
 }

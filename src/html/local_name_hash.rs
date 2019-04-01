@@ -23,13 +23,18 @@
 //! by zeroes as repetitave 1 digits get added to the hash.
 use super::Tag;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Default)]
 pub struct LocalNameHash(Option<u64>);
 
 impl LocalNameHash {
     #[inline]
+    pub fn new() -> Self {
+        LocalNameHash(Some(0))
+    }
+
+    #[inline]
     pub fn empty() -> Self {
-        LocalNameHash(None)
+        LocalNameHash::default()
     }
 
     #[inline]
@@ -70,17 +75,10 @@ impl LocalNameHash {
     }
 }
 
-impl Default for LocalNameHash {
-    #[inline]
-    fn default() -> Self {
-        LocalNameHash(Some(0))
-    }
-}
-
 impl From<&str> for LocalNameHash {
     #[inline]
     fn from(string: &str) -> Self {
-        let mut hash = LocalNameHash::default();
+        let mut hash = LocalNameHash::new();
 
         for ch in string.bytes() {
             hash.update(ch);

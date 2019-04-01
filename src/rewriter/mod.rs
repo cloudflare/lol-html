@@ -3,7 +3,7 @@ mod content_handlers;
 
 use self::content_handlers::*;
 use crate::content::{Token, TokenCaptureFlags};
-use crate::parser::TagNameInfo;
+use crate::html::LocalName;
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;
@@ -24,7 +24,7 @@ impl TransformController for HtmlRewriteController<'_> {
         self.handlers_dispatcher.get_token_capture_flags()
     }
 
-    fn handle_element_start(&mut self, _: &TagNameInfo<'_>) -> ElementStartResponse<Self> {
+    fn handle_element_start(&mut self, _: &LocalName<'_>) -> ElementStartResponse<Self> {
         for &locator in &self.element_handler_locators {
             self.handlers_dispatcher
                 .set_element_handlers_active(locator, true);
@@ -33,7 +33,7 @@ impl TransformController for HtmlRewriteController<'_> {
         ElementStartResponse::CaptureFlags(self.handlers_dispatcher.get_token_capture_flags())
     }
 
-    fn handle_element_end(&mut self, _: &TagNameInfo<'_>) -> TokenCaptureFlags {
+    fn handle_element_end(&mut self, _: &LocalName<'_>) -> TokenCaptureFlags {
         self.handlers_dispatcher.get_token_capture_flags()
     }
 

@@ -11,6 +11,7 @@ use self::state_machine::{ParsingLoopTerminationReason, StateMachine};
 use self::tag_scanner::TagScanner;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
 use crate::base::Chunk;
+use crate::html::LocalName;
 use cfg_if::cfg_if;
 use failure::Error;
 use std::cell::RefCell;
@@ -41,13 +42,13 @@ impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
 
 impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_start_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
-        self.borrow_mut().handle_start_tag_hint(name_info)
+    fn handle_start_tag_hint(&mut self, tag_name: &LocalName<'_>) -> ParserDirective {
+        self.borrow_mut().handle_start_tag_hint(tag_name)
     }
 
     #[inline]
-    fn handle_end_tag_hint(&mut self, name_info: &TagNameInfo<'_>) -> ParserDirective {
-        self.borrow_mut().handle_end_tag_hint(name_info)
+    fn handle_end_tag_hint(&mut self, tag_name: &LocalName<'_>) -> ParserDirective {
+        self.borrow_mut().handle_end_tag_hint(tag_name)
     }
 }
 

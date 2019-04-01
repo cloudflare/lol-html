@@ -2,7 +2,7 @@ use cool_thing::{LocalNameHash, Tag};
 
 test_fixture!("Local name hash", {
     test("Should invalidate hash for non-ASCII alphanum values", {
-        assert_eq!(LocalNameHash::from("div@&"), LocalNameHash::empty());
+        assert_eq!(LocalNameHash::from("div@&"), LocalNameHash::default());
     });
 
     test("Should invalidate hash for long values", {

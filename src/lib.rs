@@ -63,8 +63,7 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element,
         };
 
-        pub use self::parser::TagNameInfo;
         pub use self::base::Bytes;
-        pub use self::html::{LocalNameHash, Tag};
+        pub use self::html::{LocalName, LocalNameHash, Tag};
     }
 }
