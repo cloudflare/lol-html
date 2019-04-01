@@ -16,7 +16,7 @@ mod ambiguity_guard;
 use self::ambiguity_guard::AmbiguityGuard;
 use crate::base::Bytes;
 use crate::html::{LocalNameHash, Namespace, Tag, TextType};
-use crate::parser::outputs::{TagLexeme, TagTokenOutline};
+use crate::parser::{TagLexeme, TagTokenOutline};
 use TagTokenOutline::*;
 
 pub use self::ambiguity_guard::AmbiguityGuardError;

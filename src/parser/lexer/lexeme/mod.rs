@@ -1,6 +1,9 @@
-use super::token_outline::*;
+mod token_outline;
+
 use crate::base::{Bytes, Chunk, Range};
 use std::fmt::{self, Debug, Write};
+
+pub use self::token_outline::*;
 
 pub struct Lexeme<'i, T> {
     input: &'i Chunk<'i>,

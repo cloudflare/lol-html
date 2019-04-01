@@ -2,7 +2,6 @@
 mod state_machine;
 
 mod lexer;
-mod outputs;
 mod tag_scanner;
 mod tree_builder_simulator;
 
@@ -17,8 +16,10 @@ use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::lexer::{LexemeSink, SharedAttributeBuffer};
-pub use self::outputs::*;
+pub use self::lexer::{
+    Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline, SharedAttributeBuffer,
+    TagLexeme, TagTokenOutline,
+};
 pub use self::tag_scanner::TagHintSink;
 pub use self::tree_builder_simulator::AmbiguityGuardError;
 

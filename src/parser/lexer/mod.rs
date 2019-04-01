@@ -1,16 +1,19 @@
 #[macro_use]
 mod actions;
+
 mod conditions;
+mod lexeme;
 
 use crate::base::{Align, Chunk, Cursor, Range};
 use crate::html::{LocalNameHash, TextType};
-use crate::parser::outputs::*;
 use crate::parser::state_machine::{
     ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
 };
 use crate::parser::{ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+pub use self::lexeme::*;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
