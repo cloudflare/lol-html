@@ -57,7 +57,7 @@ impl<S: LexemeSink> Lexer<S> {
             current_tag_token: None,
             current_non_tag_content_token: None,
             current_attr: None,
-            last_start_tag_name_hash: LocalNameHash::empty(),
+            last_start_tag_name_hash: LocalNameHash::default(),
             closing_quote: b'"',
             attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,

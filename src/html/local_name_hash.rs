@@ -33,11 +33,6 @@ impl LocalNameHash {
     }
 
     #[inline]
-    pub fn empty() -> Self {
-        LocalNameHash::default()
-    }
-
-    #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_none()
     }

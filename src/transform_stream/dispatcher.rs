@@ -21,7 +21,7 @@ where
     last_consumed_lexeme_end: usize,
     token_capturer: TokenCapturer,
     got_flags_from_hint: bool,
-    pending_element_modifiers_info_handler: Option<ElementModifiersInfoHandler<C>>,
+    pending_element_modifiers_info_handler: Option<AuxiliaryElementInfoHandler<C>>,
 }
 
 impl<C, O> Dispatcher<C, O>
@@ -114,7 +114,7 @@ where
             ($handler:expr, $attributes:expr, $self_closing:expr) => {
                 $handler(
                     &mut self.transform_controller,
-                    ElementModifiersInfo::new(input, Rc::clone($attributes), $self_closing),
+                    AuxiliaryElementInfo::new(input, Rc::clone($attributes), $self_closing),
                 )
                 .into()
             };
@@ -145,7 +145,7 @@ where
 
                     match self.transform_controller.handle_element_start(&name) {
                         ElementStartResponse::CaptureFlags(flags) => flags,
-                        ElementStartResponse::RequestElementModifiersInfo(mut handler) => {
+                        ElementStartResponse::RequestAuxiliaryElementInfo(mut handler) => {
                             get_flags_from_handler!(handler, attributes, self_closing)
                         }
                     }
@@ -205,7 +205,7 @@ where
             ElementStartResponse::CaptureFlags(flags) => {
                 self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)
             }
-            ElementStartResponse::RequestElementModifiersInfo(handler) => {
+            ElementStartResponse::RequestAuxiliaryElementInfo(handler) => {
                 self.pending_element_modifiers_info_handler = Some(handler);
 
                 ParserDirective::Lex

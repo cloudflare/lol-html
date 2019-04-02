@@ -3,20 +3,20 @@ use crate::content::{Token, TokenCaptureFlags};
 use crate::html::LocalName;
 use crate::parser::SharedAttributeBuffer;
 
-pub struct ElementModifiersInfo<'i> {
+pub struct AuxiliaryElementInfo<'i> {
     input: &'i Chunk<'i>,
     attributes: SharedAttributeBuffer,
     self_closing: bool,
 }
 
-impl<'i> ElementModifiersInfo<'i> {
+impl<'i> AuxiliaryElementInfo<'i> {
     #[inline]
     pub fn new(
         input: &'i Chunk<'i>,
         attributes: SharedAttributeBuffer,
         self_closing: bool,
     ) -> Self {
-        ElementModifiersInfo {
+        AuxiliaryElementInfo {
             input,
             attributes,
             self_closing,
@@ -38,12 +38,12 @@ impl<'i> ElementModifiersInfo<'i> {
     }
 }
 
-pub type ElementModifiersInfoHandler<C> =
-    Box<dyn FnMut(&mut C, ElementModifiersInfo) -> TokenCaptureFlags>;
+pub type AuxiliaryElementInfoHandler<C> =
+    Box<dyn FnMut(&mut C, AuxiliaryElementInfo) -> TokenCaptureFlags>;
 
 pub enum ElementStartResponse<C: TransformController> {
     CaptureFlags(TokenCaptureFlags),
-    RequestElementModifiersInfo(ElementModifiersInfoHandler<C>),
+    RequestAuxiliaryElementInfo(AuxiliaryElementInfoHandler<C>),
 }
 
 pub trait TransformController: Sized {
