@@ -14,7 +14,7 @@ pub struct TextChunk<'i> {
 }
 
 impl<'i> TextChunk<'i> {
-    pub(in crate::content) fn new_token(
+    pub(super) fn new_token(
         text: &'i str,
         text_type: TextType,
         last_in_text_node: bool,

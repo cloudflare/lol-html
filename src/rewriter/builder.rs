@@ -1,5 +1,5 @@
 use super::*;
-use crate::content::{Comment, Doctype, Element, TextChunk};
+use crate::rewritable_units::{Comment, Doctype, Element, TextChunk};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 

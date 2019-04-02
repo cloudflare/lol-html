@@ -1,12 +1,10 @@
 mod element;
-mod token_capturer;
 mod tokens;
 
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 
 pub use self::element::*;
-pub use self::token_capturer::*;
 pub use self::tokens::*;
 
 pub enum ContentType {

@@ -11,7 +11,7 @@ pub struct EndTag<'i> {
 }
 
 impl<'i> EndTag<'i> {
-    pub(in crate::content) fn new_token(
+    pub(super) fn new_token(
         name: Bytes<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,

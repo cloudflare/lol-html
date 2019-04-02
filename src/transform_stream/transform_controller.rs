@@ -1,7 +1,7 @@
 use crate::base::Chunk;
-use crate::content::{Token, TokenCaptureFlags};
 use crate::html::LocalName;
 use crate::parser::SharedAttributeBuffer;
+use crate::rewritable_units::{Token, TokenCaptureFlags};
 
 pub struct AuxiliaryElementInfo<'i> {
     input: &'i Chunk<'i>,

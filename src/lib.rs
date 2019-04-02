@@ -32,8 +32,8 @@ mod base;
 #[macro_use]
 mod html;
 
-mod content;
 mod parser;
+mod rewritable_units;
 mod rewriter;
 mod transform_stream;
 mod virtual_tree;
@@ -45,7 +45,7 @@ pub use self::rewriter::{
     HtmlRewriterBuilder, SelectorError,
 };
 
-pub use self::content::{
+pub use self::rewritable_units::{
     Attribute, AttributeNameError, Comment, CommentTextError, ContentType, Doctype, Element,
     TagNameError, TextChunk,
 };
@@ -59,7 +59,7 @@ cfg_if! {
             ElementStartResponse, TransformController, TransformStream,
         };
 
-        pub use self::content::{
+        pub use self::rewritable_units::{
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element,
         };
 

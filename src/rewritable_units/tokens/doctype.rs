@@ -1,5 +1,5 @@
 use crate::base::Bytes;
-use crate::content::{Serialize, Token};
+use crate::rewritable_units::{Serialize, Token};
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -13,7 +13,7 @@ pub struct Doctype<'i> {
 }
 
 impl<'i> Doctype<'i> {
-    pub(in crate::content) fn new_token(
+    pub(super) fn new_token(
         name: Option<Bytes<'i>>,
         public_id: Option<Bytes<'i>>,
         system_id: Option<Bytes<'i>>,

@@ -14,7 +14,7 @@ pub struct StartTag<'i> {
 }
 
 impl<'i> StartTag<'i> {
-    pub(in crate::content) fn new_token(
+    pub(super) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         self_closing: bool,
@@ -32,7 +32,7 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    pub(in crate::content) fn encoding(&self) -> &'static Encoding {
+    pub fn encoding(&self) -> &'static Encoding {
         self.encoding
     }
 

@@ -1,4 +1,4 @@
-use crate::content::{Comment, Doctype, Element, TextChunk, Token, TokenCaptureFlags};
+use crate::rewritable_units::{Comment, Doctype, Element, TextChunk, Token, TokenCaptureFlags};
 
 pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype<'_>) + 'h>;
 pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment<'_>) + 'h>;

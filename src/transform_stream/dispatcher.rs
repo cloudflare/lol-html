@@ -1,10 +1,12 @@
 use super::*;
 use crate::base::{Chunk, Range};
-use crate::content::{Serialize, ToToken, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent};
 use crate::html::LocalName;
 use crate::parser::{
     Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHintSink,
     TagLexeme, TagTokenOutline,
+};
+use crate::rewritable_units::{
+    Serialize, ToToken, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
 use encoding_rs::Encoding;
 use std::rc::Rc;

@@ -1,6 +1,6 @@
 use crate::base::{Bytes, Chunk};
-use crate::content::Serialize;
 use crate::parser::SharedAttributeBuffer;
+use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
 use lazycell::LazyCell;
 use std::fmt::{self, Debug};
@@ -125,7 +125,7 @@ pub struct Attributes<'i> {
 }
 
 impl<'i> Attributes<'i> {
-    pub(in crate::content) fn new(
+    pub(super) fn new(
         input: &'i Chunk<'i>,
         attribute_buffer: SharedAttributeBuffer,
         encoding: &'static Encoding,

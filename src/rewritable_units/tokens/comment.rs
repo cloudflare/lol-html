@@ -20,7 +20,7 @@ pub struct Comment<'i> {
 }
 
 impl<'i> Comment<'i> {
-    pub(in crate::content) fn new_token(
+    pub(super) fn new_token(
         text: Bytes<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,

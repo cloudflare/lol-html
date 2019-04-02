@@ -2,8 +2,8 @@ mod builder;
 mod content_handlers;
 
 use self::content_handlers::*;
-use crate::content::{Token, TokenCaptureFlags};
 use crate::html::LocalName;
+use crate::rewritable_units::{Token, TokenCaptureFlags};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;

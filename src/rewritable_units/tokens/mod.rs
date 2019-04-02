@@ -10,30 +10,53 @@ macro_rules! impl_common_token_api {
     ($Token:ident) => {
         impl<'i> $Token<'i> {
             #[inline]
-            pub fn before(&mut self, content: &str, content_type: crate::content::ContentType) {
-                crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {
-                    self.ordering_mutations.content_before.extend_from_slice(c)
-                });
+            pub fn before(
+                &mut self,
+                content: &str,
+                content_type: crate::rewritable_units::ContentType,
+            ) {
+                crate::rewritable_units::content_to_bytes(
+                    content,
+                    content_type,
+                    self.encoding,
+                    &mut |c| self.ordering_mutations.content_before.extend_from_slice(c),
+                );
             }
 
             #[inline]
-            pub fn after(&mut self, content: &str, content_type: crate::content::ContentType) {
+            pub fn after(
+                &mut self,
+                content: &str,
+                content_type: crate::rewritable_units::ContentType,
+            ) {
                 let mut pos = 0;
 
-                crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {
-                    self.ordering_mutations
-                        .content_after
-                        .splice(pos..pos, c.iter().cloned());
+                crate::rewritable_units::content_to_bytes(
+                    content,
+                    content_type,
+                    self.encoding,
+                    &mut |c| {
+                        self.ordering_mutations
+                            .content_after
+                            .splice(pos..pos, c.iter().cloned());
 
-                    pos += c.len();
-                });
+                        pos += c.len();
+                    },
+                );
             }
 
             #[inline]
-            pub fn replace(&mut self, content: &str, content_type: crate::content::ContentType) {
-                crate::content::content_to_bytes(content, content_type, self.encoding, &mut |c| {
-                    self.ordering_mutations.replacements.extend_from_slice(c)
-                });
+            pub fn replace(
+                &mut self,
+                content: &str,
+                content_type: crate::rewritable_units::ContentType,
+            ) {
+                crate::rewritable_units::content_to_bytes(
+                    content,
+                    content_type,
+                    self.encoding,
+                    &mut |c| self.ordering_mutations.replacements.extend_from_slice(c),
+                );
 
                 self.ordering_mutations.removed = true;
             }
@@ -49,7 +72,7 @@ macro_rules! impl_common_token_api {
             }
         }
 
-        impl crate::content::Serialize for $Token<'_> {
+        impl crate::rewritable_units::Serialize for $Token<'_> {
             #[inline]
             fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
                 let OrderingMutations {
@@ -81,6 +104,7 @@ macro_rules! impl_common_token_api {
 }
 
 mod attributes;
+mod capturer;
 mod comment;
 mod doctype;
 mod end_tag;
@@ -90,6 +114,7 @@ mod text_chunk;
 pub(super) use self::attributes::Attributes;
 
 pub use self::attributes::{Attribute, AttributeNameError};
+pub use self::capturer::*;
 pub use self::comment::{Comment, CommentTextError};
 pub use self::doctype::Doctype;
 pub use self::end_tag::EndTag;
