@@ -50,7 +50,7 @@ where
         encoding: &'static Encoding,
     ) -> Self {
         let initial_parser_directive = if transform_controller.initial_capture_flags().is_empty() {
-            ParserDirective::ScanForTags
+            ParserDirective::OnlyScanTagsWherePossible
         } else {
             ParserDirective::Lex
         };

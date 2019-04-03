@@ -5,7 +5,8 @@ mod conditions;
 use crate::base::{Align, Chunk, Cursor, Range};
 use crate::html::{LocalName, LocalNameHash, TextType};
 use crate::parser::state_machine::{
-    ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine, StateResult,
+    FeedbackDirective, ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine,
+    StateResult,
 };
 use crate::parser::{
     AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
@@ -82,9 +83,10 @@ impl<S: TagHintSink> TagScanner<S> {
 
         let name = LocalName::new(input, name_range, self.tag_name_hash);
 
-        trace!(@output tag_name);
+        trace!(@output name);
 
         if self.is_in_end_tag {
+            self.is_in_end_tag = false;
             self.tag_hint_sink.handle_end_tag_hint(name)
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;
@@ -93,38 +95,30 @@ impl<S: TagHintSink> TagScanner<S> {
     }
 
     #[inline]
-    fn get_tree_builder_feedback(&mut self) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
+    fn try_apply_tree_builder_feedback(
+        &mut self,
+    ) -> Result<Option<TreeBuilderFeedback>, AmbiguityGuardError> {
         let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
 
-        if self.is_in_end_tag {
-            Ok(tree_builder_simulator.get_feedback_for_end_tag(self.tag_name_hash, true))
+        let feedback = if self.is_in_end_tag {
+            tree_builder_simulator.get_feedback_for_end_tag(self.tag_name_hash)
         } else {
-            tree_builder_simulator.get_feedback_for_start_tag(self.tag_name_hash, true)
-        }
-    }
+            tree_builder_simulator.get_feedback_for_start_tag(self.tag_name_hash)?
+        };
 
-    fn get_loop_directive_for_tag(
-        &mut self,
-        tag_start: usize,
-    ) -> Result<ParsingLoopDirective, AmbiguityGuardError> {
-        Ok(match self.get_tree_builder_feedback()? {
+        Ok(match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
-                // NOTE: we can't switch type immediately as we
-                // are in the middle of tag parsing. So, we need
-                // to switch later on the `emit_tag` action.
+                // NOTE: we can't switch type immediately as we are in the middle of tag parsing.
+                // So, we need to switch later on the `emit_tag` action.
                 self.pending_text_type_change = Some(text_type);
-                ParsingLoopDirective::None
+                None
             }
             TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
                 self.cdata_allowed = cdata_allowed;
-                ParsingLoopDirective::None
+                None
             }
-            TreeBuilderFeedback::RequestLexeme(_) => ParsingLoopDirective::Break(
-                ParsingLoopTerminationReason::LexemeRequiredForAdjustment(
-                    self.create_bookmark(tag_start),
-                ),
-            ),
-            TreeBuilderFeedback::None => ParsingLoopDirective::None,
+            TreeBuilderFeedback::RequestLexeme(_) => Some(feedback),
+            TreeBuilderFeedback::None => None,
         })
     }
 }
@@ -171,7 +165,7 @@ impl<S: TagHintSink> StateMachine for TagScanner<S> {
     }
 
     #[inline]
-    fn adjust_to_bookmark(&mut self, _pos: usize) {
+    fn adjust_to_bookmark(&mut self, _pos: usize, _feedback_directive: FeedbackDirective) {
         trace!(@noop);
     }
 

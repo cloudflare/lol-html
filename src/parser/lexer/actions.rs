@@ -57,24 +57,15 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             .take()
             .expect("Tag token should exist at this point");
 
-        // NOTE: if we are silently parsing the tag to get tree builder
-        // feedback for the tag scanner then the ambiguity check has been
-        // already made by the tag scanner.
-        let with_ambiguity_check = !self.should_silently_consume_current_tag_only;
-
-        let feedback = match token {
-            StartTag { name_hash, .. } => {
-                self.last_start_tag_name_hash = name_hash;
-
-                self.tree_builder_simulator
-                    .borrow_mut()
-                    .get_feedback_for_start_tag(name_hash, with_ambiguity_check)?
-            }
-            EndTag { name_hash, .. } => self
-                .tree_builder_simulator
-                .borrow_mut()
-                .get_feedback_for_end_tag(name_hash, with_ambiguity_check),
+        let feedback = match self.feedback_directive.take() {
+            FeedbackDirective::ApplyUnhandledFeedback(feedback) => Some(feedback),
+            FeedbackDirective::Skip => None,
+            FeedbackDirective::None => Some(self.get_feedback_for_tag(&token)?),
         };
+
+        if let StartTag { name_hash, .. } = token {
+            self.last_start_tag_name_hash = name_hash;
+        }
 
         let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
 
@@ -82,13 +73,17 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         // (except for CDATA, but there is a special action to take care of it).
         self.set_last_text_type(TextType::Data);
 
-        let loop_directive_from_feedback = self.handle_tree_builder_feedback(feedback, &lexeme);
+        let loop_directive_from_feedback = feedback
+            .map(|f| self.handle_tree_builder_feedback(f, &lexeme))
+            .unwrap_or(ParsingLoopDirective::None);
 
         Ok(match self.emit_tag_lexeme(&lexeme) {
             ParserDirective::Lex => loop_directive_from_feedback,
-            ParserDirective::ScanForTags => {
-                self.change_parser_directive(self.lexeme_start, ParserDirective::ScanForTags)
-            }
+            ParserDirective::OnlyScanTagsWherePossible => self.change_parser_directive(
+                self.lexeme_start,
+                ParserDirective::OnlyScanTagsWherePossible,
+                FeedbackDirective::None,
+            ),
         })
     }
 

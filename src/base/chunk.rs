@@ -1,6 +1,6 @@
 use super::{Bytes, Range};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct Chunk<'b> {
     data: &'b [u8],
     last: bool,

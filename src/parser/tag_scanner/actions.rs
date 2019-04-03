@@ -42,17 +42,32 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
             .take()
             .expect("Tag start should be set at this point");
 
-        let loop_directive = match self.emit_tag_hint(input) {
-            ParserDirective::ScanForTags => self.get_loop_directive_for_tag(tag_start)?,
+        let unhandled_feedback = self.try_apply_tree_builder_feedback()?;
 
-            // NOTE: we don't need to take feedback from tree builder simulator
-            // here because tag will be re-parsed by the lexer anyway.
-            ParserDirective::Lex => self.change_parser_directive(tag_start, ParserDirective::Lex),
-        };
+        Ok(match unhandled_feedback {
+            Some(unhandled_feedback) => self.change_parser_directive(
+                tag_start,
+                ParserDirective::Lex,
+                FeedbackDirective::ApplyUnhandledFeedback(unhandled_feedback),
+            ),
+            None => match self.emit_tag_hint(input) {
+                ParserDirective::OnlyScanTagsWherePossible => ParsingLoopDirective::None,
+                ParserDirective::Lex => {
+                    let feedback_directive = match self.pending_text_type_change.take() {
+                        Some(text_type) => FeedbackDirective::ApplyUnhandledFeedback(
+                            TreeBuilderFeedback::SwitchTextType(text_type),
+                        ),
+                        None => FeedbackDirective::Skip,
+                    };
 
-        self.is_in_end_tag = false;
-
-        Ok(loop_directive)
+                    self.change_parser_directive(
+                        tag_start,
+                        ParserDirective::Lex,
+                        feedback_directive,
+                    )
+                }
+            },
+        })
     }
 
     #[inline]

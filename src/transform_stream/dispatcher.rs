@@ -105,7 +105,7 @@ where
         if self.token_capturer.has_captures() {
             ParserDirective::Lex
         } else {
-            ParserDirective::ScanForTags
+            ParserDirective::OnlyScanTagsWherePossible
         }
     }
 

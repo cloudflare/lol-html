@@ -6,20 +6,50 @@ mod syntax;
 
 use crate::base::{Chunk, Cursor};
 use crate::html::{LocalNameHash, TextType};
-use crate::parser::ParserDirective;
+use crate::parser::{ParserDirective, TreeBuilderFeedback};
 use failure::Error;
+use std::fmt::{self, Debug};
+use std::mem;
 
-#[derive(Debug, Copy, Clone)]
+pub enum FeedbackDirective {
+    ApplyUnhandledFeedback(TreeBuilderFeedback),
+    Skip,
+    None,
+}
+
+impl FeedbackDirective {
+    #[inline]
+    pub fn take(&mut self) -> FeedbackDirective {
+        mem::replace(self, FeedbackDirective::None)
+    }
+}
+
+impl Debug for FeedbackDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                FeedbackDirective::ApplyUnhandledFeedback(_) => "ApplyPendingFeedback",
+                FeedbackDirective::Skip => "Skip",
+                FeedbackDirective::None => "None",
+            }
+        )
+    }
+}
+
+#[derive(Debug)]
 pub struct StateMachineBookmark {
-    pub cdata_allowed: bool,
-    pub text_type: TextType,
-    pub last_start_tag_name_hash: LocalNameHash,
+    cdata_allowed: bool,
+    text_type: TextType,
+    last_start_tag_name_hash: LocalNameHash,
+    // NOTE: pub because it's used by trace!.
     pub pos: usize,
+    feedback_directive: FeedbackDirective,
 }
 
 pub enum ParsingLoopTerminationReason {
     ParserDirectiveChange(ParserDirective, StateMachineBookmark),
-    LexemeRequiredForAdjustment(StateMachineBookmark),
     EndOfInput { blocked_byte_count: usize },
 }
 
@@ -103,7 +133,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn closing_quote(&self) -> u8;
 
     fn adjust_for_next_input(&mut self);
-    fn adjust_to_bookmark(&mut self, pos: usize);
+    fn adjust_to_bookmark(&mut self, pos: usize, feedback_directive: FeedbackDirective);
     fn enter_ch_sequence_matching(&mut self);
     fn leave_ch_sequence_matching(&mut self);
     fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize;
@@ -126,7 +156,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         self.set_cdata_allowed(bookmark.cdata_allowed);
         self.switch_text_type(bookmark.text_type);
         self.set_last_start_tag_name_hash(bookmark.last_start_tag_name_hash);
-        self.adjust_to_bookmark(bookmark.pos);
+        self.adjust_to_bookmark(bookmark.pos, bookmark.feedback_directive);
         self.set_input_cursor(Cursor::new(bookmark.pos));
 
         self.run_parsing_loop(input)
@@ -146,12 +176,17 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn create_bookmark(&self, pos: usize) -> StateMachineBookmark {
+    fn create_bookmark(
+        &self,
+        pos: usize,
+        feedback_directive: FeedbackDirective,
+    ) -> StateMachineBookmark {
         StateMachineBookmark {
             cdata_allowed: self.cdata_allowed(None),
             text_type: self.last_text_type(),
             last_start_tag_name_hash: self.last_start_tag_name_hash(),
             pos,
+            feedback_directive,
         }
     }
 
@@ -160,10 +195,11 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         &self,
         pos: usize,
         new_parser_directive: ParserDirective,
+        feedback_directive: FeedbackDirective,
     ) -> ParsingLoopDirective {
         ParsingLoopDirective::Break(ParsingLoopTerminationReason::ParserDirectiveChange(
             new_parser_directive,
-            self.create_bookmark(pos),
+            self.create_bookmark(pos, feedback_directive),
         ))
     }
 

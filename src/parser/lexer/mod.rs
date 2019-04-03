@@ -7,9 +7,12 @@ mod lexeme;
 use crate::base::{Align, Chunk, Cursor, Range};
 use crate::html::{LocalNameHash, TextType};
 use crate::parser::state_machine::{
-    ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark, StateResult,
+    FeedbackDirective, ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark,
+    StateResult,
 };
-use crate::parser::{ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator};
+use crate::parser::{
+    AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -41,7 +44,7 @@ pub struct Lexer<S: LexemeSink> {
     attr_buffer: SharedAttributeBuffer,
     tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     last_text_type: TextType,
-    should_silently_consume_current_tag_only: bool,
+    feedback_directive: FeedbackDirective,
 }
 
 impl<S: LexemeSink> Lexer<S> {
@@ -64,19 +67,24 @@ impl<S: LexemeSink> Lexer<S> {
             ))),
             tree_builder_simulator,
             last_text_type: TextType::Data,
-            should_silently_consume_current_tag_only: false,
+            feedback_directive: FeedbackDirective::None,
         }
     }
 
-    #[inline]
-    pub fn silently_consume_current_tag_only(
+    fn get_feedback_for_tag(
         &mut self,
-        input: &Chunk<'_>,
-        bookmark: StateMachineBookmark,
-    ) -> ParsingLoopResult {
-        self.should_silently_consume_current_tag_only = true;
-
-        self.continue_from_bookmark(input, bookmark)
+        tag: &TagTokenOutline,
+    ) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
+        match *tag {
+            TagTokenOutline::StartTag { name_hash, .. } => self
+                .tree_builder_simulator
+                .borrow_mut()
+                .get_feedback_for_start_tag(name_hash),
+            TagTokenOutline::EndTag { name_hash, .. } => Ok(self
+                .tree_builder_simulator
+                .borrow_mut()
+                .get_feedback_for_end_tag(name_hash)),
+        }
     }
 
     fn handle_tree_builder_feedback(
@@ -116,12 +124,7 @@ impl<S: LexemeSink> Lexer<S> {
 
         self.lexeme_start = lexeme.raw_range().end;
 
-        if self.should_silently_consume_current_tag_only {
-            self.should_silently_consume_current_tag_only = false;
-            ParserDirective::ScanForTags
-        } else {
-            self.lexeme_sink.handle_tag(lexeme)
-        }
+        self.lexeme_sink.handle_tag(lexeme)
     }
 
     #[inline]
@@ -193,8 +196,9 @@ impl<S: LexemeSink> StateMachine for Lexer<S> {
     }
 
     #[inline]
-    fn adjust_to_bookmark(&mut self, pos: usize) {
+    fn adjust_to_bookmark(&mut self, pos: usize, feedback_directive: FeedbackDirective) {
         self.lexeme_start = pos;
+        self.feedback_directive = feedback_directive;
     }
 
     #[inline]

@@ -130,11 +130,8 @@ impl TreeBuilderSimulator {
     pub fn get_feedback_for_start_tag(
         &mut self,
         tag_name: LocalNameHash,
-        with_ambiguity_check: bool,
     ) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
-        if with_ambiguity_check {
-            self.ambiguity_guard.track_start_tag(tag_name)?;
-        }
+        self.ambiguity_guard.track_start_tag(tag_name)?;
 
         Ok(if tag_name == Tag::Svg {
             self.enter_ns(Namespace::Svg)
@@ -147,14 +144,8 @@ impl TreeBuilderSimulator {
         })
     }
 
-    pub fn get_feedback_for_end_tag(
-        &mut self,
-        tag_name: LocalNameHash,
-        with_ambiguity_check: bool,
-    ) -> TreeBuilderFeedback {
-        if with_ambiguity_check {
-            self.ambiguity_guard.track_end_tag(tag_name);
-        }
+    pub fn get_feedback_for_end_tag(&mut self, tag_name: LocalNameHash) -> TreeBuilderFeedback {
+        self.ambiguity_guard.track_end_tag(tag_name);
 
         if self.current_ns == Namespace::Html {
             self.check_integration_point_exit(tag_name)

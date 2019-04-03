@@ -23,9 +23,13 @@ pub use self::lexer::{
 pub use self::tag_scanner::TagHintSink;
 pub use self::tree_builder_simulator::AmbiguityGuardError;
 
-#[derive(Debug, Copy, Clone)]
+// NOTE: tag scanner can implicitly force parser to switch to
+// the lexer mode if it fails to get tree builder feedback. It's up
+// to consumer to switch the parser back to the tag scan mode in
+// the tag handler.
+#[derive(Debug)]
 pub enum ParserDirective {
-    ScanForTags,
+    OnlyScanTagsWherePossible,
     Lex,
 }
 
@@ -67,7 +71,7 @@ pub struct Parser<S: ParserOutputSink> {
 macro_rules! with_current_sm {
     ($self:tt, sm.$fn:ident($($args:tt)*) ) => {
         match $self.current_directive {
-            ParserDirective::ScanForTags => $self.tag_scanner.$fn($($args)*),
+            ParserDirective::OnlyScanTagsWherePossible => $self.tag_scanner.$fn($($args)*),
             ParserDirective::Lex => $self.lexer.$fn($($args)*),
         }
     };
@@ -101,20 +105,6 @@ impl<S: ParserOutputSink> Parser<S> {
 
                     loop_termination_reason =
                         with_current_sm!(self, sm.continue_from_bookmark(input, sm_bookmark))?;
-                }
-
-                // NOTE: lexeme was required to get tree builder feedback for eager
-                // parser. So we need to spin lexer and consume lexeme
-                // for the tag, but without emitting it to consumers as they don't expect
-                // lexemes at this point.
-                LexemeRequiredForAdjustment(sm_bookmark) => {
-                    self.current_directive = ParserDirective::Lex;
-
-                    trace!(@continue_from_bookmark sm_bookmark, self.current_directive, input);
-
-                    loop_termination_reason = self
-                        .lexer
-                        .silently_consume_current_tag_only(input, sm_bookmark)?;
                 }
 
                 EndOfInput { blocked_byte_count } => {
