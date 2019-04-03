@@ -71,19 +71,13 @@ fn cool_thing_tokenizer_bench(
                 self.capture_flags
             }
 
-            fn handle_element_start(
-                &mut self,
-                tag_name: &LocalName<'_>,
-            ) -> ElementStartResponse<Self> {
-                black_box(tag_name);
+            fn handle_element_start(&mut self, name: LocalName<'_>) -> ElementStartResponse<Self> {
+                black_box(name);
                 ElementStartResponse::CaptureFlags(self.capture_flags)
             }
 
-            fn handle_element_end(
-                &mut self,
-                tag_name: &LocalName<'_>,
-            ) -> CoolThingTokenCaptureFlags {
-                black_box(tag_name);
+            fn handle_element_end(&mut self, name: LocalName<'_>) -> CoolThingTokenCaptureFlags {
+                black_box(name);
                 self.capture_flags
             }
 

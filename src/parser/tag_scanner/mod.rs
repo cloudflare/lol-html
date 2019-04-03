@@ -15,8 +15,8 @@ use std::cmp::min;
 use std::rc::Rc;
 
 pub trait TagHintSink {
-    fn handle_start_tag_hint(&mut self, tag_name: &LocalName<'_>) -> ParserDirective;
-    fn handle_end_tag_hint(&mut self, tag_name: &LocalName<'_>) -> ParserDirective;
+    fn handle_start_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective;
+    fn handle_end_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective;
 }
 
 pub type State<S> = fn(&mut TagScanner<S>, &Chunk<'_>) -> StateResult;
@@ -80,15 +80,15 @@ impl<S: TagHintSink> TagScanner<S> {
             end: self.input_cursor.pos(),
         };
 
-        let tag_name = LocalName::new(input, name_range, self.tag_name_hash);
+        let name = LocalName::new(input, name_range, self.tag_name_hash);
 
         trace!(@output tag_name);
 
         if self.is_in_end_tag {
-            self.tag_hint_sink.handle_end_tag_hint(&tag_name)
+            self.tag_hint_sink.handle_end_tag_hint(name)
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;
-            self.tag_hint_sink.handle_start_tag_hint(&tag_name)
+            self.tag_hint_sink.handle_start_tag_hint(name)
         }
     }
 

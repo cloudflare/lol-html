@@ -145,7 +145,7 @@ where
                 } => {
                     let name = LocalName::new(input, name, name_hash);
 
-                    match self.transform_controller.handle_element_start(&name) {
+                    match self.transform_controller.handle_element_start(name) {
                         ElementStartResponse::CaptureFlags(flags) => flags,
                         ElementStartResponse::RequestAuxiliaryElementInfo(mut handler) => {
                             get_flags_from_handler!(handler, attributes, self_closing)
@@ -156,7 +156,7 @@ where
                 EndTag { name, name_hash } => {
                     let name = LocalName::new(input, name, name_hash);
 
-                    self.transform_controller.handle_element_end(&name)
+                    self.transform_controller.handle_element_end(name)
                 }
             },
         };
@@ -202,8 +202,8 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_start_tag_hint(&mut self, tag_name: &LocalName<'_>) -> ParserDirective {
-        match self.transform_controller.handle_element_start(tag_name) {
+    fn handle_start_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective {
+        match self.transform_controller.handle_element_start(name) {
             ElementStartResponse::CaptureFlags(flags) => {
                 self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)
             }
@@ -215,8 +215,8 @@ where
         }
     }
 
-    fn handle_end_tag_hint(&mut self, tag_name: &LocalName<'_>) -> ParserDirective {
-        let settings = self.transform_controller.handle_element_end(tag_name);
+    fn handle_end_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective {
+        let settings = self.transform_controller.handle_element_end(name);
 
         self.apply_capture_flags_from_hint_and_get_next_parser_directive(settings)
     }

@@ -48,7 +48,7 @@ pub enum ElementStartResponse<C: TransformController> {
 
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
-    fn handle_element_start(&mut self, tag_name: &LocalName<'_>) -> ElementStartResponse<Self>;
-    fn handle_element_end(&mut self, tag_name: &LocalName<'_>) -> TokenCaptureFlags;
+    fn handle_element_start(&mut self, name: LocalName<'_>) -> ElementStartResponse<Self>;
+    fn handle_element_end(&mut self, name: LocalName<'_>) -> TokenCaptureFlags;
     fn handle_token(&mut self, token: &mut Token<'_>);
 }
