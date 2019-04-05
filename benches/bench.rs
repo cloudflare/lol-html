@@ -53,7 +53,7 @@ fn cool_thing_tokenizer_bench(
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
         use cool_thing::{
-            ElementStartResponse, LocalName, Token, TransformController, TransformStream,
+            ElementStartResponse, LocalName, Namespace, Token, TransformController, TransformStream,
         };
 
         struct BenchTransformController {
@@ -71,8 +71,13 @@ fn cool_thing_tokenizer_bench(
                 self.capture_flags
             }
 
-            fn handle_element_start(&mut self, name: LocalName<'_>) -> ElementStartResponse<Self> {
+            fn handle_element_start(
+                &mut self,
+                name: LocalName<'_>,
+                ns: Namespace,
+            ) -> ElementStartResponse<Self> {
                 black_box(name);
+                black_box(ns);
                 ElementStartResponse::CaptureFlags(self.capture_flags)
             }
 

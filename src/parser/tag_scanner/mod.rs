@@ -3,7 +3,7 @@ mod actions;
 mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
-use crate::html::{LocalName, LocalNameHash, TextType};
+use crate::html::{LocalName, LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
     FeedbackDirective, ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine,
     StateResult,
@@ -16,7 +16,7 @@ use std::cmp::min;
 use std::rc::Rc;
 
 pub trait TagHintSink {
-    fn handle_start_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective;
+    fn handle_start_tag_hint(&mut self, name: LocalName<'_>, ns: Namespace) -> ParserDirective;
     fn handle_end_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective;
 }
 
@@ -90,7 +90,10 @@ impl<S: TagHintSink> TagScanner<S> {
             self.tag_hint_sink.handle_end_tag_hint(name)
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;
-            self.tag_hint_sink.handle_start_tag_hint(name)
+
+            let ns = self.tree_builder_simulator.borrow_mut().current_ns();
+
+            self.tag_hint_sink.handle_start_tag_hint(name, ns)
         }
     }
 

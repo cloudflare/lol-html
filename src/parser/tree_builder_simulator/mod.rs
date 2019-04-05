@@ -158,12 +158,19 @@ impl TreeBuilderSimulator {
         }
     }
 
+    #[inline]
+    pub fn current_ns(&self) -> Namespace {
+        self.current_ns
+    }
+
+    #[inline]
     fn enter_ns(&mut self, ns: Namespace) -> TreeBuilderFeedback {
         self.ns_stack.push(ns);
         self.current_ns = ns;
         TreeBuilderFeedback::SetAllowCdata(ns != Namespace::Html)
     }
 
+    #[inline]
     fn leave_ns(&mut self) -> TreeBuilderFeedback {
         self.ns_stack.pop();
 

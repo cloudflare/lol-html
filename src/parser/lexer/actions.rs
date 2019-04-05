@@ -63,11 +63,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             FeedbackDirective::None => Some(self.get_feedback_for_tag(&token)?),
         };
 
-        if let StartTag { name_hash, .. } = token {
-            self.last_start_tag_name_hash = name_hash;
-        }
-
-        let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
+        let mut lexeme = self.create_lexeme_with_raw_inclusive(input, token);
 
         // NOTE: exit from any non-initial text parsing mode always happens on tag emission
         // (except for CDATA, but there is a special action to take care of it).
@@ -77,11 +73,21 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             .map(|f| self.handle_tree_builder_feedback(f, &lexeme))
             .unwrap_or(ParsingLoopDirective::None);
 
+        if let StartTag {
+            ref mut ns,
+            name_hash,
+            ..
+        } = lexeme.token_outline
+        {
+            self.last_start_tag_name_hash = name_hash;
+            *ns = self.tree_builder_simulator.borrow().current_ns();
+        }
+
         Ok(match self.emit_tag_lexeme(&lexeme) {
             ParserDirective::Lex => loop_directive_from_feedback,
-            ParserDirective::OnlyScanTagsWherePossible => self.change_parser_directive(
+            ParserDirective::WherePossibleScanForTagsOnly => self.change_parser_directive(
                 self.lexeme_start,
-                ParserDirective::OnlyScanTagsWherePossible,
+                ParserDirective::WherePossibleScanForTagsOnly,
                 FeedbackDirective::None,
             ),
         })
@@ -119,6 +125,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         self.current_tag_token = Some(StartTag {
             name: Range::default(),
             name_hash: LocalNameHash::new(),
+            ns: Namespace::default(),
             attributes: Rc::clone(&self.attr_buffer),
             self_closing: false,
         });

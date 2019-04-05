@@ -64,6 +64,6 @@ cfg_if! {
         };
 
         pub use self::base::Bytes;
-        pub use self::html::{LocalName, LocalNameHash, Tag};
+        pub use self::html::{LocalName, LocalNameHash, Tag, Namespace};
     }
 }

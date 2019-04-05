@@ -8,7 +8,7 @@ pub use self::token_outline::*;
 pub struct Lexeme<'i, T> {
     input: &'i Chunk<'i>,
     raw_range: Range,
-    token_outline: T,
+    pub(super) token_outline: T,
 }
 
 pub type TagLexeme<'i> = Lexeme<'i, TagTokenOutline>;

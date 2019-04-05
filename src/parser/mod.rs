@@ -10,7 +10,7 @@ use self::state_machine::{ParsingLoopTerminationReason, StateMachine};
 use self::tag_scanner::TagScanner;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
 use crate::base::Chunk;
-use crate::html::LocalName;
+use crate::html::{LocalName, Namespace};
 use cfg_if::cfg_if;
 use failure::Error;
 use std::cell::RefCell;
@@ -29,7 +29,7 @@ pub use self::tree_builder_simulator::AmbiguityGuardError;
 // the tag handler.
 #[derive(Debug)]
 pub enum ParserDirective {
-    OnlyScanTagsWherePossible,
+    WherePossibleScanForTagsOnly,
     Lex,
 }
 
@@ -47,8 +47,8 @@ impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
 
 impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_start_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective {
-        self.borrow_mut().handle_start_tag_hint(name)
+    fn handle_start_tag_hint(&mut self, name: LocalName<'_>, ns: Namespace) -> ParserDirective {
+        self.borrow_mut().handle_start_tag_hint(name, ns)
     }
 
     #[inline]
@@ -71,7 +71,7 @@ pub struct Parser<S: ParserOutputSink> {
 macro_rules! with_current_sm {
     ($self:tt, sm.$fn:ident($($args:tt)*) ) => {
         match $self.current_directive {
-            ParserDirective::OnlyScanTagsWherePossible => $self.tag_scanner.$fn($($args)*),
+            ParserDirective::WherePossibleScanForTagsOnly => $self.tag_scanner.$fn($($args)*),
             ParserDirective::Lex => $self.lexer.$fn($($args)*),
         }
     };

@@ -63,7 +63,11 @@ impl TransformController for TraceTransformController {
         self.capture_flags
     }
 
-    fn handle_element_start(&mut self, _: LocalName<'_>) -> ElementStartResponse<Self> {
+    fn handle_element_start(
+        &mut self,
+        _: LocalName<'_>,
+        _: Namespace,
+    ) -> ElementStartResponse<Self> {
         ElementStartResponse::CaptureFlags(self.capture_flags)
     }
 

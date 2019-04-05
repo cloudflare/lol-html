@@ -1,5 +1,5 @@
 use crate::base::{Align, Range};
-use crate::html::{LocalNameHash, TextType};
+use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::SharedAttributeBuffer;
 
 #[derive(Debug, Default)]
@@ -23,6 +23,7 @@ pub enum TagTokenOutline {
     StartTag {
         name: Range,
         name_hash: LocalNameHash,
+        ns: Namespace,
         attributes: SharedAttributeBuffer,
         self_closing: bool,
     },

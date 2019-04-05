@@ -1,6 +1,6 @@
 use super::*;
 use crate::base::{Chunk, Range};
-use crate::html::LocalName;
+use crate::html::{LocalName, Namespace};
 use crate::parser::{
     Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHintSink,
     TagLexeme, TagTokenOutline,
@@ -105,7 +105,7 @@ where
         if self.token_capturer.has_captures() {
             ParserDirective::Lex
         } else {
-            ParserDirective::OnlyScanTagsWherePossible
+            ParserDirective::WherePossibleScanForTagsOnly
         }
     }
 
@@ -140,12 +140,13 @@ where
                 StartTag {
                     name,
                     name_hash,
+                    ns,
                     ref attributes,
                     self_closing,
                 } => {
                     let name = LocalName::new(input, name, name_hash);
 
-                    match self.transform_controller.handle_element_start(name) {
+                    match self.transform_controller.handle_element_start(name, ns) {
                         ElementStartResponse::CaptureFlags(flags) => flags,
                         ElementStartResponse::RequestAuxiliaryElementInfo(mut handler) => {
                             get_flags_from_handler!(handler, attributes, self_closing)
@@ -202,8 +203,8 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_start_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective {
-        match self.transform_controller.handle_element_start(name) {
+    fn handle_start_tag_hint(&mut self, name: LocalName<'_>, ns: Namespace) -> ParserDirective {
+        match self.transform_controller.handle_element_start(name, ns) {
             ElementStartResponse::CaptureFlags(flags) => {
                 self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)
             }

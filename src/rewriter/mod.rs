@@ -2,7 +2,7 @@ mod builder;
 mod content_handlers;
 
 use self::content_handlers::*;
-use crate::html::LocalName;
+use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
@@ -24,7 +24,11 @@ impl TransformController for HtmlRewriteController<'_> {
         self.handlers_dispatcher.get_token_capture_flags()
     }
 
-    fn handle_element_start(&mut self, _: LocalName<'_>) -> ElementStartResponse<Self> {
+    fn handle_element_start(
+        &mut self,
+        _: LocalName<'_>,
+        _: Namespace,
+    ) -> ElementStartResponse<Self> {
         for &locator in &self.element_handler_locators {
             self.handlers_dispatcher
                 .set_element_handlers_active(locator, true);

@@ -51,7 +51,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
                 FeedbackDirective::ApplyUnhandledFeedback(unhandled_feedback),
             ),
             None => match self.emit_tag_hint(input) {
-                ParserDirective::OnlyScanTagsWherePossible => ParsingLoopDirective::None,
+                ParserDirective::WherePossibleScanForTagsOnly => ParsingLoopDirective::None,
                 ParserDirective::Lex => {
                     let feedback_directive = match self.pending_text_type_change.take() {
                         Some(text_type) => FeedbackDirective::ApplyUnhandledFeedback(
