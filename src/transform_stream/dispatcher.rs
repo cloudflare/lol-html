@@ -23,7 +23,7 @@ where
     last_consumed_lexeme_end: usize,
     token_capturer: TokenCapturer,
     got_flags_from_hint: bool,
-    pending_element_modifiers_info_handler: Option<AuxiliaryElementInfoHandler<C>>,
+    pending_element_aux_info_req: Option<AuxElementInfoRequest<C>>,
 }
 
 impl<C, O> Dispatcher<C, O>
@@ -40,7 +40,7 @@ where
             last_consumed_lexeme_end: 0,
             token_capturer: TokenCapturer::new(initial_capture_flags, encoding),
             got_flags_from_hint: false,
-            pending_element_modifiers_info_handler: None,
+            pending_element_aux_info_req: None,
         }
     }
 
@@ -112,25 +112,24 @@ where
     fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) {
         let input = lexeme.input();
 
-        macro_rules! get_flags_from_handler {
+        macro_rules! get_flags_from_aux_info_res {
             ($handler:expr, $attributes:expr, $self_closing:expr) => {
                 $handler(
                     &mut self.transform_controller,
-                    AuxiliaryElementInfo::new(input, Rc::clone($attributes), $self_closing),
+                    AuxElementInfo::new(input, Rc::clone($attributes), $self_closing),
                 )
-                .into()
             };
         }
 
-        let capture_flags = match self.pending_element_modifiers_info_handler.take() {
+        let capture_flags = match self.pending_element_aux_info_req.take() {
             // NOTE: tag hint was produced for the tag, but
             // attributes and self closing flag were requested.
-            Some(mut handler) => match *lexeme.token_outline() {
+            Some(mut aux_info_req) => match *lexeme.token_outline() {
                 StartTag {
                     ref attributes,
                     self_closing,
                     ..
-                } => get_flags_from_handler!(handler, attributes, self_closing),
+                } => get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing),
                 _ => unreachable!("Tag should be a start tag at this point"),
             },
 
@@ -147,9 +146,9 @@ where
                     let name = LocalName::new(input, name, name_hash);
 
                     match self.transform_controller.handle_element_start(name, ns) {
-                        ElementStartResponse::CaptureFlags(flags) => flags,
-                        ElementStartResponse::RequestAuxiliaryElementInfo(mut handler) => {
-                            get_flags_from_handler!(handler, attributes, self_closing)
+                        Ok(flags) => flags,
+                        Err(mut aux_info_req) => {
+                            get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing)
                         }
                     }
                 }
@@ -168,9 +167,9 @@ where
     #[inline]
     fn apply_capture_flags_from_hint_and_get_next_parser_directive(
         &mut self,
-        settings: impl Into<TokenCaptureFlags>,
+        flags: TokenCaptureFlags,
     ) -> ParserDirective {
-        self.token_capturer.set_capture_flags(settings.into());
+        self.token_capturer.set_capture_flags(flags);
         self.got_flags_from_hint = true;
         self.get_next_parser_directive()
     }
@@ -205,11 +204,9 @@ where
 {
     fn handle_start_tag_hint(&mut self, name: LocalName<'_>, ns: Namespace) -> ParserDirective {
         match self.transform_controller.handle_element_start(name, ns) {
-            ElementStartResponse::CaptureFlags(flags) => {
-                self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)
-            }
-            ElementStartResponse::RequestAuxiliaryElementInfo(handler) => {
-                self.pending_element_modifiers_info_handler = Some(handler);
+            Ok(flags) => self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags),
+            Err(aux_info_req) => {
+                self.pending_element_aux_info_req = Some(aux_info_req);
 
                 ParserDirective::Lex
             }
@@ -217,9 +214,9 @@ where
     }
 
     fn handle_end_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective {
-        let settings = self.transform_controller.handle_element_end(name);
+        let flags = self.transform_controller.handle_element_end(name);
 
-        self.apply_capture_flags_from_hint_and_get_next_parser_directive(settings)
+        self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)
     }
 }
 

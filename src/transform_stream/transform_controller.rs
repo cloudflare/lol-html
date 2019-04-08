@@ -3,20 +3,20 @@ use crate::html::{LocalName, Namespace};
 use crate::parser::SharedAttributeBuffer;
 use crate::rewritable_units::{Token, TokenCaptureFlags};
 
-pub struct AuxiliaryElementInfo<'i> {
+pub struct AuxElementInfo<'i> {
     input: &'i Chunk<'i>,
     attributes: SharedAttributeBuffer,
     self_closing: bool,
 }
 
-impl<'i> AuxiliaryElementInfo<'i> {
+impl<'i> AuxElementInfo<'i> {
     #[inline]
     pub fn new(
         input: &'i Chunk<'i>,
         attributes: SharedAttributeBuffer,
         self_closing: bool,
     ) -> Self {
-        AuxiliaryElementInfo {
+        AuxElementInfo {
             input,
             attributes,
             self_closing,
@@ -38,13 +38,8 @@ impl<'i> AuxiliaryElementInfo<'i> {
     }
 }
 
-pub type AuxiliaryElementInfoHandler<C> =
-    Box<dyn FnMut(&mut C, AuxiliaryElementInfo) -> TokenCaptureFlags>;
-
-pub enum ElementStartResponse<C: TransformController> {
-    CaptureFlags(TokenCaptureFlags),
-    RequestAuxiliaryElementInfo(AuxiliaryElementInfoHandler<C>),
-}
+pub type AuxElementInfoRequest<C> = Box<dyn FnMut(&mut C, AuxElementInfo) -> TokenCaptureFlags>;
+pub type ElementStartHandlingResult<C> = Result<TokenCaptureFlags, AuxElementInfoRequest<C>>;
 
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
@@ -53,7 +48,7 @@ pub trait TransformController: Sized {
         &mut self,
         name: LocalName<'_>,
         ns: Namespace,
-    ) -> ElementStartResponse<Self>;
+    ) -> ElementStartHandlingResult<Self>;
 
     fn handle_element_end(&mut self, name: LocalName<'_>) -> TokenCaptureFlags;
     fn handle_token(&mut self, token: &mut Token<'_>);

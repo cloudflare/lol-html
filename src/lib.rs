@@ -56,7 +56,7 @@ pub use self::transform_stream::OutputSink;
 cfg_if! {
     if #[cfg(feature = "test_api")] {
         pub use self::transform_stream::{
-            ElementStartResponse, TransformController, TransformStream,
+            ElementStartHandlingResult, TransformController, TransformStream,
         };
 
         pub use self::rewritable_units::{
@@ -64,6 +64,6 @@ cfg_if! {
         };
 
         pub use self::base::Bytes;
-        pub use self::html::{LocalName, LocalNameHash, Tag, Namespace};
+        pub use self::html::{LocalName, LocalNameHash, Tag, Namespace, TAG_STR_PAIRS};
     }
 }

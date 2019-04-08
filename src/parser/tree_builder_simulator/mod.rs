@@ -86,6 +86,7 @@ fn get_text_type_adjustment(tag_name: LocalNameHash) -> TreeBuilderFeedback {
     }
 }
 
+#[inline]
 fn causes_foreign_content_exit(tag_name: LocalNameHash) -> bool {
     tag_is_one_of!(
         tag_name,
@@ -97,10 +98,12 @@ fn causes_foreign_content_exit(tag_name: LocalNameHash) -> bool {
     )
 }
 
+#[inline]
 fn is_text_integration_point_in_math_ml(tag_name: LocalNameHash) -> bool {
     tag_is_one_of!(tag_name, [Mi, Mo, Mn, Ms, Mtext])
 }
 
+#[inline]
 fn is_html_integration_point_in_svg(tag_name: LocalNameHash) -> bool {
     tag_is_one_of!(tag_name, [Desc, Title, ForeignObject])
 }

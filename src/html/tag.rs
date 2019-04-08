@@ -1,14 +1,34 @@
-// NOTE: Consistency between hashing algorithm and these values is guaranteed by the dedicated test.
-#[repr(u64)]
-#[derive(Debug, Copy, Clone)]
-pub enum Tag {
+macro_rules! declare_tags {
+    ($($name:ident = $val:expr),+) => {
+        #[repr(u64)]
+        #[derive(Debug, Copy, Clone)]
+        pub enum Tag {
+            $($name = $val),+
+        }
+
+        // NOTE: used in the test that checks the consistency of
+        // hash values with the hashing algorithm.
+        #[cfg(feature = "test_api")]
+        pub static TAG_STR_PAIRS: &[(Tag, &str)] = &[
+            $((Tag::$name, stringify!($name))),+
+        ];
+    };
+}
+
+declare_tags! {
+    A = 6u64,
+    Area = 220_486u64,
     B = 7u64,
+    Base = 236_298u64,
+    Basefont = 247_776_793_209u64,
+    Bgsound = 7_944_694_377u64,
     Big = 7_628u64,
     Blockquote = 265_678_647_808_810u64,
     Body = 250_174u64,
     Br = 247u64,
     Center = 279_569_751u64,
     Code = 282_922u64,
+    Col = 8849u64,
     Dd = 297u64,
     Desc = 305_928u64,
     Div = 9691u64,
@@ -33,6 +53,7 @@ pub enum Tag {
     Input = 15_325_017u64,
     Keygen = 548_352_339u64,
     Li = 558u64,
+    Link = 572_016u64,
     Listing = 18_749_373_036u64,
     Math = 596_781u64,
     Menu = 600_698u64,
@@ -48,6 +69,7 @@ pub enum Tag {
     Noscript = 675_124_329_145u64,
     Ol = 657u64,
     P = 21u64,
+    Param = 22_240_466u64,
     Plaintext = 23_680_792_701_881u64,
     Pre = 22_250u64,
     Ruby = 780_542u64,
@@ -55,6 +77,7 @@ pub enum Tag {
     Script = 814_463_673u64,
     Select = 816_359_705u64,
     Small = 25_762_353u64,
+    Source = 827_153_674u64,
     Span = 808_147u64,
     Strike = 832_289_290u64,
     Strong = 832_295_532u64,
@@ -66,11 +89,13 @@ pub enum Tag {
     Template = 870_357_441_322u64,
     Textarea = 870_730_390_854u64,
     Title = 26_699_306u64,
+    Track = 26_974_480u64,
     Tt = 825u64,
     U = 26u64,
     Ul = 849u64,
     Var = 27_863u64,
     Xmp = 30_293u64,
+    Wbr = 28_919u64
 }
 
 macro_rules! tag_is_one_of {

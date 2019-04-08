@@ -1,4 +1,4 @@
-use cool_thing::{LocalNameHash, Tag};
+use cool_thing::{LocalNameHash, TAG_STR_PAIRS};
 
 test_fixture!("Local name hash", {
     test("Should invalidate hash for non-ASCII alphanum values", {
@@ -10,8 +10,8 @@ test_fixture!("Local name hash", {
     });
 
     test("Precalculated hash values use current hashing algorithm", {
-        assert_eq!(LocalNameHash::from("svg"), Tag::Svg);
-        assert_eq!(LocalNameHash::from("math"), Tag::Math);
-        assert_eq!(LocalNameHash::from("h1"), Tag::H1);
+        for &(tag, tag_string) in TAG_STR_PAIRS {
+            assert_eq!(LocalNameHash::from(tag_string), tag);
+        }
     });
 });

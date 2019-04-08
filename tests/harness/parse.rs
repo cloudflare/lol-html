@@ -26,8 +26,8 @@ impl TransformController for TestTransformController<'_> {
         &mut self,
         _: LocalName<'_>,
         _: Namespace,
-    ) -> ElementStartResponse<Self> {
-        ElementStartResponse::CaptureFlags(self.capture_flags)
+    ) -> ElementStartHandlingResult<Self> {
+        Ok(self.capture_flags)
     }
 
     fn handle_element_end(&mut self, _: LocalName<'_>) -> TokenCaptureFlags {

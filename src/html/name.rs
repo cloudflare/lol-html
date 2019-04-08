@@ -1,4 +1,4 @@
-use super::LocalNameHash;
+use super::{LocalNameHash, Tag};
 use crate::base::{Bytes, Chunk, Range};
 use std::fmt::{self, Display, Formatter};
 
@@ -15,6 +15,14 @@ impl<'n> Name<'n> {
     #[inline]
     pub fn new(input: &'n Chunk<'n>, range: Range) -> Self {
         Name::Bytes(input.slice(range))
+    }
+
+    #[inline]
+    pub fn into_unbound_from_input(self) -> Name<'static> {
+        match self {
+            Name::Bytes(b) => Name::Bytes(b.into_owned()),
+            Name::Unencoded(_) => unreachable!("Unencoded name can't come from the the input"),
+        }
     }
 }
 
@@ -68,6 +76,14 @@ impl<'n> LocalName<'n> {
             LocalName::Hash(hash)
         }
     }
+
+    #[inline]
+    pub fn into_unbound_from_input(self) -> LocalName<'static> {
+        match self {
+            LocalName::Name(n) => LocalName::Name(n.into_unbound_from_input()),
+            LocalName::Hash(h) => LocalName::Hash(h),
+        }
+    }
 }
 
 impl<'s> From<&'s str> for LocalName<'s> {
@@ -93,6 +109,16 @@ impl Default for LocalName<'_> {
 impl Display for LocalName<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{:#?}", self)
+    }
+}
+
+impl PartialEq<Tag> for LocalName<'_> {
+    #[inline]
+    fn eq(&self, tag: &Tag) -> bool {
+        match self {
+            LocalName::Hash(h) => h == tag,
+            _ => false,
+        }
     }
 }
 

@@ -28,13 +28,13 @@ impl TransformController for HtmlRewriteController<'_> {
         &mut self,
         _: LocalName<'_>,
         _: Namespace,
-    ) -> ElementStartResponse<Self> {
+    ) -> ElementStartHandlingResult<Self> {
         for &locator in &self.element_handler_locators {
             self.handlers_dispatcher
                 .set_element_handlers_active(locator, true);
         }
 
-        ElementStartResponse::CaptureFlags(self.handlers_dispatcher.get_token_capture_flags())
+        Ok(self.handlers_dispatcher.get_token_capture_flags())
     }
 
     fn handle_element_end(&mut self, _: LocalName<'_>) -> TokenCaptureFlags {
