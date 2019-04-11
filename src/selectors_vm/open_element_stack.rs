@@ -1,21 +1,17 @@
-use super::virtual_element::VirtualElement;
 use crate::html::{LocalName, Namespace, Tag};
-use std::rc::Rc;
+use crate::rewriter::ElementContentHandlersLocator;
 
-pub type StackItem = Rc<VirtualElement<'static>>;
-pub type SelfClosingFlagRequest<'e> = Box<dyn FnOnce(&mut OpenElementStack, bool) -> bool + 'e>;
+pub type SelfClosingFlagRequest<'i> = Box<dyn FnOnce(&mut OpenElementStack, bool) -> bool + 'i>;
 
 #[inline]
-fn is_void_element(element: &VirtualElement<'_>) -> bool {
-    let name = element.local_name();
-
+fn is_void_element(local_name: &LocalName<'_>) -> bool {
     // NOTE: fast path for the most commonly used elements
-    if tag_is_one_of!(*name, [Div, A, Span, Li, Input]) {
+    if tag_is_one_of!(*local_name, [Div, A, Span, Li, Input]) {
         return false;
     }
 
     tag_is_one_of!(
-        *name,
+        *local_name,
         [
             Area, Base, Basefont, Bgsound, Br, Col, Embed, Hr, Img, Input, Keygen, Link, Meta,
             Param, Source, Track, Wbr
@@ -23,25 +19,38 @@ fn is_void_element(element: &VirtualElement<'_>) -> bool {
     )
 }
 
+struct StackItem {
+    local_name: LocalName<'static>,
+    handlers_locators: Vec<ElementContentHandlersLocator>,
+}
+
 #[derive(Default)]
 pub struct OpenElementStack(Vec<StackItem>);
 
 impl OpenElementStack {
     #[inline]
-    pub fn attach_parent(&self, element: &mut VirtualElement<'_>) {
-        element.set_parent(self.0.last().map(Rc::clone));
+    fn push(
+        &mut self,
+        local_name: LocalName<'_>,
+        handlers_locators: Vec<ElementContentHandlersLocator>,
+    ) {
+        self.0.push(StackItem {
+            local_name: local_name.into_owned(),
+            handlers_locators,
+        })
     }
 
-    pub fn try_push_element<'e>(
+    pub fn try_push<'i>(
         &mut self,
-        element: VirtualElement<'e>,
+        local_name: LocalName<'i>,
         ns: Namespace,
-    ) -> Result<bool, SelfClosingFlagRequest<'e>> {
+        handlers_locators: Vec<ElementContentHandlersLocator>,
+    ) -> Result<bool, SelfClosingFlagRequest<'i>> {
         if ns == Namespace::Html {
-            if is_void_element(&element) {
+            if is_void_element(&local_name) {
                 Ok(false)
             } else {
-                self.push(element);
+                self.push(local_name, handlers_locators);
                 Ok(true)
             }
         } else {
@@ -52,7 +61,7 @@ impl OpenElementStack {
                 if self_closing {
                     false
                 } else {
-                    this.push(element);
+                    this.push(local_name, handlers_locators);
                     true
                 }
             }))
@@ -62,25 +71,21 @@ impl OpenElementStack {
     pub fn pop_up_to(
         &mut self,
         local_name: LocalName,
-        mut popped_element_handler: impl FnMut(Rc<VirtualElement<'_>>),
+        mut popped_locators_handler: impl FnMut(Vec<ElementContentHandlersLocator>),
     ) {
         for i in self.0.len() - 1..=0 {
-            if *self.0[i].local_name() == local_name {
+            if self.0[i].local_name == local_name {
                 for _ in i..self.0.len() {
-                    popped_element_handler(
+                    popped_locators_handler(
                         self.0
                             .pop()
-                            .expect("Element should be on the stack at this point"),
+                            .expect("Element should be on the stack at this point")
+                            .handlers_locators,
                     );
                 }
 
                 break;
             }
         }
-    }
-
-    #[inline]
-    fn push(&mut self, element: VirtualElement<'_>) {
-        self.0.push(Rc::new(element.into_unbound_from_input()));
     }
 }

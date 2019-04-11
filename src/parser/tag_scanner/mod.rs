@@ -4,10 +4,7 @@ mod conditions;
 
 use crate::base::{Align, Chunk, Cursor, Range};
 use crate::html::{LocalName, LocalNameHash, Namespace, TextType};
-use crate::parser::state_machine::{
-    FeedbackDirective, ParsingLoopDirective, ParsingLoopTerminationReason, StateMachine,
-    StateResult,
-};
+use crate::parser::state_machine::{FeedbackDirective, StateMachine, StateResult};
 use crate::parser::{
     AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
 };

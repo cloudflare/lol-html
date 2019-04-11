@@ -60,7 +60,7 @@ macro_rules! assert_not_null {
     };
 }
 
-// All these utilities are macros so we can propagate the variable
+// NOTE: all these utilities are macros so we can propagate the variable
 // name to the null pointer assertion.
 macro_rules! to_ref {
     ($ptr:ident) => {{

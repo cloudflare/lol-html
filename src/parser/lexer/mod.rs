@@ -7,8 +7,7 @@ mod lexeme;
 use crate::base::{Align, Chunk, Cursor, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
-    FeedbackDirective, ParsingLoopDirective, ParsingLoopResult, StateMachine, StateMachineBookmark,
-    StateResult,
+    FeedbackDirective, ParsingLoopDirective, StateMachine, StateResult,
 };
 use crate::parser::{
     AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,

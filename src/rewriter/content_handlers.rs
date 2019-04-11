@@ -50,8 +50,10 @@ impl<H> HandlerVec<H> {
     }
 
     #[inline]
-    pub fn has_active(&self) -> bool {
-        self.active_count > 0
+    pub fn if_has_active_set(&self, flags: &mut TokenCaptureFlags, value: TokenCaptureFlags) {
+        if self.active_count > 0 {
+            *flags |= value;
+        }
     }
 
     #[inline]
@@ -76,7 +78,7 @@ impl<H> HandlerVec<H> {
     }
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct ElementContentHandlersLocator {
     element_handler_idx: Option<usize>,
     comment_handler_idx: Option<usize>,
@@ -127,6 +129,8 @@ impl<'h> ContentHandlersDispatcher<'h> {
         }
     }
 
+    // TODO there might be multiple elements on the stack using the same
+    // handlers (e.g. "*" selector). Use counter instead of boolean "active".
     #[inline]
     pub fn set_element_handlers_active(
         &mut self,
@@ -171,22 +175,14 @@ impl<'h> ContentHandlersDispatcher<'h> {
     pub fn get_token_capture_flags(&self) -> TokenCaptureFlags {
         let mut flags = TokenCaptureFlags::empty();
 
-        macro_rules! update_flags {
-            ( $($handlers:ident => $FLAG:ident),* ) => {
-                $(
-                    if self.$handlers.has_active() {
-                        flags |= TokenCaptureFlags::$FLAG;
-                    }
-                )*
-            };
-        }
-
-        update_flags! {
-            doctype_handlers => DOCTYPES,
-            comment_handlers => COMMENTS,
-            text_handlers => TEXT,
-            element_handlers => NEXT_START_TAG
-        }
+        self.doctype_handlers
+            .if_has_active_set(&mut flags, TokenCaptureFlags::DOCTYPES);
+        self.comment_handlers
+            .if_has_active_set(&mut flags, TokenCaptureFlags::COMMENTS);
+        self.text_handlers
+            .if_has_active_set(&mut flags, TokenCaptureFlags::TEXT);
+        self.element_handlers
+            .if_has_active_set(&mut flags, TokenCaptureFlags::NEXT_START_TAG);
 
         flags
     }

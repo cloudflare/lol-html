@@ -35,8 +35,8 @@ mod html;
 mod parser;
 mod rewritable_units;
 mod rewriter;
+mod selectors_vm;
 mod transform_stream;
-mod virtual_tree;
 
 use cfg_if::cfg_if;
 
