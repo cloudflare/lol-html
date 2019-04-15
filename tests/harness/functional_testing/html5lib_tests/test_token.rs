@@ -73,7 +73,9 @@ impl<'de> Deserialize<'de> for TestToken {
 
                                 value
                             }
-                            None => return Err(DeError::invalid_length(actual_length, &$error_msg)),
+                            None => {
+                                return Err(DeError::invalid_length(actual_length, &$error_msg))
+                            }
                         }
                     };
                 }

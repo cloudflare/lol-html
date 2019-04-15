@@ -42,7 +42,7 @@ use cfg_if::cfg_if;
 
 pub use self::rewriter::{
     DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter,
-    HtmlRewriterBuilder, SelectorError,
+    HtmlRewriterBuilder,
 };
 
 pub use self::rewritable_units::{
@@ -51,6 +51,7 @@ pub use self::rewritable_units::{
 };
 
 pub use self::html::TextType;
+pub use self::selectors_vm::SelectorError;
 pub use self::transform_stream::OutputSink;
 
 cfg_if! {
@@ -65,5 +66,8 @@ cfg_if! {
 
         pub use self::base::Bytes;
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace, TAG_STR_PAIRS};
+        pub use self::selectors_vm::{
+            Ast as SelectorsAst, AstNode, Expr, SimpleExpr, AttributeExprOperand
+        };
     }
 }

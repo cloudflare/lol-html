@@ -8,6 +8,7 @@ use html5ever::tokenizer::{
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::string::ToString;
 
 // sends tokens to a given sink, while at the same time converting and
 // recording them into the provided array
@@ -20,10 +21,9 @@ impl<'a, Sink> TokenSinkProxy<'a, Sink> {
     fn push_text_token(&mut self, s: &str) {
         if let Some(&mut TestToken::Text(ref mut last)) = self.tokens.last_mut() {
             *last += s;
-
-            return;
+        } else {
+            self.tokens.push(TestToken::Text(s.to_string()));
         }
-        self.tokens.push(TestToken::Text(s.to_string()));
     }
 }
 
@@ -34,9 +34,9 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
         match token {
             Token::DoctypeToken(ref doctype) => {
                 self.tokens.push(TestToken::Doctype {
-                    name: doctype.name.as_ref().map(|s| s.to_string()),
-                    public_id: doctype.public_id.as_ref().map(|s| s.to_string()),
-                    system_id: doctype.system_id.as_ref().map(|s| s.to_string()),
+                    name: doctype.name.as_ref().map(ToString::to_string),
+                    public_id: doctype.public_id.as_ref().map(ToString::to_string),
+                    system_id: doctype.system_id.as_ref().map(ToString::to_string),
                     force_quirks: doctype.force_quirks,
                 });
             }

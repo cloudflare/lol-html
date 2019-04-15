@@ -1,15 +1,8 @@
 use super::*;
 use crate::rewritable_units::{Comment, Doctype, Element, TextChunk};
+use crate::selectors_vm::SelectorError;
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
-
-#[derive(Fail, Debug, PartialEq, Copy, Clone)]
-pub enum SelectorError {
-    #[fail(display = "The selector is unsupported.")]
-    UnsupportedSelector,
-    #[fail(display = "Invalid CSS selector.")]
-    InvalidSelector,
-}
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum EncodingError {
@@ -98,7 +91,7 @@ impl<'h> HtmlRewriterBuilder<'h> {
     ) -> Result<(), SelectorError> {
         // TODO
         if selector != "*" {
-            return Err(SelectorError::UnsupportedSelector);
+            return Err(SelectorError::UnsupportedSyntax);
         }
 
         let locator = self.0.handlers_dispatcher.add_element_content_handlers(

@@ -96,7 +96,7 @@ fn main() {
 
     let parser = transform_stream.parser();
 
-    parser.switch_text_type(match matches.opt_str("t").as_ref().map(|s| s.as_str()) {
+    parser.switch_text_type(match matches.opt_str("t").as_ref().map(String::as_str) {
         None => TextType::Data,
         Some(state) => TextType::from(state),
     });

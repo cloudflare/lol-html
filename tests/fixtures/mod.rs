@@ -4,5 +4,6 @@ test_modules!(
     tokens,
     element,
     rewriter,
-    selector_matching
+    selector_matching,
+    selectors_vm
 );

@@ -14,34 +14,36 @@ pub enum SelectorError {
     #[fail(display = "Dangling combinator in the selector.")]
     DanglingCombinator,
     #[fail(display = "Unexpected token in the attribute selector.")]
-    UnexpectedTokenInAttributeSelector,
-    #[fail(display = "Pseudo classes and elements are unsupported in selectors.")]
+    UnexpectedTokenInAttribute,
+    #[fail(display = "Unsupported pseudo-class or pseudo-element in the selectors.")]
     UnsupportedPseudoClassOrElement,
-    #[fail(display = "Unexpected identifier in the selector.")]
-    UnexpectedIdent,
+    #[fail(display = "Nested negation in the selector.")]
+    NestedNegation,
     #[fail(display = "Selector with explicit namespaces are not supported.")]
     NamespacedSelector,
-    #[fail(display = "Unexpected token in the attribute selector.")]
-    UnexpectedTokenInAttr,
     #[fail(display = "Invalid or unescaped class name in the selector.")]
     InvalidClassName,
     #[fail(display = "Empty negation in the selector.")]
     EmptyNegation,
     #[fail(display = "Unsupported combinator `{}` in the selector.", _0)]
     UnsupportedCombinator(char),
-    #[fail(display = "Unsupported namespaced attribute selector.")]
-    UnsupportedNamespacedAttributeSelector,
     #[fail(display = "Unsupported syntax in the selector.")]
     UnsupportedSyntax,
 }
 
 impl From<SelectorParseError<'_>> for SelectorError {
     fn from(err: SelectorParseError<'_>) -> Self {
+        // NOTE: always use explicit variants in this match, so we
+        // get compile-time error if new error types were added to
+        // the parser.
+        #[deny(clippy::wildcard_enum_match_arm)]
         match err.kind {
             ParseErrorKind::Basic(err) => match err {
                 BasicParseErrorKind::UnexpectedToken(_) => SelectorError::UnexpectedToken,
                 BasicParseErrorKind::EndOfInput => SelectorError::UnexpectedEnd,
-                _ => SelectorError::UnsupportedSyntax,
+                BasicParseErrorKind::AtRuleBodyInvalid
+                | BasicParseErrorKind::AtRuleInvalid(_)
+                | BasicParseErrorKind::QualifiedRuleInvalid => SelectorError::UnsupportedSyntax,
             },
             ParseErrorKind::Custom(err) => match err {
                 SelectorParseErrorKind::NoQualifiedNameInAttributeSelector(_) => {
@@ -49,25 +51,36 @@ impl From<SelectorParseError<'_>> for SelectorError {
                 }
                 SelectorParseErrorKind::EmptySelector => SelectorError::EmptySelector,
                 SelectorParseErrorKind::DanglingCombinator => SelectorError::DanglingCombinator,
-                SelectorParseErrorKind::UnexpectedTokenInAttributeSelector(_) => {
-                    SelectorError::UnexpectedTokenInAttributeSelector
-                }
-                SelectorParseErrorKind::UnsupportedPseudoClassOrElement(_) => {
+                SelectorParseErrorKind::UnsupportedPseudoClassOrElement(_)
+                | SelectorParseErrorKind::PseudoElementInComplexSelector
+                | SelectorParseErrorKind::NonPseudoElementAfterSlotted
+                | SelectorParseErrorKind::InvalidPseudoElementAfterSlotted
+                | SelectorParseErrorKind::PseudoElementExpectedColon(_)
+                | SelectorParseErrorKind::PseudoElementExpectedIdent(_)
+                | SelectorParseErrorKind::NoIdentForPseudo(_)
+                // NOTE: according to the parser code this error occures only during
+                // the parsing of vendor-specific pseudo-classes.
+                | SelectorParseErrorKind::NonCompoundSelector
+                // NOTE: according to the parser code this error occures only during
+                // the parsing of the :slotted() pseudo-class.
+                | SelectorParseErrorKind::NonSimpleSelectorInNegation => {
                     SelectorError::UnsupportedPseudoClassOrElement
                 }
-                SelectorParseErrorKind::UnexpectedIdent(_) => SelectorError::UnexpectedIdent,
+                // NOTE: this is currently the only case in the parser code
+                // that triggers this error.
+                SelectorParseErrorKind::UnexpectedIdent(_) => SelectorError::NestedNegation,
                 SelectorParseErrorKind::ExpectedNamespace(_) => SelectorError::NamespacedSelector,
                 SelectorParseErrorKind::ExplicitNamespaceUnexpectedToken(_) => {
                     SelectorError::UnexpectedToken
                 }
-                SelectorParseErrorKind::ExpectedBarInAttr(_)
+                SelectorParseErrorKind::UnexpectedTokenInAttributeSelector(_)
+                | SelectorParseErrorKind::ExpectedBarInAttr(_)
                 | SelectorParseErrorKind::BadValueInAttr(_)
                 | SelectorParseErrorKind::InvalidQualNameInAttr(_) => {
-                    SelectorError::UnexpectedTokenInAttr
+                    SelectorError::UnexpectedTokenInAttribute
                 }
                 SelectorParseErrorKind::ClassNeedsIdent(_) => SelectorError::InvalidClassName,
                 SelectorParseErrorKind::EmptyNegation => SelectorError::EmptyNegation,
-                _ => SelectorError::UnsupportedSyntax,
             },
         }
     }

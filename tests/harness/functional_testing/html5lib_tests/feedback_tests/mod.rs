@@ -11,7 +11,7 @@ fn parse_inputs(file: BufReader<File>) -> Vec<String> {
     let mut inputs = Vec::default();
     let mut in_data = 0;
 
-    for line in file.lines().map(|line| line.unwrap()) {
+    for line in file.lines().map(Result::unwrap) {
         if line == "#data" {
             in_data = 1;
         } else if line.starts_with('#') {
@@ -49,7 +49,7 @@ pub fn get_test_cases() -> Vec<TestCase> {
             TestCase {
                 description: input
                     .chars()
-                    .flat_map(|c| c.escape_default())
+                    .flat_map(char::escape_default)
                     .collect::<String>()
                     + " (with feedback)",
                 expected_tokens: expected_tokens::get(&input),
