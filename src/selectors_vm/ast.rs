@@ -179,9 +179,14 @@ impl<P> AstNode<P> {
 }
 
 #[derive(Default, PartialEq, Eq, Debug)]
-pub struct Ast<P>(pub Vec<AstNode<P>>)
+pub struct Ast<P>
 where
-    P: PartialEq + Eq + Copy + Debug;
+    P: PartialEq + Eq + Copy + Debug,
+{
+    pub root: Vec<AstNode<P>>,
+    // NOTE: used to preallocate instruction vector during compilation.
+    pub cumulative_node_count: usize,
+}
 
 impl<P> Ast<P>
 where
@@ -198,7 +203,11 @@ where
     }
 
     #[inline]
-    fn host_expressions(predicate: Predicate, branches: &mut Vec<AstNode<P>>) -> usize {
+    fn host_expressions(
+        predicate: Predicate,
+        branches: &mut Vec<AstNode<P>>,
+        cumulative_node_count: &mut usize,
+    ) -> usize {
         match branches
             .iter()
             .enumerate()
@@ -207,6 +216,7 @@ where
             Some((i, _)) => i,
             None => {
                 branches.push(AstNode::new(predicate));
+                *cumulative_node_count += 1;
 
                 branches.len() - 1
             }
@@ -215,11 +225,12 @@ where
 
     fn add_parsed_selector(&mut self, selector: Selector<SelectorImplDescriptor>, payload: P) {
         let mut predicate = Predicate::default();
-        let mut branches = &mut self.0;
+        let mut branches = &mut self.root;
 
         macro_rules! host_and_switch_branch_vec {
             ($branches:ident) => {{
-                let node_idx = Self::host_expressions(predicate, branches);
+                let node_idx =
+                    Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
 
                 branches = branches[node_idx]
                     .$branches
@@ -243,7 +254,7 @@ where
             }
         }
 
-        let node_idx = Self::host_expressions(predicate, branches);
+        let node_idx = Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
 
         branches[node_idx]
             .payload
