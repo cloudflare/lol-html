@@ -1,5 +1,8 @@
 use super::attribute_matcher::{is_attr_whitespace, AttributeMatcher};
-use super::{Ast, AttributeExpr, AttributeExprOperand, NonAttributeExpr, Program};
+use super::{
+    AddressRange, Ast, AstNode, AttributeExpr, AttributeExprOperand, Instr, NonAttributeExpr,
+    Predicate, Program, ThreadState,
+};
 use crate::base::Bytes;
 use crate::html::LocalName;
 use encoding_rs::Encoding;
@@ -40,7 +43,8 @@ where
     P: PartialEq + Eq + Copy + Debug,
 {
     encoding: &'static Encoding,
-    program: Program<P>,
+    instructions: Vec<Instr<P>>,
+    free_space_ptr: usize,
 }
 
 impl<P> Compiler<P>
@@ -50,7 +54,8 @@ where
     pub fn new(encoding: &'static Encoding) -> Self {
         Compiler {
             encoding,
-            program: Program::default(),
+            instructions: Vec::default(),
+            free_space_ptr: 0,
         }
     }
 
@@ -143,7 +148,55 @@ where
         }
     }
 
-    pub fn compile(self, ast: Ast<P>) -> Program<P> {
-        self.program
+    fn compile_predicate(
+        &self,
+        predicate: Predicate,
+        associated_thread_state: ThreadState<P>,
+    ) -> Instr<P> {
+        unimplemented!();
+    }
+
+    #[inline]
+    fn reserve_space_for_nodes(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
+        let address_range = self.free_space_ptr..nodes.len();
+
+        self.free_space_ptr = address_range.end;
+
+        debug_assert!(self.free_space_ptr < self.instructions.len());
+
+        address_range
+    }
+
+    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>) -> AddressRange {
+        // NOTE: we need sibling nodes to be in a contiguous region, so
+        // we can reference them by range instead of vector of addresses.
+        let address_range = self.reserve_space_for_nodes(&nodes);
+
+        for (i, node) in nodes.into_iter().enumerate() {
+            let associated_thread_state = ThreadState {
+                matched_payload: node.payload,
+                jumps: node.children.map(|c| self.compile_nodes(c)),
+                hereditary_jumps: node.descendants.map(|d| self.compile_nodes(d)),
+            };
+
+            self.instructions[address_range.start + i] =
+                self.compile_predicate(node.predicate, associated_thread_state);
+        }
+
+        address_range
+    }
+
+    pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
+        self.instructions
+            .resize_with(ast.cumulative_node_count, || {
+                Box::new(|_| unreachable!("Instruction stub should never be executed"))
+            });
+
+        let entry_points = self.compile_nodes(ast.root);
+
+        Program {
+            instructions: self.instructions,
+            entry_points,
+        }
     }
 }
