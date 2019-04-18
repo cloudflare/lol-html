@@ -33,13 +33,9 @@ impl<'i> Doctype<'i> {
 
     #[inline]
     pub fn name(&self) -> Option<String> {
-        self.name.as_ref().map(|n| {
-            let mut name = n.as_string(self.encoding);
-
-            name.make_ascii_lowercase();
-
-            name
-        })
+        self.name
+            .as_ref()
+            .map(|n| n.as_lowercase_string(self.encoding))
     }
 
     #[inline]

@@ -17,8 +17,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::lexer::{
-    Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline, SharedAttributeBuffer,
-    TagLexeme, TagTokenOutline,
+    AttributeOutline, Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline,
+    SharedAttributeBuffer, TagLexeme, TagTokenOutline,
 };
 pub use self::tag_scanner::TagHintSink;
 pub use self::tree_builder_simulator::AmbiguityGuardError;

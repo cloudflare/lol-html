@@ -25,7 +25,7 @@ pub trait LexemeSink {
 }
 
 pub type State<S> = fn(&mut Lexer<S>, &Chunk<'_>) -> StateResult;
-pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOultine>>>;
+pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOutline>>>;
 
 pub struct Lexer<S: LexemeSink> {
     input_cursor: Cursor,
@@ -37,7 +37,7 @@ pub struct Lexer<S: LexemeSink> {
     state: State<S>,
     current_tag_token: Option<TagTokenOutline>,
     current_non_tag_content_token: Option<NonTagContentTokenOutline>,
-    current_attr: Option<AttributeOultine>,
+    current_attr: Option<AttributeOutline>,
     last_start_tag_name_hash: LocalNameHash,
     closing_quote: u8,
     attr_buffer: SharedAttributeBuffer,

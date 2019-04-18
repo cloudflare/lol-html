@@ -52,8 +52,8 @@ impl<'i> Attribute<'i> {
             // character reference. Character references are not
             // supported in attribute names, so we need to bail.
             match Bytes::from_str_without_replacements(name, encoding) {
-                Some(name) => Ok(name.into_owned()),
-                None => Err(AttributeNameError::UnencodableCharacter),
+                Ok(name) => Ok(name.into_owned()),
+                Err(_) => Err(AttributeNameError::UnencodableCharacter),
             }
         }
     }
@@ -74,11 +74,7 @@ impl<'i> Attribute<'i> {
 
     #[inline]
     pub fn name(&self) -> String {
-        let mut name = self.name.as_string(self.encoding);
-
-        name.make_ascii_lowercase();
-
-        name
+        self.name.as_lowercase_string(self.encoding)
     }
 
     #[inline]

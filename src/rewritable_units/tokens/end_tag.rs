@@ -26,11 +26,7 @@ impl<'i> EndTag<'i> {
 
     #[inline]
     pub fn name(&self) -> String {
-        let mut name = self.name.as_string(self.encoding);
-
-        name.make_ascii_lowercase();
-
-        name
+        self.name.as_lowercase_string(self.encoding)
     }
 
     #[inline]

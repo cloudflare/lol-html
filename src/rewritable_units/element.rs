@@ -45,8 +45,8 @@ impl<'r, 't> Element<'r, 't> {
                     // character reference. Character references are not
                     // supported in tag names, so we need to bail.
                     match Bytes::from_str_without_replacements(name, self.encoding) {
-                        Some(name) => Ok(name.into_owned()),
-                        None => Err(TagNameError::UnencodableCharacter),
+                        Ok(name) => Ok(name.into_owned()),
+                        Err(_) => Err(TagNameError::UnencodableCharacter),
                     }
                 }
             }

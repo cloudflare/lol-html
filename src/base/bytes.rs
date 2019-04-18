@@ -24,19 +24,24 @@ impl<'b> Bytes<'b> {
     pub fn from_str_without_replacements(
         string: &'b str,
         encoding: &'static Encoding,
-    ) -> Option<Self> {
+    ) -> Result<Self, ()> {
         let (res, _, has_replacements) = encoding.encode(string);
 
         if has_replacements {
-            None
+            Err(())
         } else {
-            Some(res.into())
+            Ok(res.into())
         }
     }
 
     #[inline]
     pub fn as_string(&self, encoding: &'static Encoding) -> String {
         encoding.decode(self).0.into_owned()
+    }
+
+    #[inline]
+    pub fn as_lowercase_string(&self, encoding: &'static Encoding) -> String {
+        encoding.decode(self).0.to_ascii_lowercase()
     }
 
     #[inline]

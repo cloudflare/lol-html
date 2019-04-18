@@ -2,14 +2,14 @@ use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::SharedAttributeBuffer;
 
-#[derive(Debug, Default)]
-pub struct AttributeOultine {
+#[derive(Debug, Default, Copy, Clone)]
+pub struct AttributeOutline {
     pub name: Range,
     pub value: Range,
     pub raw_range: Range,
 }
 
-impl Align for AttributeOultine {
+impl Align for AttributeOutline {
     #[inline]
     fn align(&mut self, offset: usize) {
         self.name.align(offset);

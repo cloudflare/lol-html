@@ -6,12 +6,40 @@ use crate::parser::{
     TagLexeme, TagTokenOutline,
 };
 use crate::rewritable_units::{
-    Serialize, ToToken, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
+    Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
 use encoding_rs::Encoding;
 use std::rc::Rc;
 
 use TagTokenOutline::*;
+
+pub type AuxElementInfoRequest<C> =
+    Box<dyn FnMut(&mut C, &Chunk<'_>, SharedAttributeBuffer, bool) -> TokenCaptureFlags>;
+
+pub type ElementStartHandlingResult<C> = Result<TokenCaptureFlags, AuxElementInfoRequest<C>>;
+
+pub trait TransformController: Sized {
+    fn initial_capture_flags(&self) -> TokenCaptureFlags;
+
+    fn handle_element_start(
+        &mut self,
+        name: LocalName<'_>,
+        ns: Namespace,
+    ) -> ElementStartHandlingResult<Self>;
+
+    fn handle_element_end(&mut self, name: LocalName<'_>) -> TokenCaptureFlags;
+    fn handle_token(&mut self, token: &mut Token<'_>);
+}
+
+pub trait OutputSink {
+    fn handle_chunk(&mut self, chunk: &[u8]);
+}
+
+impl<F: FnMut(&[u8])> OutputSink for F {
+    fn handle_chunk(&mut self, chunk: &[u8]) {
+        self(chunk);
+    }
+}
 
 pub struct Dispatcher<C, O>
 where
@@ -116,7 +144,9 @@ where
             ($handler:expr, $attributes:expr, $self_closing:expr) => {
                 $handler(
                     &mut self.transform_controller,
-                    AuxElementInfo::new(input, Rc::clone($attributes), $self_closing),
+                    input,
+                    Rc::clone($attributes),
+                    $self_closing,
                 )
             };
         }

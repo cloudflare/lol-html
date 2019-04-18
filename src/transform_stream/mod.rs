@@ -1,30 +1,20 @@
 mod dispatcher;
-mod transform_controller;
 
 use self::dispatcher::Dispatcher;
 use crate::base::{Buffer, Chunk};
-use crate::parser::{Parser, ParserDirective};
+
+use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use encoding_rs::Encoding;
 use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::transform_controller::*;
+pub use self::dispatcher::{ElementStartHandlingResult, OutputSink, TransformController};
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",
     "tag or a comment that is captured by the specified selector."
 );
-
-pub trait OutputSink {
-    fn handle_chunk(&mut self, chunk: &[u8]);
-}
-
-impl<F: FnMut(&[u8])> OutputSink for F {
-    fn handle_chunk(&mut self, chunk: &[u8]) {
-        self(chunk);
-    }
-}
 
 pub struct TransformStream<C, O>
 where

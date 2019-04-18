@@ -1,5 +1,6 @@
 use super::Tag;
 use crate::base::{Bytes, Chunk, Range};
+use encoding_rs::Encoding;
 
 // NOTE: All standard tag names contain only ASCII alpha characters
 // and digits from 1 to 6 (in numbered header tags, i.e. <h1> - <h6>).
@@ -118,6 +119,20 @@ impl<'i> LocalName<'i> {
         match self {
             LocalName::Bytes(b) => LocalName::Bytes(b.into_owned()),
             LocalName::Hash(h) => LocalName::Hash(h),
+        }
+    }
+
+    #[inline]
+    pub fn from_str_without_replacements<'s>(
+        string: &'s str,
+        encoding: &'static Encoding,
+    ) -> Result<LocalName<'s>, ()> {
+        let hash = LocalNameHash::from(string);
+
+        if hash.is_empty() {
+            Bytes::from_str_without_replacements(string, encoding).map(LocalName::Bytes)
+        } else {
+            Ok(LocalName::Hash(hash))
         }
     }
 }

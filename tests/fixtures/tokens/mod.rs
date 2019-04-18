@@ -7,7 +7,7 @@ macro_rules! serialization_test {
         // NOTE: give test cases type annotation to avoid boilerplate code in tests.
         let test_cases: &[(
             &'static str,
-            Box<Fn(&mut $TokenType<'_>, &'static Encoding)>,
+            Box<dyn Fn(&mut $TokenType<'_>, &'static Encoding)>,
             &'static str,
         )] = $test_cases;
 

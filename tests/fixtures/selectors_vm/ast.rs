@@ -1,4 +1,7 @@
-use cool_thing::{AstNode, AttributeExprOperand, Expr, SelectorError, SelectorsAst, SimpleExpr};
+use cool_thing::{
+    AstNode, AttributeExpr, AttributeExprOperand, Expr, NonAttributeExpr, Predicate, SelectorError,
+    SelectorsAst,
+};
 use selectors::attr::ParsedCaseSensitivity;
 
 fn assert_ast(selectors: &[&str], expected: SelectorsAst<usize>) {
@@ -21,102 +24,286 @@ fn assert_err(selector: &str, expected_err: SelectorError) {
 }
 
 test_fixture!("Selectors AST", {
-    test("Basic expressions", {
-        macro_rules! assert_simple_expr {
-            ($([$selector:expr, $expr:expr]),+) => {
-                $(
-                     assert_ast(
-                        &[$selector],
-                        SelectorsAst(vec![AstNode {
-                            expressions: vec![$expr],
-                            children: None,
-                            descendants: None,
-                            payload: Some(vec![0])
-                        }]),
-                    );
-                )+
-            };
-        }
-
-        assert_simple_expr!(
-            ["*", Expr::Simple(SimpleExpr::ExplicitAny)],
-            ["div", Expr::Simple(SimpleExpr::LocalName("div".into()))],
-            ["#foo", Expr::Simple(SimpleExpr::Id("foo".into()))],
-            [".bar", Expr::Simple(SimpleExpr::Class("bar".into()))],
-            [
-                "[foo]",
-                Expr::Simple(SimpleExpr::AttributeExists("foo".into()))
-            ],
-            [
-                r#"[foo="bar"]"#,
-                Expr::Simple(SimpleExpr::AttributeEqual(AttributeExprOperand {
-                    name: "foo".into(),
-                    value: "bar".into(),
-                    case_sensitivity: ParsedCaseSensitivity::CaseSensitive
-                }))
-            ],
-            [
-                r#"[foo~="bar" i]"#,
-                Expr::Simple(SimpleExpr::AttributeIncludes(AttributeExprOperand {
-                    name: "foo".into(),
-                    value: "bar".into(),
-                    case_sensitivity: ParsedCaseSensitivity::AsciiCaseInsensitive
-                }))
-            ],
-            [
-                r#"[foo|="bar" s]"#,
-                Expr::Simple(SimpleExpr::AttributeDashMatch(AttributeExprOperand {
-                    name: "foo".into(),
-                    value: "bar".into(),
-                    case_sensitivity: ParsedCaseSensitivity::ExplicitCaseSensitive
-                }))
-            ],
-            [
-                r#"[foo^="bar"]"#,
-                Expr::Simple(SimpleExpr::AttributePrefix(AttributeExprOperand {
-                    name: "foo".into(),
-                    value: "bar".into(),
-                    case_sensitivity: ParsedCaseSensitivity::CaseSensitive
-                }))
-            ],
-            [
-                r#"[foo*="bar"]"#,
-                Expr::Simple(SimpleExpr::AttributeSubstring(AttributeExprOperand {
-                    name: "foo".into(),
-                    value: "bar".into(),
-                    case_sensitivity: ParsedCaseSensitivity::CaseSensitive
-                }))
-            ],
-            [
-                r#"[foo$="bar"]"#,
-                Expr::Simple(SimpleExpr::AttributeSuffix(AttributeExprOperand {
-                    name: "foo".into(),
-                    value: "bar".into(),
-                    case_sensitivity: ParsedCaseSensitivity::CaseSensitive
-                }))
-            ],
-            [r#"[foo*=""]"#, Expr::Simple(SimpleExpr::Unmatchable)],
-            [
+    test("Simple non-attribute expressions", {
+        vec![
+            (
+                "*",
+                Expr {
+                    simple_expr: NonAttributeExpr::ExplicitAny,
+                    negation: false,
+                },
+            ),
+            (
+                "div",
+                Expr {
+                    simple_expr: NonAttributeExpr::LocalName("div".into()),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo*=""]"#,
+                Expr {
+                    simple_expr: NonAttributeExpr::Unmatchable,
+                    negation: false,
+                },
+            ),
+            (
                 ":not(div)",
-                Expr::Negation(vec![SimpleExpr::LocalName("div".into()),])
-            ]
-        );
+                Expr {
+                    simple_expr: NonAttributeExpr::LocalName("div".into()),
+                    negation: true,
+                },
+            ),
+        ]
+        .into_iter()
+        .for_each(|(selector, expected)| {
+            assert_ast(
+                &[selector],
+                SelectorsAst(vec![AstNode {
+                    predicate: Predicate {
+                        non_attr_exprs: Some(vec![expected]),
+                        attr_exprs: None,
+                    },
+                    children: None,
+                    descendants: None,
+                    payload: Some(vec![0]),
+                }]),
+            );
+        });
+    });
+
+    test("Simple attribute expressions", {
+        vec![
+            (
+                "#foo",
+                Expr {
+                    simple_expr: AttributeExpr::Id("foo".into()),
+                    negation: false,
+                },
+            ),
+            (
+                ".bar",
+                Expr {
+                    simple_expr: AttributeExpr::Class("bar".into()),
+                    negation: false,
+                },
+            ),
+            (
+                "[foo]",
+                Expr {
+                    simple_expr: AttributeExpr::AttributeExists("foo".into()),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo="bar"]"#,
+                Expr {
+                    simple_expr: AttributeExpr::AttributeEqual(AttributeExprOperand {
+                        name: "foo".into(),
+                        value: "bar".into(),
+                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                    }),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo~="bar" i]"#,
+                Expr {
+                    simple_expr: AttributeExpr::AttributeIncludes(AttributeExprOperand {
+                        name: "foo".into(),
+                        value: "bar".into(),
+                        case_sensitivity: ParsedCaseSensitivity::AsciiCaseInsensitive,
+                    }),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo|="bar" s]"#,
+                Expr {
+                    simple_expr: AttributeExpr::AttributeDashMatch(AttributeExprOperand {
+                        name: "foo".into(),
+                        value: "bar".into(),
+                        case_sensitivity: ParsedCaseSensitivity::ExplicitCaseSensitive,
+                    }),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo^="bar"]"#,
+                Expr {
+                    simple_expr: AttributeExpr::AttributePrefix(AttributeExprOperand {
+                        name: "foo".into(),
+                        value: "bar".into(),
+                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                    }),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo*="bar"]"#,
+                Expr {
+                    simple_expr: AttributeExpr::AttributeSubstring(AttributeExprOperand {
+                        name: "foo".into(),
+                        value: "bar".into(),
+                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                    }),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo$="bar"]"#,
+                Expr {
+                    simple_expr: AttributeExpr::AttributeSuffix(AttributeExprOperand {
+                        name: "foo".into(),
+                        value: "bar".into(),
+                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                    }),
+                    negation: false,
+                },
+            ),
+            (
+                r#":not([foo$="bar"])"#,
+                Expr {
+                    simple_expr: AttributeExpr::AttributeSuffix(AttributeExprOperand {
+                        name: "foo".into(),
+                        value: "bar".into(),
+                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                    }),
+                    negation: true,
+                },
+            ),
+        ]
+        .into_iter()
+        .for_each(|(selector, expected)| {
+            assert_ast(
+                &[selector],
+                SelectorsAst(vec![AstNode {
+                    predicate: Predicate {
+                        non_attr_exprs: None,
+                        attr_exprs: Some(vec![expected]),
+                    },
+                    children: None,
+                    descendants: None,
+                    payload: Some(vec![0]),
+                }]),
+            );
+        });
     });
 
     test("Compound selectors", {
         assert_ast(
-            &[".foo#bar[baz]"],
+            &["div.foo#bar:not([baz])"],
             SelectorsAst(vec![AstNode {
-                expressions: vec![
-                    Expr::Simple(SimpleExpr::AttributeExists("baz".into())),
-                    Expr::Simple(SimpleExpr::Id("bar".into())),
-                    Expr::Simple(SimpleExpr::Class("foo".into())),
-                ],
+                predicate: Predicate {
+                    non_attr_exprs: Some(vec![Expr {
+                        simple_expr: NonAttributeExpr::LocalName("div".into()),
+                        negation: false,
+                    }]),
+                    attr_exprs: Some(vec![
+                        Expr {
+                            simple_expr: AttributeExpr::AttributeExists("baz".into()),
+                            negation: true,
+                        },
+                        Expr {
+                            simple_expr: AttributeExpr::Id("bar".into()),
+                            negation: false,
+                        },
+                        Expr {
+                            simple_expr: AttributeExpr::Class("foo".into()),
+                            negation: false,
+                        },
+                    ]),
+                },
                 children: None,
                 descendants: None,
                 payload: Some(vec![0]),
             }]),
         );
+    });
+
+    test("Multiple payloads", {
+        assert_ast(
+            &["#foo", "#foo"],
+            SelectorsAst(vec![AstNode {
+                predicate: Predicate {
+                    non_attr_exprs: None,
+                    attr_exprs: Some(vec![Expr {
+                        simple_expr: AttributeExpr::Id("foo".into()),
+                        negation: false,
+                    }]),
+                },
+                children: None,
+                descendants: None,
+                payload: Some(vec![0, 1]),
+            }]),
+        );
+    });
+
+    test("Selector lists", {
+        assert_ast(
+            &["#foo > div, #foo > span", "#foo > .c1, #foo > .c2"],
+            SelectorsAst(vec![AstNode {
+                predicate: Predicate {
+                    non_attr_exprs: None,
+                    attr_exprs: Some(vec![Expr {
+                        simple_expr: AttributeExpr::Id("foo".into()),
+                        negation: false,
+                    }]),
+                },
+                children: Some(vec![
+                    AstNode {
+                        predicate: Predicate {
+                            non_attr_exprs: Some(vec![Expr {
+                                simple_expr: NonAttributeExpr::LocalName("div".into()),
+                                negation: false,
+                            }]),
+                            attr_exprs: None,
+                        },
+                        children: None,
+                        descendants: None,
+                        payload: Some(vec![0]),
+                    },
+                    AstNode {
+                        predicate: Predicate {
+                            non_attr_exprs: Some(vec![Expr {
+                                simple_expr: NonAttributeExpr::LocalName("span".into()),
+                                negation: false,
+                            }]),
+                            attr_exprs: None,
+                        },
+                        children: None,
+                        descendants: None,
+                        payload: Some(vec![0]),
+                    },
+                    AstNode {
+                        predicate: Predicate {
+                            non_attr_exprs: None,
+                            attr_exprs: Some(vec![Expr {
+                                simple_expr: AttributeExpr::Class("c1".into()),
+                                negation: false,
+                            }]),
+                        },
+                        children: None,
+                        descendants: None,
+                        payload: Some(vec![1]),
+                    },
+                    AstNode {
+                        predicate: Predicate {
+                            non_attr_exprs: None,
+                            attr_exprs: Some(vec![Expr {
+                                simple_expr: AttributeExpr::Class("c2".into()),
+                                negation: false,
+                            }]),
+                        },
+                        children: None,
+                        descendants: None,
+                        payload: Some(vec![1]),
+                    },
+                ]),
+                descendants: None,
+                payload: None,
+            }]),
+        )
     });
 
     test("Combinators", {
@@ -131,19 +318,41 @@ test_fixture!("Selectors AST", {
             ],
             SelectorsAst(vec![
                 AstNode {
-                    expressions: vec![Expr::Simple(SimpleExpr::Class("c1".into()))],
+                    predicate: Predicate {
+                        non_attr_exprs: None,
+                        attr_exprs: Some(vec![Expr {
+                            simple_expr: AttributeExpr::Class("c1".into()),
+                            negation: false,
+                        }]),
+                    },
                     children: Some(vec![
                         AstNode {
-                            expressions: vec![Expr::Simple(SimpleExpr::Class("c2".into()))],
+                            predicate: Predicate {
+                                non_attr_exprs: None,
+                                attr_exprs: Some(vec![Expr {
+                                    simple_expr: AttributeExpr::Class("c2".into()),
+                                    negation: false,
+                                }]),
+                            },
                             children: None,
                             descendants: Some(vec![
                                 AstNode {
-                                    expressions: vec![Expr::Simple(SimpleExpr::Class("c3".into()))],
+                                    predicate: Predicate {
+                                        non_attr_exprs: None,
+                                        attr_exprs: Some(vec![Expr {
+                                            simple_expr: AttributeExpr::Class("c3".into()),
+                                            negation: false,
+                                        }]),
+                                    },
                                     children: None,
                                     descendants: Some(vec![AstNode {
-                                        expressions: vec![Expr::Simple(SimpleExpr::Id(
-                                            "foo".into(),
-                                        ))],
+                                        predicate: Predicate {
+                                            non_attr_exprs: None,
+                                            attr_exprs: Some(vec![Expr {
+                                                simple_expr: AttributeExpr::Id("foo".into()),
+                                                negation: false,
+                                            }]),
+                                        },
                                         children: None,
                                         descendants: None,
                                         payload: Some(vec![0]),
@@ -151,7 +360,13 @@ test_fixture!("Selectors AST", {
                                     payload: None,
                                 },
                                 AstNode {
-                                    expressions: vec![Expr::Simple(SimpleExpr::Id("bar".into()))],
+                                    predicate: Predicate {
+                                        non_attr_exprs: None,
+                                        attr_exprs: Some(vec![Expr {
+                                            simple_expr: AttributeExpr::Id("bar".into()),
+                                            negation: false,
+                                        }]),
+                                    },
                                     children: None,
                                     descendants: None,
                                     payload: Some(vec![1]),
@@ -160,7 +375,13 @@ test_fixture!("Selectors AST", {
                             payload: None,
                         },
                         AstNode {
-                            expressions: vec![Expr::Simple(SimpleExpr::Id("qux".into()))],
+                            predicate: Predicate {
+                                non_attr_exprs: None,
+                                attr_exprs: Some(vec![Expr {
+                                    simple_expr: AttributeExpr::Id("qux".into()),
+                                    negation: false,
+                                }]),
+                            },
                             children: None,
                             descendants: None,
                             payload: Some(vec![2]),
@@ -168,20 +389,34 @@ test_fixture!("Selectors AST", {
                     ]),
                     descendants: Some(vec![
                         AstNode {
-                            expressions: vec![Expr::Simple(SimpleExpr::Id("baz".into()))],
+                            predicate: Predicate {
+                                non_attr_exprs: None,
+                                attr_exprs: Some(vec![Expr {
+                                    simple_expr: AttributeExpr::Id("baz".into()),
+                                    negation: false,
+                                }]),
+                            },
                             children: None,
                             descendants: None,
                             payload: Some(vec![3]),
                         },
                         AstNode {
-                            expressions: vec![Expr::Simple(SimpleExpr::AttributeExists(
-                                "foo".into(),
-                            ))],
+                            predicate: Predicate {
+                                non_attr_exprs: None,
+                                attr_exprs: Some(vec![Expr {
+                                    simple_expr: AttributeExpr::AttributeExists("foo".into()),
+                                    negation: false,
+                                }]),
+                            },
                             children: None,
                             descendants: Some(vec![AstNode {
-                                expressions: vec![Expr::Simple(SimpleExpr::AttributeExists(
-                                    "bar".into(),
-                                ))],
+                                predicate: Predicate {
+                                    non_attr_exprs: None,
+                                    attr_exprs: Some(vec![Expr {
+                                        simple_expr: AttributeExpr::AttributeExists("bar".into()),
+                                        negation: false,
+                                    }]),
+                                },
                                 children: None,
                                 descendants: None,
                                 payload: Some(vec![4]),
@@ -192,62 +427,19 @@ test_fixture!("Selectors AST", {
                     payload: None,
                 },
                 AstNode {
-                    expressions: vec![Expr::Simple(SimpleExpr::Id("quz".into()))],
+                    predicate: Predicate {
+                        non_attr_exprs: None,
+                        attr_exprs: Some(vec![Expr {
+                            simple_expr: AttributeExpr::Id("quz".into()),
+                            negation: false,
+                        }]),
+                    },
                     children: None,
                     descendants: None,
                     payload: Some(vec![5]),
                 },
             ]),
         );
-    });
-
-    test("Multiple payloads", {
-        assert_ast(
-            &["#foo", "#foo"],
-            SelectorsAst(vec![AstNode {
-                expressions: vec![Expr::Simple(SimpleExpr::Id("foo".into()))],
-                children: None,
-                descendants: None,
-                payload: Some(vec![0, 1]),
-            }]),
-        );
-    });
-
-    test("Selector lists", {
-        assert_ast(
-            &["#foo > div, #foo > span", "#foo > .c1, #foo > .c2"],
-            SelectorsAst(vec![AstNode {
-                expressions: vec![Expr::Simple(SimpleExpr::Id("foo".into()))],
-                children: Some(vec![
-                    AstNode {
-                        expressions: vec![Expr::Simple(SimpleExpr::LocalName("div".into()))],
-                        children: None,
-                        descendants: None,
-                        payload: Some(vec![0]),
-                    },
-                    AstNode {
-                        expressions: vec![Expr::Simple(SimpleExpr::LocalName("span".into()))],
-                        children: None,
-                        descendants: None,
-                        payload: Some(vec![0]),
-                    },
-                    AstNode {
-                        expressions: vec![Expr::Simple(SimpleExpr::Class("c1".into()))],
-                        children: None,
-                        descendants: None,
-                        payload: Some(vec![1]),
-                    },
-                    AstNode {
-                        expressions: vec![Expr::Simple(SimpleExpr::Class("c2".into()))],
-                        children: None,
-                        descendants: None,
-                        payload: Some(vec![1]),
-                    },
-                ]),
-                descendants: None,
-                payload: None,
-            }]),
-        )
     });
 
     test("Parse errors", {

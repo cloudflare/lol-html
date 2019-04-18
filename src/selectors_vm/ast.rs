@@ -4,8 +4,6 @@ use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component, Selector};
 use std::fmt::Debug;
 
-type AstNodeVec<P> = Vec<AstNode<P>>;
-
 #[derive(Eq, PartialEq, Debug)]
 pub struct AttributeExprOperand {
     pub name: String,
@@ -14,9 +12,7 @@ pub struct AttributeExprOperand {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum SimpleExpr {
-    ExplicitAny,
-    LocalName(String),
+pub enum AttributeExpr {
     Id(String),
     Class(String),
     AttributeExists(String),
@@ -26,7 +22,18 @@ pub enum SimpleExpr {
     AttributePrefix(AttributeExprOperand),
     AttributeSubstring(AttributeExprOperand),
     AttributeSuffix(AttributeExprOperand),
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum NonAttributeExpr {
+    ExplicitAny,
     Unmatchable,
+    LocalName(String),
+}
+
+enum SimpleExpr {
+    NonAttributeExpr(NonAttributeExpr),
+    AttributeExpr(AttributeExpr),
 }
 
 impl SimpleExpr {
@@ -36,7 +43,7 @@ impl SimpleExpr {
         name: &str,
         value: &str,
         case_sensitivity: ParsedCaseSensitivity,
-    ) -> Self {
+    ) -> AttributeExpr {
         use AttrSelectorOperator::*;
 
         let operand = AttributeExprOperand {
@@ -46,12 +53,12 @@ impl SimpleExpr {
         };
 
         match operator {
-            DashMatch => SimpleExpr::AttributeDashMatch(operand),
-            Equal => SimpleExpr::AttributeEqual(operand),
-            Includes => SimpleExpr::AttributeIncludes(operand),
-            Prefix => SimpleExpr::AttributePrefix(operand),
-            Substring => SimpleExpr::AttributeSubstring(operand),
-            Suffix => SimpleExpr::AttributeSuffix(operand),
+            DashMatch => AttributeExpr::AttributeDashMatch(operand),
+            Equal => AttributeExpr::AttributeEqual(operand),
+            Includes => AttributeExpr::AttributeIncludes(operand),
+            Prefix => AttributeExpr::AttributePrefix(operand),
+            Substring => AttributeExpr::AttributeSubstring(operand),
+            Suffix => AttributeExpr::AttributeSuffix(operand),
         }
     }
 }
@@ -60,15 +67,19 @@ impl From<&Component<SelectorImplDescriptor>> for SimpleExpr {
     #[inline]
     fn from(component: &Component<SelectorImplDescriptor>) -> Self {
         match component {
-            Component::LocalName(n) => SimpleExpr::LocalName(n.name.to_owned()),
-            Component::ExplicitUniversalType | Component::ExplicitAnyNamespace => {
-                SimpleExpr::ExplicitAny
+            Component::LocalName(n) => {
+                SimpleExpr::NonAttributeExpr(NonAttributeExpr::LocalName(n.name.to_owned()))
             }
-            Component::ExplicitNoNamespace => SimpleExpr::Unmatchable,
-            Component::ID(id) => SimpleExpr::Id(id.to_owned()),
-            Component::Class(c) => SimpleExpr::Class(c.to_owned()),
+            Component::ExplicitUniversalType | Component::ExplicitAnyNamespace => {
+                SimpleExpr::NonAttributeExpr(NonAttributeExpr::ExplicitAny)
+            }
+            Component::ExplicitNoNamespace => {
+                SimpleExpr::NonAttributeExpr(NonAttributeExpr::Unmatchable)
+            }
+            Component::ID(id) => SimpleExpr::AttributeExpr(AttributeExpr::Id(id.to_owned())),
+            Component::Class(c) => SimpleExpr::AttributeExpr(AttributeExpr::Class(c.to_owned())),
             Component::AttributeInNoNamespaceExists { local_name, .. } => {
-                SimpleExpr::AttributeExists(local_name.to_owned())
+                SimpleExpr::AttributeExpr(AttributeExpr::AttributeExists(local_name.to_owned()))
             }
             &Component::AttributeInNoNamespace {
                 ref local_name,
@@ -78,9 +89,14 @@ impl From<&Component<SelectorImplDescriptor>> for SimpleExpr {
                 never_matches,
             } => {
                 if never_matches {
-                    SimpleExpr::Unmatchable
+                    SimpleExpr::NonAttributeExpr(NonAttributeExpr::Unmatchable)
                 } else {
-                    Self::attr_expr_for_operator(operator, local_name, value, case_sensitivity)
+                    SimpleExpr::AttributeExpr(Self::attr_expr_for_operator(
+                        operator,
+                        local_name,
+                        value,
+                        case_sensitivity,
+                    ))
                 }
             }
             // NOTE: the rest of the components are explicit namespace or
@@ -95,33 +111,66 @@ impl From<&Component<SelectorImplDescriptor>> for SimpleExpr {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum Expr {
-    Simple(SimpleExpr),
-    Negation(Vec<SimpleExpr>),
+pub struct Expr<E>
+where
+    E: PartialEq + Eq + Debug,
+{
+    pub simple_expr: E,
+    pub negation: bool,
 }
 
-impl From<&Component<SelectorImplDescriptor>> for Expr {
+impl<E> Expr<E>
+where
+    E: PartialEq + Eq + Debug,
+{
     #[inline]
-    fn from(component: &Component<SelectorImplDescriptor>) -> Self {
-        match component {
-            Component::Negation(e) => Expr::Negation(e.iter().map(SimpleExpr::from).collect()),
-            _ => Expr::Simple(component.into()),
+    fn new(simple_expr: E, negation: bool) -> Self {
+        Expr {
+            simple_expr,
+            negation,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Default)]
+pub struct Predicate {
+    pub non_attr_exprs: Option<Vec<Expr<NonAttributeExpr>>>,
+    pub attr_exprs: Option<Vec<Expr<AttributeExpr>>>,
+}
+
+#[inline]
+fn add_expr_to_list<E>(list: &mut Option<Vec<Expr<E>>>, expr: E, negation: bool)
+where
+    E: PartialEq + Eq + Debug,
+{
+    list.get_or_insert_with(Vec::default)
+        .push(Expr::new(expr, negation))
+}
+
+impl Predicate {
+    #[inline]
+    fn add_component(&mut self, component: &Component<SelectorImplDescriptor>, negation: bool) {
+        match SimpleExpr::from(component) {
+            SimpleExpr::AttributeExpr(e) => add_expr_to_list(&mut self.attr_exprs, e, negation),
+            SimpleExpr::NonAttributeExpr(e) => {
+                add_expr_to_list(&mut self.non_attr_exprs, e, negation)
+            }
         }
     }
 }
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct AstNode<P> {
-    pub expressions: Vec<Expr>,
-    pub children: Option<AstNodeVec<P>>,
-    pub descendants: Option<AstNodeVec<P>>,
+    pub predicate: Predicate,
+    pub children: Option<Vec<AstNode<P>>>,
+    pub descendants: Option<Vec<AstNode<P>>>,
     pub payload: Option<Vec<P>>,
 }
 
 impl<P> AstNode<P> {
-    fn new(expressions: Vec<Expr>) -> Self {
+    fn new(predicate: Predicate) -> Self {
         AstNode {
-            expressions,
+            predicate,
             children: None,
             descendants: None,
             payload: None,
@@ -130,7 +179,7 @@ impl<P> AstNode<P> {
 }
 
 #[derive(Default, PartialEq, Eq, Debug)]
-pub struct Ast<P>(pub AstNodeVec<P>)
+pub struct Ast<P>(pub Vec<AstNode<P>>)
 where
     P: PartialEq + Eq + Copy + Debug;
 
@@ -149,15 +198,15 @@ where
     }
 
     #[inline]
-    fn host_expressions(expressions: Vec<Expr>, branches: &mut AstNodeVec<P>) -> usize {
+    fn host_expressions(predicate: Predicate, branches: &mut Vec<AstNode<P>>) -> usize {
         match branches
             .iter()
             .enumerate()
-            .find(|(_, n)| n.expressions == expressions)
+            .find(|(_, n)| n.predicate == predicate)
         {
             Some((i, _)) => i,
             None => {
-                branches.push(AstNode::new(expressions));
+                branches.push(AstNode::new(predicate));
 
                 branches.len() - 1
             }
@@ -165,16 +214,18 @@ where
     }
 
     fn add_parsed_selector(&mut self, selector: Selector<SelectorImplDescriptor>, payload: P) {
-        let mut expressions = Vec::default();
+        let mut predicate = Predicate::default();
         let mut branches = &mut self.0;
 
         macro_rules! host_and_switch_branch_vec {
             ($branches:ident) => {{
-                let node_idx = Self::host_expressions(expressions, branches);
+                let node_idx = Self::host_expressions(predicate, branches);
+
                 branches = branches[node_idx]
                     .$branches
                     .get_or_insert_with(Vec::default);
-                expressions = Vec::default();
+
+                predicate = Predicate::default();
             }};
         }
 
@@ -187,11 +238,12 @@ where
                         "Unsupported selector components should be filtered out by the parser."
                     ),
                 },
-                _ => expressions.push(component.into()),
+                Component::Negation(c) => c.iter().for_each(|c| predicate.add_component(c, true)),
+                _ => predicate.add_component(component, false),
             }
         }
 
-        let node_idx = Self::host_expressions(expressions, branches);
+        let node_idx = Self::host_expressions(predicate, branches);
 
         branches[node_idx]
             .payload

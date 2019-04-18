@@ -48,13 +48,13 @@ impl<'i> Comment<'i> {
             // character reference. Character references are not
             // supported in comments, so we need to bail.
             match Bytes::from_str_without_replacements(text, self.encoding) {
-                Some(text) => {
+                Ok(text) => {
                     self.text = text.into_owned();
                     self.raw = None;
 
                     Ok(())
                 }
-                None => Err(CommentTextError::UnencodableCharacter),
+                Err(_) => Err(CommentTextError::UnencodableCharacter),
             }
         }
     }

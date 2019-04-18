@@ -253,7 +253,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     fn start_attr(&mut self, input: &Chunk<'_>, ch: Option<u8>) {
         // NOTE: create attribute only if we are parsing a start tag
         if let Some(StartTag { .. }) = self.current_tag_token {
-            self.current_attr = Some(AttributeOultine::default());
+            self.current_attr = Some(AttributeOutline::default());
 
             self.start_token_part(input, ch);
         }
@@ -261,7 +261,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     #[inline]
     fn finish_attr_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
-        if let Some(AttributeOultine {
+        if let Some(AttributeOutline {
             ref mut name,
             ref mut raw_range,
             ..
@@ -274,7 +274,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     #[inline]
     fn finish_attr_value(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
-        if let Some(AttributeOultine {
+        if let Some(AttributeOutline {
             ref mut value,
             ref mut raw_range,
             ..
