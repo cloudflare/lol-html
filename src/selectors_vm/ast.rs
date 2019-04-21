@@ -1,4 +1,4 @@
-use super::parse::{SelectorImplDescriptor, SelectorsParser};
+use super::parser::{SelectorImplDescriptor, SelectorsParser};
 use super::SelectorError;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component, Selector};

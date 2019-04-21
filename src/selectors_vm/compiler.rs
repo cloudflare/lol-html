@@ -1,16 +1,17 @@
 use super::attribute_matcher::{is_attr_whitespace, AttributeMatcher};
-use super::{
-    AddressRange, Ast, AstNode, AttributeExpr, AttributeExprOperand, Instr, NonAttributeExpr,
-    Predicate, Program, ThreadState,
+use super::program::{
+    AddressRange, AttrExprMatchingInstr, ExecutionBranch, GenericInstr, Instr, InstrStub,
+    NonAttrExprMatchingInstr, Program,
 };
+use super::{Ast, AstNode, AttributeExpr, AttributeExprOperand, NonAttributeExpr, Predicate};
 use crate::base::Bytes;
 use crate::html::LocalName;
 use encoding_rs::Encoding;
 use selectors::attr::ParsedCaseSensitivity;
 use std::fmt::Debug;
 
-type CompiledNonAttributeExpr = Box<dyn Fn(LocalName<'_>) -> bool>;
-type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher<'_>) -> bool>;
+pub type CompiledNonAttributeExpr = Box<dyn Fn(&LocalName<'_>) -> bool>;
+pub type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher<'_>) -> bool>;
 
 pub struct CompiledAttributeExprOperand {
     pub name: Bytes<'static>,
@@ -18,22 +19,48 @@ pub struct CompiledAttributeExprOperand {
     pub case_sensitivity: ParsedCaseSensitivity,
 }
 
-macro_rules! unmatchable {
-    () => {
-        Box::new(|_| false)
+macro_rules! curry_compile_expr_macro {
+    ($negation:ident) => {
+        macro_rules! compile_expr {
+            (|$arg:ident| $body:expr) => {
+                if $negation {
+                    Box::new(move |$arg| !($body))
+                } else {
+                    Box::new(move |$arg| $body)
+                }
+            };
+
+            (@unmatchable) => {
+                compile_expr!(|_arg| false);
+            };
+
+            (@match_all) => {
+                compile_expr!(|_arg| true);
+            };
+        }
     };
 }
 
-trait MapOrUnmatchable<T> {
-    fn map_or_unmatchable(self, map: impl Fn(T) -> CompiledAttributeExpr) -> CompiledAttributeExpr;
+trait CompileOr<T> {
+    fn compile_or(
+        self,
+        negation: bool,
+        compile: impl Fn(T) -> CompiledAttributeExpr,
+    ) -> CompiledAttributeExpr;
 }
 
-impl<T> MapOrUnmatchable<T> for Result<T, ()> {
+impl<T> CompileOr<T> for Result<T, ()> {
     #[inline]
-    fn map_or_unmatchable(self, map: impl Fn(T) -> CompiledAttributeExpr) -> CompiledAttributeExpr {
+    fn compile_or(
+        self,
+        negation: bool,
+        compile: impl Fn(T) -> CompiledAttributeExpr,
+    ) -> CompiledAttributeExpr {
+        curry_compile_expr_macro!(negation);
+
         match self {
-            Ok(v) => map(v),
-            Err(_) => unmatchable!(),
+            Ok(v) => compile(v),
+            Err(_) => compile_expr!(@unmatchable),
         }
     }
 }
@@ -43,11 +70,11 @@ where
     P: PartialEq + Eq + Copy + Debug,
 {
     encoding: &'static Encoding,
-    instructions: Vec<Instr<P>>,
+    instructions: Vec<Box<dyn Instr<P>>>,
     free_space_ptr: usize,
 }
 
-impl<P> Compiler<P>
+impl<P: 'static> Compiler<P>
 where
     P: PartialEq + Eq + Copy + Debug,
 {
@@ -59,20 +86,26 @@ where
         }
     }
 
-    fn compile_non_attr_expr(&self, expr: NonAttributeExpr) -> CompiledNonAttributeExpr {
+    fn compile_non_attr_expr(
+        &self,
+        expr: NonAttributeExpr,
+        negation: bool,
+    ) -> CompiledNonAttributeExpr {
+        curry_compile_expr_macro!(negation);
+
         match expr {
-            NonAttributeExpr::ExplicitAny => Box::new(|_| true),
-            NonAttributeExpr::Unmatchable => unmatchable!(),
+            NonAttributeExpr::ExplicitAny => compile_expr!(@match_all),
+            NonAttributeExpr::Unmatchable => compile_expr!(@unmatchable),
             NonAttributeExpr::LocalName(local_name) => {
                 match LocalName::from_str_without_replacements(&local_name, self.encoding)
                     .map(|n| n.into_owned())
                 {
                     Ok(local_name) => {
-                        Box::new(move |actual_local_name| actual_local_name == local_name)
+                        compile_expr!(|actual_local_name| *actual_local_name == local_name)
                     }
                     // NOTE: selector value can't be converted to the given encoding, so
                     // it won't ever match.
-                    Err(_) => unmatchable!(),
+                    Err(_) => compile_expr!(@unmatchable),
                 }
             }
         }
@@ -102,48 +135,54 @@ where
         })
     }
 
-    fn compile_attr_expr(&self, expr: AttributeExpr) -> CompiledAttributeExpr {
+    fn compile_attr_expr(&self, expr: AttributeExpr, negation: bool) -> CompiledAttributeExpr {
+        curry_compile_expr_macro!(negation);
+
         match expr {
             AttributeExpr::Id(id) => self
                 .compile_literal(&id)
-                .map_or_unmatchable(|id| Box::new(move |m| m.id_matches(&id))),
+                .compile_or(negation, |id| compile_expr!(|m| m.id_matches(&id))),
 
             AttributeExpr::Class(class) => self
                 .compile_literal(&class)
-                .map_or_unmatchable(|class| Box::new(move |m| m.has_class(&class))),
+                .compile_or(negation, |class| compile_expr!(|m| m.has_class(&class))),
 
             AttributeExpr::AttributeExists(name) => self
                 .compile_literal_lowercase(name)
-                .map_or_unmatchable(|name| Box::new(move |m| m.has_attribute(&name))),
+                .compile_or(negation, |name| compile_expr!(|m| m.has_attribute(&name))),
 
             AttributeExpr::AttributeEqual(operand) => self
                 .compile_attr_expr_operand(operand)
-                .map_or_unmatchable(|operand| Box::new(move |m| m.attr_eq(&operand))),
+                .compile_or(negation, |operand| compile_expr!(|m| m.attr_eq(&operand))),
 
             AttributeExpr::AttributeIncludes(operand) => self
                 .compile_attr_expr_operand(operand)
-                .map_or_unmatchable(|operand| {
-                    Box::new(move |m| m.matches_splitted_by(&operand, is_attr_whitespace))
+                .compile_or(negation, |operand| {
+                    compile_expr!(|m| m.matches_splitted_by(&operand, is_attr_whitespace))
                 }),
 
             AttributeExpr::AttributeDashMatch(operand) => self
                 .compile_attr_expr_operand(operand)
-                .map_or_unmatchable(|operand| {
-                    Box::new(move |m| m.matches_splitted_by(&operand, |b| b == b'-'))
+                .compile_or(negation, |operand| {
+                    compile_expr!(|m| m.matches_splitted_by(&operand, |b| b == b'-'))
                 }),
 
             AttributeExpr::AttributePrefix(operand) => self
                 .compile_attr_expr_operand(operand)
-                .map_or_unmatchable(|operand| Box::new(move |m| m.has_attr_with_prefix(&operand))),
+                .compile_or(negation, |operand| {
+                    compile_expr!(|m| m.has_attr_with_prefix(&operand))
+                }),
 
             AttributeExpr::AttributeSuffix(operand) => self
                 .compile_attr_expr_operand(operand)
-                .map_or_unmatchable(|operand| Box::new(move |m| m.has_attr_with_suffix(&operand))),
+                .compile_or(negation, |operand| {
+                    compile_expr!(|m| m.has_attr_with_suffix(&operand))
+                }),
 
             AttributeExpr::AttributeSubstring(operand) => self
                 .compile_attr_expr_operand(operand)
-                .map_or_unmatchable(|operand| {
-                    Box::new(move |m| m.has_attr_with_substring(&operand))
+                .compile_or(negation, |operand| {
+                    compile_expr!(|m| m.has_attr_with_substring(&operand))
                 }),
         }
     }
@@ -151,14 +190,35 @@ where
     fn compile_predicate(
         &self,
         predicate: Predicate,
-        associated_thread_state: ThreadState<P>,
-    ) -> Instr<P> {
-        unimplemented!();
+        branch: ExecutionBranch<P>,
+    ) -> Box<dyn Instr<P>> {
+        let non_attr_exprs = predicate.non_attr_exprs.map(|e| {
+            e.into_iter()
+                .map(|expr| self.compile_non_attr_expr(expr.simple_expr, expr.negation))
+                .collect::<Vec<_>>()
+        });
+
+        let attr_exprs = predicate.attr_exprs.map(|e| {
+            e.into_iter()
+                .map(|expr| self.compile_attr_expr(expr.simple_expr, expr.negation))
+                .collect::<Vec<_>>()
+        });
+
+        match (non_attr_exprs, attr_exprs) {
+            (Some(non_attr_exprs), None) => {
+                NonAttrExprMatchingInstr::new_boxed(branch, non_attr_exprs)
+            }
+            (None, Some(attr_exprs)) => AttrExprMatchingInstr::new_boxed(branch, attr_exprs),
+            (Some(non_attr_exprs), Some(attr_exprs)) => {
+                GenericInstr::new_boxed(branch, non_attr_exprs, attr_exprs)
+            }
+            _ => unreachable!("Predicate should contain expressions"),
+        }
     }
 
     #[inline]
     fn reserve_space_for_nodes(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
-        let address_range = self.free_space_ptr..nodes.len();
+        let address_range = self.free_space_ptr..self.free_space_ptr + nodes.len();
 
         self.free_space_ptr = address_range.end;
 
@@ -173,14 +233,14 @@ where
         let address_range = self.reserve_space_for_nodes(&nodes);
 
         for (i, node) in nodes.into_iter().enumerate() {
-            let associated_thread_state = ThreadState {
-                matched_payload: node.payload,
+            let branch = ExecutionBranch {
+                payload: node.payload,
                 jumps: node.children.map(|c| self.compile_nodes(c)),
                 hereditary_jumps: node.descendants.map(|d| self.compile_nodes(d)),
             };
 
             self.instructions[address_range.start + i] =
-                self.compile_predicate(node.predicate, associated_thread_state);
+                self.compile_predicate(node.predicate, branch);
         }
 
         address_range
@@ -188,9 +248,7 @@ where
 
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
         self.instructions
-            .resize_with(ast.cumulative_node_count, || {
-                Box::new(|_| unreachable!("Instruction stub should never be executed"))
-            });
+            .resize_with(ast.cumulative_node_count, || InstrStub::new_boxed());
 
         let entry_points = self.compile_nodes(ast.root);
 
