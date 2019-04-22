@@ -63,7 +63,7 @@ impl Serialize for Doctype<'_> {
 }
 
 impl Debug for Doctype<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Doctype")
             .field("name", &self.name())
             .field("public_id", &self.public_id())

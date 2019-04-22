@@ -60,7 +60,7 @@ impl<'i> Comment<'i> {
     }
 
     #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
+    fn raw(&self) -> Option<&Bytes> {
         self.raw.as_ref()
     }
 
@@ -75,7 +75,7 @@ impl<'i> Comment<'i> {
 impl_common_token_api!(Comment);
 
 impl Debug for Comment<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Comment")
             .field("text", &self.text())
             .finish()

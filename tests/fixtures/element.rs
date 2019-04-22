@@ -7,7 +7,7 @@ fn parse_element(
     encoding: &'static Encoding,
     mut handler: impl FnMut(Element<'_, '_>),
 ) {
-    parse_token!(input, encoding, StartTag, |t: &mut StartTag<'_>| {
+    parse_token!(input, encoding, StartTag, |t: &mut StartTag| {
         handler(create_element(t));
     });
 }

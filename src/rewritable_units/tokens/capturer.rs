@@ -42,7 +42,7 @@ pub trait ToToken {
         &self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult<'_>;
+    ) -> ToTokenResult;
 }
 
 impl ToToken for TagLexeme<'_> {
@@ -50,7 +50,7 @@ impl ToToken for TagLexeme<'_> {
         &self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult<'_> {
+    ) -> ToTokenResult {
         match *self.token_outline() {
             TagTokenOutline::StartTag {
                 name,
@@ -89,7 +89,7 @@ impl ToToken for NonTagContentLexeme<'_> {
         &self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult<'_> {
+    ) -> ToTokenResult {
         match *self.token_outline() {
             Some(NonTagContentTokenOutline::Text(text_type)) => ToTokenResult::Text(text_type),
             Some(NonTagContentTokenOutline::Comment(text))
@@ -148,7 +148,7 @@ impl TokenCapturer {
     }
 
     #[inline]
-    fn flush_pending_text(&mut self, event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>)) {
+    fn flush_pending_text(&mut self, event_handler: &mut dyn FnMut(TokenCapturerEvent)) {
         if self.pending_text_decoder.is_some() {
             self.emit_text(&Bytes::empty(), true, event_handler);
             self.pending_text_decoder = None;
@@ -157,9 +157,9 @@ impl TokenCapturer {
 
     fn emit_text(
         &mut self,
-        raw: &Bytes<'_>,
+        raw: &Bytes,
         last: bool,
-        event_handler: &mut dyn FnMut(TokenCapturerEvent<'_>),
+        event_handler: &mut dyn FnMut(TokenCapturerEvent),
     ) {
         let encoding = self.encoding;
         let buffer = self.text_buffer.as_mut_str();
@@ -191,7 +191,7 @@ impl TokenCapturer {
     pub fn feed<'i, T>(
         &mut self,
         lexeme: &Lexeme<'i, T>,
-        mut event_handler: impl FnMut(TokenCapturerEvent<'_>),
+        mut event_handler: impl FnMut(TokenCapturerEvent),
     ) where
         Lexeme<'i, T>: ToToken,
     {

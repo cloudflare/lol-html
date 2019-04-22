@@ -51,7 +51,7 @@ impl<'de> Deserialize<'de> for TestToken {
         impl<'de> ::serde::de::Visitor<'de> for Visitor {
             type Value = TestToken;
 
-            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            fn expecting(&self, f: &mut Formatter) -> fmt::Result {
                 f.write_str("['TokenKind', ...]")
             }
 
@@ -169,7 +169,7 @@ impl Unescape for TestToken {
 pub struct TestTokenList(Vec<TestToken>);
 
 impl TestTokenList {
-    pub fn push(&mut self, token: &Token<'_>) {
+    pub fn push(&mut self, token: &Token) {
         match token {
             Token::TextChunk(t) => {
                 let text = t.as_str();

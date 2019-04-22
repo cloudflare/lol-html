@@ -13,11 +13,11 @@ use std::cmp::min;
 use std::rc::Rc;
 
 pub trait TagHintSink {
-    fn handle_start_tag_hint(&mut self, name: LocalName<'_>, ns: Namespace) -> ParserDirective;
-    fn handle_end_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective;
+    fn handle_start_tag_hint(&mut self, name: LocalName, ns: Namespace) -> ParserDirective;
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> ParserDirective;
 }
 
-pub type State<S> = fn(&mut TagScanner<S>, &Chunk<'_>) -> StateResult;
+pub type State<S> = fn(&mut TagScanner<S>, &Chunk) -> StateResult;
 
 /// Tag scanner skips the majority of lexer operations and, thus,
 /// is faster. It also has much less requirements for buffering which makes it more
@@ -72,7 +72,7 @@ impl<S: TagHintSink> TagScanner<S> {
         }
     }
 
-    fn emit_tag_hint(&mut self, input: &Chunk<'_>) -> ParserDirective {
+    fn emit_tag_hint(&mut self, input: &Chunk) -> ParserDirective {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.input_cursor.pos(),
@@ -137,7 +137,7 @@ impl<S: TagHintSink> StateMachine for TagScanner<S> {
     }
 
     #[inline]
-    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize {
+    fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
         // NOTE: if we are in character sequence matching we need
         // to block from the position where matching starts. We don't
         // need to do that manually in the lexer because it

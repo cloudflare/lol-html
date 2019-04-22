@@ -4,7 +4,7 @@ use crate::rewriter::ElementContentHandlersLocator;
 pub type SelfClosingFlagRequest<'i> = Box<dyn FnOnce(&mut OpenElementStack, bool) -> bool + 'i>;
 
 #[inline]
-fn is_void_element(local_name: &LocalName<'_>) -> bool {
+fn is_void_element(local_name: &LocalName) -> bool {
     // NOTE: fast path for the most commonly used elements
     if tag_is_one_of!(*local_name, [Div, A, Span, Li, Input]) {
         return false;
@@ -31,7 +31,7 @@ impl OpenElementStack {
     #[inline]
     fn push(
         &mut self,
-        local_name: LocalName<'_>,
+        local_name: LocalName,
         handlers_locators: Vec<ElementContentHandlersLocator>,
     ) {
         self.0.push(StackItem {

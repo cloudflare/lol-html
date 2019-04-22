@@ -34,12 +34,12 @@ impl<'b> Chunk<'b> {
     }
 
     #[inline]
-    pub fn slice(&self, range: Range) -> Bytes<'_> {
+    pub fn slice(&self, range: Range) -> Bytes {
         self.data[range.start..range.end].into()
     }
 
     #[inline]
-    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes<'_>> {
+    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes> {
         range.map(|range| self.slice(range))
     }
 

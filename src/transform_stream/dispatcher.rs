@@ -14,7 +14,7 @@ use std::rc::Rc;
 use TagTokenOutline::*;
 
 pub type AuxElementInfoRequest<C> =
-    Box<dyn FnMut(&mut C, &Chunk<'_>, SharedAttributeBuffer, bool) -> TokenCaptureFlags>;
+    Box<dyn FnMut(&mut C, &Chunk, SharedAttributeBuffer, bool) -> TokenCaptureFlags>;
 
 pub type ElementStartHandlingResult<C> = Result<TokenCaptureFlags, AuxElementInfoRequest<C>>;
 
@@ -23,12 +23,12 @@ pub trait TransformController: Sized {
 
     fn handle_element_start(
         &mut self,
-        name: LocalName<'_>,
+        name: LocalName,
         ns: Namespace,
     ) -> ElementStartHandlingResult<Self>;
 
-    fn handle_element_end(&mut self, name: LocalName<'_>) -> TokenCaptureFlags;
-    fn handle_token(&mut self, token: &mut Token<'_>);
+    fn handle_element_end(&mut self, name: LocalName) -> TokenCaptureFlags;
+    fn handle_token(&mut self, token: &mut Token);
 }
 
 pub trait OutputSink {
@@ -72,7 +72,7 @@ where
         }
     }
 
-    pub fn flush_remaining_input(&mut self, input: &Chunk<'_>, blocked_byte_count: usize) {
+    pub fn flush_remaining_input(&mut self, input: &Chunk, blocked_byte_count: usize) {
         let output = input.slice(Range {
             start: self.last_consumed_lexeme_end,
             end: input.len() - blocked_byte_count,
@@ -85,7 +85,7 @@ where
         self.last_consumed_lexeme_end = 0;
     }
 
-    pub fn finish(&mut self, input: &Chunk<'_>) {
+    pub fn finish(&mut self, input: &Chunk) {
         self.flush_remaining_input(input, 0);
 
         // NOTE: output the finalizing chunk.
@@ -137,7 +137,7 @@ where
         }
     }
 
-    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) {
+    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme) {
         let input = lexeme.input();
 
         macro_rules! get_flags_from_aux_info_res {
@@ -210,7 +210,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective {
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> ParserDirective {
         if self.got_flags_from_hint {
             self.got_flags_from_hint = false;
         } else {
@@ -222,7 +222,7 @@ where
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>) {
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) {
         self.try_produce_token_from_lexeme(lexeme);
     }
 }
@@ -232,7 +232,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_start_tag_hint(&mut self, name: LocalName<'_>, ns: Namespace) -> ParserDirective {
+    fn handle_start_tag_hint(&mut self, name: LocalName, ns: Namespace) -> ParserDirective {
         match self.transform_controller.handle_element_start(name, ns) {
             Ok(flags) => self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags),
             Err(aux_info_req) => {
@@ -243,7 +243,7 @@ where
         }
     }
 
-    fn handle_end_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective {
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> ParserDirective {
         let flags = self.transform_controller.handle_element_end(name);
 
         self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)

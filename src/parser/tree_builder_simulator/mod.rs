@@ -27,7 +27,7 @@ const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
-    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback>),
+    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback>),
     None,
 }
 
@@ -40,7 +40,7 @@ impl From<TextType> for TreeBuilderFeedback {
 
 #[inline]
 fn request_lexeme(
-    callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback + 'static,
+    callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback + 'static,
 ) -> TreeBuilderFeedback {
     TreeBuilderFeedback::RequestLexeme(Box::new(callback))
 }
@@ -55,7 +55,7 @@ macro_rules! expect_tag {
 }
 
 #[inline]
-fn eq_case_insensitive(actual: &Bytes<'_>, expected: &[u8]) -> bool {
+fn eq_case_insensitive(actual: &Bytes, expected: &[u8]) -> bool {
     if actual.len() != expected.len() {
         return false;
     }

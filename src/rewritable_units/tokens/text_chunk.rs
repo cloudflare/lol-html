@@ -45,7 +45,7 @@ impl<'i> TextChunk<'i> {
     }
 
     #[inline]
-    fn raw(&self) -> Option<&Bytes<'_>> {
+    fn raw(&self) -> Option<&Bytes> {
         None
     }
 
@@ -60,7 +60,7 @@ impl<'i> TextChunk<'i> {
 impl_common_token_api!(TextChunk);
 
 impl Debug for TextChunk<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("TextChunk")
             .field("text", &self.as_str())
             .field("last_in_text_node", &self.last_in_text_node())

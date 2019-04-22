@@ -6,37 +6,37 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     impl_common_sm_actions!();
 
     #[inline]
-    fn create_start_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
         self.tag_name_hash = LocalNameHash::new();
     }
 
     #[inline]
-    fn create_end_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn create_end_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_name_start = self.input_cursor.pos();
         self.tag_name_hash = LocalNameHash::new();
         self.is_in_end_tag = true;
     }
 
     #[inline]
-    fn mark_tag_start(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn mark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_start = Some(self.input_cursor.pos());
     }
 
     #[inline]
-    fn unmark_tag_start(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn unmark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.tag_start = None;
     }
 
     #[inline]
-    fn update_tag_name_hash(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
+    fn update_tag_name_hash(&mut self, _input: &Chunk, ch: Option<u8>) {
         if let Some(ch) = ch {
             self.tag_name_hash.update(ch);
         }
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
+    fn finish_tag_name(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
         let tag_start = self
             .tag_start
             .take()
@@ -71,7 +71,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     }
 
     #[inline]
-    fn emit_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
+    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
         Ok(
             if let Some(text_type) = self.pending_text_type_change.take() {
                 self.switch_text_type(text_type);
@@ -110,7 +110,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     );
 
     #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &Chunk<'_>, _ch: Option<u8>, _offset: usize) {
+    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {
         trace!(@noop);
     }
 }

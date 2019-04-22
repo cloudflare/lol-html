@@ -18,7 +18,7 @@ struct Input {
 }
 
 impl Debug for Input {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.name)
     }
 }
@@ -74,7 +74,7 @@ fn cool_thing_tokenizer_bench(
 
             fn handle_element_start(
                 &mut self,
-                name: LocalName<'_>,
+                name: LocalName,
                 ns: Namespace,
             ) -> ElementStartHandlingResult<Self> {
                 black_box(name);
@@ -83,13 +83,13 @@ fn cool_thing_tokenizer_bench(
                 Ok(self.capture_flags)
             }
 
-            fn handle_element_end(&mut self, name: LocalName<'_>) -> CoolThingTokenCaptureFlags {
+            fn handle_element_end(&mut self, name: LocalName) -> CoolThingTokenCaptureFlags {
                 black_box(name);
 
                 self.capture_flags
             }
 
-            fn handle_token(&mut self, token: &mut Token<'_>) {
+            fn handle_token(&mut self, token: &mut Token) {
                 black_box(token);
             }
         }

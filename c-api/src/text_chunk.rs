@@ -7,7 +7,7 @@ pub struct TextChunkContent {
 }
 
 impl TextChunkContent {
-    fn new(chunk: &TextChunk<'_>) -> Self {
+    fn new(chunk: &TextChunk) -> Self {
         let content = chunk.as_str();
 
         TextChunkContent {
@@ -18,18 +18,18 @@ impl TextChunkContent {
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_content_get(chunk: *mut TextChunk<'_>) -> TextChunkContent {
+pub extern "C" fn cool_thing_text_chunk_content_get(chunk: *mut TextChunk) -> TextChunkContent {
     TextChunkContent::new(to_ref!(chunk))
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_is_last_in_text_node(chunk: *mut TextChunk<'_>) -> bool {
+pub extern "C" fn cool_thing_text_chunk_is_last_in_text_node(chunk: *mut TextChunk) -> bool {
     to_ref!(chunk).last_in_text_node()
 }
 
 #[no_mangle]
 pub extern "C" fn cool_thing_text_chunk_before(
-    chunk: *mut TextChunk<'_>,
+    chunk: *mut TextChunk,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,
@@ -39,7 +39,7 @@ pub extern "C" fn cool_thing_text_chunk_before(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_text_chunk_after(
-    chunk: *mut TextChunk<'_>,
+    chunk: *mut TextChunk,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,
@@ -49,7 +49,7 @@ pub extern "C" fn cool_thing_text_chunk_after(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_text_chunk_replace(
-    chunk: *mut TextChunk<'_>,
+    chunk: *mut TextChunk,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,
@@ -58,11 +58,11 @@ pub extern "C" fn cool_thing_text_chunk_replace(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_remove(chunk: *mut TextChunk<'_>) {
+pub extern "C" fn cool_thing_text_chunk_remove(chunk: *mut TextChunk) {
     to_ref_mut!(chunk).remove();
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_is_removed(chunk: *const TextChunk<'_>) -> bool {
+pub extern "C" fn cool_thing_text_chunk_is_removed(chunk: *const TextChunk) -> bool {
     to_ref!(chunk).removed()
 }

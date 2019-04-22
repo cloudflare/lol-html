@@ -28,14 +28,14 @@ impl<'h> ElementContentHandlers<'h> {
     }
 
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment<'_>) + 'h) -> Self {
+    pub fn comments(mut self, handler: impl FnMut(&mut Comment) + 'h) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
     }
 
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk<'_>) + 'h) -> Self {
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) + 'h) -> Self {
         self.text = Some(Box::new(handler));
 
         self
@@ -51,21 +51,21 @@ pub struct DocumentContentHandlers<'h> {
 
 impl<'h> DocumentContentHandlers<'h> {
     #[inline]
-    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype<'_>) + 'h) -> Self {
+    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) + 'h) -> Self {
         self.doctype = Some(Box::new(handler));
 
         self
     }
 
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment<'_>) + 'h) -> Self {
+    pub fn comments(mut self, handler: impl FnMut(&mut Comment) + 'h) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
     }
 
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk<'_>) + 'h) -> Self {
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) + 'h) -> Self {
         self.text = Some(Box::new(handler));
 
         self

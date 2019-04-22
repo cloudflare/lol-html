@@ -21,14 +21,14 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     impl_common_sm_actions!();
 
     #[inline]
-    fn emit_eof(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
+    fn emit_eof(&mut self, input: &Chunk, _ch: Option<u8>) {
         let lexeme = self.create_lexeme_with_raw_exclusive(input, Some(Eof));
 
         self.emit_lexeme(&lexeme);
     }
 
     #[inline]
-    fn emit_text(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
+    fn emit_text(&mut self, input: &Chunk, _ch: Option<u8>) {
         if self.input_cursor.pos() > self.lexeme_start {
             // NOTE: unlike any other tokens (except EOF), text tokens don't have
             // any lexical symbols that determine their bounds. Therefore,
@@ -43,7 +43,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn emit_current_token(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
+    fn emit_current_token(&mut self, input: &Chunk, _ch: Option<u8>) {
         let token = self.current_non_tag_content_token.take();
         let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
 
@@ -51,7 +51,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn emit_tag(&mut self, input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
+    fn emit_tag(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
         let token = self
             .current_tag_token
             .take()
@@ -94,7 +94,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn emit_current_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>) {
+    fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
         let token = self.current_non_tag_content_token.take();
         let lexeme = self.create_lexeme_with_raw_exclusive(input, token);
 
@@ -103,14 +103,14 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn emit_raw_without_token(&mut self, input: &Chunk<'_>, _ch: Option<u8>) {
+    fn emit_raw_without_token(&mut self, input: &Chunk, _ch: Option<u8>) {
         let lexeme = self.create_lexeme_with_raw_inclusive(input, None);
 
         self.emit_lexeme(&lexeme);
     }
 
     #[inline]
-    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>) {
+    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) {
         // NOTE: since we are at EOF we use exclusive range for token's raw.
         let lexeme = self.create_lexeme_with_raw_exclusive(input, None);
 
@@ -119,7 +119,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn create_start_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.attr_buffer.borrow_mut().clear();
 
         self.current_tag_token = Some(StartTag {
@@ -132,7 +132,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn create_end_tag(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn create_end_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.current_tag_token = Some(EndTag {
             name: Range::default(),
             name_hash: LocalNameHash::new(),
@@ -140,7 +140,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn create_doctype(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn create_doctype(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.current_non_tag_content_token = Some(Doctype {
             name: None,
             public_id: None,
@@ -150,31 +150,31 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn create_comment(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn create_comment(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.current_non_tag_content_token = Some(Comment(Range::default()));
     }
 
     #[inline]
-    fn start_token_part(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn start_token_part(&mut self, _input: &Chunk, _ch: Option<u8>) {
         self.token_part_start = self.input_cursor.pos();
     }
 
     #[inline]
-    fn mark_comment_text_end(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn mark_comment_text_end(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(Comment(ref mut text)) = self.current_non_tag_content_token {
             *text = get_token_part_range!(self);
         }
     }
 
     #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &Chunk<'_>, _ch: Option<u8>, offset: usize) {
+    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, offset: usize) {
         if let Some(Comment(ref mut text)) = self.current_non_tag_content_token {
             text.end += offset;
         }
     }
 
     #[inline]
-    fn set_force_quirks(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn set_force_quirks(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(Doctype {
             ref mut force_quirks,
             ..
@@ -185,14 +185,14 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_doctype_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn finish_doctype_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(Doctype { ref mut name, .. }) = self.current_non_tag_content_token {
             *name = Some(get_token_part_range!(self));
         }
     }
 
     #[inline]
-    fn finish_doctype_public_id(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn finish_doctype_public_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(Doctype {
             ref mut public_id, ..
         }) = self.current_non_tag_content_token
@@ -202,7 +202,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_doctype_system_id(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn finish_doctype_system_id(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(Doctype {
             ref mut system_id, ..
         }) = self.current_non_tag_content_token
@@ -212,7 +212,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) -> StateResult {
+    fn finish_tag_name(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
         match self.current_tag_token {
             Some(StartTag { ref mut name, .. }) | Some(EndTag { ref mut name, .. }) => {
                 *name = get_token_part_range!(self)
@@ -224,7 +224,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn update_tag_name_hash(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
+    fn update_tag_name_hash(&mut self, _input: &Chunk, ch: Option<u8>) {
         if let Some(ch) = ch {
             match self.current_tag_token {
                 Some(StartTag {
@@ -239,7 +239,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn mark_as_self_closing(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn mark_as_self_closing(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(StartTag {
             ref mut self_closing,
             ..
@@ -250,7 +250,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn start_attr(&mut self, input: &Chunk<'_>, ch: Option<u8>) {
+    fn start_attr(&mut self, input: &Chunk, ch: Option<u8>) {
         // NOTE: create attribute only if we are parsing a start tag
         if let Some(StartTag { .. }) = self.current_tag_token {
             self.current_attr = Some(AttributeOutline::default());
@@ -260,7 +260,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_attr_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn finish_attr_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(AttributeOutline {
             ref mut name,
             ref mut raw_range,
@@ -273,7 +273,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_attr_value(&mut self, _input: &Chunk<'_>, ch: Option<u8>) {
+    fn finish_attr_value(&mut self, _input: &Chunk, ch: Option<u8>) {
         if let Some(AttributeOutline {
             ref mut value,
             ref mut raw_range,
@@ -291,7 +291,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_attr(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+    fn finish_attr(&mut self, _input: &Chunk, _ch: Option<u8>) {
         if let Some(attr) = self.current_attr.take() {
             self.attr_buffer.borrow_mut().push(attr);
         }

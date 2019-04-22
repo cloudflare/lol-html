@@ -26,7 +26,7 @@ impl TransformController for HtmlRewriteController<'_> {
 
     fn handle_element_start(
         &mut self,
-        _: LocalName<'_>,
+        _: LocalName,
         _: Namespace,
     ) -> ElementStartHandlingResult<Self> {
         for &locator in &self.element_handler_locators {
@@ -37,12 +37,12 @@ impl TransformController for HtmlRewriteController<'_> {
         Ok(self.handlers_dispatcher.get_token_capture_flags())
     }
 
-    fn handle_element_end(&mut self, _: LocalName<'_>) -> TokenCaptureFlags {
+    fn handle_element_end(&mut self, _: LocalName) -> TokenCaptureFlags {
         self.handlers_dispatcher.get_token_capture_flags()
     }
 
     #[inline]
-    fn handle_token(&mut self, token: &mut Token<'_>) {
+    fn handle_token(&mut self, token: &mut Token) {
         self.handlers_dispatcher.handle_token(token);
     }
 }
@@ -79,7 +79,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
 // `.unwrap()` and `.expect()` methods available on Result
 // returned by the `HtmlRewriterBuilder.build()` method.
 impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "HtmlRewriter")
     }
 }

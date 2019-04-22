@@ -10,8 +10,8 @@ use encoding_rs::Encoding;
 use selectors::attr::ParsedCaseSensitivity;
 use std::fmt::Debug;
 
-pub type CompiledNonAttributeExpr = Box<dyn Fn(&LocalName<'_>) -> bool>;
-pub type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher<'_>) -> bool>;
+pub type CompiledNonAttributeExpr = Box<dyn Fn(&LocalName) -> bool>;
+pub type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher) -> bool>;
 
 pub struct CompiledAttributeExprOperand {
     pub name: Bytes<'static>,

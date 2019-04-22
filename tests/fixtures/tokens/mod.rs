@@ -7,13 +7,13 @@ macro_rules! serialization_test {
         // NOTE: give test cases type annotation to avoid boilerplate code in tests.
         let test_cases: &[(
             &'static str,
-            Box<dyn Fn(&mut $TokenType<'_>, &'static Encoding)>,
+            Box<dyn Fn(&mut $TokenType, &'static Encoding)>,
             &'static str,
         )] = $test_cases;
 
         for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
             for (case_name, transform, expected) in test_cases {
-                parse_token!($input, encoding, $TokenType, |t: &mut $TokenType<'_>| {
+                parse_token!($input, encoding, $TokenType, |t: &mut $TokenType| {
                     let mut output = Output::new(encoding);
 
                     transform(t, encoding);

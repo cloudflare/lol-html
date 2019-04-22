@@ -2,7 +2,7 @@ use super::{Input, Output};
 use cool_thing::*;
 use failure::Error;
 
-type TokenHandler<'h> = Box<dyn FnMut(&mut Token<'_>) + 'h>;
+type TokenHandler<'h> = Box<dyn FnMut(&mut Token) + 'h>;
 
 struct TestTransformController<'h> {
     token_handler: TokenHandler<'h>,
@@ -24,17 +24,17 @@ impl TransformController for TestTransformController<'_> {
     }
     fn handle_element_start(
         &mut self,
-        _: LocalName<'_>,
+        _: LocalName,
         _: Namespace,
     ) -> ElementStartHandlingResult<Self> {
         Ok(self.capture_flags)
     }
 
-    fn handle_element_end(&mut self, _: LocalName<'_>) -> TokenCaptureFlags {
+    fn handle_element_end(&mut self, _: LocalName) -> TokenCaptureFlags {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, token: &mut Token<'_>) {
+    fn handle_token(&mut self, token: &mut Token) {
         (self.token_handler)(token)
     }
 }
@@ -44,7 +44,7 @@ pub fn parse(
     capture_flags: TokenCaptureFlags,
     initial_text_type: TextType,
     last_start_tag_name_hash: LocalNameHash,
-    token_handler: TokenHandler<'_>,
+    token_handler: TokenHandler,
 ) -> Result<String, Error> {
     let encoding = input
         .encoding()

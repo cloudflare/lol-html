@@ -142,7 +142,7 @@ impl<'b> From<&'b [u8]> for Bytes<'b> {
 }
 
 impl Debug for Bytes<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "`{}`", self.as_debug_string())
     }
 }

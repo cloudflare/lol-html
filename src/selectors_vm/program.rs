@@ -22,11 +22,11 @@ pub struct ExecutionBranch<P> {
 pub trait Instr<P> {
     fn exec<'i>(
         &'i self,
-        local_name: &LocalName<'_>,
-        attr_matcher: Option<&AttributeMatcher<'_>>,
+        local_name: &LocalName,
+        attr_matcher: Option<&AttributeMatcher>,
     ) -> ExecOutcome<'i, P>;
 
-    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher<'_>) -> InstrResult<'i, P>;
+    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher) -> InstrResult<'i, P>;
 }
 
 pub struct Program<P> {
@@ -44,15 +44,11 @@ impl<P: 'static> InstrStub<P> {
 }
 
 impl<P> Instr<P> for InstrStub<P> {
-    fn exec<'i>(
-        &'i self,
-        _: &LocalName<'_>,
-        _: Option<&AttributeMatcher<'_>>,
-    ) -> ExecOutcome<'i, P> {
+    fn exec<'i>(&'i self, _: &LocalName, _: Option<&AttributeMatcher>) -> ExecOutcome<'i, P> {
         unreachable!("Instruction stub should never be executed");
     }
 
-    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher<'_>) -> InstrResult<'i, P> {
+    fn exec_with_attrs<'i>(&'i self, _: &AttributeMatcher) -> InstrResult<'i, P> {
         unreachable!("Instruction stub should never be executed");
     }
 }
@@ -89,13 +85,13 @@ impl<P> Instr<P> for NonAttrExprMatchingInstr<P> {
     #[inline]
     fn exec<'i>(
         &'i self,
-        local_name: &LocalName<'_>,
-        _: Option<&AttributeMatcher<'_>>,
+        local_name: &LocalName,
+        _: Option<&AttributeMatcher>,
     ) -> ExecOutcome<'i, P> {
         ExecOutcome::Result(do_match!(self.exprs, local_name, self.associated_branch))
     }
 
-    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher<'_>) -> InstrResult<'i, P> {
+    fn exec_with_attrs<'i>(&'i self, _: &AttributeMatcher) -> InstrResult<'i, P> {
         unreachable!("Non attribute matching instruction should never request attributes");
     }
 }
@@ -122,8 +118,8 @@ impl<P> Instr<P> for AttrExprMatchingInstr<P> {
     #[inline]
     fn exec<'i>(
         &'i self,
-        _: &LocalName<'_>,
-        attr_matcher: Option<&AttributeMatcher<'_>>,
+        _: &LocalName,
+        attr_matcher: Option<&AttributeMatcher>,
     ) -> ExecOutcome<'i, P> {
         match attr_matcher {
             Some(m) => ExecOutcome::Result(do_match!(self.exprs, m, self.associated_branch)),
@@ -131,7 +127,7 @@ impl<P> Instr<P> for AttrExprMatchingInstr<P> {
         }
     }
 
-    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher<'_>) -> InstrResult<'i, P> {
+    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher) -> InstrResult<'i, P> {
         do_match!(self.exprs, attr_matcher, self.associated_branch)
     }
 }
@@ -161,8 +157,8 @@ impl<P> Instr<P> for GenericInstr<P> {
     #[inline]
     fn exec<'i>(
         &'i self,
-        local_name: &LocalName<'_>,
-        attr_matcher: Option<&AttributeMatcher<'_>>,
+        local_name: &LocalName,
+        attr_matcher: Option<&AttributeMatcher>,
     ) -> ExecOutcome<'i, P> {
         if !self.non_attr_exprs.iter().all(|e| e(local_name)) {
             ExecOutcome::Result(None)
@@ -176,7 +172,7 @@ impl<P> Instr<P> for GenericInstr<P> {
         }
     }
 
-    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher<'_>) -> InstrResult<'i, P> {
+    fn exec_with_attrs<'i>(&'i self, attr_matcher: &AttributeMatcher) -> InstrResult<'i, P> {
         do_match!(self.attr_exprs, attr_matcher, self.associated_branch)
     }
 }

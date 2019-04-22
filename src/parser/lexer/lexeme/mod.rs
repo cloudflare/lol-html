@@ -39,23 +39,23 @@ impl<'i, T> Lexeme<'i, T> {
     }
 
     #[inline]
-    pub fn part(&self, range: Range) -> Bytes<'_> {
+    pub fn part(&self, range: Range) -> Bytes {
         self.input.slice(range)
     }
 
     #[inline]
-    pub fn opt_part(&self, range: Option<Range>) -> Option<Bytes<'_>> {
+    pub fn opt_part(&self, range: Option<Range>) -> Option<Bytes> {
         self.input.opt_slice(range)
     }
 
     #[inline]
-    pub fn raw(&self) -> Bytes<'_> {
+    pub fn raw(&self) -> Bytes {
         self.input.slice(self.raw_range())
     }
 }
 
 impl<T: Debug> Debug for Lexeme<'_, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut builder = f.debug_struct("Lexeme");
         let mut pretty_raw = self.input.as_debug_string();
         let mut start = String::new();

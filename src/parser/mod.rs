@@ -35,24 +35,24 @@ pub enum ParserDirective {
 
 impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective {
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> ParserDirective {
         self.borrow_mut().handle_tag(lexeme)
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>) {
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) {
         self.borrow_mut().handle_non_tag_content(lexeme);
     }
 }
 
 impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_start_tag_hint(&mut self, name: LocalName<'_>, ns: Namespace) -> ParserDirective {
+    fn handle_start_tag_hint(&mut self, name: LocalName, ns: Namespace) -> ParserDirective {
         self.borrow_mut().handle_start_tag_hint(name, ns)
     }
 
     #[inline]
-    fn handle_end_tag_hint(&mut self, name: LocalName<'_>) -> ParserDirective {
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> ParserDirective {
         self.borrow_mut().handle_end_tag_hint(name)
     }
 }
@@ -91,7 +91,7 @@ impl<S: ParserOutputSink> Parser<S> {
         }
     }
 
-    pub fn parse(&mut self, input: &Chunk<'_>) -> Result<usize, Error> {
+    pub fn parse(&mut self, input: &Chunk) -> Result<usize, Error> {
         use ParsingLoopTerminationReason::*;
 
         let mut loop_termination_reason = with_current_sm!(self, sm.run_parsing_loop(input))?;

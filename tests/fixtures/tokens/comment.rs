@@ -3,7 +3,7 @@ use encoding_rs::{EUC_JP, UTF_8};
 
 test_fixture!("Comment token", {
     test("Comment closing sequence in text", {
-        parse_token!("<!-- foo -->", UTF_8, Comment, |c: &mut Comment<'_>| {
+        parse_token!("<!-- foo -->", UTF_8, Comment, |c: &mut Comment| {
             let err = c.set_text("foo -- bar --> baz").unwrap_err();
 
             assert_eq!(err, CommentTextError::CommentClosingSequence);
@@ -11,7 +11,7 @@ test_fixture!("Comment token", {
     });
 
     test("Encoding-unmappable characters text", {
-        parse_token!("<!-- foo -->", EUC_JP, Comment, |c: &mut Comment<'_>| {
+        parse_token!("<!-- foo -->", EUC_JP, Comment, |c: &mut Comment| {
             let err = c.set_text("foo\u{00F8}bar").unwrap_err();
 
             assert_eq!(err, CommentTextError::UnencodableCharacter);

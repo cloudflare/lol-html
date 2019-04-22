@@ -20,11 +20,11 @@ pub use self::lexeme::*;
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 pub trait LexemeSink {
-    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective;
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>);
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> ParserDirective;
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme);
 }
 
-pub type State<S> = fn(&mut Lexer<S>, &Chunk<'_>) -> StateResult;
+pub type State<S> = fn(&mut Lexer<S>, &Chunk) -> StateResult;
 pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOutline>>>;
 
 pub struct Lexer<S: LexemeSink> {
@@ -89,7 +89,7 @@ impl<S: LexemeSink> Lexer<S> {
     fn handle_tree_builder_feedback(
         &mut self,
         feedback: TreeBuilderFeedback,
-        lexeme: &TagLexeme<'_>,
+        lexeme: &TagLexeme,
     ) -> ParsingLoopDirective {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
@@ -110,7 +110,7 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme<'_>) {
+    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme) {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;
@@ -118,7 +118,7 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) -> ParserDirective {
+    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme) -> ParserDirective {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;
@@ -180,7 +180,7 @@ impl<S: LexemeSink> StateMachine for Lexer<S> {
     }
 
     #[inline]
-    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize {
+    fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
         input.len() - self.lexeme_start
     }
 

@@ -44,19 +44,19 @@ pub extern "C" fn cool_thing_attributes_iterator_next<'r, 't>(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attributes_iterator_free(iterator: *mut Iter<Attribute<'_>>) {
+pub extern "C" fn cool_thing_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
     drop(to_box!(iterator));
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attribute_name_get(attribute: *const Attribute<'_>) -> Str {
+pub extern "C" fn cool_thing_attribute_name_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.name())
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attribute_value_get(attribute: *const Attribute<'_>) -> Str {
+pub extern "C" fn cool_thing_attribute_value_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.value())

@@ -17,7 +17,7 @@ impl Cursor {
 
     #[inline]
     #[allow(clippy::let_and_return)]
-    pub fn consume_ch(&mut self, chunk: &Chunk<'_>) -> Option<u8> {
+    pub fn consume_ch(&mut self, chunk: &Chunk) -> Option<u8> {
         let ch = chunk.get(self.next_pos);
 
         self.next_pos += 1;
@@ -43,7 +43,7 @@ impl Cursor {
 
     #[inline]
     #[allow(clippy::let_and_return)]
-    pub fn lookahead(&self, chunk: &Chunk<'_>, offset: usize) -> Option<u8> {
+    pub fn lookahead(&self, chunk: &Chunk, offset: usize) -> Option<u8> {
         let ch = chunk.get(self.next_pos + offset - 1);
 
         trace!(@chars "lookahead", ch);

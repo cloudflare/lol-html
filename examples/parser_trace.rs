@@ -65,17 +65,17 @@ impl TransformController for TraceTransformController {
 
     fn handle_element_start(
         &mut self,
-        _: LocalName<'_>,
+        _: LocalName,
         _: Namespace,
     ) -> ElementStartHandlingResult<Self> {
         Ok(self.capture_flags)
     }
 
-    fn handle_element_end(&mut self, _: LocalName<'_>) -> TokenCaptureFlags {
+    fn handle_element_end(&mut self, _: LocalName) -> TokenCaptureFlags {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, _: &mut Token<'_>) {}
+    fn handle_token(&mut self, _: &mut Token) {}
 }
 
 fn main() {

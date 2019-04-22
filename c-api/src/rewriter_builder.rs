@@ -8,9 +8,9 @@ pub extern "C" fn cool_thing_rewriter_builder_new() -> *mut HtmlRewriterBuilder<
 #[no_mangle]
 pub extern "C" fn cool_thing_rewriter_builder_add_document_content_handlers(
     builder: *mut HtmlRewriterBuilder<'static>,
-    doctype_handler: Option<extern "C" fn(*mut Doctype<'_>)>,
-    comments_handler: Option<extern "C" fn(*mut Comment<'_>)>,
-    text_handler: Option<extern "C" fn(*mut TextChunk<'_>)>,
+    doctype_handler: Option<extern "C" fn(*mut Doctype)>,
+    comments_handler: Option<extern "C" fn(*mut Comment)>,
+    text_handler: Option<extern "C" fn(*mut TextChunk)>,
 ) {
     let builder = to_ref_mut!(builder);
     let mut handlers = DocumentContentHandlers::default();
@@ -36,8 +36,8 @@ pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
     selector: *const c_char,
     selector_len: size_t,
     element_handler: Option<extern "C" fn(*mut Element<'_, '_>)>,
-    comments_handler: Option<extern "C" fn(*mut Comment<'_>)>,
-    text_handler: Option<extern "C" fn(*mut TextChunk<'_>)>,
+    comments_handler: Option<extern "C" fn(*mut Comment)>,
+    text_handler: Option<extern "C" fn(*mut TextChunk)>,
 ) -> c_int {
     let selector = unwrap_or_ret_err_code! { to_str!(selector, selector_len) };
     let builder = to_ref_mut!(builder);

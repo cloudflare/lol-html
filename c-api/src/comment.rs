@@ -1,13 +1,13 @@
 use super::*;
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_text_get(comment: *const Comment<'_>) -> Str {
+pub extern "C" fn cool_thing_comment_text_get(comment: *const Comment) -> Str {
     Str::new(to_ref!(comment).text())
 }
 
 #[no_mangle]
 pub extern "C" fn cool_thing_comment_text_set(
-    comment: *mut Comment<'_>,
+    comment: *mut Comment,
     text: *const c_char,
     text_len: size_t,
 ) -> c_int {
@@ -21,7 +21,7 @@ pub extern "C" fn cool_thing_comment_text_set(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_comment_before(
-    comment: *mut Comment<'_>,
+    comment: *mut Comment,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,
@@ -31,7 +31,7 @@ pub extern "C" fn cool_thing_comment_before(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_comment_after(
-    comment: *mut Comment<'_>,
+    comment: *mut Comment,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,
@@ -41,7 +41,7 @@ pub extern "C" fn cool_thing_comment_after(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_comment_replace(
-    comment: *mut Comment<'_>,
+    comment: *mut Comment,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,
@@ -50,11 +50,11 @@ pub extern "C" fn cool_thing_comment_replace(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_remove(comment: *mut Comment<'_>) {
+pub extern "C" fn cool_thing_comment_remove(comment: *mut Comment) {
     to_ref_mut!(comment).remove();
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_is_removed(comment: *const Comment<'_>) -> bool {
+pub extern "C" fn cool_thing_comment_is_removed(comment: *const Comment) -> bool {
     to_ref!(comment).removed()
 }

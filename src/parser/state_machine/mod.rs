@@ -25,7 +25,7 @@ impl FeedbackDirective {
 }
 
 impl Debug for FeedbackDirective {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -63,46 +63,46 @@ pub type StateResult = Result<ParsingLoopDirective, Error>;
 pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, Error>;
 
 pub trait StateMachineActions {
-    fn emit_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn emit_text(&mut self, input: &Chunk<'_>, _ch: Option<u8>);
-    fn emit_current_token(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn emit_tag(&mut self, input: &Chunk<'_>, ch: Option<u8>) -> StateResult;
-    fn emit_current_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn emit_raw_without_token(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
+    fn emit_text(&mut self, input: &Chunk, _ch: Option<u8>);
+    fn emit_current_token(&mut self, input: &Chunk, ch: Option<u8>);
+    fn emit_tag(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
+    fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
+    fn emit_raw_without_token(&mut self, input: &Chunk, ch: Option<u8>);
+    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn create_start_tag(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn create_end_tag(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn create_doctype(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn create_comment(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn create_start_tag(&mut self, input: &Chunk, ch: Option<u8>);
+    fn create_end_tag(&mut self, input: &Chunk, ch: Option<u8>);
+    fn create_doctype(&mut self, input: &Chunk, ch: Option<u8>);
+    fn create_comment(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn start_token_part(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn start_token_part(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn mark_comment_text_end(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn shift_comment_text_end_by(&mut self, input: &Chunk<'_>, ch: Option<u8>, offset: usize);
+    fn mark_comment_text_end(&mut self, input: &Chunk, ch: Option<u8>);
+    fn shift_comment_text_end_by(&mut self, input: &Chunk, ch: Option<u8>, offset: usize);
 
-    fn set_force_quirks(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn finish_doctype_name(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn finish_doctype_public_id(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn finish_doctype_system_id(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn set_force_quirks(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_doctype_name(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_doctype_public_id(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_doctype_system_id(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn finish_tag_name(&mut self, input: &Chunk<'_>, ch: Option<u8>) -> StateResult;
-    fn update_tag_name_hash(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn mark_as_self_closing(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn finish_tag_name(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
+    fn update_tag_name_hash(&mut self, input: &Chunk, ch: Option<u8>);
+    fn mark_as_self_closing(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn start_attr(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn finish_attr_name(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn finish_attr_value(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn finish_attr(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn start_attr(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_attr_name(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_attr_value(&mut self, input: &Chunk, ch: Option<u8>);
+    fn finish_attr(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn set_closing_quote_to_double(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn set_closing_quote_to_single(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn set_closing_quote_to_double(&mut self, input: &Chunk, ch: Option<u8>);
+    fn set_closing_quote_to_single(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn mark_tag_start(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn unmark_tag_start(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn mark_tag_start(&mut self, input: &Chunk, ch: Option<u8>);
+    fn unmark_tag_start(&mut self, input: &Chunk, ch: Option<u8>);
 
-    fn enter_cdata(&mut self, input: &Chunk<'_>, ch: Option<u8>);
-    fn leave_cdata(&mut self, input: &Chunk<'_>, ch: Option<u8>);
+    fn enter_cdata(&mut self, input: &Chunk, ch: Option<u8>);
+    fn leave_cdata(&mut self, input: &Chunk, ch: Option<u8>);
 }
 
 pub trait StateMachineConditions {
@@ -113,8 +113,8 @@ pub trait StateMachineConditions {
 pub trait StateMachine: StateMachineActions + StateMachineConditions {
     define_states!();
 
-    fn state(&self) -> fn(&mut Self, &Chunk<'_>) -> StateResult;
-    fn set_state(&mut self, state: fn(&mut Self, &Chunk<'_>) -> StateResult);
+    fn state(&self) -> fn(&mut Self, &Chunk) -> StateResult;
+    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult);
 
     fn input_cursor(&mut self) -> &mut Cursor;
     fn set_input_cursor(&mut self, input_cursor: Cursor);
@@ -136,9 +136,9 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn adjust_to_bookmark(&mut self, pos: usize, feedback_directive: FeedbackDirective);
     fn enter_ch_sequence_matching(&mut self);
     fn leave_ch_sequence_matching(&mut self);
-    fn get_blocked_byte_count(&self, input: &Chunk<'_>) -> usize;
+    fn get_blocked_byte_count(&self, input: &Chunk) -> usize;
 
-    fn run_parsing_loop(&mut self, input: &Chunk<'_>) -> ParsingLoopResult {
+    fn run_parsing_loop(&mut self, input: &Chunk) -> ParsingLoopResult {
         loop {
             let state = self.state();
 
@@ -150,7 +150,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
 
     fn continue_from_bookmark(
         &mut self,
-        input: &Chunk<'_>,
+        input: &Chunk,
         bookmark: StateMachineBookmark,
     ) -> ParsingLoopResult {
         self.set_cdata_allowed(bookmark.cdata_allowed);
@@ -163,7 +163,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn break_on_end_of_input(&mut self, input: &Chunk<'_>) -> StateResult {
+    fn break_on_end_of_input(&mut self, input: &Chunk) -> StateResult {
         let blocked_byte_count = self.get_blocked_byte_count(input);
 
         if !input.is_last() {
@@ -204,7 +204,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn switch_state(&mut self, state: fn(&mut Self, &Chunk<'_>) -> StateResult) {
+    fn switch_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult) {
         self.set_state(state);
         self.set_is_state_enter(true);
     }
@@ -281,22 +281,22 @@ macro_rules! impl_common_sm_accessors {
 macro_rules! impl_common_sm_actions {
     () => {
         #[inline]
-        fn set_closing_quote_to_double(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+        fn set_closing_quote_to_double(&mut self, _input: &Chunk, _ch: Option<u8>) {
             self.closing_quote = b'"';
         }
 
         #[inline]
-        fn set_closing_quote_to_single(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+        fn set_closing_quote_to_single(&mut self, _input: &Chunk, _ch: Option<u8>) {
             self.closing_quote = b'\'';
         }
 
         #[inline]
-        fn enter_cdata(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+        fn enter_cdata(&mut self, _input: &Chunk, _ch: Option<u8>) {
             self.set_last_text_type(TextType::CDataSection);
         }
 
         #[inline]
-        fn leave_cdata(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+        fn leave_cdata(&mut self, _input: &Chunk, _ch: Option<u8>) {
             self.set_last_text_type(TextType::Data);
         }
     };
@@ -306,7 +306,7 @@ macro_rules! noop_action {
     ($($fn_name:ident),*) => {
         $(
             #[inline]
-            fn $fn_name(&mut self, _input: &Chunk<'_>, _ch: Option<u8>) {
+            fn $fn_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
                 trace!(@noop);
             }
         )*

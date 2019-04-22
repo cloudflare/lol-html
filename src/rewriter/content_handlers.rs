@@ -1,8 +1,8 @@
 use crate::rewritable_units::{Comment, Doctype, Element, TextChunk, Token, TokenCaptureFlags};
 
-pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype<'_>) + 'h>;
-pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment<'_>) + 'h>;
-pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk<'_>) + 'h>;
+pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) + 'h>;
+pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) + 'h>;
+pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) + 'h>;
 pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element<'_, '_>) + 'h>;
 
 struct HandlerVecItem<H> {
@@ -151,7 +151,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
     }
 
     #[inline]
-    pub fn handle_token(&mut self, token: &mut Token<'_>) {
+    pub fn handle_token(&mut self, token: &mut Token) {
         match token {
             Token::StartTag(start_tag) => {
                 let mut element = Element::new(start_tag);
