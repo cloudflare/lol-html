@@ -109,6 +109,16 @@ impl<'i> StartTag<'i> {
             output_handler(b">");
         }
     }
+
+    #[cfg(feature = "test_api")]
+    pub fn raw_attributes(
+        &self,
+    ) -> (
+        &'i crate::base::Chunk<'i>,
+        crate::parser::SharedAttributeBuffer,
+    ) {
+        self.attributes.raw_attributes()
+    }
 }
 
 impl_common_token_api!(StartTag);

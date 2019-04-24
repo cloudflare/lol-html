@@ -201,6 +201,11 @@ impl<'i> Attributes<'i> {
             .borrow_mut()
             .expect("Items should be initialized")
     }
+
+    #[cfg(feature = "test_api")]
+    pub fn raw_attributes(&self) -> (&'i Chunk<'i>, SharedAttributeBuffer) {
+        (self.input, std::rc::Rc::clone(&self.attribute_buffer))
+    }
 }
 
 impl<'i> Deref for Attributes<'i> {

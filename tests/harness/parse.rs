@@ -90,7 +90,7 @@ macro_rules! parse_token {
             TokenCaptureFlags::all(),
             TextType::Data,
             LocalNameHash::default(),
-            Box::new(move |t| match t {
+            Box::new(|t| match t {
                 Token::$TokenType(t) => {
                     // NOTE: we always have two text chunks:
                     // one with the actual text and the second is emitted

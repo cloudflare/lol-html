@@ -1,1 +1,1 @@
-test_modules!(ast);
+test_modules!(ast, compiler);

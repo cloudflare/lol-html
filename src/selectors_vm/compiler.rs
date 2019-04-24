@@ -1,4 +1,4 @@
-use super::attribute_matcher::{is_attr_whitespace, AttributeMatcher};
+use super::attribute_matcher::AttributeMatcher;
 use super::program::{
     AddressRange, AttrExprMatchingInstr, ExecutionBranch, GenericInstr, Instr, InstrStub,
     NonAttrExprMatchingInstr, Program,
@@ -158,13 +158,13 @@ where
             AttributeExpr::AttributeIncludes(operand) => self
                 .compile_attr_expr_operand(operand)
                 .compile_or(negation, |operand| {
-                    compile_expr!(|m| m.matches_splitted_by(&operand, is_attr_whitespace))
+                    compile_expr!(|m| m.matches_splitted_by_whitespace(&operand))
                 }),
 
             AttributeExpr::AttributeDashMatch(operand) => self
                 .compile_attr_expr_operand(operand)
                 .compile_or(negation, |operand| {
-                    compile_expr!(|m| m.matches_splitted_by(&operand, |b| b == b'-'))
+                    compile_expr!(|m| m.has_dash_matching_attr(&operand))
                 }),
 
             AttributeExpr::AttributePrefix(operand) => self
@@ -222,7 +222,7 @@ where
 
         self.free_space_ptr = address_range.end;
 
-        debug_assert!(self.free_space_ptr < self.instructions.len());
+        debug_assert!(self.free_space_ptr <= self.instructions.len());
 
         address_range
     }
@@ -234,7 +234,7 @@ where
 
         for (i, node) in nodes.into_iter().enumerate() {
             let branch = ExecutionBranch {
-                payload: node.payload,
+                matched_payload: node.payload,
                 jumps: node.children.map(|c| self.compile_nodes(c)),
                 hereditary_jumps: node.descendants.map(|d| self.compile_nodes(d)),
             };

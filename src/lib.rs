@@ -66,9 +66,11 @@ cfg_if! {
 
         pub use self::base::Bytes;
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace, TAG_STR_PAIRS};
+
         pub use self::selectors_vm::{
             Ast as SelectorsAst, AstNode, Predicate, Expr, AttributeExprOperand, AttributeExpr,
-            NonAttributeExpr
+            NonAttributeExpr, Compiler as SelectorsCompiler, Program as SelectorsProgram,
+            ExecutionBranch, AttributeMatcher,
         };
     }
 }

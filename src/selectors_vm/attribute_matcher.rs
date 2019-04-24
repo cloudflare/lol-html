@@ -14,7 +14,7 @@ lazy_static! {
 }
 
 #[inline]
-pub fn is_attr_whitespace(b: u8) -> bool {
+fn is_attr_whitespace(b: u8) -> bool {
     b == b' ' || b == b'\n' || b == b'\r' || b == b'\t' || b == b'\x0c'
 }
 
@@ -53,7 +53,7 @@ impl<'i> AttributeMatcher<'i> {
                 let attr_name = self.input.slice(a.name);
 
                 for i in 0..attr_name.len() {
-                    if attr_name[i].to_ascii_lowercase() == lowercased_name[i] {
+                    if attr_name[i].to_ascii_lowercase() != lowercased_name[i] {
                         return false;
                     }
                 }
@@ -111,18 +111,14 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn matches_splitted_by(
-        &self,
-        operand: &CompiledAttributeExprOperand,
-        split_by: impl Fn(u8) -> bool,
-    ) -> bool {
+    pub fn matches_splitted_by_whitespace(&self, operand: &CompiledAttributeExprOperand) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = operand
                 .case_sensitivity
                 .to_unconditional(self.is_html_element);
 
             actual_value
-                .split(|&b| split_by(b))
+                .split(|&b| is_attr_whitespace(b))
                 .any(|part| case_sensitivity.eq(part, &operand.value))
         })
     }
@@ -137,6 +133,24 @@ impl<'i> AttributeMatcher<'i> {
             let prefix_len = operand.value.len();
 
             actual_value.len() >= prefix_len
+                && case_sensitivity.eq(&actual_value[..prefix_len], &operand.value)
+        })
+    }
+
+    #[inline]
+    pub fn has_dash_matching_attr(&self, operand: &CompiledAttributeExprOperand) -> bool {
+        self.value_matches(&operand.name, |actual_value| {
+            let case_sensitivity = operand
+                .case_sensitivity
+                .to_unconditional(self.is_html_element);
+
+            if case_sensitivity.eq(&actual_value, &operand.value) {
+                return true;
+            }
+
+            let prefix_len = operand.value.len();
+
+            actual_value.get(prefix_len) == Some(&b'-')
                 && case_sensitivity.eq(&actual_value[..prefix_len], &operand.value)
         })
     }

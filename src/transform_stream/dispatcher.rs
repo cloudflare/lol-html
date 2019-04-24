@@ -14,7 +14,7 @@ use std::rc::Rc;
 use TagTokenOutline::*;
 
 pub type AuxElementInfoRequest<C> =
-    Box<dyn FnMut(&mut C, &Chunk, SharedAttributeBuffer, bool) -> TokenCaptureFlags>;
+    Box<dyn Fn(&mut C, &Chunk, SharedAttributeBuffer, bool) -> TokenCaptureFlags>;
 
 pub type ElementStartHandlingResult<C> = Result<TokenCaptureFlags, AuxElementInfoRequest<C>>;
 

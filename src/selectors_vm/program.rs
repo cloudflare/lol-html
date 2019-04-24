@@ -6,23 +6,25 @@ use std::ops::Range;
 
 pub type AddressRange = Range<usize>;
 
-pub struct AttributesRequired;
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct ExecutionBranch<P> {
-    pub payload: Option<Vec<P>>,
+    pub matched_payload: Option<Vec<P>>,
     pub jumps: Option<AddressRange>,
     pub hereditary_jumps: Option<AddressRange>,
 }
 
+type AttributesRequest<'i, P> =
+    Box<dyn Fn(&AttributeMatcher) -> Option<&'i ExecutionBranch<P>> + 'i>;
+
 pub trait Instr<P> {
+    fn try_exec_without_attrs<'i>(
+        &'i self,
+        local_name: &LocalName,
+    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>>;
+
     fn exec<'i>(
         &'i self,
         local_name: &LocalName,
-        attr_matcher: Option<&AttributeMatcher>,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequired>;
-
-    fn exec_with_attrs<'i>(
-        &'i self,
         attr_matcher: &AttributeMatcher,
     ) -> Option<&'i ExecutionBranch<P>>;
 }
@@ -42,15 +44,14 @@ impl<P: 'static> InstrStub<P> {
 }
 
 impl<P> Instr<P> for InstrStub<P> {
-    fn exec<'i>(
+    fn try_exec_without_attrs<'i>(
         &'i self,
         _: &LocalName,
-        _: Option<&AttributeMatcher>,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequired> {
+    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
         unreachable!("Instruction stub should never be executed");
     }
 
-    fn exec_with_attrs<'i>(&'i self, _: &AttributeMatcher) -> Option<&'i ExecutionBranch<P>> {
+    fn exec<'i>(&'i self, _: &LocalName, _: &AttributeMatcher) -> Option<&'i ExecutionBranch<P>> {
         unreachable!("Instruction stub should never be executed");
     }
 }
@@ -85,16 +86,20 @@ impl<P> NonAttrExprMatchingInstr<P> {
 
 impl<P> Instr<P> for NonAttrExprMatchingInstr<P> {
     #[inline]
-    fn exec<'i>(
+    fn try_exec_without_attrs<'i>(
         &'i self,
         local_name: &LocalName,
-        _: Option<&AttributeMatcher>,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequired> {
+    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
         Ok(do_match!(self.exprs, local_name, self.associated_branch))
     }
 
-    fn exec_with_attrs<'i>(&'i self, _: &AttributeMatcher) -> Option<&'i ExecutionBranch<P>> {
-        unreachable!("Non attribute matching instruction should never request attributes");
+    #[inline]
+    fn exec<'i>(
+        &'i self,
+        local_name: &LocalName,
+        _: &AttributeMatcher,
+    ) -> Option<&'i ExecutionBranch<P>> {
+        do_match!(self.exprs, local_name, self.associated_branch)
     }
 }
 
@@ -118,19 +123,19 @@ impl<P> AttrExprMatchingInstr<P> {
 
 impl<P> Instr<P> for AttrExprMatchingInstr<P> {
     #[inline]
+    fn try_exec_without_attrs<'i>(
+        &'i self,
+        _: &LocalName,
+    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
+        Err(Box::new(move |attr_matcher| {
+            do_match!(self.exprs, attr_matcher, self.associated_branch)
+        }))
+    }
+
+    #[inline]
     fn exec<'i>(
         &'i self,
         _: &LocalName,
-        attr_matcher: Option<&AttributeMatcher>,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequired> {
-        match attr_matcher {
-            Some(m) => Ok(do_match!(self.exprs, m, self.associated_branch)),
-            None => Err(AttributesRequired),
-        }
-    }
-
-    fn exec_with_attrs<'i>(
-        &'i self,
         attr_matcher: &AttributeMatcher,
     ) -> Option<&'i ExecutionBranch<P>> {
         do_match!(self.exprs, attr_matcher, self.associated_branch)
@@ -160,25 +165,29 @@ impl<P> GenericInstr<P> {
 
 impl<P> Instr<P> for GenericInstr<P> {
     #[inline]
-    fn exec<'i>(
+    fn try_exec_without_attrs<'i>(
         &'i self,
         local_name: &LocalName,
-        attr_matcher: Option<&AttributeMatcher>,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequired> {
+    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
         if !self.non_attr_exprs.iter().all(|e| e(local_name)) {
             Ok(None)
         } else {
-            match attr_matcher {
-                Some(m) => Ok(do_match!(self.attr_exprs, m, self.associated_branch)),
-                None => Err(AttributesRequired),
-            }
+            Err(Box::new(move |attr_matcher| {
+                do_match!(self.attr_exprs, attr_matcher, self.associated_branch)
+            }))
         }
     }
 
-    fn exec_with_attrs<'i>(
+    #[inline]
+    fn exec<'i>(
         &'i self,
+        local_name: &LocalName,
         attr_matcher: &AttributeMatcher,
     ) -> Option<&'i ExecutionBranch<P>> {
-        do_match!(self.attr_exprs, attr_matcher, self.associated_branch)
+        if self.non_attr_exprs.iter().all(|e| e(local_name)) {
+            do_match!(self.attr_exprs, attr_matcher, self.associated_branch)
+        } else {
+            None
+        }
     }
 }

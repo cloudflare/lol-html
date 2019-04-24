@@ -8,4 +8,6 @@ mod stack;
 
 pub use self::ast::*;
 pub use self::attribute_matcher::AttributeMatcher;
+pub use self::compiler::Compiler;
 pub use self::error::SelectorError;
+pub use self::program::{ExecutionBranch, Program};
