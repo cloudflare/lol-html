@@ -31,7 +31,7 @@ impl TransformController for HtmlRewriteController<'_> {
     ) -> ElementStartHandlingResult<Self> {
         for &locator in &self.element_handler_locators {
             self.handlers_dispatcher
-                .set_element_handlers_active(locator, true);
+                .inc_element_handlers_user_count(locator);
         }
 
         Ok(self.handlers_dispatcher.get_token_capture_flags())

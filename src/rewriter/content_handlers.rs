@@ -7,74 +7,118 @@ pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element<'_, '_>) + 'h>;
 
 struct HandlerVecItem<H> {
     handler: H,
-    active: bool,
+    user_count: usize,
 }
 
 struct HandlerVec<H> {
     handlers: Vec<HandlerVecItem<H>>,
-    active_count: usize,
+    user_count: usize,
 }
 
 impl<H> Default for HandlerVec<H> {
     fn default() -> Self {
         HandlerVec {
             handlers: Vec::default(),
-            active_count: 0,
+            user_count: 0,
         }
     }
 }
 
 impl<H> HandlerVec<H> {
     #[inline]
-    pub fn push(&mut self, handler: H, active: bool) -> usize {
+    pub fn push(&mut self, handler: H, always_active: bool) -> usize {
         let idx = self.handlers.len();
 
-        self.handlers.push(HandlerVecItem { handler, active });
+        let item = HandlerVecItem {
+            handler,
+            user_count: if always_active { 1 } else { 0 },
+        };
 
-        if active {
-            self.active_count += 1;
-        }
+        self.user_count += item.user_count;
+        self.handlers.push(item);
 
         idx
     }
 
     #[inline]
-    pub fn set_handler_active(&mut self, idx: usize, active: bool) {
-        self.handlers[idx].active = active;
-
-        if active {
-            self.active_count += 1;
-        } else {
-            self.active_count -= 1;
-        }
+    pub fn inc_user_count(&mut self, idx: usize) {
+        self.handlers[idx].user_count += 1;
+        self.user_count += 1;
     }
 
     #[inline]
-    pub fn if_has_active_set(&self, flags: &mut TokenCaptureFlags, value: TokenCaptureFlags) {
-        if self.active_count > 0 {
-            *flags |= value;
-        }
+    pub fn dec_user_count(&mut self, idx: usize) {
+        self.handlers[idx].user_count -= 1;
+        self.user_count -= 1;
+    }
+
+    #[inline]
+    pub fn has_active(&self) -> bool {
+        self.user_count > 0
     }
 
     #[inline]
     pub fn for_each_active_handler(&mut self, mut action: impl FnMut(&mut H)) {
         for item in self.handlers.iter_mut() {
-            if item.active {
+            if item.user_count > 0 {
                 action(&mut item.handler);
             }
         }
     }
+}
+
+struct SelfDeactivatingHandlerVec<H> {
+    handlers: Vec<HandlerVecItem<H>>,
+    user_count: usize,
+}
+
+impl<H> Default for SelfDeactivatingHandlerVec<H> {
+    fn default() -> Self {
+        SelfDeactivatingHandlerVec {
+            handlers: Vec::default(),
+            user_count: 0,
+        }
+    }
+}
+
+impl<H> SelfDeactivatingHandlerVec<H> {
+    #[inline]
+    pub fn push(&mut self, handler: H) -> usize {
+        let idx = self.handlers.len();
+
+        self.handlers.push(HandlerVecItem {
+            handler,
+            user_count: 0,
+        });
+
+        idx
+    }
 
     #[inline]
-    pub fn once_for_each_active_handler(&mut self, mut action: impl FnMut(&mut H)) {
+    pub fn use_handler(&mut self, idx: usize) {
+        let handler = &mut self.handlers[idx];
+
+        if handler.user_count == 0 {
+            handler.user_count = 1;
+            self.user_count += 1;
+        }
+    }
+
+    #[inline]
+    pub fn has_active(&self) -> bool {
+        self.user_count > 0
+    }
+
+    #[inline]
+    pub fn for_each_active_handler(&mut self, mut action: impl FnMut(&mut H)) {
         for item in self.handlers.iter_mut() {
-            if item.active {
+            if item.user_count == 1 {
                 action(&mut item.handler);
-                item.active = false;
+                item.user_count = 0;
             }
         }
 
-        self.active_count = 0;
+        self.user_count = 0;
     }
 }
 
@@ -90,7 +134,7 @@ pub struct ContentHandlersDispatcher<'h> {
     doctype_handlers: HandlerVec<DoctypeHandler<'h>>,
     comment_handlers: HandlerVec<CommentHandler<'h>>,
     text_handlers: HandlerVec<TextHandler<'h>>,
-    element_handlers: HandlerVec<ElementHandler<'h>>,
+    element_handlers: SelfDeactivatingHandlerVec<ElementHandler<'h>>,
 }
 
 impl<'h> ContentHandlersDispatcher<'h> {
@@ -123,30 +167,35 @@ impl<'h> ContentHandlersDispatcher<'h> {
         text_handler: Option<TextHandler<'h>>,
     ) -> ElementContentHandlersLocator {
         ElementContentHandlersLocator {
-            element_handler_idx: element_handler.map(|h| self.element_handlers.push(h, false)),
+            element_handler_idx: element_handler.map(|h| self.element_handlers.push(h)),
             comment_handler_idx: comment_handler.map(|h| self.comment_handlers.push(h, false)),
             text_handler_idx: text_handler.map(|h| self.text_handlers.push(h, false)),
         }
     }
 
-    // TODO there might be multiple elements on the stack using the same
-    // handlers (e.g. "*" selector). Use counter instead of boolean "active".
     #[inline]
-    pub fn set_element_handlers_active(
-        &mut self,
-        locator: ElementContentHandlersLocator,
-        active: bool,
-    ) {
+    pub fn inc_element_handlers_user_count(&mut self, locator: ElementContentHandlersLocator) {
         if let Some(idx) = locator.comment_handler_idx {
-            self.comment_handlers.set_handler_active(idx, active);
+            self.comment_handlers.inc_user_count(idx);
         }
 
         if let Some(idx) = locator.text_handler_idx {
-            self.text_handlers.set_handler_active(idx, active);
+            self.text_handlers.inc_user_count(idx);
         }
 
         if let Some(idx) = locator.element_handler_idx {
-            self.element_handlers.set_handler_active(idx, active);
+            self.element_handlers.use_handler(idx);
+        }
+    }
+
+    #[inline]
+    pub fn dec_element_handlers_user_count(&mut self, locator: ElementContentHandlersLocator) {
+        if let Some(idx) = locator.comment_handler_idx {
+            self.comment_handlers.dec_user_count(idx);
+        }
+
+        if let Some(idx) = locator.text_handler_idx {
+            self.text_handlers.dec_user_count(idx);
         }
     }
 
@@ -156,9 +205,8 @@ impl<'h> ContentHandlersDispatcher<'h> {
             Token::StartTag(start_tag) => {
                 let mut element = Element::new(start_tag);
 
-                // NOTE: deactivate all the element handlers once we've got the element.
                 self.element_handlers
-                    .once_for_each_active_handler(|h| h(&mut element));
+                    .for_each_active_handler(|h| h(&mut element));
             }
             Token::Doctype(doctype) => self
                 .doctype_handlers
@@ -175,14 +223,21 @@ impl<'h> ContentHandlersDispatcher<'h> {
     pub fn get_token_capture_flags(&self) -> TokenCaptureFlags {
         let mut flags = TokenCaptureFlags::empty();
 
-        self.doctype_handlers
-            .if_has_active_set(&mut flags, TokenCaptureFlags::DOCTYPES);
-        self.comment_handlers
-            .if_has_active_set(&mut flags, TokenCaptureFlags::COMMENTS);
-        self.text_handlers
-            .if_has_active_set(&mut flags, TokenCaptureFlags::TEXT);
-        self.element_handlers
-            .if_has_active_set(&mut flags, TokenCaptureFlags::NEXT_START_TAG);
+        if self.doctype_handlers.has_active() {
+            flags |= TokenCaptureFlags::DOCTYPES;
+        }
+
+        if self.comment_handlers.has_active() {
+            flags |= TokenCaptureFlags::COMMENTS;
+        }
+
+        if self.text_handlers.has_active() {
+            flags |= TokenCaptureFlags::TEXT;
+        }
+
+        if self.element_handlers.has_active() {
+            flags |= TokenCaptureFlags::NEXT_START_TAG;
+        }
 
         flags
     }
