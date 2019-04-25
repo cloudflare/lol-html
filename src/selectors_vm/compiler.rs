@@ -98,7 +98,7 @@ where
             NonAttributeExpr::Unmatchable => compile_expr!(@unmatchable),
             NonAttributeExpr::LocalName(local_name) => {
                 match LocalName::from_str_without_replacements(&local_name, self.encoding)
-                    .map(|n| n.into_owned())
+                    .map(LocalName::into_owned)
                 {
                     Ok(local_name) => {
                         compile_expr!(|actual_local_name| *actual_local_name == local_name)
@@ -113,7 +113,7 @@ where
 
     #[inline]
     fn compile_literal(&self, lit: &str) -> Result<Bytes<'static>, ()> {
-        Bytes::from_str_without_replacements(lit, self.encoding).map(|b| b.into_owned())
+        Bytes::from_str_without_replacements(lit, self.encoding).map(Bytes::into_owned)
     }
 
     #[inline]

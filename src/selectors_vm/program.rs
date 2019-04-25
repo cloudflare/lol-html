@@ -16,11 +16,14 @@ pub struct ExecutionBranch<P> {
 type AttributesRequest<'i, P> =
     Box<dyn Fn(&AttributeMatcher) -> Option<&'i ExecutionBranch<P>> + 'i>;
 
+type ExecWithoutAttrsResult<'i, P> =
+    Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>>;
+
 pub trait Instr<P> {
     fn try_exec_without_attrs<'i>(
         &'i self,
         local_name: &LocalName,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>>;
+    ) -> ExecWithoutAttrsResult<'i, P>;
 
     fn exec<'i>(
         &'i self,
@@ -44,10 +47,7 @@ impl<P: 'static> InstrStub<P> {
 }
 
 impl<P> Instr<P> for InstrStub<P> {
-    fn try_exec_without_attrs<'i>(
-        &'i self,
-        _: &LocalName,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
+    fn try_exec_without_attrs<'i>(&'i self, _: &LocalName) -> ExecWithoutAttrsResult<'i, P> {
         unreachable!("Instruction stub should never be executed");
     }
 
@@ -89,7 +89,7 @@ impl<P> Instr<P> for NonAttrExprMatchingInstr<P> {
     fn try_exec_without_attrs<'i>(
         &'i self,
         local_name: &LocalName,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
+    ) -> ExecWithoutAttrsResult<'i, P> {
         Ok(do_match!(self.exprs, local_name, self.associated_branch))
     }
 
@@ -123,10 +123,7 @@ impl<P> AttrExprMatchingInstr<P> {
 
 impl<P> Instr<P> for AttrExprMatchingInstr<P> {
     #[inline]
-    fn try_exec_without_attrs<'i>(
-        &'i self,
-        _: &LocalName,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
+    fn try_exec_without_attrs<'i>(&'i self, _: &LocalName) -> ExecWithoutAttrsResult<'i, P> {
         Err(Box::new(move |attr_matcher| {
             do_match!(self.exprs, attr_matcher, self.associated_branch)
         }))
@@ -168,7 +165,7 @@ impl<P> Instr<P> for GenericInstr<P> {
     fn try_exec_without_attrs<'i>(
         &'i self,
         local_name: &LocalName,
-    ) -> Result<Option<&'i ExecutionBranch<P>>, AttributesRequest<'i, P>> {
+    ) -> ExecWithoutAttrsResult<'i, P> {
         if !self.non_attr_exprs.iter().all(|e| e(local_name)) {
             Ok(None)
         } else {

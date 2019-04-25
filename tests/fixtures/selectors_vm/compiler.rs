@@ -126,6 +126,7 @@ fn assert_non_attr_expr_matches_and_negation_reverses_match(
             |input, should_match, local_name, attr_matcher| {
                 // NOTE: can't use unwrap() or expect() here, because
                 // Debug is not implemented for the closure in the error type.
+                #[allow(clippy::match_wild_err_arm)]
                 let multi_step_res = match instr.try_exec_without_attrs(&local_name) {
                     Ok(res) => res,
                     Err(_) => panic!("Should match without attribute request"),

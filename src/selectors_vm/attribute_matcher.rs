@@ -60,7 +60,7 @@ impl<'i> AttributeMatcher<'i> {
 
                 true
             })
-            .map(|&a| a)
+            .cloned()
     }
 
     #[inline]
