@@ -1,7 +1,7 @@
+use super::program::AddressRange;
 use crate::html::{LocalName, Namespace, Tag};
-use crate::rewriter::ElementContentHandlersLocator;
 
-pub type SelfClosingFlagRequest<'i> = Box<dyn FnOnce(&mut OpenElementStack, bool) -> bool + 'i>;
+pub type SelfClosingFlagRequest<'i> = Box<dyn FnOnce(bool) -> bool + 'i>;
 
 #[inline]
 fn is_void_element(local_name: &LocalName) -> bool {
@@ -19,69 +19,54 @@ fn is_void_element(local_name: &LocalName) -> bool {
     )
 }
 
-struct StackItem {
-    local_name: LocalName<'static>,
-    handlers_locators: Vec<ElementContentHandlersLocator>,
+pub struct StackItem<P> {
+    pub local_name: LocalName<'static>,
+    pub matched_payload: Vec<P>,
+    pub jumps: Vec<AddressRange>,
+    pub hereditary_jumps: Vec<AddressRange>,
+    pub has_ancestor_with_hereditary_jumps: bool,
 }
 
 #[derive(Default)]
-pub struct OpenElementStack(Vec<StackItem>);
+pub struct Stack<P>(Vec<StackItem<P>>);
 
-impl OpenElementStack {
-    #[inline]
-    fn push(
-        &mut self,
-        local_name: LocalName,
-        handlers_locators: Vec<ElementContentHandlersLocator>,
-    ) {
-        self.0.push(StackItem {
-            local_name: local_name.into_owned(),
-            handlers_locators,
-        })
-    }
-
+impl<P> Stack<P> {
     pub fn try_push<'i>(
-        &mut self,
-        local_name: LocalName<'i>,
+        &'i mut self,
+        item: StackItem<P>,
         ns: Namespace,
-        handlers_locators: Vec<ElementContentHandlersLocator>,
     ) -> Result<bool, SelfClosingFlagRequest<'i>> {
         if ns == Namespace::Html {
-            if is_void_element(&local_name) {
-                Ok(false)
+            Ok(if is_void_element(&item.local_name) {
+                false
             } else {
-                self.push(local_name, handlers_locators);
-                Ok(true)
-            }
+                self.0.push(item);
+                true
+            })
         } else {
             // TODO currently we request lexeme for all foreign elements.
             // Consider adding additional event to the tag scanner which will
             // return just the self closing flag.
-            Err(Box::new(move |this, self_closing| {
+            Err(Box::new(move |self_closing| {
                 if self_closing {
                     false
                 } else {
-                    this.push(local_name, handlers_locators);
+                    self.0.push(item);
                     true
                 }
             }))
         }
     }
 
-    pub fn pop_up_to(
-        &mut self,
-        local_name: LocalName,
-        mut popped_locators_handler: impl FnMut(Vec<ElementContentHandlersLocator>),
-    ) {
+    pub fn pop_up_to(&mut self, local_name: LocalName, mut popped_payload_handler: impl FnMut(P)) {
         for i in self.0.len() - 1..=0 {
             if self.0[i].local_name == local_name {
                 for _ in i..self.0.len() {
-                    popped_locators_handler(
-                        self.0
-                            .pop()
-                            .expect("Element should be on the stack at this point")
-                            .handlers_locators,
-                    );
+                    self.0.pop().into_iter().for_each(|i| {
+                        for payload in i.matched_payload {
+                            popped_payload_handler(payload);
+                        }
+                    });
                 }
 
                 break;
