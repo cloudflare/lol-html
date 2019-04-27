@@ -9,6 +9,7 @@ use crate::html::LocalName;
 use encoding_rs::Encoding;
 use selectors::attr::ParsedCaseSensitivity;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 pub type CompiledNonAttributeExpr = Box<dyn Fn(&LocalName) -> bool>;
 pub type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher) -> bool>;
@@ -67,7 +68,7 @@ impl<T> CompileOr<T> for Result<T, ()> {
 
 pub struct Compiler<P>
 where
-    P: PartialEq + Eq + Copy + Debug,
+    P: PartialEq + Eq + Copy + Debug + Hash,
 {
     encoding: &'static Encoding,
     instructions: Vec<Box<dyn Instr<P>>>,
@@ -76,7 +77,7 @@ where
 
 impl<P: 'static> Compiler<P>
 where
-    P: PartialEq + Eq + Copy + Debug,
+    P: PartialEq + Eq + Copy + Debug + Hash,
 {
     pub fn new(encoding: &'static Encoding) -> Self {
         Compiler {
@@ -218,32 +219,41 @@ where
 
     #[inline]
     fn reserve_space_for_nodes(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
-        let address_range = self.free_space_ptr..self.free_space_ptr + nodes.len();
+        let addr_range = self.free_space_ptr..self.free_space_ptr + nodes.len();
 
-        self.free_space_ptr = address_range.end;
+        self.free_space_ptr = addr_range.end;
 
         debug_assert!(self.free_space_ptr <= self.instructions.len());
 
-        address_range
+        addr_range
+    }
+
+    #[inline]
+    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>) -> Option<AddressRange> {
+        if nodes.is_empty() {
+            None
+        } else {
+            Some(self.compile_nodes(nodes))
+        }
     }
 
     fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
         // we can reference them by range instead of vector of addresses.
-        let address_range = self.reserve_space_for_nodes(&nodes);
+        let addr_range = self.reserve_space_for_nodes(&nodes);
 
         for (i, node) in nodes.into_iter().enumerate() {
             let branch = ExecutionBranch {
                 matched_payload: node.payload,
-                jumps: node.children.map(|c| self.compile_nodes(c)),
-                hereditary_jumps: node.descendants.map(|d| self.compile_nodes(d)),
+                jumps: self.compile_descendants(node.children),
+                hereditary_jumps: self.compile_descendants(node.descendants),
             };
 
-            self.instructions[address_range.start + i] =
+            self.instructions[addr_range.start + i] =
                 self.compile_predicate(node.predicate, branch);
         }
 
-        address_range
+        addr_range
     }
 
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {

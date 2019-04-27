@@ -1,7 +1,7 @@
 use super::program::AddressRange;
 use crate::html::{LocalName, Namespace, Tag};
-
-pub type SelfClosingFlagRequest<'i> = Box<dyn FnOnce(bool) -> bool + 'i>;
+use std::collections::HashSet;
+use std::hash::Hash;
 
 #[inline]
 fn is_void_element(local_name: &LocalName) -> bool {
@@ -19,58 +19,113 @@ fn is_void_element(local_name: &LocalName) -> bool {
     )
 }
 
-pub struct StackItem<P> {
-    pub local_name: LocalName<'static>,
-    pub matched_payload: Vec<P>,
+pub enum StackDirective {
+    Push,
+    PushIfNotSelfClosing,
+    PopImmediately,
+}
+
+pub struct StackItem<'i, P>
+where
+    P: Hash + Eq,
+{
+    pub local_name: LocalName<'i>,
+    pub matched_payload: HashSet<P>,
     pub jumps: Vec<AddressRange>,
     pub hereditary_jumps: Vec<AddressRange>,
     pub has_ancestor_with_hereditary_jumps: bool,
+    pub stack_directive: StackDirective,
 }
 
-#[derive(Default)]
-pub struct Stack<P>(Vec<StackItem<P>>);
+impl<'i, P> StackItem<'i, P>
+where
+    P: Hash + Eq,
+{
+    #[inline]
+    pub fn new(local_name: LocalName<'i>) -> Self {
+        StackItem {
+            local_name,
+            matched_payload: HashSet::default(),
+            jumps: Vec::default(),
+            hereditary_jumps: Vec::default(),
+            has_ancestor_with_hereditary_jumps: false,
+            stack_directive: StackDirective::Push,
+        }
+    }
 
-impl<P> Stack<P> {
-    pub fn try_push<'i>(
-        &'i mut self,
-        item: StackItem<P>,
-        ns: Namespace,
-    ) -> Result<bool, SelfClosingFlagRequest<'i>> {
+    #[inline]
+    pub fn into_owned(self) -> StackItem<'static, P> {
+        StackItem {
+            local_name: self.local_name.into_owned(),
+            matched_payload: self.matched_payload,
+            jumps: self.jumps,
+            hereditary_jumps: self.hereditary_jumps,
+            has_ancestor_with_hereditary_jumps: self.has_ancestor_with_hereditary_jumps,
+            stack_directive: self.stack_directive,
+        }
+    }
+}
+
+pub struct Stack<P>(Vec<StackItem<'static, P>>)
+where
+    P: Hash + Eq;
+
+impl<P> Stack<P>
+where
+    P: Hash + Eq,
+{
+    #[inline]
+    pub fn get_stack_directive(&mut self, item: &StackItem<P>, ns: Namespace) -> StackDirective {
         if ns == Namespace::Html {
-            Ok(if is_void_element(&item.local_name) {
-                false
+            if is_void_element(&item.local_name) {
+                StackDirective::PopImmediately
             } else {
-                self.0.push(item);
-                true
-            })
+                StackDirective::Push
+            }
         } else {
-            // TODO currently we request lexeme for all foreign elements.
-            // Consider adding additional event to the tag scanner which will
-            // return just the self closing flag.
-            Err(Box::new(move |self_closing| {
-                if self_closing {
-                    false
-                } else {
-                    self.0.push(item);
-                    true
-                }
-            }))
+            StackDirective::PushIfNotSelfClosing
         }
     }
 
     pub fn pop_up_to(&mut self, local_name: LocalName, mut popped_payload_handler: impl FnMut(P)) {
-        for i in self.0.len() - 1..=0 {
+        for i in (0..self.0.len()).rev() {
             if self.0[i].local_name == local_name {
                 for _ in i..self.0.len() {
-                    self.0.pop().into_iter().for_each(|i| {
-                        for payload in i.matched_payload {
+                    if let Some(item) = self.0.pop() {
+                        for payload in item.matched_payload {
                             popped_payload_handler(payload);
                         }
-                    });
+                    }
                 }
 
                 break;
             }
         }
+    }
+
+    #[inline]
+    pub fn items(&self) -> &[StackItem<P>] {
+        &self.0
+    }
+
+    #[inline]
+    pub fn push_item(&mut self, mut item: StackItem<'static, P>) {
+        if let Some(last) = self.0.last() {
+            if last.has_ancestor_with_hereditary_jumps || !last.hereditary_jumps.is_empty() {
+                item.has_ancestor_with_hereditary_jumps = true;
+            }
+        }
+
+        self.0.push(item);
+    }
+}
+
+impl<P> Default for Stack<P>
+where
+    P: Hash + Eq,
+{
+    #[inline]
+    fn default() -> Self {
+        Stack(Vec::default())
     }
 }

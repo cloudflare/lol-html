@@ -24,11 +24,7 @@ impl TransformController for HtmlRewriteController<'_> {
         self.handlers_dispatcher.get_token_capture_flags()
     }
 
-    fn handle_element_start(
-        &mut self,
-        _: LocalName,
-        _: Namespace,
-    ) -> ElementStartHandlingResult<Self> {
+    fn handle_start_tag(&mut self, _: LocalName, _: Namespace) -> StartTagHandlingResult<Self> {
         for &locator in &self.element_handler_locators {
             self.handlers_dispatcher
                 .inc_element_handlers_user_count(locator);
@@ -37,7 +33,7 @@ impl TransformController for HtmlRewriteController<'_> {
         Ok(self.handlers_dispatcher.get_token_capture_flags())
     }
 
-    fn handle_element_end(&mut self, _: LocalName) -> TokenCaptureFlags {
+    fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
         self.handlers_dispatcher.get_token_capture_flags()
     }
 

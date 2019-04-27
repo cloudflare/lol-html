@@ -9,7 +9,9 @@ use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub use self::dispatcher::{ElementStartHandlingResult, OutputSink, TransformController};
+pub use self::dispatcher::{
+    AuxStartTagInfo, OutputSink, StartTagHandlingResult, TransformController,
+};
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
     "This is caused by the parser encountering an extremely long ",

@@ -53,7 +53,7 @@ fn cool_thing_tokenizer_bench(
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
         use cool_thing::{
-            ElementStartHandlingResult, LocalName, Namespace, Token, TransformController,
+            LocalName, Namespace, StartTagHandlingResult, Token, TransformController,
             TransformStream,
         };
 
@@ -72,18 +72,18 @@ fn cool_thing_tokenizer_bench(
                 self.capture_flags
             }
 
-            fn handle_element_start(
+            fn handle_start_tag(
                 &mut self,
                 name: LocalName,
                 ns: Namespace,
-            ) -> ElementStartHandlingResult<Self> {
+            ) -> StartTagHandlingResult<Self> {
                 black_box(name);
                 black_box(ns);
 
                 Ok(self.capture_flags)
             }
 
-            fn handle_element_end(&mut self, name: LocalName) -> CoolThingTokenCaptureFlags {
+            fn handle_end_tag(&mut self, name: LocalName) -> CoolThingTokenCaptureFlags {
                 black_box(name);
 
                 self.capture_flags

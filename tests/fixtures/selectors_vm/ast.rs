@@ -1,11 +1,11 @@
-use cool_thing::{
-    AstNode, AttributeExpr, AttributeExprOperand, Expr, NonAttributeExpr, Predicate, SelectorError,
-    SelectorsAst,
+use cool_thing::selectors_vm::{
+    Ast, AstNode, AttributeExpr, AttributeExprOperand, Expr, NonAttributeExpr, Predicate,
+    SelectorError,
 };
 use selectors::attr::ParsedCaseSensitivity;
 
-fn assert_ast(selectors: &[&str], expected: SelectorsAst<usize>) {
-    let mut ast = SelectorsAst::default();
+fn assert_ast(selectors: &[&str], expected: Ast<usize>) {
+    let mut ast = Ast::default();
 
     for (idx, selector) in selectors.iter().enumerate() {
         ast.add_selector(selector, idx).unwrap();
@@ -16,9 +16,7 @@ fn assert_ast(selectors: &[&str], expected: SelectorsAst<usize>) {
 
 fn assert_err(selector: &str, expected_err: SelectorError) {
     assert_eq!(
-        SelectorsAst::default()
-            .add_selector(selector, 0)
-            .unwrap_err(),
+        Ast::default().add_selector(selector, 0).unwrap_err(),
         expected_err
     );
 }
@@ -59,15 +57,15 @@ test_fixture!("Selectors AST", {
         .for_each(|(selector, expected)| {
             assert_ast(
                 &[selector],
-                SelectorsAst {
+                Ast {
                     root: vec![AstNode {
                         predicate: Predicate {
                             non_attr_exprs: Some(vec![expected]),
                             attr_exprs: None,
                         },
-                        children: None,
-                        descendants: None,
-                        payload: Some(vec![0]),
+                        children: vec![],
+                        descendants: vec![],
+                        payload: set![0],
                     }],
                     cumulative_node_count: 1,
                 },
@@ -180,15 +178,15 @@ test_fixture!("Selectors AST", {
         .for_each(|(selector, expected)| {
             assert_ast(
                 &[selector],
-                SelectorsAst {
+                Ast {
                     root: vec![AstNode {
                         predicate: Predicate {
                             non_attr_exprs: None,
                             attr_exprs: Some(vec![expected]),
                         },
-                        children: None,
-                        descendants: None,
-                        payload: Some(vec![0]),
+                        children: vec![],
+                        descendants: vec![],
+                        payload: set![0],
                     }],
                     cumulative_node_count: 1,
                 },
@@ -199,7 +197,7 @@ test_fixture!("Selectors AST", {
     test("Compound selectors", {
         assert_ast(
             &["div.foo#bar:not([baz])"],
-            SelectorsAst {
+            Ast {
                 root: vec![AstNode {
                     predicate: Predicate {
                         non_attr_exprs: Some(vec![Expr {
@@ -221,9 +219,9 @@ test_fixture!("Selectors AST", {
                             },
                         ]),
                     },
-                    children: None,
-                    descendants: None,
-                    payload: Some(vec![0]),
+                    children: vec![],
+                    descendants: vec![],
+                    payload: set![0],
                 }],
                 cumulative_node_count: 1,
             },
@@ -233,7 +231,7 @@ test_fixture!("Selectors AST", {
     test("Multiple payloads", {
         assert_ast(
             &["#foo", "#foo"],
-            SelectorsAst {
+            Ast {
                 root: vec![AstNode {
                     predicate: Predicate {
                         non_attr_exprs: None,
@@ -242,9 +240,9 @@ test_fixture!("Selectors AST", {
                             negation: false,
                         }]),
                     },
-                    children: None,
-                    descendants: None,
-                    payload: Some(vec![0, 1]),
+                    children: vec![],
+                    descendants: vec![],
+                    payload: set![0, 1],
                 }],
                 cumulative_node_count: 1,
             },
@@ -254,7 +252,7 @@ test_fixture!("Selectors AST", {
     test("Selector lists", {
         assert_ast(
             &["#foo > div, #foo > span", "#foo > .c1, #foo > .c2"],
-            SelectorsAst {
+            Ast {
                 root: vec![AstNode {
                     predicate: Predicate {
                         non_attr_exprs: None,
@@ -263,7 +261,7 @@ test_fixture!("Selectors AST", {
                             negation: false,
                         }]),
                     },
-                    children: Some(vec![
+                    children: vec![
                         AstNode {
                             predicate: Predicate {
                                 non_attr_exprs: Some(vec![Expr {
@@ -272,9 +270,9 @@ test_fixture!("Selectors AST", {
                                 }]),
                                 attr_exprs: None,
                             },
-                            children: None,
-                            descendants: None,
-                            payload: Some(vec![0]),
+                            children: vec![],
+                            descendants: vec![],
+                            payload: set![0],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -284,9 +282,9 @@ test_fixture!("Selectors AST", {
                                 }]),
                                 attr_exprs: None,
                             },
-                            children: None,
-                            descendants: None,
-                            payload: Some(vec![0]),
+                            children: vec![],
+                            descendants: vec![],
+                            payload: set![0],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -296,9 +294,9 @@ test_fixture!("Selectors AST", {
                                     negation: false,
                                 }]),
                             },
-                            children: None,
-                            descendants: None,
-                            payload: Some(vec![1]),
+                            children: vec![],
+                            descendants: vec![],
+                            payload: set![1],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -308,13 +306,13 @@ test_fixture!("Selectors AST", {
                                     negation: false,
                                 }]),
                             },
-                            children: None,
-                            descendants: None,
-                            payload: Some(vec![1]),
+                            children: vec![],
+                            descendants: vec![],
+                            payload: set![1],
                         },
-                    ]),
-                    descendants: None,
-                    payload: None,
+                    ],
+                    descendants: vec![],
+                    payload: set![],
                 }],
                 cumulative_node_count: 5,
             },
@@ -331,7 +329,7 @@ test_fixture!("Selectors AST", {
                 ".c1 [foo] [bar]",
                 "#quz",
             ],
-            SelectorsAst {
+            Ast {
                 root: vec![
                     AstNode {
                         predicate: Predicate {
@@ -341,7 +339,7 @@ test_fixture!("Selectors AST", {
                                 negation: false,
                             }]),
                         },
-                        children: Some(vec![
+                        children: vec![
                             AstNode {
                                 predicate: Predicate {
                                     non_attr_exprs: None,
@@ -350,8 +348,8 @@ test_fixture!("Selectors AST", {
                                         negation: false,
                                     }]),
                                 },
-                                children: None,
-                                descendants: Some(vec![
+                                children: vec![],
+                                descendants: vec![
                                     AstNode {
                                         predicate: Predicate {
                                             non_attr_exprs: None,
@@ -360,8 +358,8 @@ test_fixture!("Selectors AST", {
                                                 negation: false,
                                             }]),
                                         },
-                                        children: None,
-                                        descendants: Some(vec![AstNode {
+                                        children: vec![],
+                                        descendants: vec![AstNode {
                                             predicate: Predicate {
                                                 non_attr_exprs: None,
                                                 attr_exprs: Some(vec![Expr {
@@ -369,11 +367,11 @@ test_fixture!("Selectors AST", {
                                                     negation: false,
                                                 }]),
                                             },
-                                            children: None,
-                                            descendants: None,
-                                            payload: Some(vec![0]),
-                                        }]),
-                                        payload: None,
+                                            children: vec![],
+                                            descendants: vec![],
+                                            payload: set![0],
+                                        }],
+                                        payload: set![],
                                     },
                                     AstNode {
                                         predicate: Predicate {
@@ -383,12 +381,12 @@ test_fixture!("Selectors AST", {
                                                 negation: false,
                                             }]),
                                         },
-                                        children: None,
-                                        descendants: None,
-                                        payload: Some(vec![1]),
+                                        children: vec![],
+                                        descendants: vec![],
+                                        payload: set![1],
                                     },
-                                ]),
-                                payload: None,
+                                ],
+                                payload: set![],
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -398,12 +396,12 @@ test_fixture!("Selectors AST", {
                                         negation: false,
                                     }]),
                                 },
-                                children: None,
-                                descendants: None,
-                                payload: Some(vec![2]),
+                                children: vec![],
+                                descendants: vec![],
+                                payload: set![2],
                             },
-                        ]),
-                        descendants: Some(vec![
+                        ],
+                        descendants: vec![
                             AstNode {
                                 predicate: Predicate {
                                     non_attr_exprs: None,
@@ -412,9 +410,9 @@ test_fixture!("Selectors AST", {
                                         negation: false,
                                     }]),
                                 },
-                                children: None,
-                                descendants: None,
-                                payload: Some(vec![3]),
+                                children: vec![],
+                                descendants: vec![],
+                                payload: set![3],
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -424,8 +422,8 @@ test_fixture!("Selectors AST", {
                                         negation: false,
                                     }]),
                                 },
-                                children: None,
-                                descendants: Some(vec![AstNode {
+                                children: vec![],
+                                descendants: vec![AstNode {
                                     predicate: Predicate {
                                         non_attr_exprs: None,
                                         attr_exprs: Some(vec![Expr {
@@ -435,14 +433,14 @@ test_fixture!("Selectors AST", {
                                             negation: false,
                                         }]),
                                     },
-                                    children: None,
-                                    descendants: None,
-                                    payload: Some(vec![4]),
-                                }]),
-                                payload: None,
+                                    children: vec![],
+                                    descendants: vec![],
+                                    payload: set![4],
+                                }],
+                                payload: set![],
                             },
-                        ]),
-                        payload: None,
+                        ],
+                        payload: set![],
                     },
                     AstNode {
                         predicate: Predicate {
@@ -452,9 +450,9 @@ test_fixture!("Selectors AST", {
                                 negation: false,
                             }]),
                         },
-                        children: None,
-                        descendants: None,
-                        payload: Some(vec![5]),
+                        children: vec![],
+                        descendants: vec![],
+                        payload: set![5],
                     },
                 ],
                 cumulative_node_count: 10,

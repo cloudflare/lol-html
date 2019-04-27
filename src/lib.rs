@@ -35,7 +35,6 @@ mod html;
 mod parser;
 mod rewritable_units;
 mod rewriter;
-mod selectors_vm;
 mod transform_stream;
 
 use cfg_if::cfg_if;
@@ -56,8 +55,10 @@ pub use self::transform_stream::OutputSink;
 
 cfg_if! {
     if #[cfg(feature = "test_api")] {
+        pub mod selectors_vm;
+
         pub use self::transform_stream::{
-            ElementStartHandlingResult, TransformController, TransformStream,
+            StartTagHandlingResult, TransformController, TransformStream,
         };
 
         pub use self::rewritable_units::{
@@ -67,10 +68,7 @@ cfg_if! {
         pub use self::base::Bytes;
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace, TAG_STR_PAIRS};
 
-        pub use self::selectors_vm::{
-            Ast as SelectorsAst, AstNode, Predicate, Expr, AttributeExprOperand, AttributeExpr,
-            NonAttributeExpr, Compiler as SelectorsCompiler, Program as SelectorsProgram,
-            ExecutionBranch, AttributeMatcher,
-        };
+    } else {
+        mod selectors_vm;
     }
 }

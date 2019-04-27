@@ -2,7 +2,9 @@ use super::parser::{SelectorImplDescriptor, SelectorsParser};
 use super::SelectorError;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component, Selector};
+use std::collections::HashSet;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct AttributeExprOperand {
@@ -160,20 +162,26 @@ impl Predicate {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct AstNode<P> {
+pub struct AstNode<P>
+where
+    P: Hash + Eq,
+{
     pub predicate: Predicate,
-    pub children: Option<Vec<AstNode<P>>>,
-    pub descendants: Option<Vec<AstNode<P>>>,
-    pub payload: Option<Vec<P>>,
+    pub children: Vec<AstNode<P>>,
+    pub descendants: Vec<AstNode<P>>,
+    pub payload: HashSet<P>,
 }
 
-impl<P> AstNode<P> {
+impl<P> AstNode<P>
+where
+    P: Hash + Eq,
+{
     fn new(predicate: Predicate) -> Self {
         AstNode {
             predicate,
-            children: None,
-            descendants: None,
-            payload: None,
+            children: Vec::default(),
+            descendants: Vec::default(),
+            payload: HashSet::default(),
         }
     }
 }
@@ -181,7 +189,7 @@ impl<P> AstNode<P> {
 #[derive(Default, PartialEq, Eq, Debug)]
 pub struct Ast<P>
 where
-    P: PartialEq + Eq + Copy + Debug,
+    P: PartialEq + Eq + Copy + Debug + Hash,
 {
     pub root: Vec<AstNode<P>>,
     // NOTE: used to preallocate instruction vector during compilation.
@@ -190,7 +198,7 @@ where
 
 impl<P> Ast<P>
 where
-    P: PartialEq + Eq + Copy + Debug,
+    P: PartialEq + Eq + Copy + Debug + Hash,
 {
     #[inline]
     pub fn add_selector(&mut self, selector: &str, payload: P) -> Result<(), SelectorError> {
@@ -232,10 +240,7 @@ where
                 let node_idx =
                     Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
 
-                branches = branches[node_idx]
-                    .$branches
-                    .get_or_insert_with(Vec::default);
-
+                branches = &mut branches[node_idx].$branches;
                 predicate = Predicate::default();
             }};
         }
@@ -256,9 +261,6 @@ where
 
         let node_idx = Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
 
-        branches[node_idx]
-            .payload
-            .get_or_insert_with(Vec::default)
-            .push(payload);
+        branches[node_idx].payload.insert(payload);
     }
 }

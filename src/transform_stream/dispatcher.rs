@@ -13,21 +13,19 @@ use std::rc::Rc;
 
 use TagTokenOutline::*;
 
-pub type AuxElementInfoRequest<C> =
-    Box<dyn Fn(&mut C, &Chunk, SharedAttributeBuffer, bool) -> TokenCaptureFlags>;
+pub struct AuxStartTagInfo<'i> {
+    pub input: &'i Chunk<'i>,
+    pub attr_buffer: SharedAttributeBuffer,
+    pub self_closing: bool,
+}
 
-pub type ElementStartHandlingResult<C> = Result<TokenCaptureFlags, AuxElementInfoRequest<C>>;
+type AuxStartTagInfoRequest<C> = Box<dyn Fn(&mut C, AuxStartTagInfo<'_>) -> TokenCaptureFlags>;
+pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, AuxStartTagInfoRequest<C>>;
 
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
-
-    fn handle_element_start(
-        &mut self,
-        name: LocalName,
-        ns: Namespace,
-    ) -> ElementStartHandlingResult<Self>;
-
-    fn handle_element_end(&mut self, name: LocalName) -> TokenCaptureFlags;
+    fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
+    fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
     fn handle_token(&mut self, token: &mut Token);
 }
 
@@ -51,7 +49,7 @@ where
     last_consumed_lexeme_end: usize,
     token_capturer: TokenCapturer,
     got_flags_from_hint: bool,
-    pending_element_aux_info_req: Option<AuxElementInfoRequest<C>>,
+    pending_element_aux_info_req: Option<AuxStartTagInfoRequest<C>>,
 }
 
 impl<C, O> Dispatcher<C, O>
@@ -144,9 +142,11 @@ where
             ($handler:expr, $attributes:expr, $self_closing:expr) => {
                 $handler(
                     &mut self.transform_controller,
-                    input,
-                    Rc::clone($attributes),
-                    $self_closing,
+                    AuxStartTagInfo {
+                        input,
+                        attr_buffer: Rc::clone($attributes),
+                        self_closing: $self_closing,
+                    },
                 )
             };
         }
@@ -175,7 +175,7 @@ where
                 } => {
                     let name = LocalName::new(input, name, name_hash);
 
-                    match self.transform_controller.handle_element_start(name, ns) {
+                    match self.transform_controller.handle_start_tag(name, ns) {
                         Ok(flags) => flags,
                         Err(aux_info_req) => {
                             get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing)
@@ -186,7 +186,7 @@ where
                 EndTag { name, name_hash } => {
                     let name = LocalName::new(input, name, name_hash);
 
-                    self.transform_controller.handle_element_end(name)
+                    self.transform_controller.handle_end_tag(name)
                 }
             },
         };
@@ -233,7 +233,7 @@ where
     O: OutputSink,
 {
     fn handle_start_tag_hint(&mut self, name: LocalName, ns: Namespace) -> ParserDirective {
-        match self.transform_controller.handle_element_start(name, ns) {
+        match self.transform_controller.handle_start_tag(name, ns) {
             Ok(flags) => self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags),
             Err(aux_info_req) => {
                 self.pending_element_aux_info_req = Some(aux_info_req);
@@ -244,7 +244,7 @@ where
     }
 
     fn handle_end_tag_hint(&mut self, name: LocalName) -> ParserDirective {
-        let flags = self.transform_controller.handle_element_end(name);
+        let flags = self.transform_controller.handle_end_tag(name);
 
         self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)
     }

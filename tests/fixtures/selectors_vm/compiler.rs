@@ -1,17 +1,15 @@
 use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
-use cool_thing::{
-    AttributeMatcher, LocalName, Namespace, SelectorsAst, SelectorsCompiler, SelectorsProgram,
-    StartTag,
-};
+use cool_thing::selectors_vm::{Ast, AttributeMatcher, Compiler, Program};
+use cool_thing::{LocalName, Namespace, StartTag};
 use encoding_rs::{Encoding, UTF_8};
 use std::collections::HashSet;
 
 macro_rules! assert_instr_res {
     ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
-        let expected_payload = if *$should_match { Some(vec![0]) } else { None };
+        let expected_payload = if *$should_match { Some(set![0]) } else { None };
 
         assert_eq!(
-            $res.and_then(|b| b.matched_payload.to_owned()),
+            $res.map(|b| b.matched_payload.to_owned()),
             expected_payload,
             "Instruction didn't produce expected matching result\n\
              selector: {:#?}\n\
@@ -29,14 +27,14 @@ fn compile(
     selectors: &[&str],
     encoding: &'static Encoding,
     expected_entry_point_count: usize,
-) -> SelectorsProgram<usize> {
-    let mut ast = SelectorsAst::default();
+) -> Program<usize> {
+    let mut ast = Ast::default();
 
     for (idx, selector) in selectors.iter().enumerate() {
         ast.add_selector(selector, idx).unwrap();
     }
 
-    let program = SelectorsCompiler::new(encoding).compile(ast);
+    let program = Compiler::new(encoding).compile(ast);
 
     assert_eq!(
         program.entry_points.end - program.entry_points.start,
@@ -101,8 +99,11 @@ fn assert_attr_expr_matches(
         test_cases,
         encoding,
         |input, should_match, local_name, attr_matcher| {
-            let attrs_req = instr.try_exec_without_attrs(&local_name).unwrap_err();
-            let multi_step_res = attrs_req(&attr_matcher);
+            instr
+                .try_exec_without_attrs(&local_name)
+                .expect_err("Instruction should not execute without attributes");
+
+            let multi_step_res = instr.complete_execution_with_attrs(&attr_matcher);
             let res = instr.exec(&local_name, &attr_matcher);
 
             assert_eq!(multi_step_res, res);
@@ -158,7 +159,7 @@ macro_rules! exec_generic_instr {
 
         let multi_step_res = match $instr.try_exec_without_attrs(&$local_name) {
             Ok(res) => res,
-            Err(attr_req) => attr_req(&$attr_matcher),
+            Err(_) => $instr.complete_execution_with_attrs(&$attr_matcher),
         };
 
         assert_eq!(res, multi_step_res);
@@ -196,10 +197,8 @@ macro_rules! exec_instr_range {
             let res = exec_generic_instr!($program.instructions[addr], $local_name, $attr_matcher);
 
             if let Some(res) = res {
-                if let Some(ref payload) = res.matched_payload {
-                    for &p in payload {
-                        matched_payload.insert(p);
-                    }
+                for &p in &res.matched_payload {
+                    matched_payload.insert(p);
                 }
 
                 if let Some(ref j) = res.jumps {
