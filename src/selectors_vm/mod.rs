@@ -7,7 +7,7 @@ mod program;
 mod stack;
 
 use self::program::AddressRange;
-use self::stack::{Stack, StackDirective, StackItem};
+use self::stack::StackDirective;
 use crate::html::{LocalName, Namespace};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
@@ -19,8 +19,20 @@ pub use self::attribute_matcher::AttributeMatcher;
 pub use self::compiler::Compiler;
 pub use self::error::SelectorError;
 pub use self::program::{ExecutionBranch, Program};
+pub use self::stack::{Stack, StackItem};
 
-pub type AuxStartTagInfoRequest<'v> = Box<dyn FnOnce(AuxStartTagInfo) + 'v>;
+pub type AuxStartTagInfoRequest<'v> = Box<dyn FnMut(AuxStartTagInfo) + 'v>;
+
+fn aux_info_request<'v>(
+    req: impl FnOnce(AuxStartTagInfo) + 'v,
+) -> Result<(), AuxStartTagInfoRequest<'v>> {
+    // TODO: remove this hack when Box<dyn FnOnce> become callable in Rust 1.35.
+    let mut wrap = Some(req);
+
+    Err(Box::new(move |aux_info| {
+        (wrap.take().expect("FnOnce called more than once"))(aux_info)
+    }))
+}
 
 pub struct MatchInfo<P> {
     pub payload: P,
@@ -28,13 +40,13 @@ pub struct MatchInfo<P> {
 }
 
 #[derive(Default)]
-struct JumpsPtr {
+struct JumpPtr {
     instr_set_idx: usize,
     offset: usize,
 }
 
 #[derive(Default)]
-struct HereditaryJumpsPtr {
+struct HereditaryJumpPtr {
     stack_offset: usize,
     instr_set_idx: usize,
     offset: usize,
@@ -45,23 +57,17 @@ struct Bailout<T> {
     restore_point: T,
 }
 
-macro_rules! aux_info_request {
-    ($handler:expr) => {
-        Err(Box::new($handler))
-    };
-}
-
-struct ExecutionCtx<'i, P>
+struct ExecutionCtx<'i, 'h, P>
 where
     P: PartialEq + Eq + Copy + Debug + Hash + 'static,
 {
     stack_item: StackItem<'i, P>,
-    match_handler: Box<dyn FnMut(MatchInfo<P>)>,
+    match_handler: Box<dyn FnMut(MatchInfo<P>) + 'h>,
     with_content: bool,
     ns: Namespace,
 }
 
-impl<'i, P> ExecutionCtx<'i, P>
+impl<'i, 'h, P> ExecutionCtx<'i, 'h, P>
 where
     P: PartialEq + Eq + Copy + Debug + Hash + 'static,
 {
@@ -69,7 +75,7 @@ where
     pub fn new(
         local_name: LocalName<'i>,
         ns: Namespace,
-        match_handler: impl FnMut(MatchInfo<P>) + 'static,
+        match_handler: impl FnMut(MatchInfo<P>) + 'h,
     ) -> Self {
         ExecutionCtx {
             stack_item: StackItem::new(local_name),
@@ -101,7 +107,7 @@ where
     }
 
     #[inline]
-    pub fn into_owned(self) -> ExecutionCtx<'static, P> {
+    pub fn into_owned(self) -> ExecutionCtx<'static, 'h, P> {
         ExecutionCtx {
             stack_item: self.stack_item.into_owned(),
             match_handler: self.match_handler,
@@ -145,7 +151,7 @@ where
         &'v mut self,
         local_name: LocalName,
         ns: Namespace,
-        match_handler: impl FnMut(MatchInfo<P>) + 'static,
+        match_handler: impl FnMut(MatchInfo<P>) + 'v,
     ) -> Result<(), AuxStartTagInfoRequest<'v>> {
         let mut ctx = ExecutionCtx::new(local_name, ns, match_handler);
         let stack_directive = self.stack.get_stack_directive(&ctx.stack_item, ns);
@@ -155,7 +161,7 @@ where
         } else if let StackDirective::PushIfNotSelfClosing = stack_directive {
             let mut ctx = ctx.into_owned();
 
-            return aux_info_request!(move |aux_info| {
+            return aux_info_request(move |aux_info| {
                 let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ns);
 
                 ctx.with_content = !aux_info.self_closing;
@@ -167,12 +173,12 @@ where
                     0,
                 );
 
-                self.exec_jumps_with_attrs(&attr_matcher, &mut ctx, JumpsPtr::default());
+                self.exec_jumps_with_attrs(&attr_matcher, &mut ctx, JumpPtr::default());
 
                 self.exec_hereditary_jumps_with_attrs(
                     &attr_matcher,
                     &mut ctx,
-                    HereditaryJumpsPtr::default(),
+                    HereditaryJumpPtr::default(),
                 );
 
                 if ctx.with_content {
@@ -189,74 +195,15 @@ where
         self.stack.pop_up_to(local_name, unmatch_handler);
     }
 
-    #[inline]
-    fn exec_jumps_with_attrs(
-        &self,
-        attr_matcher: &AttributeMatcher,
-        ctx: &mut ExecutionCtx<P>,
-        from_ptr: JumpsPtr,
-    ) {
-        if let Some(parent) = self.stack.items().last() {
-            for i in from_ptr.instr_set_idx..parent.jumps.len() {
-                self.exec_instr_set_with_attrs(
-                    &parent.jumps[i],
-                    attr_matcher,
-                    ctx,
-                    from_ptr.offset,
-                );
-            }
-        }
-    }
-
-    #[inline]
-    fn exec_hereditary_jumps_with_attrs(
-        &self,
-        attr_matcher: &AttributeMatcher,
-        ctx: &mut ExecutionCtx<P>,
-        from_ptr: HereditaryJumpsPtr,
-    ) {
-        for ancestor in self.stack.items().iter().rev().skip(from_ptr.stack_offset) {
-            for i in from_ptr.instr_set_idx..ancestor.hereditary_jumps.len() {
-                self.exec_instr_set_with_attrs(
-                    &ancestor.hereditary_jumps[i],
-                    attr_matcher,
-                    ctx,
-                    from_ptr.offset,
-                );
-            }
-
-            if !ancestor.has_ancestor_with_hereditary_jumps {
-                break;
-            }
-        }
-    }
-
-    #[inline]
-    fn exec_instr_set_with_attrs(
-        &self,
-        addr_range: &AddressRange,
-        attr_matcher: &AttributeMatcher,
-        ctx: &mut ExecutionCtx<P>,
-        offset: usize,
-    ) {
-        for addr in addr_range.start + offset..addr_range.end {
-            let instr = &self.program.instructions[addr];
-
-            if let Some(branch) = instr.exec(&ctx.stack_item.local_name, attr_matcher) {
-                ctx.add_execution_branch(branch);
-            }
-        }
-    }
-
     fn exec_without_attrs<'v>(
         &'v mut self,
-        mut ctx: ExecutionCtx<P>,
+        mut ctx: ExecutionCtx<'_, 'v, P>,
     ) -> Result<(), AuxStartTagInfoRequest<'v>> {
         macro_rules! bailout {
             ($at_addr:expr, $restore_point_handler:expr) => {{
                 let mut ctx = ctx.into_owned();
 
-                return aux_info_request!(move |aux_info| {
+                return aux_info_request(move |aux_info| {
                     let attr_matcher =
                         AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ctx.ns);
 
@@ -282,12 +229,12 @@ where
                     b.restore_point,
                 );
 
-                self.exec_jumps_with_attrs(attr_matcher, ctx, JumpsPtr::default());
+                self.exec_jumps_with_attrs(attr_matcher, ctx, JumpPtr::default());
 
                 self.exec_hereditary_jumps_with_attrs(
                     attr_matcher,
                     ctx,
-                    HereditaryJumpsPtr::default(),
+                    HereditaryJumpPtr::default(),
                 );
             });
         }
@@ -299,7 +246,7 @@ where
                 self.exec_hereditary_jumps_with_attrs(
                     attr_matcher,
                     ctx,
-                    HereditaryJumpsPtr::default(),
+                    HereditaryJumpPtr::default(),
                 );
             });
         }
@@ -332,16 +279,58 @@ where
     }
 
     #[inline]
+    fn try_exec_instr_set_without_attrs(
+        &self,
+        addr_range: AddressRange,
+        ctx: &mut ExecutionCtx<P>,
+    ) -> Result<(), Bailout<usize>> {
+        let start = addr_range.start;
+
+        for addr in addr_range {
+            let instr = &self.program.instructions[addr];
+            let result = instr.try_exec_without_attrs(&ctx.stack_item.local_name);
+
+            if let Ok(Some(branch)) = result {
+                ctx.add_execution_branch(branch)
+            } else if result.is_err() {
+                return Err(Bailout {
+                    at_addr: addr,
+                    restore_point: addr - start + 1,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    #[inline]
+    fn exec_instr_set_with_attrs(
+        &self,
+        addr_range: &AddressRange,
+        attr_matcher: &AttributeMatcher,
+        ctx: &mut ExecutionCtx<P>,
+        offset: usize,
+    ) {
+        for addr in addr_range.start + offset..addr_range.end {
+            let instr = &self.program.instructions[addr];
+
+            if let Some(branch) = instr.exec(&ctx.stack_item.local_name, attr_matcher) {
+                ctx.add_execution_branch(branch);
+            }
+        }
+    }
+
+    #[inline]
     fn try_exec_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<P>,
-    ) -> Result<(), Bailout<JumpsPtr>> {
+    ) -> Result<(), Bailout<JumpPtr>> {
         if let Some(parent) = self.stack.items().last() {
             for (i, jumps) in parent.jumps.iter().enumerate() {
                 self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
                     .map_err(|b| Bailout {
                         at_addr: b.at_addr,
-                        restore_point: JumpsPtr {
+                        restore_point: JumpPtr {
                             instr_set_idx: i,
                             offset: b.restore_point,
                         },
@@ -353,16 +342,36 @@ where
     }
 
     #[inline]
+    fn exec_jumps_with_attrs(
+        &self,
+        attr_matcher: &AttributeMatcher,
+        ctx: &mut ExecutionCtx<P>,
+        ptr: JumpPtr,
+    ) {
+        // NOTE: find pointed jumps instruction set and execute it with the offset.
+        if let Some(parent) = self.stack.items().last() {
+            if let Some(ptr_jumps) = parent.jumps.get(ptr.instr_set_idx) {
+                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
+
+                // NOTE: execute remaining jumps instruction sets as usual.
+                for jumps in parent.jumps.iter().skip(ptr.instr_set_idx + 1) {
+                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
+                }
+            }
+        }
+    }
+
+    #[inline]
     fn try_exec_hereditary_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<P>,
-    ) -> Result<(), Bailout<HereditaryJumpsPtr>> {
+    ) -> Result<(), Bailout<HereditaryJumpPtr>> {
         for (i, ancestor) in self.stack.items().iter().rev().enumerate() {
-            for (j, jumps) in ancestor.hereditary_jumps.iter().enumerate() {
-                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
+            for (j, jumps) in ancestor.hereditary_jumps.iter().cloned().enumerate() {
+                self.try_exec_instr_set_without_attrs(jumps, ctx)
                     .map_err(|b| Bailout {
                         at_addr: b.at_addr,
-                        restore_point: HereditaryJumpsPtr {
+                        restore_point: HereditaryJumpPtr {
                             stack_offset: i,
                             instr_set_idx: j,
                             offset: b.restore_point,
@@ -379,25 +388,48 @@ where
     }
 
     #[inline]
-    fn try_exec_instr_set_without_attrs(
+    fn exec_hereditary_jumps_with_attrs(
         &self,
-        addr_range: AddressRange,
+        attr_matcher: &AttributeMatcher,
         ctx: &mut ExecutionCtx<P>,
-    ) -> Result<(), Bailout<usize>> {
-        for addr in addr_range {
-            let instr = &self.program.instructions[addr];
-            let result = instr.try_exec_without_attrs(&ctx.stack_item.local_name);
+        ptr: HereditaryJumpPtr,
+    ) {
+        let items = self.stack.items();
 
-            if let Ok(Some(branch)) = result {
-                ctx.add_execution_branch(branch)
-            } else if result.is_err() {
-                return Err(Bailout {
-                    at_addr: addr,
-                    restore_point: addr + 1,
-                });
-            }
+        if items.is_empty() {
+            return;
         }
 
-        Ok(())
+        let ptr_ancestor_idx = items.len() - 1 - ptr.stack_offset;
+
+        // NOTE: first find pointed ancestor, then jump instruction
+        // set and execute it with the offset.
+        if let Some(ptr_ancestor) = items.get(ptr_ancestor_idx) {
+            if let Some(ptr_jumps) = ptr_ancestor.hereditary_jumps.get(ptr.instr_set_idx) {
+                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
+
+                // NOTE: execute the rest of jump instruction sets in the pointed ancestor as usual.
+                for jumps in ptr_ancestor
+                    .hereditary_jumps
+                    .iter()
+                    .skip(ptr.instr_set_idx + 1)
+                {
+                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
+                }
+            }
+
+            // NOTE: execute hereditary jumps in remaining ancestors as usual.
+            if ptr_ancestor.has_ancestor_with_hereditary_jumps {
+                for ancestor in items.iter().rev().skip(ptr.stack_offset + 1) {
+                    for jumps in &ancestor.hereditary_jumps {
+                        self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
+                    }
+
+                    if !ancestor.has_ancestor_with_hereditary_jumps {
+                        break;
+                    }
+                }
+            }
+        }
     }
 }

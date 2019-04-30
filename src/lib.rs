@@ -58,7 +58,7 @@ cfg_if! {
         pub mod selectors_vm;
 
         pub use self::transform_stream::{
-            StartTagHandlingResult, TransformController, TransformStream,
+            AuxStartTagInfo, StartTagHandlingResult, TransformController, TransformStream,
         };
 
         pub use self::rewritable_units::{

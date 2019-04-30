@@ -66,9 +66,9 @@ fn with_start_tag(
     mut action: impl FnMut(LocalName, AttributeMatcher),
 ) {
     parse_token!(html, encoding, StartTag, |t: &mut StartTag| {
-        let (input_bytes, attrs) = t.raw_attributes();
+        let (input, attrs) = t.raw_attributes();
         let tag_name = t.name();
-        let attr_matcher = AttributeMatcher::new(input_bytes, attrs, Namespace::Html);
+        let attr_matcher = AttributeMatcher::new(input, attrs, Namespace::Html);
         let local_name = LocalName::from_str_without_replacements(&tag_name, encoding).unwrap();
 
         action(local_name, attr_matcher);

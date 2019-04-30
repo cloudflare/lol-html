@@ -4,4 +4,10 @@ macro_rules! set {
     };
 }
 
-test_modules!(ast, compiler, stack);
+macro_rules! map {
+    ($($items:expr),*) => {
+        vec![$($items),*].iter().cloned().collect::<std::collections::HashMap<_, _>>()
+    };
+}
+
+test_modules!(ast, compiler, stack, execution);
