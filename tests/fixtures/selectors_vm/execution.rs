@@ -1,4 +1,4 @@
-use cool_thing::selectors_vm::{Ast, SelectorMatchingVm};
+use cool_thing::selectors_vm::{Ast, MatchInfo, SelectorMatchingVm};
 use cool_thing::{AuxStartTagInfo, EndTag, LocalName, Namespace, StartTag};
 use encoding_rs::UTF_8;
 use std::collections::HashMap;
@@ -35,20 +35,26 @@ macro_rules! exec_for_start_tag_and_assert {
             let mut matched_payload = HashSet::default();
 
             {
-                let result = $vm.exec_for_start_tag(local_name!(t), $ns, |m| {
+                let mut match_handler = |m: MatchInfo<_>| {
                     assert_eq!(m.with_content, $expectation.should_match_with_content);
                     matched_payload.insert(m.payload);
-                });
+                };
+
+                let result = $vm.exec_for_start_tag(local_name!(t), $ns, &mut match_handler);
 
                 if $expectation.should_bailout {
                     let mut aux_info_req = result.expect_err("Bailout expected");
                     let (input, attr_buffer) = t.raw_attributes();
 
-                    aux_info_req(AuxStartTagInfo {
-                        input,
-                        attr_buffer,
-                        self_closing: t.self_closing(),
-                    });
+                    aux_info_req(
+                        &mut $vm,
+                        AuxStartTagInfo {
+                            input,
+                            attr_buffer,
+                            self_closing: t.self_closing(),
+                        },
+                        &mut match_handler,
+                    );
                 } else {
                     // NOTE: can't use unwrap() or expect() here, because
                     // Debug is not implemented for the closure in the error type.

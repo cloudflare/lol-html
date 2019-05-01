@@ -72,7 +72,7 @@ static void test_unsupported_selector() {
 
     cool_thing_str_t *msg = cool_thing_take_last_error();
 
-    str_eq(msg, "The selector is unsupported.");
+    str_eq(msg, "Unsupported pseudo-class or pseudo-element in selector.");
 
     cool_thing_str_free(*msg);
 }

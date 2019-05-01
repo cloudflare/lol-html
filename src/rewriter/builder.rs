@@ -1,6 +1,6 @@
 use super::*;
 use crate::rewritable_units::{Comment, Doctype, Element, TextChunk};
-use crate::selectors_vm::SelectorError;
+use crate::selectors_vm::{self, SelectorError, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 
@@ -73,11 +73,14 @@ impl<'h> DocumentContentHandlers<'h> {
 }
 
 #[derive(Default)]
-pub struct HtmlRewriterBuilder<'h>(HtmlRewriteController<'h>);
+pub struct HtmlRewriterBuilder<'h> {
+    handlers_dispatcher: ContentHandlersDispatcher<'h>,
+    selectors_ast: selectors_vm::Ast<ElementContentHandlersLocator>,
+}
 
 impl<'h> HtmlRewriterBuilder<'h> {
     pub fn on_document(&mut self, handlers: DocumentContentHandlers<'h>) {
-        self.0.handlers_dispatcher.add_document_content_handlers(
+        self.handlers_dispatcher.add_document_content_handlers(
             handlers.doctype,
             handlers.comments,
             handlers.text,
@@ -89,20 +92,13 @@ impl<'h> HtmlRewriterBuilder<'h> {
         selector: &str,
         handlers: ElementContentHandlers<'h>,
     ) -> Result<(), SelectorError> {
-        // TODO
-        if selector != "*" {
-            return Err(SelectorError::UnsupportedSyntax);
-        }
-
-        let locator = self.0.handlers_dispatcher.add_element_content_handlers(
+        let locator = self.handlers_dispatcher.add_element_content_handlers(
             handlers.element,
             handlers.comments,
             handlers.text,
         );
 
-        self.0.element_handler_locators.push(locator);
-
-        Ok(())
+        self.selectors_ast.add_selector(selector, locator)
     }
 
     #[inline]
@@ -115,7 +111,12 @@ impl<'h> HtmlRewriterBuilder<'h> {
             .ok_or(EncodingError::UnknownEncoding)?;
 
         if encoding.is_ascii_compatible() {
-            Ok(HtmlRewriter::new(self.0, output_sink, encoding))
+            let selector_matching_vm = SelectorMatchingVm::new(self.selectors_ast, encoding);
+
+            let controller =
+                HtmlRewriteController::new(self.handlers_dispatcher, selector_matching_vm);
+
+            Ok(HtmlRewriter::new(controller, output_sink, encoding))
         } else {
             Err(EncodingError::NonAsciiCompatibleEncoding)
         }

@@ -3,31 +3,31 @@ use selectors::parser::{SelectorParseError, SelectorParseErrorKind};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum SelectorError {
-    #[fail(display = "Unexpected token in the selector.")]
+    #[fail(display = "Unexpected token in selector.")]
     UnexpectedToken,
-    #[fail(display = "Unexpected end of the selector.")]
+    #[fail(display = "Unexpected end of selector.")]
     UnexpectedEnd,
-    #[fail(display = "Missing attribute name in the attribute selector.")]
+    #[fail(display = "Missing attribute name in attribute selector.")]
     MissingAttributeName,
     #[fail(display = "The selector is empty.")]
     EmptySelector,
-    #[fail(display = "Dangling combinator in the selector.")]
+    #[fail(display = "Dangling combinator in selector.")]
     DanglingCombinator,
     #[fail(display = "Unexpected token in the attribute selector.")]
     UnexpectedTokenInAttribute,
-    #[fail(display = "Unsupported pseudo-class or pseudo-element in the selectors.")]
+    #[fail(display = "Unsupported pseudo-class or pseudo-element in selector.")]
     UnsupportedPseudoClassOrElement,
-    #[fail(display = "Nested negation in the selector.")]
+    #[fail(display = "Nested negation in selector.")]
     NestedNegation,
-    #[fail(display = "Selector with explicit namespaces are not supported.")]
+    #[fail(display = "Selectors with explicit namespaces are not supported.")]
     NamespacedSelector,
-    #[fail(display = "Invalid or unescaped class name in the selector.")]
+    #[fail(display = "Invalid or unescaped class name in selector.")]
     InvalidClassName,
-    #[fail(display = "Empty negation in the selector.")]
+    #[fail(display = "Empty negation in selector.")]
     EmptyNegation,
-    #[fail(display = "Unsupported combinator `{}` in the selector.", _0)]
+    #[fail(display = "Unsupported combinator `{}` in selector.", _0)]
     UnsupportedCombinator(char),
-    #[fail(display = "Unsupported syntax in the selector.")]
+    #[fail(display = "Unsupported syntax in selector.")]
     UnsupportedSyntax,
 }
 

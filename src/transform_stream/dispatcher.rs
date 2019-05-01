@@ -19,7 +19,7 @@ pub struct AuxStartTagInfo<'i> {
     pub self_closing: bool,
 }
 
-type AuxStartTagInfoRequest<C> = Box<dyn Fn(&mut C, AuxStartTagInfo<'_>) -> TokenCaptureFlags>;
+type AuxStartTagInfoRequest<C> = Box<dyn FnMut(&mut C, AuxStartTagInfo<'_>) -> TokenCaptureFlags>;
 pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, AuxStartTagInfoRequest<C>>;
 
 pub trait TransformController: Sized {
@@ -154,7 +154,7 @@ where
         let capture_flags = match self.pending_element_aux_info_req.take() {
             // NOTE: tag hint was produced for the tag, but
             // attributes and self closing flag were requested.
-            Some(aux_info_req) => match *lexeme.token_outline() {
+            Some(mut aux_info_req) => match *lexeme.token_outline() {
                 StartTag {
                     ref attributes,
                     self_closing,
@@ -177,7 +177,7 @@ where
 
                     match self.transform_controller.handle_start_tag(name, ns) {
                         Ok(flags) => flags,
-                        Err(aux_info_req) => {
+                        Err(mut aux_info_req) => {
                             get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing)
                         }
                     }

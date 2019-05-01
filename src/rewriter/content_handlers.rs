@@ -122,7 +122,7 @@ impl<H> SelfDeactivatingHandlerVec<H> {
     }
 }
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct ElementContentHandlersLocator {
     element_handler_idx: Option<usize>,
     comment_handler_idx: Option<usize>,
