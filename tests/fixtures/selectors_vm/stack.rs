@@ -1,31 +1,46 @@
-use cool_thing::selectors_vm::{Stack, StackItem};
+use cool_thing::selectors_vm::{ElementData, Stack, StackItem};
 use cool_thing::LocalName;
 use encoding_rs::UTF_8;
-use std::collections::HashMap;
+use std::collections::HashSet;
+
+#[derive(Default)]
+struct TestElementData(usize);
+
+impl ElementData for TestElementData {
+    type MatchPayload = ();
+
+    fn get_matched_payload_mut(&mut self) -> &mut HashSet<()> {
+        unreachable!();
+    }
+}
 
 fn local_name(name: &'static str) -> LocalName<'static> {
     LocalName::from_str_without_replacements(name, UTF_8).unwrap()
 }
 
-fn item(name: &'static str) -> StackItem<'static, usize> {
-    StackItem::new(local_name(name))
+fn item(name: &'static str, data: usize) -> StackItem<'static, TestElementData> {
+    let mut item = StackItem::new(local_name(name));
+
+    item.element_data = TestElementData(data);
+
+    item
 }
 
 test_fixture!("Selectors VM stack", {
     test("Hereditary jumps flag", {
         let mut stack = Stack::default();
 
-        stack.push_item(item("item1"));
+        stack.push_item(item("item1", 0));
 
-        let mut item2 = item("item2");
+        let mut item2 = item("item2", 1);
         item2.hereditary_jumps.push(0..0);
         stack.push_item(item2);
 
-        let mut item3 = item("item3");
+        let mut item3 = item("item3", 2);
         item3.hereditary_jumps.push(0..0);
         stack.push_item(item3);
 
-        stack.push_item(item("item4"));
+        stack.push_item(item("item4", 3));
 
         assert_eq!(
             stack
@@ -39,40 +54,22 @@ test_fixture!("Selectors VM stack", {
 
     test("Pop up to", {
         macro_rules! assert_pop_result {
-            ($up_to:expr, $expected_payload:expr, $expected_items:expr) => {{
+            ($up_to:expr, $expected_unmatched:expr, $expected_items:expr) => {{
                 let mut stack = Stack::default();
 
-                stack.push_item(item("html"));
+                stack.push_item(item("html", 0));
+                stack.push_item(item("body", 1));
+                stack.push_item(item("div", 2));
+                stack.push_item(item("div", 3));
+                stack.push_item(item("span", 4));
 
-                let mut body = item("body");
-                body.matched_payload.insert(1);
-                body.matched_payload.insert(2);
-                stack.push_item(body);
+                let mut unmatched = Vec::default();
 
-                let mut div1 = item("div");
-                div1.matched_payload.insert(3);
-                stack.push_item(div1);
-
-                let mut div2 = item("div");
-                div2.matched_payload.insert(2);
-                stack.push_item(div2);
-
-                let mut span = item("span");
-                span.matched_payload.insert(4);
-                span.matched_payload.insert(5);
-                span.matched_payload.insert(6);
-                stack.push_item(span);
-
-                let mut unmatched_payload = HashMap::default();
-
-                stack.pop_up_to(local_name($up_to), |p| {
-                    unmatched_payload
-                        .entry(p)
-                        .and_modify(|c| *c += 1)
-                        .or_insert(1);
+                stack.pop_up_to(local_name($up_to), |d| {
+                    unmatched.push(d.0);
                 });
 
-                assert_eq!(unmatched_payload, $expected_payload);
+                assert_eq!(unmatched, $expected_unmatched);
 
                 assert_eq!(
                     stack
@@ -88,38 +85,21 @@ test_fixture!("Selectors VM stack", {
             }};
         }
 
-        assert_pop_result!(
-            "span",
-            map![(4, 1), (5, 1), (6, 1)],
-            ["html", "body", "div", "div"]
-        );
+        assert_pop_result!("span", vec![4], ["html", "body", "div", "div"]);
+        assert_pop_result!("div", vec![3, 4], ["html", "body", "div"]);
+        assert_pop_result!("body", vec![1, 2, 3, 4], ["html"]);
+        assert_pop_result!("html", vec![0, 1, 2, 3, 4], []);
 
-        assert_pop_result!(
-            "div",
-            map![(2, 1), (4, 1), (5, 1), (6, 1)],
-            ["html", "body", "div"]
-        );
+        let empty: Vec<usize> = Vec::default();
 
-        assert_pop_result!(
-            "body",
-            map![(1, 1), (2, 2), (3, 1), (4, 1), (5, 1), (6, 1)],
-            ["html"]
-        );
-
-        assert_pop_result!(
-            "html",
-            map![(1, 1), (2, 2), (3, 1), (4, 1), (5, 1), (6, 1)],
-            []
-        );
-
-        assert_pop_result!("table", map![], ["html", "body", "div", "div", "span"]);
+        assert_pop_result!("table", empty, ["html", "body", "div", "div", "span"]);
     });
 
     test("Pop up to - empty stack", {
         let mut stack = Stack::default();
         let mut handler_called = false;
 
-        stack.pop_up_to(local_name("div"), |_: usize| {
+        stack.pop_up_to(local_name("div"), |_: TestElementData| {
             handler_called = true;
         });
 

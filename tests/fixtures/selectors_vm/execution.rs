@@ -1,4 +1,4 @@
-use cool_thing::selectors_vm::{Ast, MatchInfo, SelectorMatchingVm};
+use cool_thing::selectors_vm::{Ast, ElementData, MatchInfo, SelectorMatchingVm};
 use cool_thing::{AuxStartTagInfo, EndTag, LocalName, Namespace, StartTag};
 use encoding_rs::UTF_8;
 use std::collections::HashMap;
@@ -8,6 +8,17 @@ struct Expectation {
     should_bailout: bool,
     should_match_with_content: bool,
     matched_payload: HashSet<usize>,
+}
+
+#[derive(Default)]
+struct TestElementData(HashSet<usize>);
+
+impl ElementData for TestElementData {
+    type MatchPayload = usize;
+
+    fn get_matched_payload_mut(&mut self) -> &mut HashSet<usize> {
+        &mut self.0
+    }
 }
 
 macro_rules! local_name {
@@ -25,7 +36,9 @@ macro_rules! create_vm {
             ast.add_selector(selector, i).unwrap();
         }
 
-        SelectorMatchingVm::new(ast, UTF_8)
+        let vm: SelectorMatchingVm<TestElementData> = SelectorMatchingVm::new(ast, UTF_8);
+
+        vm
     }};
 }
 
@@ -76,11 +89,13 @@ macro_rules! exec_for_end_tag_and_assert {
         parse_token!($tag_html, UTF_8, EndTag, |t: &mut EndTag| {
             let mut unmatched_payload = HashMap::default();
 
-            $vm.exec_for_end_tag(local_name!(t), |p| {
-                unmatched_payload
-                    .entry(p)
-                    .and_modify(|c| *c += 1)
-                    .or_insert(1);
+            $vm.exec_for_end_tag(local_name!(t), |elem_data: TestElementData| {
+                for payload in elem_data.0 {
+                    unmatched_payload
+                        .entry(payload)
+                        .and_modify(|c| *c += 1)
+                        .or_insert(1);
+                }
             });
 
             assert_eq!(unmatched_payload, $expected_unmatched_payload);

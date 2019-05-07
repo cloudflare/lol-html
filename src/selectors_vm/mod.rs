@@ -19,19 +19,19 @@ pub use self::attribute_matcher::AttributeMatcher;
 pub use self::compiler::Compiler;
 pub use self::error::SelectorError;
 pub use self::program::{ExecutionBranch, Program};
-pub use self::stack::{Stack, StackItem};
+pub use self::stack::{ElementData, Stack, StackItem};
 
 pub struct MatchInfo<P> {
     pub payload: P,
     pub with_content: bool,
 }
 
-pub type AuxStartTagInfoRequest<P> =
-    Box<dyn FnMut(&mut SelectorMatchingVm<P>, AuxStartTagInfo, &mut dyn FnMut(MatchInfo<P>))>;
+pub type AuxStartTagInfoRequest<E, P> =
+    Box<dyn FnMut(&mut SelectorMatchingVm<E>, AuxStartTagInfo, &mut dyn FnMut(MatchInfo<P>))>;
 
-type RestorePointHandler<T, P> = fn(
-    &mut SelectorMatchingVm<P>,
-    &mut ExecutionCtx<'static, P>,
+type RestorePointHandler<T, E, P> = fn(
+    &mut SelectorMatchingVm<E>,
+    &mut ExecutionCtx<'static, E>,
     &AttributeMatcher,
     T,
     &mut dyn FnMut(MatchInfo<P>),
@@ -55,18 +55,16 @@ struct Bailout<T> {
     restore_point: T,
 }
 
-struct ExecutionCtx<'i, P>
-where
-    P: PartialEq + Eq + Copy + Debug + Hash + 'static,
-{
-    stack_item: StackItem<'i, P>,
+struct ExecutionCtx<'i, E: ElementData> {
+    stack_item: StackItem<'i, E>,
     with_content: bool,
     ns: Namespace,
 }
 
-impl<'i, P> ExecutionCtx<'i, P>
+impl<'i, E> ExecutionCtx<'i, E>
 where
-    P: PartialEq + Eq + Copy + Debug + Hash + 'static,
+    E: ElementData,
+    E::MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static,
 {
     #[inline]
     pub fn new(local_name: LocalName<'i>, ns: Namespace) -> Self {
@@ -79,17 +77,19 @@ where
 
     pub fn add_execution_branch(
         &mut self,
-        branch: &ExecutionBranch<P>,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        branch: &ExecutionBranch<E::MatchPayload>,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         for &payload in &branch.matched_payload {
-            if !self.stack_item.matched_payload.contains(&payload) {
+            let element_payload = self.stack_item.element_data.get_matched_payload_mut();
+
+            if !element_payload.contains(&payload) {
                 match_handler(MatchInfo {
                     payload,
                     with_content: self.with_content,
                 });
 
-                self.stack_item.matched_payload.insert(payload);
+                element_payload.insert(payload);
             }
         }
 
@@ -107,7 +107,7 @@ where
     }
 
     #[inline]
-    pub fn into_owned(self) -> ExecutionCtx<'static, P> {
+    pub fn into_owned(self) -> ExecutionCtx<'static, E> {
         ExecutionCtx {
             stack_item: self.stack_item.into_owned(),
             with_content: self.with_content,
@@ -116,20 +116,22 @@ where
     }
 }
 
-pub struct SelectorMatchingVm<P>
+pub struct SelectorMatchingVm<E>
 where
-    P: PartialEq + Eq + Copy + Debug + Hash + 'static,
+    E: ElementData,
+    E::MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static,
 {
-    program: Program<P>,
-    stack: Stack<P>,
+    program: Program<E::MatchPayload>,
+    stack: Stack<E>,
 }
 
-impl<P> SelectorMatchingVm<P>
+impl<E> SelectorMatchingVm<E>
 where
-    P: PartialEq + Eq + Copy + Debug + Hash + 'static,
+    E: ElementData,
+    E::MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static,
 {
     #[inline]
-    pub fn new(ast: Ast<P>, encoding: &'static Encoding) -> Self {
+    pub fn new(ast: Ast<E::MatchPayload>, encoding: &'static Encoding) -> Self {
         let program = Compiler::new(encoding).compile(ast);
 
         SelectorMatchingVm {
@@ -142,8 +144,8 @@ where
         &mut self,
         local_name: LocalName,
         ns: Namespace,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
-    ) -> Result<(), AuxStartTagInfoRequest<P>> {
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
+    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
         let mut ctx = ExecutionCtx::new(local_name, ns);
         let stack_directive = self.stack.get_stack_directive(&ctx.stack_item, ns);
 
@@ -189,15 +191,23 @@ where
     }
 
     #[inline]
-    pub fn exec_for_end_tag(&mut self, local_name: LocalName, unmatch_handler: impl FnMut(P)) {
-        self.stack.pop_up_to(local_name, unmatch_handler);
+    pub fn exec_for_end_tag(
+        &mut self,
+        local_name: LocalName,
+        unmatched_element_data_handler: impl FnMut(E),
+    ) {
+        self.stack
+            .pop_up_to(local_name, unmatched_element_data_handler);
     }
 
     #[inline]
     fn aux_info_request(
-        req: impl FnOnce(&mut SelectorMatchingVm<P>, AuxStartTagInfo, &mut dyn FnMut(MatchInfo<P>))
-            + 'static,
-    ) -> Result<(), AuxStartTagInfoRequest<P>> {
+        req: impl FnOnce(
+                &mut SelectorMatchingVm<E>,
+                AuxStartTagInfo,
+                &mut dyn FnMut(MatchInfo<E::MatchPayload>),
+            ) + 'static,
+    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
         // TODO: remove this hack when Box<dyn FnOnce> become callable in Rust 1.35.
         let mut wrap = Some(req);
 
@@ -207,10 +217,10 @@ where
     }
 
     fn bailout<T: 'static>(
-        ctx: ExecutionCtx<P>,
+        ctx: ExecutionCtx<E>,
         bailout: Bailout<T>,
-        restore_point_handler: RestorePointHandler<T, P>,
-    ) -> Result<(), AuxStartTagInfoRequest<P>> {
+        restore_point_handler: RestorePointHandler<T, E, E::MatchPayload>,
+    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
         let mut ctx = ctx.into_owned();
 
         Self::aux_info_request(move |this, aux_info, match_handler| {
@@ -239,10 +249,10 @@ where
 
     fn recover_after_bailout_in_entry_points(
         &mut self,
-        ctx: &mut ExecutionCtx<'static, P>,
+        ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher,
         restore_point: usize,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         self.exec_instr_set_with_attrs(
             &self.program.entry_points,
@@ -264,10 +274,10 @@ where
 
     fn recover_after_bailout_in_jumps(
         &mut self,
-        ctx: &mut ExecutionCtx<'static, P>,
+        ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher,
         restore_point: JumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         self.exec_jumps_with_attrs(attr_matcher, ctx, restore_point, match_handler);
 
@@ -281,19 +291,19 @@ where
 
     fn recover_after_bailout_in_hereditary_jumps(
         &mut self,
-        ctx: &mut ExecutionCtx<'static, P>,
+        ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher,
         restore_point: HereditaryJumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, restore_point, match_handler);
     }
 
     fn exec_without_attrs(
         &mut self,
-        mut ctx: ExecutionCtx<P>,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
-    ) -> Result<(), AuxStartTagInfoRequest<P>> {
+        mut ctx: ExecutionCtx<E>,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
+    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
         if let Err(b) = self.try_exec_instr_set_without_attrs(
             self.program.entry_points.clone(),
             &mut ctx,
@@ -322,8 +332,8 @@ where
         &self,
         addr: usize,
         attr_matcher: &AttributeMatcher,
-        ctx: &mut ExecutionCtx<P>,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        ctx: &mut ExecutionCtx<E>,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         if let Some(branch) =
             self.program.instructions[addr].complete_execution_with_attrs(&attr_matcher)
@@ -336,8 +346,8 @@ where
     fn try_exec_instr_set_without_attrs(
         &self,
         addr_range: AddressRange,
-        ctx: &mut ExecutionCtx<P>,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        ctx: &mut ExecutionCtx<E>,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<usize>> {
         let start = addr_range.start;
 
@@ -363,9 +373,9 @@ where
         &self,
         addr_range: &AddressRange,
         attr_matcher: &AttributeMatcher,
-        ctx: &mut ExecutionCtx<P>,
+        ctx: &mut ExecutionCtx<E>,
         offset: usize,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         for addr in addr_range.start + offset..addr_range.end {
             let instr = &self.program.instructions[addr];
@@ -379,8 +389,8 @@ where
     #[inline]
     fn try_exec_jumps_without_attrs(
         &self,
-        ctx: &mut ExecutionCtx<P>,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        ctx: &mut ExecutionCtx<E>,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<JumpPtr>> {
         if let Some(parent) = self.stack.items().last() {
             for (i, jumps) in parent.jumps.iter().enumerate() {
@@ -402,9 +412,9 @@ where
     fn exec_jumps_with_attrs(
         &self,
         attr_matcher: &AttributeMatcher,
-        ctx: &mut ExecutionCtx<P>,
+        ctx: &mut ExecutionCtx<E>,
         ptr: JumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         // NOTE: find pointed jumps instruction set and execute it with the offset.
         if let Some(parent) = self.stack.items().last() {
@@ -428,8 +438,8 @@ where
     #[inline]
     fn try_exec_hereditary_jumps_without_attrs(
         &self,
-        ctx: &mut ExecutionCtx<P>,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        ctx: &mut ExecutionCtx<E>,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<HereditaryJumpPtr>> {
         for (i, ancestor) in self.stack.items().iter().rev().enumerate() {
             for (j, jumps) in ancestor.hereditary_jumps.iter().cloned().enumerate() {
@@ -456,9 +466,9 @@ where
     fn exec_hereditary_jumps_with_attrs(
         &self,
         attr_matcher: &AttributeMatcher,
-        ctx: &mut ExecutionCtx<P>,
+        ctx: &mut ExecutionCtx<E>,
         ptr: HereditaryJumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<P>),
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         let items = self.stack.items();
 

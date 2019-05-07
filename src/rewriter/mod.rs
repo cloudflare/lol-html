@@ -4,27 +4,42 @@ mod content_handlers;
 use self::content_handlers::*;
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
-use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};
+use crate::selectors_vm::{ElementData, MatchInfo, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 pub use self::builder::*;
 pub use self::content_handlers::{ElementContentHandlersLocator, EndTagHandler};
 
+#[derive(Default)]
+struct ElementDescriptor {
+    matched_content_handlers: HashSet<ElementContentHandlersLocator>,
+}
+
+impl ElementData for ElementDescriptor {
+    type MatchPayload = ElementContentHandlersLocator;
+
+    #[inline]
+    fn get_matched_payload_mut(&mut self) -> &mut HashSet<ElementContentHandlersLocator> {
+        &mut self.matched_content_handlers
+    }
+}
+
 struct HtmlRewriteController<'h> {
     handlers_dispatcher: Rc<RefCell<ContentHandlersDispatcher<'h>>>,
-    selector_matching_vm: SelectorMatchingVm<ElementContentHandlersLocator>,
+    selector_matching_vm: SelectorMatchingVm<ElementDescriptor>,
 }
 
 impl<'h> HtmlRewriteController<'h> {
     #[inline]
     pub fn new(
         handlers_dispatcher: ContentHandlersDispatcher<'h>,
-        selector_matching_vm: SelectorMatchingVm<ElementContentHandlersLocator>,
+        selector_matching_vm: SelectorMatchingVm<ElementDescriptor>,
     ) -> Self {
         HtmlRewriteController {
             handlers_dispatcher: Rc::new(RefCell::new(handlers_dispatcher)),
@@ -79,10 +94,12 @@ impl TransformController for HtmlRewriteController<'_> {
         let handlers_dispatcher = Rc::clone(&self.handlers_dispatcher);
 
         self.selector_matching_vm
-            .exec_for_end_tag(local_name, move |locator| {
-                handlers_dispatcher
-                    .borrow_mut()
-                    .dec_element_handlers_user_count(locator);
+            .exec_for_end_tag(local_name, move |element_desc| {
+                for locator in element_desc.matched_content_handlers {
+                    handlers_dispatcher
+                        .borrow_mut()
+                        .dec_element_handlers_user_count(locator);
+                }
             });
 
         self.handlers_dispatcher.borrow().get_token_capture_flags()
