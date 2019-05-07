@@ -1,86 +1,27 @@
-#[derive(Default)]
-struct OrderingMutations {
-    content_before: Vec<u8>,
-    replacements: Vec<u8>,
-    content_after: Vec<u8>,
-    removed: bool,
+mod attributes;
+mod capturer;
+
+pub(super) use self::attributes::Attributes;
+pub use self::attributes::{Attribute, AttributeNameError};
+pub use self::capturer::*;
+use super::Mutations;
+
+pub trait Serialize {
+    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8]));
 }
 
-macro_rules! impl_common_token_api {
+macro_rules! impl_serialize {
     ($Token:ident) => {
-        impl<'i> $Token<'i> {
-            #[inline]
-            pub fn before(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                crate::rewritable_units::content_to_bytes(
-                    content,
-                    content_type,
-                    self.encoding,
-                    &mut |c| self.ordering_mutations.content_before.extend_from_slice(c),
-                );
-            }
-
-            #[inline]
-            pub fn after(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                let mut pos = 0;
-
-                crate::rewritable_units::content_to_bytes(
-                    content,
-                    content_type,
-                    self.encoding,
-                    &mut |c| {
-                        self.ordering_mutations
-                            .content_after
-                            .splice(pos..pos, c.iter().cloned());
-
-                        pos += c.len();
-                    },
-                );
-            }
-
-            #[inline]
-            pub fn replace(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                crate::rewritable_units::content_to_bytes(
-                    content,
-                    content_type,
-                    self.encoding,
-                    &mut |c| self.ordering_mutations.replacements.extend_from_slice(c),
-                );
-
-                self.ordering_mutations.removed = true;
-            }
-
-            #[inline]
-            pub fn remove(&mut self) {
-                self.ordering_mutations.removed = true;
-            }
-
-            #[inline]
-            pub fn removed(&self) -> bool {
-                self.ordering_mutations.removed
-            }
-        }
-
         impl crate::rewritable_units::Serialize for $Token<'_> {
             #[inline]
             fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
-                let OrderingMutations {
+                let Mutations {
                     content_before,
                     replacements,
                     content_after,
                     removed,
-                } = &self.ordering_mutations;
+                    ..
+                } = &self.mutations;
 
                 if !content_before.is_empty() {
                     output_handler(content_before);
@@ -103,27 +44,17 @@ macro_rules! impl_common_token_api {
     };
 }
 
-mod attributes;
-mod capturer;
 mod comment;
 mod doctype;
 mod end_tag;
 mod start_tag;
 mod text_chunk;
 
-pub(super) use self::attributes::Attributes;
-
-pub use self::attributes::{Attribute, AttributeNameError};
-pub use self::capturer::*;
 pub use self::comment::{Comment, CommentTextError};
 pub use self::doctype::Doctype;
 pub use self::end_tag::EndTag;
 pub use self::start_tag::StartTag;
 pub use self::text_chunk::TextChunk;
-
-pub trait Serialize {
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8]));
-}
 
 #[derive(Debug)]
 pub enum Token<'i> {

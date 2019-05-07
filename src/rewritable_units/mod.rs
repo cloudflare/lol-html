@@ -1,3 +1,6 @@
+#[macro_use]
+mod mutations;
+
 mod element;
 mod tokens;
 
@@ -5,6 +8,7 @@ use crate::base::Bytes;
 use encoding_rs::Encoding;
 
 pub use self::element::*;
+pub use self::mutations::Mutations;
 pub use self::tokens::*;
 
 pub enum ContentType {

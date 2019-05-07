@@ -2,7 +2,7 @@ use super::*;
 use std::slice::Iter;
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_tag_name_get(element: *const Element<'_, '_>) -> Str {
+pub extern "C" fn cool_thing_element_tag_name_get(element: *const Element) -> Str {
     let element = to_ref!(element);
 
     Str::new(element.tag_name())
@@ -10,7 +10,7 @@ pub extern "C" fn cool_thing_element_tag_name_get(element: *const Element<'_, '_
 
 #[no_mangle]
 pub extern "C" fn cool_thing_element_tag_name_set(
-    element: *mut Element<'_, '_>,
+    element: *mut Element,
     name: *const c_char,
     name_len: size_t,
 ) -> c_int {
@@ -64,7 +64,7 @@ pub extern "C" fn cool_thing_attribute_value_get(attribute: *const Attribute) ->
 
 #[no_mangle]
 pub extern "C" fn cool_thing_element_get_attribute(
-    element: *const Element<'_, '_>,
+    element: *const Element,
     name: *const c_char,
     name_len: size_t,
 ) -> *const Str {
@@ -76,7 +76,7 @@ pub extern "C" fn cool_thing_element_get_attribute(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_element_has_attribute(
-    element: *const Element<'_, '_>,
+    element: *const Element,
     name: *const c_char,
     name_len: size_t,
 ) -> c_int {
@@ -92,7 +92,7 @@ pub extern "C" fn cool_thing_element_has_attribute(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_element_set_attribute(
-    element: *mut Element<'_, '_>,
+    element: *mut Element,
     name: *const c_char,
     name_len: size_t,
     value: *const c_char,
@@ -109,7 +109,7 @@ pub extern "C" fn cool_thing_element_set_attribute(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_element_remove_attribute(
-    element: *mut Element<'_, '_>,
+    element: *mut Element,
     name: *const c_char,
     name_len: size_t,
 ) -> c_int {
@@ -123,7 +123,7 @@ pub extern "C" fn cool_thing_element_remove_attribute(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_element_before(
-    element: *mut Element<'_, '_>,
+    element: *mut Element,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,
@@ -133,7 +133,7 @@ pub extern "C" fn cool_thing_element_before(
 
 #[no_mangle]
 pub extern "C" fn cool_thing_element_prepend(
-    element: *mut Element<'_, '_>,
+    element: *mut Element,
     content: *const c_char,
     content_len: size_t,
     is_html: bool,

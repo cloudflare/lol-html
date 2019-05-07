@@ -35,7 +35,7 @@ pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
     builder: *mut HtmlRewriterBuilder<'static>,
     selector: *const c_char,
     selector_len: size_t,
-    element_handler: Option<extern "C" fn(*mut Element<'_, '_>)>,
+    element_handler: Option<extern "C" fn(*mut Element)>,
     comments_handler: Option<extern "C" fn(*mut Comment)>,
     text_handler: Option<extern "C" fn(*mut TextChunk)>,
 ) -> c_int {

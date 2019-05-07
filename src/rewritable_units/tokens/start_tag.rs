@@ -1,5 +1,5 @@
 use super::{Attribute, AttributeNameError, Attributes};
-use super::{OrderingMutations, Serialize, Token};
+use super::{Mutations, Serialize, Token};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -10,7 +10,7 @@ pub struct StartTag<'i> {
     self_closing: bool,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    ordering_mutations: OrderingMutations,
+    mutations: Mutations,
 }
 
 impl<'i> StartTag<'i> {
@@ -27,7 +27,7 @@ impl<'i> StartTag<'i> {
             self_closing,
             raw: Some(raw),
             encoding,
-            ordering_mutations: OrderingMutations::default(),
+            mutations: Mutations::new(encoding),
         })
     }
 
@@ -121,7 +121,8 @@ impl<'i> StartTag<'i> {
     }
 }
 
-impl_common_token_api!(StartTag);
+inject_mutation_api!(StartTag);
+impl_serialize!(StartTag);
 
 impl Debug for StartTag<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

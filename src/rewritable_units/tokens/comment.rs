@@ -1,4 +1,4 @@
-use super::{OrderingMutations, Token};
+use super::{Mutations, Token};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -16,7 +16,7 @@ pub struct Comment<'i> {
     text: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    ordering_mutations: OrderingMutations,
+    mutations: Mutations,
 }
 
 impl<'i> Comment<'i> {
@@ -29,7 +29,7 @@ impl<'i> Comment<'i> {
             text,
             raw: Some(raw),
             encoding,
-            ordering_mutations: OrderingMutations::default(),
+            mutations: Mutations::new(encoding),
         })
     }
 
@@ -72,7 +72,8 @@ impl<'i> Comment<'i> {
     }
 }
 
-impl_common_token_api!(Comment);
+inject_mutation_api!(Comment);
+impl_serialize!(Comment);
 
 impl Debug for Comment<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

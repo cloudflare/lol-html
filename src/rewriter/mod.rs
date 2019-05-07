@@ -13,7 +13,7 @@ use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 pub use self::builder::*;
-pub use self::content_handlers::ElementContentHandlersLocator;
+pub use self::content_handlers::{ElementContentHandlersLocator, EndTagHandler};
 
 struct HtmlRewriteController<'h> {
     handlers_dispatcher: Rc<RefCell<ContentHandlersDispatcher<'h>>>,

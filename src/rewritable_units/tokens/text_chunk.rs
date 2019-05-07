@@ -1,4 +1,4 @@
-use super::{OrderingMutations, Token};
+use super::{Mutations, Token};
 use crate::base::Bytes;
 use crate::html::TextType;
 use encoding_rs::Encoding;
@@ -10,7 +10,7 @@ pub struct TextChunk<'i> {
     text_type: TextType,
     last_in_text_node: bool,
     encoding: &'static Encoding,
-    ordering_mutations: OrderingMutations,
+    mutations: Mutations,
 }
 
 impl<'i> TextChunk<'i> {
@@ -25,7 +25,7 @@ impl<'i> TextChunk<'i> {
             text_type,
             last_in_text_node,
             encoding,
-            ordering_mutations: OrderingMutations::default(),
+            mutations: Mutations::new(encoding),
         })
     }
 
@@ -57,7 +57,8 @@ impl<'i> TextChunk<'i> {
     }
 }
 
-impl_common_token_api!(TextChunk);
+inject_mutation_api!(TextChunk);
+impl_serialize!(TextChunk);
 
 impl Debug for TextChunk<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

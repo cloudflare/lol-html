@@ -62,7 +62,7 @@ cfg_if! {
         };
 
         pub use self::rewritable_units::{
-            EndTag, Serialize, StartTag, Token, TokenCaptureFlags, create_element,
+            EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
         };
 
         pub use self::base::Bytes;

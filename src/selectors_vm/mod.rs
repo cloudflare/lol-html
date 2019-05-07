@@ -207,7 +207,7 @@ where
     }
 
     fn bailout<T: 'static>(
-        ctx: ExecutionCtx<'_, P>,
+        ctx: ExecutionCtx<P>,
         bailout: Bailout<T>,
         restore_point_handler: RestorePointHandler<T, P>,
     ) -> Result<(), AuxStartTagInfoRequest<P>> {
@@ -291,7 +291,7 @@ where
 
     fn exec_without_attrs(
         &mut self,
-        mut ctx: ExecutionCtx<'_, P>,
+        mut ctx: ExecutionCtx<P>,
         match_handler: &mut dyn FnMut(MatchInfo<P>),
     ) -> Result<(), AuxStartTagInfoRequest<P>> {
         if let Err(b) = self.try_exec_instr_set_without_attrs(

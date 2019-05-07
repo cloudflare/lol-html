@@ -1,6 +1,8 @@
-use super::{Attribute, AttributeNameError, ContentType, StartTag};
+use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag};
 use crate::base::Bytes;
+use crate::rewriter::EndTagHandler;
 use encoding_rs::Encoding;
+use std::fmt::{self, Debug};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum TagNameError {
@@ -17,6 +19,8 @@ pub enum TagNameError {
 
 pub struct Element<'r, 't> {
     start_tag: &'r mut StartTag<'t>,
+    end_tag_mutations: Option<Mutations>,
+    modified_tag_name: Option<Bytes<'static>>,
     encoding: &'static Encoding,
 }
 
@@ -26,6 +30,8 @@ impl<'r, 't> Element<'r, 't> {
 
         Element {
             start_tag,
+            end_tag_mutations: None,
+            modified_tag_name: None,
             encoding,
         }
     }
@@ -55,6 +61,14 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
+    fn end_tag_mutations_mut(&mut self) -> &mut Mutations {
+        let encoding = self.encoding;
+
+        self.end_tag_mutations
+            .get_or_insert_with(|| Mutations::new(encoding))
+    }
+
+    #[inline]
     pub fn tag_name(&self) -> String {
         self.start_tag.name()
     }
@@ -63,6 +77,7 @@ impl<'r, 't> Element<'r, 't> {
     pub fn set_tag_name(&mut self, name: &str) -> Result<(), TagNameError> {
         let name = self.tag_name_bytes_from_str(name)?;
 
+        self.modified_tag_name = Some(name.clone());
         self.start_tag.set_name(name);
 
         Ok(())
@@ -104,23 +119,13 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
-    pub fn set_text(&mut self, _text: &str) {
-        unimplemented!();
-    }
-
-    #[inline]
-    pub fn set_inner_html(&mut self, _html: &str) {
-        unimplemented!();
-    }
-
-    #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.start_tag.before(content, content_type);
     }
 
     #[inline]
-    pub fn after(&mut self, _content: &str, _content_type: ContentType) {
-        unimplemented!()
+    pub fn after(&mut self, content: &str, content_type: ContentType) {
+        self.end_tag_mutations_mut().after(content, content_type);
     }
 
     #[inline]
@@ -129,8 +134,13 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
-    pub fn append(&mut self, _content: &str, _content_type: ContentType) {
-        unimplemented!()
+    pub fn append(&mut self, content: &str, content_type: ContentType) {
+        self.end_tag_mutations_mut().before(content, content_type);
+    }
+
+    #[inline]
+    pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
+        unimplemented!();
     }
 
     #[inline]
@@ -139,24 +149,50 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
-    pub fn remove(&mut self, _content: &str, _content_type: ContentType) {
+    pub fn remove(&mut self) {
         unimplemented!()
     }
 
     #[inline]
-    pub fn remove_and_keep_content(&mut self, _content: &str, _content_type: ContentType) {
+    pub fn remove_and_keep_content(&mut self) {
         unimplemented!()
     }
 
     #[inline]
     pub fn removed(&self) -> bool {
-        unimplemented!()
+        self.start_tag.removed()
+    }
+
+    pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {
+        let end_tag_mutations = self.end_tag_mutations;
+        let modified_tag_name = self.modified_tag_name;
+
+        if end_tag_mutations.is_some() || modified_tag_name.is_some() {
+            // TODO: remove this hack when Box<dyn FnOnce> become callable in Rust 1.35.
+            let mut wrap = Some(move |end_tag: &mut EndTag| {
+                if let Some(name) = modified_tag_name {
+                    end_tag.set_name(name);
+                }
+
+                if let Some(mutations) = end_tag_mutations {
+                    end_tag.set_mutations(mutations);
+                }
+            });
+
+            Some(Box::new(move |end_tag| {
+                (wrap.take().expect("FnOnce called more than once"))(end_tag)
+            }))
+        } else {
+            None
+        }
     }
 }
 
-// TODO impl Debug
-
-#[cfg(feature = "test_api")]
-pub fn create_element<'r, 't>(start_tag: &'r mut StartTag<'t>) -> Element<'r, 't> {
-    Element::new(start_tag)
+impl Debug for Element<'_, '_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Element")
+            .field("tag_name", &self.tag_name())
+            .field("attributes", &self.attributes())
+            .finish()
+    }
 }

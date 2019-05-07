@@ -24,11 +24,6 @@ impl<'b> Chunk<'b> {
     }
 
     #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    #[inline]
     pub fn is_last(&self) -> bool {
         self.last
     }

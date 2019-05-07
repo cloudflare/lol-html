@@ -21,7 +21,7 @@ pub struct ElementContentHandlers<'h> {
 
 impl<'h> ElementContentHandlers<'h> {
     #[inline]
-    pub fn element(mut self, handler: impl FnMut(&mut Element<'_, '_>) + 'h) -> Self {
+    pub fn element(mut self, handler: impl FnMut(&mut Element) + 'h) -> Self {
         self.element = Some(Box::new(handler));
 
         self

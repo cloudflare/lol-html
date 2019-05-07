@@ -1,4 +1,4 @@
-use cool_thing::{Bytes, EndTag, ContentType};
+use cool_thing::{Bytes, ContentType, EndTag, Mutations};
 
 test_fixture!("End tag token", {
     test("Serialization", {
@@ -16,13 +16,17 @@ test_fixture!("End tag token", {
                 ),
                 (
                     "With prepends and appends",
-                    Box::new(|t, _| {
-                        t.before("<span>", ContentType::Text);
-                        t.before("<div>Hey</div>", ContentType::Html);
-                        t.before("<foo>", ContentType::Html);
-                        t.after("</foo>", ContentType::Html);
-                        t.after("<!-- 42 -->", ContentType::Html);
-                        t.after("<foo & bar>", ContentType::Text);
+                    Box::new(|t, encoding| {
+                        let mut m = Mutations::new(encoding);
+
+                        m.before("<span>", ContentType::Text);
+                        m.before("<div>Hey</div>", ContentType::Html);
+                        m.before("<foo>", ContentType::Html);
+                        m.after("</foo>", ContentType::Html);
+                        m.after("<!-- 42 -->", ContentType::Html);
+                        m.after("<foo & bar>", ContentType::Text);
+
+                        t.set_mutations(m);
                     }),
                     concat!(
                         "&lt;span&gt;<div>Hey</div><foo></div foo=bar>",
@@ -31,31 +35,30 @@ test_fixture!("End tag token", {
                 ),
                 (
                     "Removed",
-                    Box::new(|t, _| {
-                        assert!(!t.removed());
+                    Box::new(|t, encoding| {
+                        let mut m = Mutations::new(encoding);
 
-                        t.remove();
+                        m.remove();
+                        m.before("<before>", ContentType::Html);
+                        m.after("<after>", ContentType::Html);
 
-                        assert!(t.removed());
-
-                        t.before("<before>", ContentType::Html);
-                        t.after("<after>", ContentType::Html);
+                        t.set_mutations(m);
                     }),
                     "<before><after>",
                 ),
                 (
                     "Replaced",
-                    Box::new(|t, _| {
-                        t.before("<before>", ContentType::Html);
-                        t.after("<after>", ContentType::Html);
+                    Box::new(|t, encoding| {
+                        let mut m = Mutations::new(encoding);
 
-                        assert!(!t.removed());
+                        m.before("<before>", ContentType::Html);
+                        m.after("<after>", ContentType::Html);
 
-                        t.replace("<div></div>", ContentType::Html);
-                        t.replace("<!--42-->", ContentType::Html);
-                        t.replace("<foo & bar>", ContentType::Text);
+                        m.replace("<div></div>", ContentType::Html);
+                        m.replace("<!--42-->", ContentType::Html);
+                        m.replace("<foo & bar>", ContentType::Text);
 
-                        assert!(t.removed());
+                        t.set_mutations(m);
                     }),
                     "<before><div></div><!--42-->&lt;foo &amp; bar&gt;<after>",
                 ),

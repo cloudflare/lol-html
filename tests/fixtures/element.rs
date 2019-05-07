@@ -1,20 +1,47 @@
-use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
-use cool_thing::{create_element, AttributeNameError, Element, StartTag, TagNameError};
+use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
+use cool_thing::{
+    AttributeNameError, ContentType, Element, ElementContentHandlers, HtmlRewriterBuilder,
+    TagNameError,
+};
 use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
-fn parse_element(
-    input: &'static str,
+fn rewrite_element(
+    html: &str,
     encoding: &'static Encoding,
-    mut handler: impl FnMut(Element<'_, '_>),
-) {
-    parse_token!(input, encoding, StartTag, |t: &mut StartTag| {
-        handler(create_element(t));
-    });
+    selector: &str,
+    mut handler: impl FnMut(&mut Element),
+) -> String {
+    let mut handler_called = false;
+    let mut output = Output::new(encoding);
+    let mut builder = HtmlRewriterBuilder::default();
+
+    builder
+        .on(
+            selector,
+            ElementContentHandlers::default().element(|el| {
+                handler_called = true;
+                handler(el);
+            }),
+        )
+        .unwrap();
+
+    {
+        let mut rewriter = builder
+            .build(encoding.name(), |c: &[u8]| output.push(c))
+            .unwrap();
+
+        rewriter.write(html.as_bytes()).unwrap();
+        rewriter.end().unwrap();
+    }
+
+    assert!(handler_called);
+
+    output.into()
 }
 
 test_fixture!("Element", {
     test("Empty tag name", {
-        parse_element("<div>", UTF_8, |mut el| {
+        rewrite_element("<div>", UTF_8, "div", |el| {
             let err = el.set_tag_name("").unwrap_err();
 
             assert_eq!(err, TagNameError::Empty);
@@ -22,7 +49,7 @@ test_fixture!("Element", {
     });
 
     test("Forbidden characters in tag name", {
-        parse_element("<div>", UTF_8, |mut el| {
+        rewrite_element("<div>", UTF_8, "div", |el| {
             for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>'] {
                 let err = el.set_tag_name(&format!("foo{}bar", ch)).unwrap_err();
 
@@ -32,7 +59,7 @@ test_fixture!("Element", {
     });
 
     test("Encoding-unmappable characters in tag name", {
-        parse_element("<div>", EUC_JP, |mut el| {
+        rewrite_element("<div>", EUC_JP, "div", |el| {
             let err = el.set_tag_name("foo\u{00F8}bar").unwrap_err();
 
             assert_eq!(err, TagNameError::UnencodableCharacter);
@@ -40,7 +67,7 @@ test_fixture!("Element", {
     });
 
     test("Invalid first character of tag name", {
-        parse_element("<div>", UTF_8, |mut el| {
+        rewrite_element("<div>", UTF_8, "div", |el| {
             let err = el.set_tag_name("1foo").unwrap_err();
 
             assert_eq!(err, TagNameError::InvalidFirstCharacter);
@@ -48,7 +75,7 @@ test_fixture!("Element", {
     });
 
     test("Empty attribute name", {
-        parse_element("<div>", UTF_8, |mut el| {
+        rewrite_element("<div>", UTF_8, "div", |el| {
             let err = el.set_attribute("", "").unwrap_err();
 
             assert_eq!(err, AttributeNameError::Empty);
@@ -56,7 +83,7 @@ test_fixture!("Element", {
     });
 
     test("Forbidden characters in attribute name", {
-        parse_element("<div>", UTF_8, |mut el| {
+        rewrite_element("<div>", UTF_8, "div", |el| {
             for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>', '='] {
                 let err = el.set_attribute(&format!("foo{}bar", ch), "").unwrap_err();
 
@@ -66,7 +93,7 @@ test_fixture!("Element", {
     });
 
     test("Encoding-unmappable characters in attribute name", {
-        parse_element("<div>", EUC_JP, |mut el| {
+        rewrite_element("<div>", EUC_JP, "div", |el| {
             let err = el.set_attribute("foo\u{00F8}bar", "").unwrap_err();
 
             assert_eq!(err, AttributeNameError::UnencodableCharacter);
@@ -75,7 +102,7 @@ test_fixture!("Element", {
 
     test("Tag name getter and setter", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            parse_element("<Foo>", enc, |mut el| {
+            rewrite_element("<Foo>", enc, "foo", |el| {
                 assert_eq!(el.tag_name(), "foo", "Encoding: {}", enc.name());
 
                 el.set_tag_name("BaZ").unwrap();
@@ -87,7 +114,7 @@ test_fixture!("Element", {
 
     test("Attribute list", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            parse_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, |el| {
+            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
                 assert_eq!(el.attributes().len(), 2, "Encoding: {}", enc.name());
                 assert_eq!(
                     el.attributes()[0].name(),
@@ -121,7 +148,7 @@ test_fixture!("Element", {
 
     test("Get attribute", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            parse_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, |el| {
+            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
                 assert_eq!(
                     el.get_attribute("fOo1").unwrap(),
                     "Bar1",
@@ -157,7 +184,7 @@ test_fixture!("Element", {
 
     test("Has attribute", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            parse_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, |el| {
+            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
                 assert!(el.has_attribute("FOo1"), "Encoding: {}", enc.name());
                 assert!(el.has_attribute("foo1"), "Encoding: {}", enc.name());
                 assert!(el.has_attribute("FOO2"), "Encoding: {}", enc.name());
@@ -168,7 +195,7 @@ test_fixture!("Element", {
 
     test("Set attribute", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            parse_element("<div>", enc, |mut el| {
+            rewrite_element("<div>", enc, "div", |el| {
                 el.set_attribute("Foo", "Bar1").unwrap();
 
                 assert_eq!(
@@ -192,7 +219,7 @@ test_fixture!("Element", {
 
     test("Remove attribute", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            parse_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, |mut el| {
+            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
                 el.remove_attribute("Unknown");
 
                 assert_eq!(el.attributes().len(), 2, "Encoding: {}", enc.name());
@@ -207,6 +234,28 @@ test_fixture!("Element", {
                 assert!(el.attributes().is_empty(), "Encoding: {}", enc.name());
                 assert_eq!(el.get_attribute("foo2"), None, "Encoding: {}", enc.name());
             });
+        }
+    });
+
+    test("Insert content before", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.before("<img>", ContentType::Html);
+                el.before("<img>", ContentType::Text);
+            });
+
+            assert_eq!(output, "<div><img>&lt;img&gt;<span>Hi</span></div>");
+        }
+    });
+
+    test("Prepend content", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.prepend("<img>", ContentType::Html);
+                el.prepend("<img>", ContentType::Text);
+            });
+
+            assert_eq!(output, "<div><span>&lt;img&gt;<img>Hi</span></div>");
         }
     });
 });

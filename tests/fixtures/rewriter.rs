@@ -6,7 +6,7 @@ use cool_thing::{
 use encoding_rs::Encoding;
 
 fn write_chunks<O: OutputSink>(
-    rewriter: &mut HtmlRewriter<'_, O>,
+    rewriter: &mut HtmlRewriter<O>,
     encoding: &'static Encoding,
     chunks: &[&str],
 ) {

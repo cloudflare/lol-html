@@ -1,4 +1,4 @@
-use super::{OrderingMutations, Token};
+use super::{Mutations, Token};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -7,7 +7,7 @@ pub struct EndTag<'i> {
     name: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    ordering_mutations: OrderingMutations,
+    mutations: Mutations,
 }
 
 impl<'i> EndTag<'i> {
@@ -20,13 +20,18 @@ impl<'i> EndTag<'i> {
             name,
             raw: Some(raw),
             encoding,
-            ordering_mutations: OrderingMutations::default(),
+            mutations: Mutations::new(encoding),
         })
     }
 
     #[inline]
     pub fn name(&self) -> String {
         self.name.as_lowercase_string(self.encoding)
+    }
+
+    #[inline]
+    pub fn set_mutations(&mut self, mutations: Mutations) {
+        self.mutations = mutations;
     }
 
     #[inline]
@@ -48,7 +53,7 @@ impl<'i> EndTag<'i> {
     }
 }
 
-impl_common_token_api!(EndTag);
+impl_serialize!(EndTag);
 
 impl Debug for EndTag<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
