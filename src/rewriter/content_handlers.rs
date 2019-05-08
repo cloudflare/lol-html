@@ -1,6 +1,8 @@
+use super::ElementDescriptor;
 use crate::rewritable_units::{
     Comment, Doctype, Element, EndTag, TextChunk, Token, TokenCaptureFlags,
 };
+use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};
 
 pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) + 'h>;
 pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) + 'h>;
@@ -95,7 +97,7 @@ impl<H> HandlerVec<H> {
 }
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
-pub struct ElementContentHandlersLocator {
+pub struct SelectorHandlersLocator {
     element_handler_idx: Option<usize>,
     comment_handler_idx: Option<usize>,
     text_handler_idx: Option<usize>,
@@ -106,7 +108,9 @@ pub struct ContentHandlersDispatcher<'h> {
     doctype_handlers: HandlerVec<DoctypeHandler<'h>>,
     comment_handlers: HandlerVec<CommentHandler<'h>>,
     text_handlers: HandlerVec<TextHandler<'h>>,
+    end_tag_handlers: HandlerVec<EndTagHandler<'h>>,
     element_handlers: HandlerVec<ElementHandler<'h>>,
+    next_element_can_have_content: bool,
 }
 
 impl<'h> ContentHandlersDispatcher<'h> {
@@ -134,13 +138,13 @@ impl<'h> ContentHandlersDispatcher<'h> {
     }
 
     #[inline]
-    pub fn add_element_content_handlers(
+    pub fn add_selector_associated_handlers(
         &mut self,
         element_handler: Option<ElementHandler<'h>>,
         comment_handler: Option<CommentHandler<'h>>,
         text_handler: Option<TextHandler<'h>>,
-    ) -> ElementContentHandlersLocator {
-        ElementContentHandlersLocator {
+    ) -> SelectorHandlersLocator {
+        SelectorHandlersLocator {
             element_handler_idx: element_handler.map(|h| {
                 self.element_handlers
                     .push(h, false, ActionOnCall::Deactivate)
@@ -153,22 +157,28 @@ impl<'h> ContentHandlersDispatcher<'h> {
     }
 
     #[inline]
-    pub fn inc_element_handlers_user_count(&mut self, locator: ElementContentHandlersLocator) {
-        if let Some(idx) = locator.comment_handler_idx {
-            self.comment_handlers.inc_user_count(idx);
-        }
+    pub fn start_matching(&mut self, match_info: MatchInfo<SelectorHandlersLocator>) {
+        let locator = match_info.payload;
 
-        if let Some(idx) = locator.text_handler_idx {
-            self.text_handlers.inc_user_count(idx);
+        if match_info.with_content {
+            if let Some(idx) = locator.comment_handler_idx {
+                self.comment_handlers.inc_user_count(idx);
+            }
+
+            if let Some(idx) = locator.text_handler_idx {
+                self.text_handlers.inc_user_count(idx);
+            }
         }
 
         if let Some(idx) = locator.element_handler_idx {
             self.element_handlers.inc_user_count(idx);
         }
+
+        self.next_element_can_have_content = match_info.with_content;
     }
 
     #[inline]
-    pub fn dec_element_handlers_user_count(&mut self, locator: ElementContentHandlersLocator) {
+    pub fn stop_matching(&mut self, locator: SelectorHandlersLocator) {
         if let Some(idx) = locator.comment_handler_idx {
             self.comment_handlers.dec_user_count(idx);
         }
@@ -179,18 +189,38 @@ impl<'h> ContentHandlersDispatcher<'h> {
     }
 
     #[inline]
-    pub fn handle_token(&mut self, token: &mut Token) {
+    pub fn activate_end_tag_handler(&mut self, idx: usize) {
+        self.end_tag_handlers.inc_user_count(idx);
+    }
+
+    #[inline]
+    pub fn handle_token(
+        &mut self,
+        token: &mut Token,
+        selector_matching_vm: &mut SelectorMatchingVm<ElementDescriptor>,
+    ) {
         match token {
             Token::StartTag(start_tag) => {
-                let mut element = Element::new(start_tag);
+                let mut element = Element::new(start_tag, self.next_element_can_have_content);
 
                 self.element_handlers
                     .call_active_handlers(|h| h(&mut element));
+
+                if let (Some(handler), Some(elem_desc)) = (
+                    element.into_end_tag_handler(),
+                    selector_matching_vm.current_element_data_mut(),
+                ) {
+                    elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.push(
+                        handler,
+                        false,
+                        ActionOnCall::Remove,
+                    ));
+                }
             }
+            Token::EndTag(end_tag) => self.end_tag_handlers.call_active_handlers(|h| h(end_tag)),
             Token::Doctype(doctype) => self.doctype_handlers.call_active_handlers(|h| h(doctype)),
             Token::TextChunk(text) => self.text_handlers.call_active_handlers(|h| h(text)),
             Token::Comment(comment) => self.comment_handlers.call_active_handlers(|h| h(comment)),
-            _ => (),
         }
     }
 
@@ -208,6 +238,10 @@ impl<'h> ContentHandlersDispatcher<'h> {
 
         if self.text_handlers.has_active() {
             flags |= TokenCaptureFlags::TEXT;
+        }
+
+        if self.end_tag_handlers.has_active() {
+            flags |= TokenCaptureFlags::NEXT_END_TAG;
         }
 
         if self.element_handlers.has_active() {

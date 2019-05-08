@@ -75,7 +75,7 @@ impl<'h> DocumentContentHandlers<'h> {
 #[derive(Default)]
 pub struct HtmlRewriterBuilder<'h> {
     handlers_dispatcher: ContentHandlersDispatcher<'h>,
-    selectors_ast: selectors_vm::Ast<ElementContentHandlersLocator>,
+    selectors_ast: selectors_vm::Ast<SelectorHandlersLocator>,
 }
 
 impl<'h> HtmlRewriterBuilder<'h> {
@@ -92,7 +92,7 @@ impl<'h> HtmlRewriterBuilder<'h> {
         selector: &str,
         handlers: ElementContentHandlers<'h>,
     ) -> Result<(), SelectorError> {
-        let locator = self.handlers_dispatcher.add_element_content_handlers(
+        let locator = self.handlers_dispatcher.add_selector_associated_handlers(
             handlers.element,
             handlers.comments,
             handlers.text,

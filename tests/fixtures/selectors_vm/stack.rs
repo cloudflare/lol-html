@@ -9,7 +9,7 @@ struct TestElementData(usize);
 impl ElementData for TestElementData {
     type MatchPayload = ();
 
-    fn get_matched_payload_mut(&mut self) -> &mut HashSet<()> {
+    fn matched_payload_mut(&mut self) -> &mut HashSet<()> {
         unreachable!();
     }
 }

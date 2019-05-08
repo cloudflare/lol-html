@@ -102,13 +102,15 @@ test_fixture!("Element", {
 
     test("Tag name getter and setter", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            rewrite_element("<Foo>", enc, "foo", |el| {
+            let output = rewrite_element("<Foo><div><span></span></div></foo>", enc, "foo", |el| {
                 assert_eq!(el.tag_name(), "foo", "Encoding: {}", enc.name());
 
                 el.set_tag_name("BaZ").unwrap();
 
                 assert_eq!(el.tag_name(), "baz", "Encoding: {}", enc.name());
             });
+
+            assert_eq!(output, "<BaZ><div><span></span></div></BaZ>");
         }
     });
 
@@ -257,5 +259,45 @@ test_fixture!("Element", {
 
             assert_eq!(output, "<div><span>&lt;img&gt;<img>Hi</span></div>");
         }
+    });
+
+    test("Append content", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.append("<img>", ContentType::Html);
+                el.append("<img>", ContentType::Text);
+            });
+
+            assert_eq!(output, "<div><span>Hi<img>&lt;img&gt;</span></div>");
+        }
+    });
+
+    test("Insert content after", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.after("<img>", ContentType::Html);
+                el.after("<img>", ContentType::Text);
+            });
+
+            assert_eq!(output, "<div><span>Hi</span>&lt;img&gt;<img></div>");
+        }
+    });
+
+    test("Void element", {
+        let output = rewrite_element("<img><span>Hi</span></img>", UTF_8, "img", |el| {
+            el.after("<!--after-->", ContentType::Html);
+            el.set_tag_name("img-foo").unwrap();
+        });
+
+        assert_eq!(output, "<img-foo><!--after--><span>Hi</span></img>");
+    });
+
+    test("Self-closing element", {
+        let output = rewrite_element("<svg><foo/>Hi</foo></svg>", UTF_8, "foo", |el| {
+            el.after("<!--after-->", ContentType::Html);
+            el.set_tag_name("bar").unwrap();
+        });
+
+        assert_eq!(output, "<svg><bar/><!--after-->Hi</foo></svg>");
     });
 });

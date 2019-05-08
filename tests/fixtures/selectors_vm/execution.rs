@@ -16,7 +16,7 @@ struct TestElementData(HashSet<usize>);
 impl ElementData for TestElementData {
     type MatchPayload = usize;
 
-    fn get_matched_payload_mut(&mut self) -> &mut HashSet<usize> {
+    fn matched_payload_mut(&mut self) -> &mut HashSet<usize> {
         &mut self.0
     }
 }

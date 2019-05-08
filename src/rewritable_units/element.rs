@@ -20,18 +20,20 @@ pub enum TagNameError {
 pub struct Element<'r, 't> {
     start_tag: &'r mut StartTag<'t>,
     end_tag_mutations: Option<Mutations>,
-    modified_tag_name: Option<Bytes<'static>>,
+    modified_end_tag_name: Option<Bytes<'static>>,
+    can_have_content: bool,
     encoding: &'static Encoding,
 }
 
 impl<'r, 't> Element<'r, 't> {
-    pub(crate) fn new(start_tag: &'r mut StartTag<'t>) -> Self {
+    pub(crate) fn new(start_tag: &'r mut StartTag<'t>, can_have_content: bool) -> Self {
         let encoding = start_tag.encoding();
 
         Element {
             start_tag,
             end_tag_mutations: None,
-            modified_tag_name: None,
+            modified_end_tag_name: None,
+            can_have_content,
             encoding,
         }
     }
@@ -77,7 +79,10 @@ impl<'r, 't> Element<'r, 't> {
     pub fn set_tag_name(&mut self, name: &str) -> Result<(), TagNameError> {
         let name = self.tag_name_bytes_from_str(name)?;
 
-        self.modified_tag_name = Some(name.clone());
+        if self.can_have_content {
+            self.modified_end_tag_name = Some(name.clone());
+        }
+
         self.start_tag.set_name(name);
 
         Ok(())
@@ -125,7 +130,11 @@ impl<'r, 't> Element<'r, 't> {
 
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
-        self.end_tag_mutations_mut().after(content, content_type);
+        if self.can_have_content {
+            self.end_tag_mutations_mut().after(content, content_type);
+        } else {
+            self.start_tag.after(content, content_type);
+        }
     }
 
     #[inline]
@@ -135,7 +144,9 @@ impl<'r, 't> Element<'r, 't> {
 
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
-        self.end_tag_mutations_mut().before(content, content_type);
+        if self.can_have_content {
+            self.end_tag_mutations_mut().before(content, content_type);
+        }
     }
 
     #[inline]
@@ -165,12 +176,12 @@ impl<'r, 't> Element<'r, 't> {
 
     pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {
         let end_tag_mutations = self.end_tag_mutations;
-        let modified_tag_name = self.modified_tag_name;
+        let modified_end_tag_name = self.modified_end_tag_name;
 
-        if end_tag_mutations.is_some() || modified_tag_name.is_some() {
+        if end_tag_mutations.is_some() || modified_end_tag_name.is_some() {
             // TODO: remove this hack when Box<dyn FnOnce> become callable in Rust 1.35.
             let mut wrap = Some(move |end_tag: &mut EndTag| {
-                if let Some(name) = modified_tag_name {
+                if let Some(name) = modified_end_tag_name {
                     end_tag.set_name(name);
                 }
 

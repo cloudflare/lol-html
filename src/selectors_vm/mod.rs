@@ -81,7 +81,7 @@ where
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         for &payload in &branch.matched_payload {
-            let element_payload = self.stack_item.element_data.get_matched_payload_mut();
+            let element_payload = self.stack_item.element_data.matched_payload_mut();
 
             if !element_payload.contains(&payload) {
                 match_handler(MatchInfo {
@@ -198,6 +198,11 @@ where
     ) {
         self.stack
             .pop_up_to(local_name, unmatched_element_data_handler);
+    }
+
+    #[inline]
+    pub fn current_element_data_mut(&mut self) -> Option<&mut E> {
+        self.stack.current_element_data_mut()
     }
 
     #[inline]
@@ -386,7 +391,6 @@ where
         }
     }
 
-    #[inline]
     fn try_exec_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<E>,
@@ -408,7 +412,6 @@ where
         Ok(())
     }
 
-    #[inline]
     fn exec_jumps_with_attrs(
         &self,
         attr_matcher: &AttributeMatcher,
@@ -435,7 +438,6 @@ where
         }
     }
 
-    #[inline]
     fn try_exec_hereditary_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<E>,
@@ -462,7 +464,6 @@ where
         Ok(())
     }
 
-    #[inline]
     fn exec_hereditary_jumps_with_attrs(
         &self,
         attr_matcher: &AttributeMatcher,

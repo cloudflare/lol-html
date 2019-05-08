@@ -22,7 +22,7 @@ fn is_void_element(local_name: &LocalName) -> bool {
 pub trait ElementData: Default + 'static {
     type MatchPayload: Hash + Eq;
 
-    fn get_matched_payload_mut(&mut self) -> &mut HashSet<Self::MatchPayload>;
+    fn matched_payload_mut(&mut self) -> &mut HashSet<Self::MatchPayload>;
 }
 
 pub enum StackDirective {
@@ -101,6 +101,11 @@ impl<E: ElementData> Stack<E> {
     #[inline]
     pub fn items(&self) -> &[StackItem<E>] {
         &self.0
+    }
+
+    #[inline]
+    pub fn current_element_data_mut(&mut self) -> Option<&mut E> {
+        self.0.last_mut().map(|i| &mut i.element_data)
     }
 
     #[inline]

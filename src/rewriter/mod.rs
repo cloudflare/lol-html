@@ -14,18 +14,19 @@ use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 pub use self::builder::*;
-pub use self::content_handlers::{ElementContentHandlersLocator, EndTagHandler};
+pub use self::content_handlers::{EndTagHandler, SelectorHandlersLocator};
 
 #[derive(Default)]
-struct ElementDescriptor {
-    matched_content_handlers: HashSet<ElementContentHandlersLocator>,
+pub struct ElementDescriptor {
+    matched_content_handlers: HashSet<SelectorHandlersLocator>,
+    pub end_tag_handler_idx: Option<usize>,
 }
 
 impl ElementData for ElementDescriptor {
-    type MatchPayload = ElementContentHandlersLocator;
+    type MatchPayload = SelectorHandlersLocator;
 
     #[inline]
-    fn get_matched_payload_mut(&mut self) -> &mut HashSet<ElementContentHandlersLocator> {
+    fn matched_payload_mut(&mut self) -> &mut HashSet<SelectorHandlersLocator> {
         &mut self.matched_content_handlers
     }
 }
@@ -50,14 +51,10 @@ impl<'h> HtmlRewriteController<'h> {
 
 impl<'h> HtmlRewriteController<'h> {
     #[inline]
-    fn create_match_handler(&self) -> impl FnMut(MatchInfo<ElementContentHandlersLocator>) + 'h {
+    fn create_match_handler(&self) -> impl FnMut(MatchInfo<SelectorHandlersLocator>) + 'h {
         let handlers_dispatcher = Rc::clone(&self.handlers_dispatcher);
 
-        move |m| {
-            handlers_dispatcher
-                .borrow_mut()
-                .inc_element_handlers_user_count(m.payload);
-        }
+        move |m| handlers_dispatcher.borrow_mut().start_matching(m)
     }
 }
 
@@ -95,10 +92,14 @@ impl TransformController for HtmlRewriteController<'_> {
 
         self.selector_matching_vm
             .exec_for_end_tag(local_name, move |element_desc| {
+                let mut handlers_dispatcher = handlers_dispatcher.borrow_mut();
+
                 for locator in element_desc.matched_content_handlers {
-                    handlers_dispatcher
-                        .borrow_mut()
-                        .dec_element_handlers_user_count(locator);
+                    handlers_dispatcher.stop_matching(locator);
+                }
+
+                if let Some(idx) = element_desc.end_tag_handler_idx {
+                    handlers_dispatcher.activate_end_tag_handler(idx);
                 }
             });
 
@@ -107,7 +108,9 @@ impl TransformController for HtmlRewriteController<'_> {
 
     #[inline]
     fn handle_token(&mut self, token: &mut Token) {
-        self.handlers_dispatcher.borrow_mut().handle_token(token);
+        self.handlers_dispatcher
+            .borrow_mut()
+            .handle_token(token, &mut self.selector_matching_vm);
     }
 }
 
