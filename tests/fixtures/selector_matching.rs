@@ -18,16 +18,27 @@ impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
         builder
             .on(
                 &test.selector,
-                ElementContentHandlers::default().element(move |el| {
-                    el.before(
-                        &format!("<!--[ELEMENT('{}')]-->", test.selector),
-                        ContentType::Html,
-                    );
-                    el.after(
-                        &format!("<!--[/ELEMENT('{}')]-->", test.selector),
-                        ContentType::Html,
-                    );
-                }),
+                ElementContentHandlers::default()
+                    .element(|el| {
+                        el.before(
+                            &format!("<!--[ELEMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+                        el.after(
+                            &format!("<!--[/ELEMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+                    })
+                    .comments(|c| {
+                        c.before(
+                            &format!("<!--[COMMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+                        c.after(
+                            &format!("<!--[/COMMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+                    }),
             )
             .unwrap();
 
