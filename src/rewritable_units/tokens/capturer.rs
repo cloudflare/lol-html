@@ -168,7 +168,7 @@ impl TokenCapturer {
             .pending_text_decoder
             .get_or_insert_with(|| encoding.new_decoder_without_bom_handling());
 
-        let mut consumed = 0usize;
+        let mut consumed = 0;
 
         loop {
             let (status, read, written, ..) = decoder.decode_to_str(&raw[consumed..], buffer, last);

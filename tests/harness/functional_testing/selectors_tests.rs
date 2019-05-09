@@ -42,6 +42,7 @@ pub struct TestCase {
 
 pub fn get_test_cases() -> Vec<TestCase> {
     let mut test_cases = Vec::new();
+    let mut ignored_count = 0;
 
     for_each_test_file("selectors/*-info.json", &mut |file| {
         let test_data = from_reader::<_, TestData>(file).unwrap();
@@ -50,10 +51,12 @@ pub fn get_test_cases() -> Vec<TestCase> {
             let description = format!("{} (`{}`)", test_data.description, selector);
 
             if SelectorsParser::parse(&selector).is_err() {
-                println!(
+                ignore!(@info
                     "Ignoring test due to unsupported selector: `{}`",
                     description
                 );
+
+                ignored_count += 1;
 
                 continue;
             }
@@ -66,6 +69,8 @@ pub fn get_test_cases() -> Vec<TestCase> {
             });
         }
     });
+
+    ignore!(@total "selector matching", ignored_count);
 
     test_cases
 }

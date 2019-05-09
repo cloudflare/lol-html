@@ -1,5 +1,17 @@
 use encoding_rs::*;
 
+macro_rules! ignore {
+    (@info $($args:expr),+) => {
+        if std::env::var("IGNORES_VERBOSE").is_ok() {
+            println!($($args),+);
+        }
+    };
+
+    (@total $type:expr, $count:expr) => {
+        println!("Ignoring {} {} tests, run with `IGNORES_VERBOSE=1` to get more info.", $count, $type);
+    };
+}
+
 mod io;
 
 #[macro_use]

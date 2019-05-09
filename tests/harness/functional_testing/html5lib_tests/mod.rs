@@ -62,6 +62,8 @@ impl Unescape for TestCase {
 
 pub fn get_test_cases() -> Vec<TestCase> {
     let mut tests = Vec::default();
+    let mut non_unescapable_count = 0;
+    let mut with_unmappable_chars_count = 0;
 
     #[derive(Deserialize)]
     struct Suite {
@@ -75,14 +77,15 @@ pub fn get_test_cases() -> Vec<TestCase> {
 
     tests.append(&mut self::feedback_tests::get_test_cases());
 
-    tests
+    let tests = tests
         .iter_mut()
         .filter_map(|t| {
             if t.unescape().is_err() {
-                println!(
-                    "Ignoring test due to non-unescapable input: `{}`",
-                    t.description
-                );
+                ignore!(@info "Ignoring test due to non-unescapable input: `{}`",
+                    t.description);
+
+                non_unescapable_count += 1;
+
                 None
             } else {
                 Some(t)
@@ -112,11 +115,14 @@ pub fn get_test_cases() -> Vec<TestCase> {
                             Some(t)
                         }
                         Err(_) => {
-                            println!(
+                            ignore!(@info
                                 "Ignoring test for {} encoding due to unmappable characters: `{}`",
                                 encoding.name(),
-                                t.description,
+                                t.description
                             );
+
+                            with_unmappable_chars_count += 1;
+
                             None
                         }
                     }
@@ -126,5 +132,9 @@ pub fn get_test_cases() -> Vec<TestCase> {
             cases.append(&mut encoding_variations);
 
             cases
-        })
+        });
+
+    ignore!(@total "html5lib tests", non_unescapable_count + with_unmappable_chars_count);
+
+    tests
 }
