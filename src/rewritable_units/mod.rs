@@ -6,10 +6,16 @@ mod tokens;
 
 use crate::base::Bytes;
 use encoding_rs::Encoding;
+use std::any::Any;
 
 pub use self::element::*;
 pub use self::mutations::Mutations;
 pub use self::tokens::*;
+
+pub trait UserData {
+    fn user_data(&self) -> Option<&dyn Any>;
+    fn set_user_data(&mut self, data: impl Any);
+}
 
 pub enum ContentType {
     Html,

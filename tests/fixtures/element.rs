@@ -1,7 +1,7 @@
 use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
 use cool_thing::{
     AttributeNameError, ContentType, Element, ElementContentHandlers, HtmlRewriterBuilder,
-    TagNameError,
+    TagNameError, UserData,
 };
 use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
@@ -237,6 +237,17 @@ test_fixture!("Element", {
                 assert_eq!(el.get_attribute("foo2"), None, "Encoding: {}", enc.name());
             });
         }
+    });
+
+    test("User data", {
+        rewrite_element("<div><span>Hi</span></div>", UTF_8, "span", |el| {
+            el.set_user_data(42usize);
+
+            assert_eq!(
+                *el.user_data().unwrap().downcast_ref::<usize>().unwrap(),
+                42usize
+            );
+        });
     });
 
     test("Insert content before", {

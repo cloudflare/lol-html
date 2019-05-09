@@ -1,6 +1,8 @@
+use super::UserData;
 use crate::base::Bytes;
 use crate::rewritable_units::{Serialize, Token};
 use encoding_rs::Encoding;
+use std::any::Any;
 use std::fmt::{self, Debug};
 
 pub struct Doctype<'i> {
@@ -10,6 +12,7 @@ pub struct Doctype<'i> {
     force_quirks: bool,
     raw: Bytes<'i>,
     encoding: &'static Encoding,
+    user_data: Option<Box<dyn Any>>,
 }
 
 impl<'i> Doctype<'i> {
@@ -28,6 +31,7 @@ impl<'i> Doctype<'i> {
             force_quirks,
             raw,
             encoding,
+            user_data: None,
         })
     }
 
@@ -59,6 +63,18 @@ impl Serialize for Doctype<'_> {
     #[inline]
     fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
         output_handler(&self.raw);
+    }
+}
+
+impl UserData for Doctype<'_> {
+    #[inline]
+    fn user_data(&self) -> Option<&dyn Any> {
+        self.user_data.as_ref().map(|d| &**d)
+    }
+
+    #[inline]
+    fn set_user_data(&mut self, data: impl Any) {
+        self.user_data = Some(Box::new(data));
     }
 }
 
