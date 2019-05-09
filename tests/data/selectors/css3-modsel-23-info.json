@@ -1,11 +1,10 @@
 {
   "description": "Selectors - :enabled pseudo-class (css3-modsel-23)",
-  "selectors": [
-    "button",
-    "input",
-    "button:enabled",
-    "input:enabled"
-  ],
-  "src": "css3-modsel-23.src.html",
-  "expected": "css3-modsel-23.expected.html"
+  "selectors": {
+    "button": "css3-modsel-23.expected0.html",
+    "input": "css3-modsel-23.expected1.html",
+    "button:enabled": "css3-modsel-23.expected2.html",
+    "input:enabled": "css3-modsel-23.expected3.html"
+  },
+  "src": "css3-modsel-23.src.html"
 }

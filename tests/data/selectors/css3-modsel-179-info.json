@@ -1,10 +1,9 @@
 {
   "description": "Selectors - ::first-line on inlines (css3-modsel-179)",
-  "selectors": [
-    "p",
-    "span:first-line",
-    "span::first-line"
-  ],
-  "src": "css3-modsel-179.src.html",
-  "expected": "css3-modsel-179.expected.html"
+  "selectors": {
+    "p": "css3-modsel-179.expected0.html",
+    "span:first-line": "css3-modsel-179.expected1.html",
+    "span::first-line": "css3-modsel-179.expected2.html"
+  },
+  "src": "css3-modsel-179.src.html"
 }

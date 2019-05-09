@@ -1,10 +1,9 @@
 {
   "description": "Selectors - Descendant combinator (css3-modsel-43b)",
-  "selectors": [
-    ".white",
-    ".green",
-    "div.t1 p"
-  ],
-  "src": "css3-modsel-43b.src.html",
-  "expected": "css3-modsel-43b.expected.html"
+  "selectors": {
+    ".white": "css3-modsel-43b.expected0.html",
+    ".green": "css3-modsel-43b.expected1.html",
+    "div.t1 p": "css3-modsel-43b.expected2.html"
+  },
+  "src": "css3-modsel-43b.src.html"
 }

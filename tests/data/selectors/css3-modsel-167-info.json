@@ -1,9 +1,8 @@
 {
   "description": "Selectors - :first-line with ::first-line (css3-modsel-167)",
-  "selectors": [
-    "p:first-line",
-    "p::first-line"
-  ],
-  "src": "css3-modsel-167.src.html",
-  "expected": "css3-modsel-167.expected.html"
+  "selectors": {
+    "p:first-line": "css3-modsel-167.expected0.html",
+    "p::first-line": "css3-modsel-167.expected1.html"
+  },
+  "src": "css3-modsel-167.src.html"
 }

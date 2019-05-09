@@ -1,13 +1,12 @@
 {
   "description": "Selectors - NEGATED :nth-last-child() pseudo-class (css3-modsel-74)",
-  "selectors": [
-    ".red",
-    "ul > li:not(:nth-last-child(odd))",
-    "ol > li:not(:nth-last-child(even))",
-    "table.t1 tr:not(:nth-last-child(-n+4))",
-    "table.t2 td:not(:nth-last-child(3n+1))",
-    "table.t1 td, table.t2 td"
-  ],
-  "src": "css3-modsel-74.src.html",
-  "expected": "css3-modsel-74.expected.html"
+  "selectors": {
+    ".red": "css3-modsel-74.expected0.html",
+    "ul > li:not(:nth-last-child(odd))": "css3-modsel-74.expected1.html",
+    "ol > li:not(:nth-last-child(even))": "css3-modsel-74.expected2.html",
+    "table.t1 tr:not(:nth-last-child(-n+4))": "css3-modsel-74.expected3.html",
+    "table.t2 td:not(:nth-last-child(3n+1))": "css3-modsel-74.expected4.html",
+    "table.t1 td, table.t2 td": "css3-modsel-74.expected5.html"
+  },
+  "src": "css3-modsel-74.src.html"
 }

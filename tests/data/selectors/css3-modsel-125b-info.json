@@ -1,9 +1,8 @@
 {
   "description": "Selectors - NEGATED Attribute space-separated value selector with declared namespace (css3-modsel-125b)",
-  "selectors": [
-    "*|p, *|q, *|r, *|s",
-    "*|q, *|s"
-  ],
-  "src": "css3-modsel-125b.src.html",
-  "expected": "css3-modsel-125b.expected.html"
+  "selectors": {
+    "*|p, *|q, *|r, *|s": "css3-modsel-125b.expected0.html",
+    "*|q, *|s": "css3-modsel-125b.expected1.html"
+  },
+  "src": "css3-modsel-125b.src.html"
 }

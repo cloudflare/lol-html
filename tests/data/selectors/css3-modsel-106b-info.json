@@ -1,10 +1,9 @@
 {
   "description": "Selectors - Attribute space-separated value selector with universal namespace (css3-modsel-106b)",
-  "selectors": [
-    "*|p, *|q, *|r, *|s",
-    "*|p, *|r, *|s",
-    "*|*[*|class~=\"deux\"], *|*[*|foo~=\"deux\"]"
-  ],
-  "src": "css3-modsel-106b.src.html",
-  "expected": "css3-modsel-106b.expected.html"
+  "selectors": {
+    "*|p, *|q, *|r, *|s": "css3-modsel-106b.expected0.html",
+    "*|p, *|r, *|s": "css3-modsel-106b.expected1.html",
+    "*|*[*|class~=\"deux\"], *|*[*|foo~=\"deux\"]": "css3-modsel-106b.expected2.html"
+  },
+  "src": "css3-modsel-106b.src.html"
 }

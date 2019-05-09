@@ -1,8 +1,7 @@
 {
   "description": "Selectors - NEGATED universal selector with declared namespace (css3-modsel-121)",
-  "selectors": [
-    "div.stub v"
-  ],
-  "src": "css3-modsel-121.src.html",
-  "expected": "css3-modsel-121.expected.html"
+  "selectors": {
+    "div.stub v": "css3-modsel-121.expected0.html"
+  },
+  "src": "css3-modsel-121.src.html"
 }

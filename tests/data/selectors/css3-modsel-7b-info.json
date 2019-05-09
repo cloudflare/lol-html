@@ -1,9 +1,8 @@
 {
   "description": "Selectors - Attribute multivalue selector (css3-modsel-7b)",
-  "selectors": [
-    "p",
-    "[title~=\"hello world\"]"
-  ],
-  "src": "css3-modsel-7b.src.html",
-  "expected": "css3-modsel-7b.expected.html"
+  "selectors": {
+    "p": "css3-modsel-7b.expected0.html",
+    "[title~=\"hello world\"]": "css3-modsel-7b.expected1.html"
+  },
+  "src": "css3-modsel-7b.src.html"
 }

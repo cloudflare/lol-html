@@ -1,10 +1,9 @@
 {
   "description": "Selectors - ::first-letter after &lt;br&gt; (css3-modsel-180a)",
-  "selectors": [
-    "p",
-    "p:first-letter",
-    "p::first-letter"
-  ],
-  "src": "css3-modsel-180a.src.html",
-  "expected": "css3-modsel-180a.expected.html"
+  "selectors": {
+    "p": "css3-modsel-180a.expected0.html",
+    "p:first-letter": "css3-modsel-180a.expected1.html",
+    "p::first-letter": "css3-modsel-180a.expected2.html"
+  },
+  "src": "css3-modsel-180a.src.html"
 }

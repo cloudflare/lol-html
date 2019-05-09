@@ -1,9 +1,8 @@
 {
   "description": "Selectors - Nondeterministic matching of direct and indirect adjacent combinators (css3-modsel-87)",
-  "selectors": [
-    "p",
-    "blockquote + div ~ p"
-  ],
-  "src": "css3-modsel-87.src.html",
-  "expected": "css3-modsel-87.expected.html"
+  "selectors": {
+    "p": "css3-modsel-87.expected0.html",
+    "blockquote + div ~ p": "css3-modsel-87.expected1.html"
+  },
+  "src": "css3-modsel-87.src.html"
 }

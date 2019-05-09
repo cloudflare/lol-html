@@ -18,6 +18,7 @@ pub use self::ast::*;
 pub use self::attribute_matcher::AttributeMatcher;
 pub use self::compiler::Compiler;
 pub use self::error::SelectorError;
+pub use self::parser::SelectorsParser;
 pub use self::program::{ExecutionBranch, Program};
 pub use self::stack::{ElementData, Stack, StackItem};
 
@@ -29,7 +30,7 @@ pub struct MatchInfo<P> {
 pub type AuxStartTagInfoRequest<E, P> =
     Box<dyn FnMut(&mut SelectorMatchingVm<E>, AuxStartTagInfo, &mut dyn FnMut(MatchInfo<P>))>;
 
-type RestorePointHandler<T, E, P> = fn(
+type RecoveryPointHandler<T, E, P> = fn(
     &mut SelectorMatchingVm<E>,
     &mut ExecutionCtx<'static, E>,
     &AttributeMatcher,
@@ -52,7 +53,7 @@ struct HereditaryJumpPtr {
 
 struct Bailout<T> {
     at_addr: usize,
-    restore_point: T,
+    recovery_point: T,
 }
 
 struct ExecutionCtx<'i, E: ElementData> {
@@ -224,7 +225,7 @@ where
     fn bailout<T: 'static>(
         ctx: ExecutionCtx<E>,
         bailout: Bailout<T>,
-        restore_point_handler: RestorePointHandler<T, E, E::MatchPayload>,
+        recovery_point_handler: RecoveryPointHandler<T, E, E::MatchPayload>,
     ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
         let mut ctx = ctx.into_owned();
 
@@ -238,11 +239,11 @@ where
                 match_handler,
             );
 
-            restore_point_handler(
+            recovery_point_handler(
                 this,
                 &mut ctx,
                 &attr_matcher,
-                bailout.restore_point,
+                bailout.recovery_point,
                 match_handler,
             );
 
@@ -256,14 +257,14 @@ where
         &mut self,
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher,
-        restore_point: usize,
+        recovery_point: usize,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         self.exec_instr_set_with_attrs(
             &self.program.entry_points,
             attr_matcher,
             ctx,
-            restore_point,
+            recovery_point,
             match_handler,
         );
 
@@ -281,10 +282,10 @@ where
         &mut self,
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher,
-        restore_point: JumpPtr,
+        recovery_point: JumpPtr,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        self.exec_jumps_with_attrs(attr_matcher, ctx, restore_point, match_handler);
+        self.exec_jumps_with_attrs(attr_matcher, ctx, recovery_point, match_handler);
 
         self.exec_hereditary_jumps_with_attrs(
             attr_matcher,
@@ -298,10 +299,10 @@ where
         &mut self,
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher,
-        restore_point: HereditaryJumpPtr,
+        recovery_point: HereditaryJumpPtr,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, restore_point, match_handler);
+        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, recovery_point, match_handler);
     }
 
     fn exec_without_attrs(
@@ -365,7 +366,7 @@ where
             } else if result.is_err() {
                 return Err(Bailout {
                     at_addr: addr,
-                    restore_point: addr - start + 1,
+                    recovery_point: addr - start + 1,
                 });
             }
         }
@@ -401,9 +402,9 @@ where
                 self.try_exec_instr_set_without_attrs(jumps.clone(), ctx, match_handler)
                     .map_err(|b| Bailout {
                         at_addr: b.at_addr,
-                        restore_point: JumpPtr {
+                        recovery_point: JumpPtr {
                             instr_set_idx: i,
-                            offset: b.restore_point,
+                            offset: b.recovery_point,
                         },
                     })?;
             }
@@ -448,10 +449,10 @@ where
                 self.try_exec_instr_set_without_attrs(jumps, ctx, match_handler)
                     .map_err(|b| Bailout {
                         at_addr: b.at_addr,
-                        restore_point: HereditaryJumpPtr {
+                        recovery_point: HereditaryJumpPtr {
                             stack_offset: i,
                             instr_set_idx: j,
-                            offset: b.restore_point,
+                            offset: b.recovery_point,
                         },
                     })?;
             }

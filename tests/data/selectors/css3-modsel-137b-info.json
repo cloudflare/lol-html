@@ -1,10 +1,9 @@
 {
   "description": "Selectors - NEGATED Attribute existence selector without declared namespace (css3-modsel-137b)",
-  "selectors": [
-    "*|q, *|r",
-    "*|q",
-    "div.stub *|*:not([|title])"
-  ],
-  "src": "css3-modsel-137b.src.html",
-  "expected": "css3-modsel-137b.expected.html"
+  "selectors": {
+    "*|q, *|r": "css3-modsel-137b.expected0.html",
+    "*|q": "css3-modsel-137b.expected1.html",
+    "div.stub *|*:not([|title])": "css3-modsel-137b.expected2.html"
+  },
+  "src": "css3-modsel-137b.src.html"
 }

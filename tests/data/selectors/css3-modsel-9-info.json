@@ -1,9 +1,8 @@
 {
   "description": "Selectors - Substring matching attribute selector (beginning) (css3-modsel-9)",
-  "selectors": [
-    "p",
-    "p[title^=\"foo\"]"
-  ],
-  "src": "css3-modsel-9.src.html",
-  "expected": "css3-modsel-9.expected.html"
+  "selectors": {
+    "p": "css3-modsel-9.expected0.html",
+    "p[title^=\"foo\"]": "css3-modsel-9.expected1.html"
+  },
+  "src": "css3-modsel-9.src.html"
 }

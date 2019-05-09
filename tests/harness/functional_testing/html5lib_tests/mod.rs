@@ -80,7 +80,7 @@ pub fn get_test_cases() -> Vec<TestCase> {
         .filter_map(|t| {
             if t.unescape().is_err() {
                 println!(
-                    "Ignoring test due to input unescape failure: `{}`",
+                    "Ignoring test due to non-unescapable input: `{}`",
                     t.description
                 );
                 None
