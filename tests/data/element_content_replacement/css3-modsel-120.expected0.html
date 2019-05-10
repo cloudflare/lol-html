@@ -1,4 +1,4 @@
-<html><head>
+<!DOCTYPE html><html><head>
   <title>NEGATED type element selector without declared namespace</title>
   <style type="text/css">@namespace html url(http://www.w3.org/1999/xhtml);
 @namespace a url(http://www.example.org/a);
@@ -13,10 +13,10 @@ div.stub > *|l > *:not(|p) { background-color : red }</style>
  </head>
  <body>
 <div class="stub">
-<p><!--Replaced (div.stub > *:not(|p)) --></p>
-<p xmlns="http://www.example.org/b"><!--Replaced (div.stub > *:not(|p)) --></p>
+<p>This paragraph should have a green background</p>
+<p xmlns="http://www.example.org/b">This paragraph should have a green background</p>
 <l xmlns="http://www.example.org/b"><!--Replaced (div.stub > *:not(|p)) --></l>
-<p xmlns="http://www.example.org/a"><!--Replaced (div.stub > *:not(|p)) --></p>
+<p xmlns="http://www.example.org/a">This paragraph should have a green background</p>
 </div>
 
 </body></html>

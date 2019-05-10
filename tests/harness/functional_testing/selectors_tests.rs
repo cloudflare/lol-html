@@ -44,8 +44,11 @@ pub fn get_test_cases(suite: &'static str) -> Vec<TestCase> {
                 let chunk_size = input.init(encoding, false).unwrap();
 
                 let description = format!(
-                    "{} ({}) - Chunk size: {}",
-                    test_data.description, selector, chunk_size
+                    "{} ({}) - Encoding: {} - Chunk size: {}",
+                    test_data.description,
+                    selector,
+                    encoding.name(),
+                    chunk_size
                 );
 
                 if SelectorsParser::parse(&selector).is_err() {

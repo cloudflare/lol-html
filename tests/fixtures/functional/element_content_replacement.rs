@@ -3,6 +3,9 @@ use crate::harness::functional_testing::FunctionalTestFixture;
 use crate::harness::Output;
 use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriterBuilder};
 
+// NOTE: Inner element content replacement functionality used as a basis for
+// the multiple element methods and it's easy to get it wrong, so we have
+// a dedicated set of functional tests for that.
 pub struct ElementContentReplacementTests;
 
 impl FunctionalTestFixture<TestCase> for ElementContentReplacementTests {

@@ -3,6 +3,7 @@ use crate::rewritable_units::{
     Comment, Doctype, Element, EndTag, TextChunk, Token, TokenCaptureFlags,
 };
 use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};
+use crate::transform_stream::ConsequentContentDirective;
 
 pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) + 'h>;
 pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) + 'h>;
@@ -111,6 +112,7 @@ pub struct ContentHandlersDispatcher<'h> {
     end_tag_handlers: HandlerVec<EndTagHandler<'h>>,
     element_handlers: HandlerVec<ElementHandler<'h>>,
     next_element_can_have_content: bool,
+    matched_elements_with_removed_content: usize,
 }
 
 impl<'h> ContentHandlersDispatcher<'h> {
@@ -178,55 +180,101 @@ impl<'h> ContentHandlersDispatcher<'h> {
     }
 
     #[inline]
-    pub fn stop_matching(&mut self, locator: SelectorHandlersLocator) {
-        if let Some(idx) = locator.comment_handler_idx {
-            self.comment_handlers.dec_user_count(idx);
+    pub fn stop_matching(&mut self, elem_desc: ElementDescriptor) {
+        for locator in elem_desc.matched_content_handlers {
+            if let Some(idx) = locator.comment_handler_idx {
+                self.comment_handlers.dec_user_count(idx);
+            }
+
+            if let Some(idx) = locator.text_handler_idx {
+                self.text_handlers.dec_user_count(idx);
+            }
         }
 
-        if let Some(idx) = locator.text_handler_idx {
-            self.text_handlers.dec_user_count(idx);
+        if let Some(idx) = elem_desc.end_tag_handler_idx {
+            self.end_tag_handlers.inc_user_count(idx);
+        }
+
+        if elem_desc.remove_content {
+            self.matched_elements_with_removed_content -= 1;
         }
     }
 
-    #[inline]
-    pub fn activate_end_tag_handler(&mut self, idx: usize) {
-        self.end_tag_handlers.inc_user_count(idx);
-    }
-
-    #[inline]
     pub fn handle_token(
         &mut self,
         token: &mut Token,
         selector_matching_vm: &mut SelectorMatchingVm<ElementDescriptor>,
-    ) {
+    ) -> ConsequentContentDirective {
         match token {
+            Token::Doctype(doctype) => self.doctype_handlers.call_active_handlers(|h| h(doctype)),
             Token::StartTag(start_tag) => {
+                if self.matched_elements_with_removed_content > 0 {
+                    start_tag.remove();
+                }
+
                 let mut element = Element::new(start_tag, self.next_element_can_have_content);
 
                 self.element_handlers
                     .call_active_handlers(|h| h(&mut element));
 
-                if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
-                    elem_desc.remove_content = element.remove_content();
+                let mut conseq_content_directive = ConsequentContentDirective::None;
 
-                    if let Some(handler) = element.into_end_tag_handler() {
-                        elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.push(
-                            handler,
-                            false,
-                            ActionOnCall::Remove,
-                        ));
+                if self.next_element_can_have_content {
+                    if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
+                        if element.remove_content() {
+                            elem_desc.remove_content = true;
+                            self.matched_elements_with_removed_content += 1;
+
+                            conseq_content_directive = ConsequentContentDirective::ForceCapture;
+                        }
+
+                        if let Some(handler) = element.into_end_tag_handler() {
+                            elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.push(
+                                handler,
+                                false,
+                                ActionOnCall::Remove,
+                            ));
+                        }
                     }
                 }
+
+                return conseq_content_directive;
             }
-            Token::EndTag(end_tag) => self.end_tag_handlers.call_active_handlers(|h| h(end_tag)),
-            Token::Doctype(doctype) => self.doctype_handlers.call_active_handlers(|h| h(doctype)),
-            Token::TextChunk(text) => self.text_handlers.call_active_handlers(|h| h(text)),
-            Token::Comment(comment) => self.comment_handlers.call_active_handlers(|h| h(comment)),
+            Token::EndTag(end_tag) => {
+                self.end_tag_handlers.call_active_handlers(|h| h(end_tag));
+
+                // NOTE: for end tag we remove token after handlers as handler may
+                // rewriter mutations object and all of these handlers are internal
+                // and we don't need to maintain the correct value for the `removed` property.
+                if self.matched_elements_with_removed_content > 0 {
+                    end_tag.mutations.remove();
+                }
+            }
+            Token::TextChunk(text) => {
+                if self.matched_elements_with_removed_content > 0 {
+                    text.remove();
+                }
+
+                self.text_handlers.call_active_handlers(|h| h(text))
+            }
+            Token::Comment(comment) => {
+                if self.matched_elements_with_removed_content > 0 {
+                    comment.remove();
+                }
+
+                self.comment_handlers.call_active_handlers(|h| h(comment))
+            }
         }
+
+        ConsequentContentDirective::None
     }
 
     #[inline]
     pub fn get_token_capture_flags(&self) -> TokenCaptureFlags {
+        if self.matched_elements_with_removed_content > 0 {
+            return TokenCaptureFlags::all();
+        }
+
         let mut flags = TokenCaptureFlags::empty();
 
         if self.doctype_handlers.has_active() {

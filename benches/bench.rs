@@ -53,8 +53,8 @@ fn cool_thing_tokenizer_bench(
 ) -> impl FnMut(&mut Bencher, &Input) {
     move |b, i: &Input| {
         use cool_thing::{
-            LocalName, Namespace, StartTagHandlingResult, Token, TransformController,
-            TransformStream,
+            ConsequentContentDirective, LocalName, Namespace, StartTagHandlingResult, Token,
+            TransformController, TransformStream,
         };
 
         struct BenchTransformController {
@@ -89,8 +89,10 @@ fn cool_thing_tokenizer_bench(
                 self.capture_flags
             }
 
-            fn handle_token(&mut self, token: &mut Token) {
+            fn handle_token(&mut self, token: &mut Token) -> ConsequentContentDirective {
                 black_box(token);
+
+                ConsequentContentDirective::None
             }
         }
 

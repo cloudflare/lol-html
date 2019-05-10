@@ -26,7 +26,7 @@ test_fixture!("End tag token", {
                         m.after("<!-- 42 -->", ContentType::Html);
                         m.after("<foo & bar>", ContentType::Text);
 
-                        t.set_mutations(m);
+                        t.mutations = m;
                     }),
                     concat!(
                         "&lt;span&gt;<div>Hey</div><foo></div foo=bar>",
@@ -42,7 +42,7 @@ test_fixture!("End tag token", {
                         m.before("<before>", ContentType::Html);
                         m.after("<after>", ContentType::Html);
 
-                        t.set_mutations(m);
+                        t.mutations = m;
                     }),
                     "<before><after>",
                 ),
@@ -58,7 +58,7 @@ test_fixture!("End tag token", {
                         m.replace("<!--42-->", ContentType::Html);
                         m.replace("<foo & bar>", ContentType::Text);
 
-                        t.set_mutations(m);
+                        t.mutations = m;
                     }),
                     "<before><div></div><!--42-->&lt;foo &amp; bar&gt;<after>",
                 ),

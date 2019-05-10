@@ -13,6 +13,12 @@ use std::rc::Rc;
 
 use TagTokenOutline::*;
 
+#[derive(PartialEq, Eq)]
+pub enum ConsequentContentDirective {
+    ForceCapture,
+    None,
+}
+
 pub struct AuxStartTagInfo<'i> {
     pub input: &'i Chunk<'i>,
     pub attr_buffer: SharedAttributeBuffer,
@@ -26,7 +32,7 @@ pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
     fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
     fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
-    fn handle_token(&mut self, token: &mut Token);
+    fn handle_token(&mut self, token: &mut Token) -> ConsequentContentDirective;
 }
 
 pub trait OutputSink {
@@ -90,7 +96,10 @@ where
         self.output_sink.handle_chunk(&[]);
     }
 
-    fn try_produce_token_from_lexeme<'i, T>(&mut self, lexeme: &Lexeme<'i, T>)
+    fn try_produce_token_from_lexeme<'i, T>(
+        &mut self,
+        lexeme: &Lexeme<'i, T>,
+    ) -> ConsequentContentDirective
     where
         Lexeme<'i, T>: ToToken,
     {
@@ -99,6 +108,7 @@ where
         let lexeme_range = lexeme.raw_range();
         let last_consumed_lexeme_end = self.last_consumed_lexeme_end;
         let mut lexeme_consumed = false;
+        let mut conseq_content_directive = ConsequentContentDirective::None;
 
         self.token_capturer.feed(lexeme, |event| match event {
             TokenCapturerEvent::LexemeConsumed => {
@@ -116,7 +126,12 @@ where
             TokenCapturerEvent::TokenProduced(mut token) => {
                 trace!(@output token);
 
-                transform_controller.handle_token(&mut token);
+                if let ConsequentContentDirective::ForceCapture =
+                    transform_controller.handle_token(&mut token)
+                {
+                    conseq_content_directive = ConsequentContentDirective::ForceCapture;
+                }
+
                 token.to_bytes(&mut |c| output_sink.handle_chunk(c));
             }
         });
@@ -124,6 +139,8 @@ where
         if lexeme_consumed {
             self.last_consumed_lexeme_end = lexeme_range.end;
         }
+
+        conseq_content_directive
     }
 
     #[inline]
@@ -234,7 +251,12 @@ where
             self.adjust_capture_flags_for_tag_lexeme(lexeme);
         }
 
-        self.try_produce_token_from_lexeme(lexeme);
+        if let ConsequentContentDirective::ForceCapture = self.try_produce_token_from_lexeme(lexeme)
+        {
+            self.token_capturer
+                .set_capture_flags(TokenCaptureFlags::all());
+        }
+
         self.get_next_parser_directive()
     }
 

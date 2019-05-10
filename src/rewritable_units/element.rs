@@ -156,11 +156,14 @@ impl<'r, 't> Element<'r, 't> {
 
     #[inline]
     pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
-        unimplemented!();
+        if self.can_have_content {
+            self.remove_content = true;
+            self.start_tag.after(content, content_type);
+        }
     }
 
     #[inline]
-    pub fn replace(&mut self, _content: &str, _content_type: ContentType) {
+    pub fn replace(&mut self, content: &str, content_type: ContentType) {
         unimplemented!()
     }
 
@@ -196,7 +199,7 @@ impl<'r, 't> Element<'r, 't> {
                 }
 
                 if let Some(mutations) = end_tag_mutations {
-                    end_tag.set_mutations(mutations);
+                    end_tag.mutations = mutations;
                 }
             });
 

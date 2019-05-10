@@ -59,6 +59,7 @@ cfg_if! {
 
         pub use self::transform_stream::{
             AuxStartTagInfo, StartTagHandlingResult, TransformController, TransformStream,
+            ConsequentContentDirective
         };
 
         pub use self::rewritable_units::{

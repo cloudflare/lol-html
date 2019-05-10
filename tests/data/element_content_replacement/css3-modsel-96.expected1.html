@@ -1,4 +1,4 @@
-<html><head>
+<!DOCTYPE html><html><head>
   <title>Universal selector without declared namespace</title>
   <style type="text/css">@namespace a url(http://www.example.org/a);
 @namespace b url(http://www.example.org/b);
@@ -15,7 +15,7 @@ div.test |* { background-color : lime }</style>
  <p><!--Replaced (div.test *) --></p>
  <elementa xmlns="http://www.example.org/a"><!--Replaced (div.test *) --></elementa>
  <elementb xmlns="http://www.example.org/b"><!--Replaced (div.test *) --></elementb>
- <div class="green"><!--Replaced (div.test *) --></div>
+ <div class="green"><!--Replaced (div.test *) --><!--Replaced (div.test *) --><!--Replaced (div.test *) --><!--Replaced (div.test *) --></div>
 </div>
 
 </body></html>

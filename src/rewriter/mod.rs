@@ -92,26 +92,18 @@ impl TransformController for HtmlRewriteController<'_> {
         let handlers_dispatcher = Rc::clone(&self.handlers_dispatcher);
 
         self.selector_matching_vm
-            .exec_for_end_tag(local_name, move |element_desc| {
-                let mut handlers_dispatcher = handlers_dispatcher.borrow_mut();
-
-                for locator in element_desc.matched_content_handlers {
-                    handlers_dispatcher.stop_matching(locator);
-                }
-
-                if let Some(idx) = element_desc.end_tag_handler_idx {
-                    handlers_dispatcher.activate_end_tag_handler(idx);
-                }
+            .exec_for_end_tag(local_name, move |elem_desc| {
+                handlers_dispatcher.borrow_mut().stop_matching(elem_desc);
             });
 
         self.handlers_dispatcher.borrow().get_token_capture_flags()
     }
 
     #[inline]
-    fn handle_token(&mut self, token: &mut Token) {
+    fn handle_token(&mut self, token: &mut Token) -> ConsequentContentDirective {
         self.handlers_dispatcher
             .borrow_mut()
-            .handle_token(token, &mut self.selector_matching_vm);
+            .handle_token(token, &mut self.selector_matching_vm)
     }
 }
 

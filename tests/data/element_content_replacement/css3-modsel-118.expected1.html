@@ -1,4 +1,4 @@
-<html><head>
+<!DOCTYPE html><html><head>
   <title>NEGATED type element selector with declared namespace</title>
   <style type="text/css">@namespace html url(http://www.w3.org/1999/xhtml);
 @namespace a url(http://www.example.org/a);
@@ -17,7 +17,7 @@ div.test *:not(a|p) { background-color : lime }
  <p xmlns="http://www.w3.org/1999/xhtml"><!--Replaced (div.test *) --></p>
  <p xmlns="http://www.example.org/b"><!--Replaced (div.test *) --></p>
  <p xmlns=""><!--Replaced (div.test *) --></p>
- <p xmlns="http://www.example.org/a"><!--Replaced (div.test *) --></p>
+ <p xmlns="http://www.example.org/a"><!--Replaced (div.test *) --><!--Replaced (div.test *) --></p>
 </div>
 
 </body></html>

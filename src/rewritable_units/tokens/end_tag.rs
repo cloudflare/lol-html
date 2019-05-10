@@ -7,7 +7,7 @@ pub struct EndTag<'i> {
     name: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    mutations: Mutations,
+    pub mutations: Mutations,
 }
 
 impl<'i> EndTag<'i> {
@@ -27,11 +27,6 @@ impl<'i> EndTag<'i> {
     #[inline]
     pub fn name(&self) -> String {
         self.name.as_lowercase_string(self.encoding)
-    }
-
-    #[inline]
-    pub fn set_mutations(&mut self, mutations: Mutations) {
-        self.mutations = mutations;
     }
 
     #[inline]

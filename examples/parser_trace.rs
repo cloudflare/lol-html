@@ -71,7 +71,9 @@ impl TransformController for TraceTransformController {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, _: &mut Token) {}
+    fn handle_token(&mut self, _: &mut Token) -> ConsequentContentDirective {
+        ConsequentContentDirective::None
+    }
 }
 
 fn main() {
