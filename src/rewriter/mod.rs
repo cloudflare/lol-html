@@ -20,6 +20,7 @@ pub use self::content_handlers::{EndTagHandler, SelectorHandlersLocator};
 pub struct ElementDescriptor {
     matched_content_handlers: HashSet<SelectorHandlersLocator>,
     pub end_tag_handler_idx: Option<usize>,
+    pub remove_content: bool,
 }
 
 impl ElementData for ElementDescriptor {

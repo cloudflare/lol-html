@@ -23,6 +23,7 @@ pub struct Element<'r, 't> {
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Bytes<'static>>,
     can_have_content: bool,
+    remove_content: bool,
     encoding: &'static Encoding,
     user_data: Option<Box<dyn Any>>,
 }
@@ -36,6 +37,7 @@ impl<'r, 't> Element<'r, 't> {
             end_tag_mutations: None,
             modified_end_tag_name: None,
             can_have_content,
+            remove_content: false,
             encoding,
             user_data: None,
         }
@@ -175,6 +177,11 @@ impl<'r, 't> Element<'r, 't> {
     #[inline]
     pub fn removed(&self) -> bool {
         self.start_tag.removed()
+    }
+
+    #[inline]
+    pub(crate) fn remove_content(&self) -> bool {
+        self.remove_content
     }
 
     pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {

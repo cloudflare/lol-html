@@ -206,15 +206,16 @@ impl<'h> ContentHandlersDispatcher<'h> {
                 self.element_handlers
                     .call_active_handlers(|h| h(&mut element));
 
-                if let (Some(handler), Some(elem_desc)) = (
-                    element.into_end_tag_handler(),
-                    selector_matching_vm.current_element_data_mut(),
-                ) {
-                    elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.push(
-                        handler,
-                        false,
-                        ActionOnCall::Remove,
-                    ));
+                if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
+                    elem_desc.remove_content = element.remove_content();
+
+                    if let Some(handler) = element.into_end_tag_handler() {
+                        elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.push(
+                            handler,
+                            false,
+                            ActionOnCall::Remove,
+                        ));
+                    }
                 }
             }
             Token::EndTag(end_tag) => self.end_tag_handlers.call_active_handlers(|h| h(end_tag)),
