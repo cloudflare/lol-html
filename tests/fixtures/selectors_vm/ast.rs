@@ -562,4 +562,8 @@ test_fixture!("Selectors AST", {
         .iter()
         .for_each(|s| assert_err(s, SelectorError::UnsupportedPseudoClassOrElement));
     });
+
+    test("Parse errors - negated pseudo-class", {
+        assert_err(":not(:nth-last-child(even))",  SelectorError::UnsupportedPseudoClassOrElement);
+    });
 });

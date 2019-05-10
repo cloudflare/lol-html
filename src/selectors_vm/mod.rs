@@ -11,8 +11,6 @@ use self::stack::StackDirective;
 use crate::html::{LocalName, Namespace};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
-use std::fmt::Debug;
-use std::hash::Hash;
 
 pub use self::ast::*;
 pub use self::attribute_matcher::AttributeMatcher;
@@ -62,11 +60,7 @@ struct ExecutionCtx<'i, E: ElementData> {
     ns: Namespace,
 }
 
-impl<'i, E> ExecutionCtx<'i, E>
-where
-    E: ElementData,
-    E::MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static,
-{
+impl<'i, E: ElementData> ExecutionCtx<'i, E> {
     #[inline]
     pub fn new(local_name: LocalName<'i>, ns: Namespace) -> Self {
         ExecutionCtx {
@@ -117,20 +111,12 @@ where
     }
 }
 
-pub struct SelectorMatchingVm<E>
-where
-    E: ElementData,
-    E::MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static,
-{
+pub struct SelectorMatchingVm<E: ElementData> {
     program: Program<E::MatchPayload>,
     stack: Stack<E>,
 }
 
-impl<E> SelectorMatchingVm<E>
-where
-    E: ElementData,
-    E::MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static,
-{
+impl<E: ElementData> SelectorMatchingVm<E> {
     #[inline]
     pub fn new(ast: Ast<E::MatchPayload>, encoding: &'static Encoding) -> Self {
         let program = Compiler::new(encoding).compile(ast);

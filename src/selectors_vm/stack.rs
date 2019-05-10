@@ -1,12 +1,13 @@
 use super::program::AddressRange;
 use crate::html::{LocalName, Namespace, Tag};
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::hash::Hash;
 
 #[inline]
 fn is_void_element(local_name: &LocalName) -> bool {
     // NOTE: fast path for the most commonly used elements
-    if tag_is_one_of!(*local_name, [Div, A, Span, Li, Input]) {
+    if tag_is_one_of!(*local_name, [Div, A, Span, Li]) {
         return false;
     }
 
@@ -20,7 +21,7 @@ fn is_void_element(local_name: &LocalName) -> bool {
 }
 
 pub trait ElementData: Default + 'static {
-    type MatchPayload: Hash + Eq;
+    type MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static;
 
     fn matched_payload_mut(&mut self) -> &mut HashSet<Self::MatchPayload>;
 }

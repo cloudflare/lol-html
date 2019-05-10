@@ -199,6 +199,10 @@ impl<'i> AttributeMatcher<'i> {
                     Some(pos) => {
                         haystack = &haystack[pos + 1..];
 
+                        if haystack.len() < rest.len() {
+                            return false;
+                        }
+
                         if case_sensitivity.eq(&haystack[..rest.len()], rest) {
                             return true;
                         }

@@ -148,7 +148,7 @@ impl TokenCapturer {
     }
 
     #[inline]
-    fn flush_pending_text(&mut self, event_handler: &mut dyn FnMut(TokenCapturerEvent)) {
+    pub fn flush_pending_text(&mut self, event_handler: &mut dyn FnMut(TokenCapturerEvent)) {
         if self.pending_text_decoder.is_some() {
             self.emit_text(&Bytes::empty(), true, event_handler);
             self.pending_text_decoder = None;

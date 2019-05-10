@@ -5,8 +5,7 @@ mod unescape;
 
 pub use self::unescape::Unescape;
 use super::for_each_test_file;
-use crate::harness::Input;
-use crate::harness::ASCII_COMPATIBLE_ENCODINGS;
+use crate::harness::{Input, ASCII_COMPATIBLE_ENCODINGS};
 use serde_json::{self, from_reader};
 use std::fmt::Write;
 

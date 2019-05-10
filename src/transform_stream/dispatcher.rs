@@ -211,6 +211,23 @@ where
     O: OutputSink,
 {
     fn handle_tag(&mut self, lexeme: &TagLexeme) -> ParserDirective {
+        // NOTE: flush pending text before reporting tag to the dispatcher.
+        // Otherwise, dispatcher can enable or disable text handlers too early.
+        // In case of start tag, newly matched element text handlers
+        // will receive leftovers from the previous match. And, in case of end tag,
+        // handlers will be disabled before the receive the finalizing chunk.
+        let transform_controller = &mut self.transform_controller;
+        let output_sink = &mut self.output_sink;
+
+        self.token_capturer.flush_pending_text(&mut |event| {
+            if let TokenCapturerEvent::TokenProduced(mut token) = event {
+                trace!(@output token);
+
+                transform_controller.handle_token(&mut token);
+                token.to_bytes(&mut |c| output_sink.handle_chunk(c));
+            }
+        });
+
         if self.got_flags_from_hint {
             self.got_flags_from_hint = false;
         } else {
@@ -236,6 +253,7 @@ where
         match self.transform_controller.handle_start_tag(name, ns) {
             Ok(flags) => self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags),
             Err(aux_info_req) => {
+                self.got_flags_from_hint = false;
                 self.pending_element_aux_info_req = Some(aux_info_req);
 
                 ParserDirective::Lex

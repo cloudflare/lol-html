@@ -15,10 +15,10 @@ div.stub > *|l > *:not(|p) { background-color : red }</style>
 <div class="stub">
 <p>This paragraph should have a green background</p>
 <p xmlns="http://www.example.org/b">This paragraph should have a green background</p>
-<l xmlns="http://www.example.org/b">
-<!--[ELEMENT('div.stub > *|l > *:not(|p)')]--><p xmlns=""><!--[TEXT('div.stub > *|l > *:not(|p)')]-->This paragraph should have a
-                green background<!--[/TEXT('div.stub > *|l > *:not(|p)')]--></p><!--[/ELEMENT('div.stub > *|l > *:not(|p)')]-->
-</l>
+<!--[ELEMENT('div.stub > *:not(|p)')]--><l xmlns="http://www.example.org/b"><!--[TEXT('div.stub > *:not(|p)')]-->
+<!--[/TEXT('div.stub > *:not(|p)')]--><p xmlns=""><!--[TEXT('div.stub > *:not(|p)')]-->This paragraph should have a
+                green background<!--[/TEXT('div.stub > *:not(|p)')]--></p><!--[TEXT('div.stub > *:not(|p)')]-->
+<!--[/TEXT('div.stub > *:not(|p)')]--></l><!--[/ELEMENT('div.stub > *:not(|p)')]-->
 <p xmlns="http://www.example.org/a">This paragraph should have a green background</p>
 </div>
 
