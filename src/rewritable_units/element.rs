@@ -181,12 +181,21 @@ impl<'r, 't> Element<'r, 't> {
 
     #[inline]
     pub fn remove(&mut self) {
-        unimplemented!()
+        self.start_tag.mutations.remove();
+
+        if self.can_have_content {
+            self.remove_content();
+            self.end_tag_mutations_mut().remove();
+        }
     }
 
     #[inline]
     pub fn remove_and_keep_content(&mut self) {
-        unimplemented!()
+        self.start_tag.mutations.remove();
+
+        if self.can_have_content {
+            self.end_tag_mutations_mut().remove();
+        }
     }
 
     #[inline]

@@ -426,6 +426,68 @@ int cool_thing_element_prepend(
     bool is_html
 );
 
+// Inserts the content string right before the element's end tag
+// either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 othewise. The actual error message
+// can be obtained using `cool_thing_take_last_error` function.
+int cool_thing_element_append(
+    cool_thing_element_t *element,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Inserts the content string right after the element's end tag as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 othewise. The actual error message
+// can be obtained using `cool_thing_take_last_error` function.
+int cool_thing_element_after(
+    cool_thing_element_t *element,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Sets either text or HTML inner content of the element.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 othewise. The actual error message
+// can be obtained using `cool_thing_take_last_error` function.
+int cool_thing_element_set_inner_content(
+    cool_thing_element_t *element,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Replaces the element with the provided text or HTML content.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 othewise. The actual error message
+// can be obtained using `cool_thing_take_last_error` function.
+int cool_thing_element_replace(
+    cool_thing_element_t *element,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Removes the element.
+void cool_thing_element_remove();
+
+// Removes the element, but leaves its inner content intact.
+void cool_thing_element_remove_and_keep_content();
+
+// Returns `true` if the element has been removed.
+bool cool_thing_element_is_removed(const cool_thing_element_t *element);
+
 #if defined(__cplusplus)
 }  // extern C
 #endif

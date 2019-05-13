@@ -100,10 +100,18 @@ impl TransformController for HtmlRewriteController<'_> {
     }
 
     #[inline]
-    fn handle_token(&mut self, token: &mut Token) -> ConsequentContentDirective {
+    fn handle_token(&mut self, token: &mut Token) {
         self.handlers_dispatcher
             .borrow_mut()
-            .handle_token(token, &mut self.selector_matching_vm)
+            .handle_token(token, &mut self.selector_matching_vm);
+    }
+
+    #[inline]
+    fn should_emit_content(&self) -> bool {
+        !self
+            .handlers_dispatcher
+            .borrow()
+            .has_matched_elements_with_removed_content()
     }
 }
 
@@ -115,7 +123,6 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         output_sink: O,
         encoding: &'static Encoding,
     ) -> Self {
-        // TODO settings
         HtmlRewriter(TransformStream::new(
             controller,
             output_sink,

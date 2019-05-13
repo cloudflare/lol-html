@@ -141,11 +141,57 @@ pub extern "C" fn cool_thing_element_prepend(
     content_insertion_fn_body! { element.prepend(content, content_len, is_html) }
 }
 
-// TODO
-// set_inner_content
-// after
-// append
-// replace
-// remove
-// remove_and_keep_content
-// removed
+#[no_mangle]
+pub extern "C" fn cool_thing_element_append(
+    element: *mut Element,
+    content: *const c_char,
+    content_len: size_t,
+    is_html: bool,
+) -> c_int {
+    content_insertion_fn_body! { element.append(content, content_len, is_html) }
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_after(
+    element: *mut Element,
+    content: *const c_char,
+    content_len: size_t,
+    is_html: bool,
+) -> c_int {
+    content_insertion_fn_body! { element.after(content, content_len, is_html) }
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_set_inner_content(
+    element: *mut Element,
+    content: *const c_char,
+    content_len: size_t,
+    is_html: bool,
+) -> c_int {
+    content_insertion_fn_body! { element.set_inner_content(content, content_len, is_html) }
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_replace(
+    element: *mut Element,
+    content: *const c_char,
+    content_len: size_t,
+    is_html: bool,
+) -> c_int {
+    content_insertion_fn_body! { element.replace(content, content_len, is_html) }
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_remove(element: *mut Element) {
+    to_ref_mut!(element).remove();
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_remove_and_keep_content(element: *mut Element) {
+    to_ref_mut!(element).remove_and_keep_content();
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_is_removed(element: *mut Element) -> bool {
+    to_ref_mut!(element).removed()
+}

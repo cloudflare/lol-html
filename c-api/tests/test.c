@@ -474,12 +474,45 @@ static void test_element_api_element_handler3(cool_thing_element_t *element) {
 static void test_element_api_element_handler4(cool_thing_element_t *element) {
     const char *before = "&before";
     const char *prepend = "<!--prepend-->";
+    const char *append = "<!--append-->";
+    const char *after = "&after";
 
     note("Insert before/prepend");
     ok(!cool_thing_element_before(element, before, strlen(before), false));
     ok(!cool_thing_element_prepend(element, prepend, strlen(prepend), true));
+
+    note("Insert after/append");
+    ok(!cool_thing_element_append(element, append, strlen(append), true));
+    ok(!cool_thing_element_after(element, after, strlen(after), false));
 }
 
+static void test_element_api_element_handler5(cool_thing_element_t *element) {
+    const char *content = "hey & ya";
+
+    note("Set inner content");
+    ok(!cool_thing_element_set_inner_content(element, content, strlen(content), false));
+}
+
+static void test_element_api_element_handler6(cool_thing_element_t *element) {
+    const char *content = "hey & ya";
+
+    note("Replace");
+    ok(!cool_thing_element_replace(element, content, strlen(content), true));
+}
+
+static void test_element_api_element_handler7(cool_thing_element_t *element) {
+    note("Remove");
+    ok(!cool_thing_element_is_removed(element));
+    cool_thing_element_remove(element);
+    ok(cool_thing_element_is_removed(element));
+}
+
+static void test_element_api_element_handler8(cool_thing_element_t *element) {
+    note("Remove and keep content");
+    ok(!cool_thing_element_is_removed(element));
+    cool_thing_element_remove_and_keep_content(element);
+    ok(cool_thing_element_is_removed(element));
+}
 
 EXPECT_OUTPUT(
     test_element_api_output1,
@@ -493,7 +526,17 @@ EXPECT_OUTPUT(
 
 EXPECT_OUTPUT(
     test_element_api_output3,
-    "&amp;before<div><!--prepend-->"
+    "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after"
+);
+
+EXPECT_OUTPUT(
+    test_element_api_output4,
+    "<div>hey &amp; ya</div>"
+);
+
+EXPECT_OUTPUT(
+    test_element_api_output5,
+    "hey & yaHello2"
 );
 
 static void element_api_test() {
@@ -555,7 +598,7 @@ static void element_api_test() {
     );
 
     REWRITE(
-        "<div>",
+        "<div>Hi</div>",
         test_element_api_output3,
         {
             const char *selector = "*";
@@ -565,6 +608,69 @@ static void element_api_test() {
                 selector,
                 strlen(selector),
                 &test_element_api_element_handler4,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+        }
+    );
+
+
+    REWRITE(
+        "<div><span>42</span></div>",
+        test_element_api_output4,
+        {
+            const char *selector = "div";
+
+            int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector,
+                strlen(selector),
+                &test_element_api_element_handler5,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+        }
+    );
+
+    REWRITE(
+        "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
+        test_element_api_output5,
+        {
+            const char *selector1 = "div";
+            const char *selector2 = "h1";
+            const char *selector3 = "h2";
+
+            int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector1,
+                strlen(selector1),
+                &test_element_api_element_handler6,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+
+            err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector2,
+                strlen(selector2),
+                &test_element_api_element_handler7,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+
+            err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector3,
+                strlen(selector3),
+                &test_element_api_element_handler8,
                 NULL,
                 NULL
             );

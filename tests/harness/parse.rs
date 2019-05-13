@@ -30,10 +30,12 @@ impl TransformController for TestTransformController<'_> {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, token: &mut Token) -> ConsequentContentDirective {
+    fn handle_token(&mut self, token: &mut Token) {
         (self.token_handler)(token);
+    }
 
-        ConsequentContentDirective::None
+    fn should_emit_content(&self) -> bool {
+        true
     }
 }
 

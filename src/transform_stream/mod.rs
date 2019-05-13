@@ -10,8 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::dispatcher::{
-    AuxStartTagInfo, ConsequentContentDirective, OutputSink, StartTagHandlingResult,
-    TransformController,
+    AuxStartTagInfo, OutputSink, StartTagHandlingResult, TransformController,
 };
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(

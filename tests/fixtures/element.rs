@@ -25,6 +25,19 @@ fn rewrite_element(
         )
         .unwrap();
 
+    // NOTE: used to test inner content removal
+    builder
+        .on(
+            "inner-remove-me",
+            ElementContentHandlers::default().element(|el| {
+                el.before("[before: should be removed]", ContentType::Text);
+                el.after("[after: should be removed]", ContentType::Text);
+                el.append("[append: should be removed]", ContentType::Text);
+                el.before("[before: should be removed]", ContentType::Text);
+            }),
+        )
+        .unwrap();
+
     {
         let mut rewriter = builder
             .build(encoding.name(), |c: &[u8]| output.push(c))
@@ -296,21 +309,31 @@ test_fixture!("Element rewritable unit", {
 
     test("Set inner content", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.prepend("<prepended>", ContentType::Html);
-                el.append("<appended>", ContentType::Html);
-                el.set_inner_content("<img>", ContentType::Html);
-                el.set_inner_content("<img>", ContentType::Text);
-            });
+            let output = rewrite_element(
+                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
+                enc,
+                "span",
+                |el| {
+                    el.prepend("<prepended>", ContentType::Html);
+                    el.append("<appended>", ContentType::Html);
+                    el.set_inner_content("<img>", ContentType::Html);
+                    el.set_inner_content("<img>", ContentType::Text);
+                },
+            );
 
             assert_eq!(output, "<div><span>&lt;img&gt;</span></div>");
 
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.prepend("<prepended>", ContentType::Html);
-                el.append("<appended>", ContentType::Html);
-                el.set_inner_content("<img>", ContentType::Text);
-                el.set_inner_content("<img>", ContentType::Html);
-            });
+            let output = rewrite_element(
+                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
+                enc,
+                "span",
+                |el| {
+                    el.prepend("<prepended>", ContentType::Html);
+                    el.append("<appended>", ContentType::Html);
+                    el.set_inner_content("<img>", ContentType::Text);
+                    el.set_inner_content("<img>", ContentType::Html);
+                },
+            );
 
             assert_eq!(output, "<div><span><img></span></div>");
         }
@@ -318,24 +341,132 @@ test_fixture!("Element rewritable unit", {
 
     test("Replace", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.prepend("<prepended>", ContentType::Html);
-                el.append("<appended>", ContentType::Html);
-                el.replace("<img>", ContentType::Html);
-                el.replace("<img>", ContentType::Text);
-            });
+            let output = rewrite_element(
+                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
+                enc,
+                "span",
+                |el| {
+                    el.prepend("<prepended>", ContentType::Html);
+                    el.append("<appended>", ContentType::Html);
+                    el.replace("<img>", ContentType::Html);
+                    el.replace("<img>", ContentType::Text);
+
+                    assert!(el.removed());
+                },
+            );
 
             assert_eq!(output, "<div>&lt;img&gt;</div>");
 
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.prepend("<prepended>", ContentType::Html);
-                el.append("<appended>", ContentType::Html);
-                el.replace("<img>", ContentType::Text);
-                el.replace("<img>", ContentType::Html);
-            });
+            let output = rewrite_element(
+                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
+                enc,
+                "span",
+                |el| {
+                    el.prepend("<prepended>", ContentType::Html);
+                    el.append("<appended>", ContentType::Html);
+                    el.replace("<img>", ContentType::Text);
+                    el.replace("<img>", ContentType::Html);
+
+                    assert!(el.removed());
+                },
+            );
 
             assert_eq!(output, "<div><img></div>");
         }
+    });
+
+    test("Remove", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element(
+                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
+                enc,
+                "span",
+                |el| {
+                    el.prepend("<prepended>", ContentType::Html);
+                    el.append("<appended>", ContentType::Html);
+                    el.remove();
+
+                    assert!(el.removed());
+                },
+            );
+
+            assert_eq!(output, "<div></div>");
+        }
+    });
+
+    test("Remove - unfinished end tag", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element(
+                "<div><span>Heello</span  ",
+                enc,
+                "span",
+                |el| {
+                    el.remove();
+
+                    assert!(el.removed());
+                },
+            );
+
+            assert_eq!(output, "<div>");
+        }
+    });
+
+    test("Remove and keep content", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.remove_and_keep_content();
+
+                assert!(el.removed());
+            });
+
+            assert_eq!(output, "<div><prepended>Hi<appended></div>");
+        }
+    });
+
+    test("Multiple consequent removes", {
+        let html = "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>";
+        let mut output = Output::new(UTF_8);
+        let mut builder = HtmlRewriterBuilder::default();
+
+        builder
+            .on(
+                "div",
+                ElementContentHandlers::default().element(|el| {
+                    el.replace("hey & ya", ContentType::Html);
+                }),
+            )
+            .unwrap();
+
+        builder
+            .on(
+                "h1",
+                ElementContentHandlers::default().element(|el| {
+                    el.remove();
+                }),
+            )
+            .unwrap();
+
+        builder
+            .on(
+                "h2",
+                ElementContentHandlers::default().element(|el| {
+                    el.remove_and_keep_content();
+                }),
+            )
+            .unwrap();
+
+        {
+            let mut rewriter = builder.build("utf-8", |c: &[u8]| output.push(c)).unwrap();
+
+            rewriter.write(html.as_bytes()).unwrap();
+            rewriter.end().unwrap();
+        }
+
+        let actual: String = output.into();
+
+        assert_eq!(actual, "hey & yaHello2");
     });
 
     test("Void element", {
