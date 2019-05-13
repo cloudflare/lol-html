@@ -370,7 +370,7 @@ static void test_text_chunk_api() {
 
 // Element
 //---------------------------------------------------------------------
-static void test_element_api_element_handler1(cool_thing_element_t *element) {
+static void modify_element_tag_name(cool_thing_element_t *element) {
     const char *new_name = "span";
 
     note("Get tag name");
@@ -393,7 +393,7 @@ static void test_element_api_element_handler1(cool_thing_element_t *element) {
     ok(!cool_thing_element_tag_name_set(element, new_name, strlen(new_name)));
 }
 
-static void test_element_api_element_handler2(cool_thing_element_t *element) {
+static void iterate_element_attributes(cool_thing_element_t *element) {
     note("Attributes iterator");
     cool_thing_attributes_iterator_t *iter = cool_thing_attributes_iterator_get(element);
 
@@ -430,7 +430,7 @@ static void test_element_api_element_handler2(cool_thing_element_t *element) {
     cool_thing_attributes_iterator_free(iter);
 }
 
-static void test_element_api_element_handler3(cool_thing_element_t *element) {
+static void get_and_modify_element_attributes(cool_thing_element_t *element) {
     const char *attr1 = "foo";
     const char *attr2 = "Bar";
     const char *attr2_value = "hey";
@@ -471,7 +471,7 @@ static void test_element_api_element_handler3(cool_thing_element_t *element) {
     ok(!cool_thing_element_remove_attribute(element, attr1, strlen(attr1)));
 }
 
-static void test_element_api_element_handler4(cool_thing_element_t *element) {
+static void element_surrounding_content_insertion(cool_thing_element_t *element) {
     const char *before = "&before";
     const char *prepend = "<!--prepend-->";
     const char *append = "<!--append-->";
@@ -486,28 +486,28 @@ static void test_element_api_element_handler4(cool_thing_element_t *element) {
     ok(!cool_thing_element_after(element, after, strlen(after), false));
 }
 
-static void test_element_api_element_handler5(cool_thing_element_t *element) {
+static void set_element_inner_content(cool_thing_element_t *element) {
     const char *content = "hey & ya";
 
     note("Set inner content");
     ok(!cool_thing_element_set_inner_content(element, content, strlen(content), false));
 }
 
-static void test_element_api_element_handler6(cool_thing_element_t *element) {
+static void replace_element(cool_thing_element_t *element) {
     const char *content = "hey & ya";
 
     note("Replace");
     ok(!cool_thing_element_replace(element, content, strlen(content), true));
 }
 
-static void test_element_api_element_handler7(cool_thing_element_t *element) {
+static void remove_element(cool_thing_element_t *element) {
     note("Remove");
     ok(!cool_thing_element_is_removed(element));
     cool_thing_element_remove(element);
     ok(cool_thing_element_is_removed(element));
 }
 
-static void test_element_api_element_handler8(cool_thing_element_t *element) {
+static void remove_element_and_keep_content(cool_thing_element_t *element) {
     note("Remove and keep content");
     ok(!cool_thing_element_is_removed(element));
     cool_thing_element_remove_and_keep_content(element);
@@ -550,7 +550,7 @@ static void element_api_test() {
                 builder,
                 selector,
                 strlen(selector),
-                &test_element_api_element_handler1,
+                &modify_element_tag_name,
                 NULL,
                 NULL
             );
@@ -569,7 +569,7 @@ static void element_api_test() {
                 builder,
                 selector,
                 strlen(selector),
-                &test_element_api_element_handler2,
+                &iterate_element_attributes,
                 NULL,
                 NULL
             );
@@ -588,7 +588,7 @@ static void element_api_test() {
                 builder,
                 selector,
                 strlen(selector),
-                &test_element_api_element_handler3,
+                &get_and_modify_element_attributes,
                 NULL,
                 NULL
             );
@@ -607,7 +607,7 @@ static void element_api_test() {
                 builder,
                 selector,
                 strlen(selector),
-                &test_element_api_element_handler4,
+                &element_surrounding_content_insertion,
                 NULL,
                 NULL
             );
@@ -627,7 +627,7 @@ static void element_api_test() {
                 builder,
                 selector,
                 strlen(selector),
-                &test_element_api_element_handler5,
+                &set_element_inner_content,
                 NULL,
                 NULL
             );
@@ -648,7 +648,7 @@ static void element_api_test() {
                 builder,
                 selector1,
                 strlen(selector1),
-                &test_element_api_element_handler6,
+                &replace_element,
                 NULL,
                 NULL
             );
@@ -659,7 +659,7 @@ static void element_api_test() {
                 builder,
                 selector2,
                 strlen(selector2),
-                &test_element_api_element_handler7,
+                &remove_element,
                 NULL,
                 NULL
             );
@@ -670,7 +670,7 @@ static void element_api_test() {
                 builder,
                 selector3,
                 strlen(selector3),
-                &test_element_api_element_handler8,
+                &remove_element_and_keep_content,
                 NULL,
                 NULL
             );

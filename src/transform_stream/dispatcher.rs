@@ -242,8 +242,8 @@ where
     O: OutputSink,
 {
     fn handle_tag(&mut self, lexeme: &TagLexeme) -> ParserDirective {
-        // NOTE: flush pending text before reporting tag to the dispatcher.
-        // Otherwise, dispatcher can enable or disable text handlers too early.
+        // NOTE: flush pending text before reporting tag to the transform controller.
+        // Otherwise, transform controller can enable or disable text handlers too early.
         // In case of start tag, newly matched element text handlers
         // will receive leftovers from the previous match. And, in case of end tag,
         // handlers will be disabled before the receive the finalizing chunk.
