@@ -23,7 +23,7 @@ pub struct Element<'r, 't> {
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Bytes<'static>>,
     can_have_content: bool,
-    remove_content: bool,
+    should_remove_content: bool,
     encoding: &'static Encoding,
     user_data: Option<Box<dyn Any>>,
 }
@@ -37,7 +37,7 @@ impl<'r, 't> Element<'r, 't> {
             end_tag_mutations: None,
             modified_end_tag_name: None,
             can_have_content,
-            remove_content: false,
+            should_remove_content: false,
             encoding,
             user_data: None,
         }
@@ -65,6 +65,13 @@ impl<'r, 't> Element<'r, 't> {
             }
             None => Err(TagNameError::Empty),
         }
+    }
+
+    #[inline]
+    fn remove_content(&mut self) {
+        self.start_tag.mutations.content_after.clear();
+        self.end_tag_mutations_mut().content_before.clear();
+        self.should_remove_content = true;
     }
 
     #[inline]
@@ -130,7 +137,7 @@ impl<'r, 't> Element<'r, 't> {
 
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.before(content, content_type);
+        self.start_tag.mutations.before(content, content_type);
     }
 
     #[inline]
@@ -138,13 +145,13 @@ impl<'r, 't> Element<'r, 't> {
         if self.can_have_content {
             self.end_tag_mutations_mut().after(content, content_type);
         } else {
-            self.start_tag.after(content, content_type);
+            self.start_tag.mutations.after(content, content_type);
         }
     }
 
     #[inline]
     pub fn prepend(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.after(content, content_type);
+        self.start_tag.mutations.after(content, content_type);
     }
 
     #[inline]
@@ -157,14 +164,19 @@ impl<'r, 't> Element<'r, 't> {
     #[inline]
     pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
-            self.remove_content = true;
-            self.start_tag.after(content, content_type);
+            self.remove_content();
+            self.start_tag.mutations.after(content, content_type);
         }
     }
 
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        unimplemented!()
+        self.start_tag.mutations.replace(content, content_type);
+
+        if self.can_have_content {
+            self.remove_content();
+            self.end_tag_mutations_mut().remove();
+        }
     }
 
     #[inline]
@@ -179,12 +191,12 @@ impl<'r, 't> Element<'r, 't> {
 
     #[inline]
     pub fn removed(&self) -> bool {
-        self.start_tag.removed()
+        self.start_tag.mutations.removed()
     }
 
     #[inline]
-    pub(crate) fn remove_content(&self) -> bool {
-        self.remove_content
+    pub(crate) fn should_remove_content(&self) -> bool {
+        self.should_remove_content
     }
 
     pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {

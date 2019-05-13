@@ -17,7 +17,7 @@ macro_rules! impl_serialize {
             fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
                 let Mutations {
                     content_before,
-                    replacements,
+                    replacement,
                     content_after,
                     removed,
                     ..
@@ -32,8 +32,8 @@ macro_rules! impl_serialize {
                         Some(raw) => output_handler(raw),
                         None => self.serialize_from_parts(output_handler),
                     }
-                } else if !replacements.is_empty() {
-                    output_handler(replacements);
+                } else if !replacement.is_empty() {
+                    output_handler(replacement);
                 }
 
                 if !content_after.is_empty() {

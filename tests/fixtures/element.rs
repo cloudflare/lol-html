@@ -39,7 +39,7 @@ fn rewrite_element(
     output.into()
 }
 
-test_fixture!("Element", {
+test_fixture!("Element rewritable unit", {
     test("Empty tag name", {
         rewrite_element("<div>", UTF_8, "div", |el| {
             let err = el.set_tag_name("").unwrap_err();
@@ -291,6 +291,50 @@ test_fixture!("Element", {
             });
 
             assert_eq!(output, "<div><span>Hi</span>&lt;img&gt;<img></div>");
+        }
+    });
+
+    test("Set inner content", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.set_inner_content("<img>", ContentType::Html);
+                el.set_inner_content("<img>", ContentType::Text);
+            });
+
+            assert_eq!(output, "<div><span>&lt;img&gt;</span></div>");
+
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.set_inner_content("<img>", ContentType::Text);
+                el.set_inner_content("<img>", ContentType::Html);
+            });
+
+            assert_eq!(output, "<div><span><img></span></div>");
+        }
+    });
+
+    test("Replace", {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.replace("<img>", ContentType::Html);
+                el.replace("<img>", ContentType::Text);
+            });
+
+            assert_eq!(output, "<div>&lt;img&gt;</div>");
+
+            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.replace("<img>", ContentType::Text);
+                el.replace("<img>", ContentType::Html);
+            });
+
+            assert_eq!(output, "<div><img></div>");
         }
     });
 

@@ -10,7 +10,7 @@ pub struct StartTag<'i> {
     self_closing: bool,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    mutations: Mutations,
+    pub mutations: Mutations,
 }
 
 impl<'i> StartTag<'i> {
@@ -121,7 +121,6 @@ impl<'i> StartTag<'i> {
     }
 }
 
-inject_mutation_api!(StartTag);
 impl_serialize!(StartTag);
 
 impl Debug for StartTag<'_> {

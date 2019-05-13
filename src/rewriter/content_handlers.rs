@@ -209,7 +209,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
             Token::Doctype(doctype) => self.doctype_handlers.call_active_handlers(|h| h(doctype)),
             Token::StartTag(start_tag) => {
                 if self.matched_elements_with_removed_content > 0 {
-                    start_tag.remove();
+                    start_tag.mutations.remove();
                 }
 
                 let mut element = Element::new(start_tag, self.next_element_can_have_content);
@@ -221,7 +221,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
 
                 if self.next_element_can_have_content {
                     if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
-                        if element.remove_content() {
+                        if element.should_remove_content() {
                             elem_desc.remove_content = true;
                             self.matched_elements_with_removed_content += 1;
 

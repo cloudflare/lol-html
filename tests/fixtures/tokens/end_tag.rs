@@ -47,20 +47,36 @@ test_fixture!("End tag token", {
                     "<before><after>",
                 ),
                 (
-                    "Replaced",
-                    Box::new(|t, encoding| {
-                        let mut m = Mutations::new(encoding);
+                    "Replaced with text",
+                    Box::new(|t, _| {
+                        t.mutations.before("<before>", ContentType::Html);
+                        t.mutations.after("<after>", ContentType::Html);
 
-                        m.before("<before>", ContentType::Html);
-                        m.after("<after>", ContentType::Html);
+                        assert!(!t.mutations.removed());
 
-                        m.replace("<div></div>", ContentType::Html);
-                        m.replace("<!--42-->", ContentType::Html);
-                        m.replace("<foo & bar>", ContentType::Text);
+                        t.mutations.replace("<div></div>", ContentType::Html);
+                        t.mutations.replace("<!--42-->", ContentType::Html);
+                        t.mutations.replace("<foo & bar>", ContentType::Text);
 
-                        t.mutations = m;
+                        assert!(t.mutations.removed());
                     }),
-                    "<before><div></div><!--42-->&lt;foo &amp; bar&gt;<after>",
+                    "<before>&lt;foo &amp; bar&gt;<after>",
+                ),
+                (
+                    "Replaced with HTML",
+                    Box::new(|t, _| {
+                        t.mutations.before("<before>", ContentType::Html);
+                        t.mutations.after("<after>", ContentType::Html);
+
+                        assert!(!t.mutations.removed());
+
+                        t.mutations.replace("<div></div>", ContentType::Html);
+                        t.mutations.replace("<!--42-->", ContentType::Html);
+                        t.mutations.replace("<foo & bar>", ContentType::Html);
+
+                        assert!(t.mutations.removed());
+                    }),
+                    "<before><foo & bar><after>",
                 ),
             ]
         );

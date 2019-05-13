@@ -1,9 +1,30 @@
-use crate::rewritable_units::{content_to_bytes, ContentType};
+use crate::base::Bytes;
+use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
+
+#[inline]
+fn content_to_bytes(
+    content: &str,
+    content_type: ContentType,
+    encoding: &'static Encoding,
+    output_handler: &mut dyn FnMut(&[u8]),
+) {
+    let bytes = Bytes::from_str(content, encoding);
+
+    match content_type {
+        ContentType::Html => output_handler(&bytes),
+        ContentType::Text => bytes.replace_byte3(
+            (b'<', b"&lt;"),
+            (b'>', b"&gt;"),
+            (b'&', b"&amp;"),
+            output_handler,
+        ),
+    }
+}
 
 pub struct Mutations {
     pub content_before: Vec<u8>,
-    pub replacements: Vec<u8>,
+    pub replacement: Vec<u8>,
     pub content_after: Vec<u8>,
     pub removed: bool,
     encoding: &'static Encoding,
@@ -14,7 +35,7 @@ impl Mutations {
     pub fn new(encoding: &'static Encoding) -> Self {
         Mutations {
             content_before: Vec::default(),
-            replacements: Vec::default(),
+            replacement: Vec::default(),
             content_after: Vec::default(),
             removed: false,
             encoding,
@@ -41,10 +62,13 @@ impl Mutations {
 
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
+        let mut replacement = Vec::default();
+
         content_to_bytes(content, content_type, self.encoding, &mut |c| {
-            self.replacements.extend_from_slice(c)
+            replacement.extend_from_slice(c);
         });
 
+        self.replacement = replacement;
         self.remove();
     }
 

@@ -72,7 +72,7 @@ test_fixture!("Comment token", {
                     "<before><after>",
                 ),
                 (
-                    "Replaced",
+                    "Replaced with text",
                     Box::new(|c, _| {
                         c.before("<before>", ContentType::Html);
                         c.after("<after>", ContentType::Html);
@@ -85,7 +85,23 @@ test_fixture!("Comment token", {
 
                         assert!(c.removed());
                     }),
-                    "<before><div></div><!--42-->&lt;foo &amp; bar&gt;<after>",
+                    "<before>&lt;foo &amp; bar&gt;<after>",
+                ),
+                (
+                    "Replaced with HTML",
+                    Box::new(|c, _| {
+                        c.before("<before>", ContentType::Html);
+                        c.after("<after>", ContentType::Html);
+
+                        assert!(!c.removed());
+
+                        c.replace("<div></div>", ContentType::Html);
+                        c.replace("<!--42-->", ContentType::Html);
+                        c.replace("<foo & bar>", ContentType::Html);
+
+                        assert!(c.removed());
+                    }),
+                    "<before><foo & bar><after>",
                 ),
             ]
         );

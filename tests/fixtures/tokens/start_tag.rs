@@ -1,4 +1,4 @@
-use cool_thing::{Bytes, StartTag, ContentType};
+use cool_thing::{Bytes, ContentType, StartTag};
 
 test_fixture!("Start tag token", {
     test("Serialization", {
@@ -88,12 +88,12 @@ test_fixture!("Start tag token", {
             (
                 "With prepends and appends",
                 Box::new(|t, _| {
-                    t.before("<span>", ContentType::Text);
-                    t.before("<div>Hey</div>", ContentType::Html);
-                    t.before("<foo>", ContentType::Html);
-                    t.after("</foo>", ContentType::Html);
-                    t.after("<!-- 42 -->", ContentType::Html);
-                    t.after("<foo & bar>", ContentType::Text);
+                    t.mutations.before("<span>", ContentType::Text);
+                    t.mutations.before("<div>Hey</div>", ContentType::Html);
+                    t.mutations.before("<foo>", ContentType::Html);
+                    t.mutations.after("</foo>", ContentType::Html);
+                    t.mutations.after("<!-- 42 -->", ContentType::Html);
+                    t.mutations.after("<foo & bar>", ContentType::Text);
                 }),
                 concat!(
                     "&lt;span&gt;<div>Hey</div><foo>",
@@ -104,32 +104,48 @@ test_fixture!("Start tag token", {
             (
                 "Removed",
                 Box::new(|t, _| {
-                    assert!(!t.removed());
+                    assert!(!t.mutations.removed());
 
-                    t.remove();
+                    t.mutations.remove();
 
-                    assert!(t.removed());
+                    assert!(t.mutations.removed());
 
-                    t.before("<before>", ContentType::Html);
-                    t.after("<after>", ContentType::Html);
+                    t.mutations.before("<before>", ContentType::Html);
+                    t.mutations.after("<after>", ContentType::Html);
                 }),
                 "<before><after>",
             ),
             (
-                "Replaced",
+                "Replaced with text",
                 Box::new(|t, _| {
-                    t.before("<before>", ContentType::Html);
-                    t.after("<after>", ContentType::Html);
+                    t.mutations.before("<before>", ContentType::Html);
+                    t.mutations.after("<after>", ContentType::Html);
 
-                    assert!(!t.removed());
+                    assert!(!t.mutations.removed());
 
-                    t.replace("<div></div>", ContentType::Html);
-                    t.replace("<!--42-->", ContentType::Html);
-                    t.replace("<foo & bar>", ContentType::Text);
+                    t.mutations.replace("<div></div>", ContentType::Html);
+                    t.mutations.replace("<!--42-->", ContentType::Html);
+                    t.mutations.replace("<foo & bar>", ContentType::Text);
 
-                    assert!(t.removed());
+                    assert!(t.mutations.removed());
                 }),
-                "<before><div></div><!--42-->&lt;foo &amp; bar&gt;<after>",
+                "<before>&lt;foo &amp; bar&gt;<after>",
+            ),
+            (
+                "Replaced with HTML",
+                Box::new(|t, _| {
+                    t.mutations.before("<before>", ContentType::Html);
+                    t.mutations.after("<after>", ContentType::Html);
+
+                    assert!(!t.mutations.removed());
+
+                    t.mutations.replace("<div></div>", ContentType::Html);
+                    t.mutations.replace("<!--42-->", ContentType::Html);
+                    t.mutations.replace("<foo & bar>", ContentType::Html);
+
+                    assert!(t.mutations.removed());
+                }),
+                "<before><foo & bar><after>",
             ),
         ]);
     });
