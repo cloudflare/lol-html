@@ -1,6 +1,10 @@
 use crate::base::Bytes;
-use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
+
+pub enum ContentType {
+    Html,
+    Text,
+}
 
 #[inline]
 fn content_to_bytes(
