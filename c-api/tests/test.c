@@ -42,7 +42,6 @@
 
 
 #define str_eq(actual, expected) { \
-    ok((actual) != NULL); \
     ok((actual)->len == strlen(expected)); \
     ok(!memcmp((actual)->data, expected, (actual)->len)); \
 }

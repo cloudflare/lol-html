@@ -7,7 +7,7 @@ test: $(OUT)/test-runner
 	prove -v $(OUT)/test-runner
 
 $(OUT)/test-runner: $(OUT)/test.o $(OUT)/picotest.o $(OUT)/libcoolthing.a
-	$(CC) -lm -L$(OUT) -lcoolthing -o $@ $^
+	$(CC) -lpthread -ldl -lm -o $@ $(OUT)/libcoolthing.a $^
 
 $(OUT)/libcoolthing.a: $(LIB) $(C_API)
 	cargo clippy && cargo build
