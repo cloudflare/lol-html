@@ -6,19 +6,8 @@ cfg: &cfg
       - build-essential
       - ragel
       - clang
-    pre-cache-copy-paths:
-      # required for the cargo build artifacts caching hack
-      - Cargo.lock
-      - Cargo.toml
-      - c-api/Cargo.lock
-      - c-api/Cargo.toml
-      - benches/deps/lazyhtml/rust/Cargo.toml
-      - benches/deps/lazyhtml/rust/lazyhtml-sys/Cargo.toml
-      - scripts/ci-cargo-cache.sh
-    pre-cache:
-      - ./scripts/ci-cargo-cache.sh
     post-cache:
-      - ./scripts/ci-test.sh
+      - ./scripts/test.sh
 
 stretch: *cfg
 jessie: *cfg
