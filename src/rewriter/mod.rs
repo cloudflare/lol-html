@@ -3,7 +3,6 @@ mod content_handlers;
 mod handlers_dispatcher;
 mod rewrite_controller;
 
-use self::handlers_dispatcher::*;
 use self::rewrite_controller::*;
 use crate::transform_stream::*;
 use encoding_rs::Encoding;

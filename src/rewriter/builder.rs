@@ -1,9 +1,12 @@
 use super::content_handlers::*;
-use super::*;
+use super::handlers_dispatcher::ContentHandlersDispatcher;
+use super::{HtmlRewriteController, HtmlRewriter};
 use crate::rewritable_units::{Comment, Doctype, Element, TextChunk};
 use crate::selectors_vm::{self, SelectorError, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum EncodingError {
@@ -20,24 +23,30 @@ pub struct ElementContentHandlers<'h> {
     text: Option<TextHandler<'h>>,
 }
 
+macro_rules! wrap_handler {
+    ($handler:expr) => {
+        Some(Rc::new(RefCell::new($handler)))
+    };
+}
+
 impl<'h> ElementContentHandlers<'h> {
     #[inline]
     pub fn element(mut self, handler: impl FnMut(&mut Element) + 'h) -> Self {
-        self.element = Some(Box::new(handler));
+        self.element = wrap_handler!(handler);
 
         self
     }
 
     #[inline]
     pub fn comments(mut self, handler: impl FnMut(&mut Comment) + 'h) -> Self {
-        self.comments = Some(Box::new(handler));
+        self.comments = wrap_handler!(handler);
 
         self
     }
 
     #[inline]
     pub fn text(mut self, handler: impl FnMut(&mut TextChunk) + 'h) -> Self {
-        self.text = Some(Box::new(handler));
+        self.text = wrap_handler!(handler);
 
         self
     }
@@ -53,21 +62,21 @@ pub struct DocumentContentHandlers<'h> {
 impl<'h> DocumentContentHandlers<'h> {
     #[inline]
     pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) + 'h) -> Self {
-        self.doctype = Some(Box::new(handler));
+        self.doctype = wrap_handler!(handler);
 
         self
     }
 
     #[inline]
     pub fn comments(mut self, handler: impl FnMut(&mut Comment) + 'h) -> Self {
-        self.comments = Some(Box::new(handler));
+        self.comments = wrap_handler!(handler);
 
         self
     }
 
     #[inline]
     pub fn text(mut self, handler: impl FnMut(&mut TextChunk) + 'h) -> Self {
-        self.text = Some(Box::new(handler));
+        self.text = wrap_handler!(handler);
 
         self
     }
@@ -75,13 +84,13 @@ impl<'h> DocumentContentHandlers<'h> {
 
 #[derive(Default)]
 pub struct HtmlRewriterBuilder<'h> {
-    handlers_dispatcher: ContentHandlersDispatcher<'h>,
+    content_handlers: ContentHandlers<'h>,
     selectors_ast: selectors_vm::Ast<SelectorHandlersLocator>,
 }
 
 impl<'h> HtmlRewriterBuilder<'h> {
     pub fn on_document(&mut self, handlers: DocumentContentHandlers<'h>) {
-        self.handlers_dispatcher.add_document_content_handlers(
+        self.content_handlers.add_document_content_handlers(
             handlers.doctype,
             handlers.comments,
             handlers.text,
@@ -93,7 +102,7 @@ impl<'h> HtmlRewriterBuilder<'h> {
         selector: &str,
         handlers: ElementContentHandlers<'h>,
     ) -> Result<(), SelectorError> {
-        let locator = self.handlers_dispatcher.add_selector_associated_handlers(
+        let locator = self.content_handlers.add_selector_associated_handlers(
             handlers.element,
             handlers.comments,
             handlers.text,
@@ -113,9 +122,8 @@ impl<'h> HtmlRewriterBuilder<'h> {
 
         if encoding.is_ascii_compatible() {
             let selector_matching_vm = SelectorMatchingVm::new(&self.selectors_ast, encoding);
-
-            let controller =
-                HtmlRewriteController::new(self.handlers_dispatcher, selector_matching_vm);
+            let dispatcher = ContentHandlersDispatcher::from(&self.content_handlers);
+            let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
 
             Ok(HtmlRewriter::new(controller, output_sink, encoding))
         } else {

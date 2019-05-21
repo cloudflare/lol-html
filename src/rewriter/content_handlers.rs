@@ -1,10 +1,12 @@
 use crate::rewritable_units::{Comment, Doctype, Element, EndTag, TextChunk};
+use std::cell::RefCell;
+use std::rc::Rc;
 
-pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) + 'h>;
-pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) + 'h>;
-pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) + 'h>;
-pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) + 'h>;
-pub type EndTagHandler<'h> = Box<dyn FnMut(&mut EndTag) + 'h>;
+pub type DoctypeHandler<'h> = Rc<RefCell<dyn FnMut(&mut Doctype) + 'h>>;
+pub type CommentHandler<'h> = Rc<RefCell<dyn FnMut(&mut Comment) + 'h>>;
+pub type TextHandler<'h> = Rc<RefCell<dyn FnMut(&mut TextChunk) + 'h>>;
+pub type ElementHandler<'h> = Rc<RefCell<dyn FnMut(&mut Element) + 'h>>;
+pub type EndTagHandler<'h> = Rc<RefCell<dyn FnMut(&mut EndTag) + 'h>>;
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct SelectorHandlersLocator {
@@ -15,11 +17,12 @@ pub struct SelectorHandlersLocator {
 
 #[derive(Default)]
 pub struct ContentHandlers<'h> {
-    doctype: Vec<DoctypeHandler<'h>>,
-    comment: Vec<CommentHandler<'h>>,
-    text: Vec<TextHandler<'h>>,
-    end: Vec<EndTagHandler<'h>>,
-    element: Vec<ElementHandler<'h>>,
+    pub doctype: Vec<DoctypeHandler<'h>>,
+    pub document_text: Vec<TextHandler<'h>>,
+    pub document_comments: Vec<CommentHandler<'h>>,
+    pub comment: Vec<CommentHandler<'h>>,
+    pub text: Vec<TextHandler<'h>>,
+    pub element: Vec<ElementHandler<'h>>,
 }
 
 impl<'h> ContentHandlers<'h> {
@@ -35,11 +38,11 @@ impl<'h> ContentHandlers<'h> {
         }
 
         if let Some(handler) = comment_handler {
-            self.comment.push(handler);
+            self.document_comments.push(handler);
         }
 
         if let Some(handler) = text_handler {
-            self.text.push(handler);
+            self.document_text.push(handler);
         }
     }
 

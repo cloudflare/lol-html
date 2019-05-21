@@ -2,7 +2,9 @@ use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, Start
 use crate::base::Bytes;
 use crate::rewriter::EndTagHandler;
 use encoding_rs::Encoding;
+use std::cell::RefCell;
 use std::fmt::{self, Debug};
+use std::rc::Rc;
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum TagNameError {
@@ -221,9 +223,9 @@ impl<'r, 't> Element<'r, 't> {
                 }
             });
 
-            Some(Box::new(move |end_tag| {
+            Some(Rc::new(RefCell::new(move |end_tag: &mut EndTag| {
                 (wrap.take().expect("FnOnce called more than once"))(end_tag)
-            }))
+            })))
         } else {
             None
         }

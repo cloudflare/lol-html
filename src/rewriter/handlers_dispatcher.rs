@@ -2,6 +2,7 @@ use super::content_handlers::*;
 use super::ElementDescriptor;
 use crate::rewritable_units::{Element, Token, TokenCaptureFlags};
 use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};
+use std::rc::Rc;
 
 #[derive(Eq, PartialEq)]
 enum ActionOnCall {
@@ -32,9 +33,7 @@ impl<H> Default for HandlerVec<H> {
 
 impl<H> HandlerVec<H> {
     #[inline]
-    pub fn push(&mut self, handler: H, always_active: bool, action_on_call: ActionOnCall) -> usize {
-        let idx = self.items.len();
-
+    pub fn push(&mut self, handler: H, always_active: bool, action_on_call: ActionOnCall) {
         let item = HandlerVecItem {
             handler,
             user_count: if always_active { 1 } else { 0 },
@@ -43,8 +42,11 @@ impl<H> HandlerVec<H> {
 
         self.user_count += item.user_count;
         self.items.push(item);
+    }
 
-        idx
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.items.len()
     }
 
     #[inline]
@@ -100,52 +102,57 @@ pub struct ContentHandlersDispatcher<'h> {
     matched_elements_with_removed_content: usize,
 }
 
+impl<'h> From<&ContentHandlers<'h>> for ContentHandlersDispatcher<'h> {
+    fn from(handlers: &ContentHandlers<'h>) -> Self {
+        let mut dispatcher = ContentHandlersDispatcher::default();
+
+        // NOTE: document-level handlers are always active
+        for handler in &handlers.doctype {
+            dispatcher
+                .doctype_handlers
+                .push(Rc::clone(handler), true, ActionOnCall::None);
+        }
+
+        for handler in &handlers.element {
+            dispatcher
+                .element_handlers
+                .push(Rc::clone(handler), false, ActionOnCall::Deactivate)
+        }
+
+        // NOTE: for text and comment first push selector-associated handlers
+        // to preserve their original indices in selector handler locators.
+        for handler in &handlers.comment {
+            dispatcher
+                .comment_handlers
+                .push(Rc::clone(handler), false, ActionOnCall::None);
+        }
+
+        for handler in &handlers.document_comments {
+            dispatcher
+                .comment_handlers
+                .push(Rc::clone(handler), true, ActionOnCall::None);
+        }
+
+        for handler in &handlers.text {
+            dispatcher
+                .text_handlers
+                .push(Rc::clone(handler), false, ActionOnCall::None);
+        }
+
+        for handler in &handlers.document_text {
+            dispatcher
+                .text_handlers
+                .push(Rc::clone(handler), true, ActionOnCall::None);
+        }
+
+        dispatcher
+    }
+}
+
 impl<'h> ContentHandlersDispatcher<'h> {
     #[inline]
     pub fn has_matched_elements_with_removed_content(&self) -> bool {
         self.matched_elements_with_removed_content > 0
-    }
-
-    #[inline]
-    pub fn add_document_content_handlers(
-        &mut self,
-        doctype_handler: Option<DoctypeHandler<'h>>,
-        comment_handler: Option<CommentHandler<'h>>,
-        text_handler: Option<TextHandler<'h>>,
-    ) {
-        // NOTE: document-level handlers are always active
-        if let Some(handler) = doctype_handler {
-            self.doctype_handlers
-                .push(handler, true, ActionOnCall::None);
-        }
-
-        if let Some(handler) = comment_handler {
-            self.comment_handlers
-                .push(handler, true, ActionOnCall::None);
-        }
-
-        if let Some(handler) = text_handler {
-            self.text_handlers.push(handler, true, ActionOnCall::None);
-        }
-    }
-
-    #[inline]
-    pub fn add_selector_associated_handlers(
-        &mut self,
-        element_handler: Option<ElementHandler<'h>>,
-        comment_handler: Option<CommentHandler<'h>>,
-        text_handler: Option<TextHandler<'h>>,
-    ) -> SelectorHandlersLocator {
-        SelectorHandlersLocator {
-            element_handler_idx: element_handler.map(|h| {
-                self.element_handlers
-                    .push(h, false, ActionOnCall::Deactivate)
-            }),
-            comment_handler_idx: comment_handler
-                .map(|h| self.comment_handlers.push(h, false, ActionOnCall::None)),
-            text_handler_idx: text_handler
-                .map(|h| self.text_handlers.push(h, false, ActionOnCall::None)),
-        }
     }
 
     #[inline]
@@ -195,8 +202,28 @@ impl<'h> ContentHandlersDispatcher<'h> {
         token: &mut Token,
         selector_matching_vm: &mut SelectorMatchingVm<ElementDescriptor>,
     ) {
+        macro_rules! call_handlers {
+            ($handlers:expr, $arg:expr) => {
+                $handlers.call_active_handlers(|h| {
+                    // NOTE: if we have handler already borrowed that means that
+                    // `.write()` or `.end()` of the current rewriter were invoked
+                    // from one of the handlers of the other rewriter that has been
+                    // constructed using the same builder. We have nothing better to do
+                    // than just panic.
+                    let handler = &mut *h.try_borrow_mut().expect(concat!(
+                        ".write() or .end() method of the rewriter has been called from one of the",
+                        " content handlers of the rewriter constructed using the same builder. ",
+                        "This behaviour is forbidden due to concurrency ambiguities."
+                    ));
+
+                    handler($arg);
+                });
+            };
+        }
+
         match token {
-            Token::Doctype(doctype) => self.doctype_handlers.call_active_handlers(|h| h(doctype)),
+            Token::Doctype(doctype) => call_handlers!(self.doctype_handlers, doctype),
+
             Token::StartTag(start_tag) => {
                 if self.matched_elements_with_removed_content > 0 {
                     start_tag.mutations.remove();
@@ -204,8 +231,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
 
                 let mut element = Element::new(start_tag, self.next_element_can_have_content);
 
-                self.element_handlers
-                    .call_active_handlers(|h| h(&mut element));
+                call_handlers!(self.element_handlers, &mut element);
 
                 if self.next_element_can_have_content {
                     if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
@@ -215,20 +241,17 @@ impl<'h> ContentHandlersDispatcher<'h> {
                         }
 
                         if let Some(handler) = element.into_end_tag_handler() {
-                            elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.push(
-                                handler,
-                                false,
-                                ActionOnCall::Remove,
-                            ));
+                            elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.len());
+
+                            self.end_tag_handlers
+                                .push(handler, false, ActionOnCall::Remove);
                         }
                     }
                 }
             }
-            Token::EndTag(end_tag) => {
-                self.end_tag_handlers.call_active_handlers(|h| h(end_tag));
-            }
-            Token::TextChunk(text) => self.text_handlers.call_active_handlers(|h| h(text)),
-            Token::Comment(comment) => self.comment_handlers.call_active_handlers(|h| h(comment)),
+            Token::EndTag(end_tag) => call_handlers!(self.end_tag_handlers, end_tag),
+            Token::TextChunk(text) => call_handlers!(self.text_handlers, text),
+            Token::Comment(comment) => call_handlers!(self.comment_handlers, comment),
         }
     }
 
