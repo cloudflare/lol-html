@@ -2,9 +2,6 @@
 extern crate failure;
 
 #[macro_use]
-mod debug_trace;
-
-#[macro_use]
 mod base;
 
 #[macro_use]

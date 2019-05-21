@@ -1,3 +1,6 @@
+#[macro_use]
+mod debug_trace;
+
 mod align;
 mod buffer;
 mod bytes;
