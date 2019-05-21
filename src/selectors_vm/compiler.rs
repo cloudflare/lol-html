@@ -241,7 +241,7 @@ where
         // we can reference them by range instead of vector of addresses.
         let addr_range = self.reserve_space_for_nodes(&nodes);
 
-        for (i, node) in nodes.into_iter().enumerate() {
+        for (i, node) in nodes.iter().enumerate() {
             let branch = ExecutionBranch {
                 matched_payload: Rc::clone(&node.payload),
                 jumps: self.compile_descendants(&node.children),
