@@ -21,7 +21,7 @@ pub use self::rewriter::{
 
 pub use self::rewritable_units::{
     Attribute, AttributeNameError, Comment, CommentTextError, ContentType, Doctype, Element,
-    TagNameError, TextChunk, UserData,
+    TagNameError, TextChunk,
 };
 
 pub use self::html::TextType;

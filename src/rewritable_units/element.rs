@@ -1,8 +1,7 @@
-use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag, UserData};
+use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag};
 use crate::base::Bytes;
 use crate::rewriter::EndTagHandler;
 use encoding_rs::Encoding;
-use std::any::Any;
 use std::fmt::{self, Debug};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
@@ -25,7 +24,6 @@ pub struct Element<'r, 't> {
     can_have_content: bool,
     should_remove_content: bool,
     encoding: &'static Encoding,
-    user_data: Option<Box<dyn Any>>,
 }
 
 impl<'r, 't> Element<'r, 't> {
@@ -39,7 +37,6 @@ impl<'r, 't> Element<'r, 't> {
             can_have_content,
             should_remove_content: false,
             encoding,
-            user_data: None,
         }
     }
 
@@ -230,18 +227,6 @@ impl<'r, 't> Element<'r, 't> {
         } else {
             None
         }
-    }
-}
-
-impl UserData for Element<'_, '_> {
-    #[inline]
-    fn user_data(&self) -> Option<&dyn Any> {
-        self.user_data.as_ref().map(|d| &**d)
-    }
-
-    #[inline]
-    fn set_user_data(&mut self, data: impl Any) {
-        self.user_data = Some(Box::new(data));
     }
 }
 

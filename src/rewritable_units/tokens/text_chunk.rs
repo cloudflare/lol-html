@@ -1,8 +1,7 @@
-use super::{Mutations, Token, UserData};
+use super::{Mutations, Token};
 use crate::base::Bytes;
 use crate::html::TextType;
 use encoding_rs::Encoding;
-use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
 
@@ -12,7 +11,6 @@ pub struct TextChunk<'i> {
     last_in_text_node: bool,
     encoding: &'static Encoding,
     mutations: Mutations,
-    user_data: Option<Box<dyn Any>>,
 }
 
 impl<'i> TextChunk<'i> {
@@ -28,7 +26,6 @@ impl<'i> TextChunk<'i> {
             last_in_text_node,
             encoding,
             mutations: Mutations::new(encoding),
-            user_data: None,
         })
     }
 
@@ -62,18 +59,6 @@ impl<'i> TextChunk<'i> {
 
 inject_mutation_api!(TextChunk);
 impl_serialize!(TextChunk);
-
-impl UserData for TextChunk<'_> {
-    #[inline]
-    fn user_data(&self) -> Option<&dyn Any> {
-        self.user_data.as_ref().map(|d| &**d)
-    }
-
-    #[inline]
-    fn set_user_data(&mut self, data: impl Any) {
-        self.user_data = Some(Box::new(data));
-    }
-}
 
 impl Debug for TextChunk<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

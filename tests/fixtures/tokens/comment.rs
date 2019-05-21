@@ -1,4 +1,4 @@
-use cool_thing::{Comment, CommentTextError, ContentType, UserData};
+use cool_thing::{Comment, CommentTextError, ContentType};
 use encoding_rs::{EUC_JP, UTF_8};
 
 test_fixture!("Comment token", {
@@ -15,17 +15,6 @@ test_fixture!("Comment token", {
             let err = c.set_text("foo\u{00F8}bar").unwrap_err();
 
             assert_eq!(err, CommentTextError::UnencodableCharacter);
-        });
-    });
-
-    test("User data", {
-        parse_token!("<!-- foo -->", UTF_8, Comment, |c: &mut Comment| {
-            c.set_user_data(42usize);
-
-            assert_eq!(
-                *c.user_data().unwrap().downcast_ref::<usize>().unwrap(),
-                42usize
-            );
         });
     });
 
