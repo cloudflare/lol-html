@@ -50,10 +50,14 @@ pub extern "C" fn cool_thing_rewriter_write(
 pub extern "C" fn cool_thing_rewriter_end(
     rewriter: *mut HtmlRewriter<'static, ExternOutputSink>,
 ) -> c_int {
-    let mut rewriter = to_box!(rewriter);
+    let rewriter = to_ref_mut!(rewriter);
 
     unwrap_or_ret_err_code! { rewriter.end() };
-    drop(rewriter);
 
     0
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_rewriter_free(rewriter: *mut HtmlRewriter<'static, ExternOutputSink>) {
+    drop(to_box!(rewriter));
 }

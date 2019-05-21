@@ -38,6 +38,7 @@
     \
         ok(!cool_thing_rewriter_write(rewriter, in, strlen(in))); \
         ok(!cool_thing_rewriter_end(rewriter)); \
+        cool_thing_rewriter_free(rewriter); \
     } while(0)
 
 

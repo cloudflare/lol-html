@@ -153,6 +153,8 @@ int cool_thing_rewriter_write(
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_rewriter_end(cool_thing_rewriter_t *rewriter);
 
+// Frees the memory held by the rewriter.
+void cool_thing_rewriter_free(cool_thing_rewriter_t *rewriter);
 
 // Doctype
 //---------------------------------------------------------------------
@@ -330,7 +332,7 @@ cool_thing_attributes_iterator_t *cool_thing_attributes_iterator_get(
     const cool_thing_element_t *element
 );
 
-// Frees memory held by the attribute iterator.
+// Frees the memory held by the attribute iterator.
 void cool_thing_attributes_iterator_free(cool_thing_attributes_iterator_t *iterator);
 
 // Advances the iterator and returns next attribute.
