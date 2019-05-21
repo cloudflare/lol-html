@@ -3,7 +3,7 @@ use cool_thing::{
     Bytes, ContentType, DocumentContentHandlers, ElementContentHandlers, EncodingError,
     HtmlRewriter, HtmlRewriterBuilder, OutputSink,
 };
-use encoding_rs::Encoding;
+use encoding_rs::{Encoding, UTF_8};
 
 fn write_chunks<O: OutputSink>(
     rewriter: &mut HtmlRewriter<O>,
@@ -184,5 +184,47 @@ test_fixture!("Rewriter", {
                 )
             );
         }
+    });
+
+    test("Multiple rewriters from the same builder", {
+        let mut output1 = Output::new(UTF_8);
+        let mut builder = HtmlRewriterBuilder::default();
+
+        builder
+            .on(
+                "span",
+                ElementContentHandlers::default().element(|el| {
+                    el.append("<!--span-->", ContentType::Html);
+                }),
+            )
+            .unwrap();
+
+        let mut rewriter1 = builder.build("utf-8", |c: &[u8]| output1.push(c)).unwrap();
+
+        rewriter1.write(b"<div><span>").unwrap();
+
+        builder
+            .on(
+                "div",
+                ElementContentHandlers::default().element(|el| {
+                    el.append("<!--div-->", ContentType::Html);
+                }),
+            )
+            .unwrap();
+
+        let mut output2 = Output::new(UTF_8);
+        let mut rewriter2 = builder.build("utf-8", |c: &[u8]| output2.push(c)).unwrap();
+
+        rewriter2.write(b"<div><span></span></div>").unwrap();
+        rewriter2.end().unwrap();
+
+        rewriter1.write(b"</span></div>").unwrap();
+        rewriter1.end().unwrap();
+
+        let output1: String = output1.into();
+        let output2: String = output2.into();
+
+        assert_eq!(output1, "<div><span><!--span--></span></div>");
+        assert_eq!(output2, "<div><span><!--span--></span><!--div--></div>");
     });
 });

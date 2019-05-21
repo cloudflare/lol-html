@@ -13,32 +13,33 @@ fn rewrite_element(
 ) -> String {
     let mut handler_called = false;
     let mut output = Output::new(encoding);
-    let mut builder = HtmlRewriterBuilder::default();
-
-    builder
-        .on(
-            selector,
-            ElementContentHandlers::default().element(|el| {
-                handler_called = true;
-                handler(el);
-            }),
-        )
-        .unwrap();
-
-    // NOTE: used to test inner content removal
-    builder
-        .on(
-            "inner-remove-me",
-            ElementContentHandlers::default().element(|el| {
-                el.before("[before: should be removed]", ContentType::Text);
-                el.after("[after: should be removed]", ContentType::Text);
-                el.append("[append: should be removed]", ContentType::Text);
-                el.before("[before: should be removed]", ContentType::Text);
-            }),
-        )
-        .unwrap();
 
     {
+        let mut builder = HtmlRewriterBuilder::default();
+
+        builder
+            .on(
+                selector,
+                ElementContentHandlers::default().element(|el| {
+                    handler_called = true;
+                    handler(el);
+                }),
+            )
+            .unwrap();
+
+        // NOTE: used to test inner content removal
+        builder
+            .on(
+                "inner-remove-me",
+                ElementContentHandlers::default().element(|el| {
+                    el.before("[before: should be removed]", ContentType::Text);
+                    el.after("[after: should be removed]", ContentType::Text);
+                    el.append("[append: should be removed]", ContentType::Text);
+                    el.before("[before: should be removed]", ContentType::Text);
+                }),
+            )
+            .unwrap();
+
         let mut rewriter = builder
             .build(encoding.name(), |c: &[u8]| output.push(c))
             .unwrap();
@@ -385,16 +386,11 @@ test_fixture!("Element rewritable unit", {
 
     test("Remove - unfinished end tag", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element(
-                "<div><span>Heello</span  ",
-                enc,
-                "span",
-                |el| {
-                    el.remove();
+            let output = rewrite_element("<div><span>Heello</span  ", enc, "span", |el| {
+                el.remove();
 
-                    assert!(el.removed());
-                },
-            );
+                assert!(el.removed());
+            });
 
             assert_eq!(output, "<div>");
         }

@@ -113,7 +113,7 @@ impl<'h> HtmlRewriterBuilder<'h> {
 
     #[inline]
     pub fn build<O: OutputSink>(
-        self,
+        &self,
         encoding: &str,
         output_sink: O,
     ) -> Result<HtmlRewriter<'h, O>, EncodingError> {
