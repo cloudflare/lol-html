@@ -59,3 +59,8 @@ pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
 
     0
 }
+
+#[no_mangle]
+pub extern "C" fn cool_thing_rewriter_builder_free(builder: *mut HtmlRewriterBuilder<'static>) {
+    drop(to_box!(builder));
+}

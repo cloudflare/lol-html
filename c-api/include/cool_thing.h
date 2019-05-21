@@ -119,13 +119,19 @@ int cool_thing_rewriter_builder_add_element_content_handlers(
     void (*text_handler)(cool_thing_text_chunk_t *chunk)
 );
 
+// Frees the memory held by the builder.
+//
+// Note that builder can be freed before any rewriters constructed from
+// it if it's not intended to be used anymore.
+void cool_thing_rewriter_builder_free(cool_thing_rewriter_builder_t *builder);
+
 
 // Rewriter
 //---------------------------------------------------------------------
 
-// Builds HTML-rewriter out of the provided builder.
-//
-// This function deallocates the builder, so it can't be used after the call.
+// Builds HTML-rewriter out of the provided builder. Can be called
+// multiple times to construct different rewriters from the same
+// builder.
 //
 // `output_sink` receives a zero-length chunk on the end of the output.
 //
@@ -147,7 +153,7 @@ int cool_thing_rewriter_write(
     size_t chunk_len
 );
 
-// Completes rewriting, flushes the remaining output and deallocates the rewriter.
+// Completes rewriting and flushes the remaining output.
 //
 // Returns 0 in case of success and -1 othewise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.

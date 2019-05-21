@@ -23,7 +23,7 @@ pub extern "C" fn cool_thing_rewriter_build(
     output_sink: extern "C" fn(*const c_char, size_t),
 ) -> *mut HtmlRewriter<'static, ExternOutputSink> {
     let encoding = unwrap_or_ret_null! { to_str!(encoding, encoding_len) };
-    let builder = to_box!(builder);
+    let builder = to_ref!(builder);
 
     let rewriter = unwrap_or_ret_null! {
         builder.build(encoding, ExternOutputSink::new(output_sink))

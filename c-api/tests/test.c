@@ -36,6 +36,8 @@
             &output_sink \
         ); \
     \
+        cool_thing_rewriter_builder_free(builder); \
+    \
         ok(!cool_thing_rewriter_write(rewriter, in, strlen(in))); \
         ok(!cool_thing_rewriter_end(rewriter)); \
         cool_thing_rewriter_free(rewriter); \
@@ -69,6 +71,8 @@ static void test_unsupported_selector() {
         NULL
     );
 
+    cool_thing_rewriter_builder_free(builder);
+
     ok(err == -1);
 
     cool_thing_str_t *msg = cool_thing_take_last_error();
@@ -90,6 +94,8 @@ static void test_non_ascii_encoding() {
         strlen(encoding),
         &output_sink_stub
     );
+
+    cool_thing_rewriter_builder_free(builder);
 
     ok(rewriter == NULL);
 
