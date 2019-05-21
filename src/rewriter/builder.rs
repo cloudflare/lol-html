@@ -111,7 +111,7 @@ impl<'h> HtmlRewriterBuilder<'h> {
             .ok_or(EncodingError::UnknownEncoding)?;
 
         if encoding.is_ascii_compatible() {
-            let selector_matching_vm = SelectorMatchingVm::new(self.selectors_ast, encoding);
+            let selector_matching_vm = SelectorMatchingVm::new(&self.selectors_ast, encoding);
 
             let controller =
                 HtmlRewriteController::new(self.handlers_dispatcher, selector_matching_vm);

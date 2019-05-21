@@ -6,7 +6,11 @@ use std::collections::HashSet;
 
 macro_rules! assert_instr_res {
     ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
-        let expected_payload = if *$should_match { Some(set![0]) } else { None };
+        let expected_payload = if *$should_match {
+            Some(rc_set![0])
+        } else {
+            None
+        };
 
         assert_eq!(
             $res.map(|b| b.matched_payload.to_owned()),
@@ -34,7 +38,7 @@ fn compile(
         ast.add_selector(selector, idx).unwrap();
     }
 
-    let program = Compiler::new(encoding).compile(ast);
+    let program = Compiler::new(encoding).compile(&ast);
 
     assert_eq!(
         program.entry_points.end - program.entry_points.start,
@@ -197,7 +201,7 @@ macro_rules! exec_instr_range {
             let res = exec_generic_instr!($program.instructions[addr], $local_name, $attr_matcher);
 
             if let Some(res) = res {
-                for &p in &res.matched_payload {
+                for &p in res.matched_payload.iter() {
                     matched_payload.insert(p);
                 }
 

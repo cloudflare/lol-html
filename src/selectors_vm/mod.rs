@@ -75,7 +75,7 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
         branch: &ExecutionBranch<E::MatchPayload>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        for &payload in &branch.matched_payload {
+        for &payload in branch.matched_payload.iter() {
             let element_payload = self.stack_item.element_data.matched_payload_mut();
 
             if !element_payload.contains(&payload) {
@@ -118,7 +118,7 @@ pub struct SelectorMatchingVm<E: ElementData> {
 
 impl<E: ElementData> SelectorMatchingVm<E> {
     #[inline]
-    pub fn new(ast: Ast<E::MatchPayload>, encoding: &'static Encoding) -> Self {
+    pub fn new(ast: &Ast<E::MatchPayload>, encoding: &'static Encoding) -> Self {
         let program = Compiler::new(encoding).compile(ast);
 
         SelectorMatchingVm {

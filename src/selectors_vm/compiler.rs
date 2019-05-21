@@ -10,6 +10,7 @@ use encoding_rs::Encoding;
 use selectors::attr::ParsedCaseSensitivity;
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::rc::Rc;
 
 pub type CompiledNonAttributeExpr = Box<dyn Fn(&LocalName) -> bool>;
 pub type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher) -> bool>;
@@ -89,7 +90,7 @@ where
 
     fn compile_non_attr_expr(
         &self,
-        expr: NonAttributeExpr,
+        expr: &NonAttributeExpr,
         negation: bool,
     ) -> CompiledNonAttributeExpr {
         curry_compile_expr_macro!(negation);
@@ -118,25 +119,23 @@ where
     }
 
     #[inline]
-    fn compile_literal_lowercase(&self, mut lit: String) -> Result<Bytes<'static>, ()> {
-        lit.make_ascii_lowercase();
-
-        self.compile_literal(&lit)
+    fn compile_literal_lowercase(&self, lit: &str) -> Result<Bytes<'static>, ()> {
+        self.compile_literal(&lit.to_ascii_lowercase())
     }
 
     #[inline]
     fn compile_attr_expr_operand(
         &self,
-        operand: AttributeExprOperand,
+        operand: &AttributeExprOperand,
     ) -> Result<CompiledAttributeExprOperand, ()> {
         Ok(CompiledAttributeExprOperand {
-            name: self.compile_literal_lowercase(operand.name)?,
+            name: self.compile_literal_lowercase(&operand.name)?,
             value: self.compile_literal(&operand.value)?,
             case_sensitivity: operand.case_sensitivity,
         })
     }
 
-    fn compile_attr_expr(&self, expr: AttributeExpr, negation: bool) -> CompiledAttributeExpr {
+    fn compile_attr_expr(&self, expr: &AttributeExpr, negation: bool) -> CompiledAttributeExpr {
         curry_compile_expr_macro!(negation);
 
         match expr {
@@ -190,18 +189,18 @@ where
 
     fn compile_predicate(
         &self,
-        predicate: Predicate,
+        predicate: &Predicate,
         branch: ExecutionBranch<P>,
     ) -> Box<dyn Instr<P>> {
-        let non_attr_exprs = predicate.non_attr_exprs.map(|e| {
-            e.into_iter()
-                .map(|expr| self.compile_non_attr_expr(expr.simple_expr, expr.negation))
+        let non_attr_exprs = predicate.non_attr_exprs.as_ref().map(|e| {
+            e.iter()
+                .map(|expr| self.compile_non_attr_expr(&expr.simple_expr, expr.negation))
                 .collect::<Vec<_>>()
         });
 
-        let attr_exprs = predicate.attr_exprs.map(|e| {
-            e.into_iter()
-                .map(|expr| self.compile_attr_expr(expr.simple_expr, expr.negation))
+        let attr_exprs = predicate.attr_exprs.as_ref().map(|e| {
+            e.iter()
+                .map(|expr| self.compile_attr_expr(&expr.simple_expr, expr.negation))
                 .collect::<Vec<_>>()
         });
 
@@ -229,7 +228,7 @@ where
     }
 
     #[inline]
-    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>) -> Option<AddressRange> {
+    fn compile_descendants(&mut self, nodes: &[AstNode<P>]) -> Option<AddressRange> {
         if nodes.is_empty() {
             None
         } else {
@@ -237,30 +236,30 @@ where
         }
     }
 
-    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>) -> AddressRange {
+    fn compile_nodes(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
         // we can reference them by range instead of vector of addresses.
         let addr_range = self.reserve_space_for_nodes(&nodes);
 
         for (i, node) in nodes.into_iter().enumerate() {
             let branch = ExecutionBranch {
-                matched_payload: node.payload,
-                jumps: self.compile_descendants(node.children),
-                hereditary_jumps: self.compile_descendants(node.descendants),
+                matched_payload: Rc::clone(&node.payload),
+                jumps: self.compile_descendants(&node.children),
+                hereditary_jumps: self.compile_descendants(&node.descendants),
             };
 
             self.instructions[addr_range.start + i] =
-                self.compile_predicate(node.predicate, branch);
+                self.compile_predicate(&node.predicate, branch);
         }
 
         addr_range
     }
 
-    pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
+    pub fn compile(mut self, ast: &Ast<P>) -> Program<P> {
         self.instructions
             .resize_with(ast.cumulative_node_count, || InstrStub::new_boxed());
 
-        let entry_points = self.compile_nodes(ast.root);
+        let entry_points = self.compile_nodes(&ast.root);
 
         Program {
             instructions: self.instructions,
