@@ -87,9 +87,6 @@ cool_thing_rewriter_builder_t *cool_thing_rewriter_builder_new();
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-//
 // WARNING: Pointers passed to handlers are valid only during the
 // handler execution. So they should never be leaked outside of handlers.
 void cool_thing_rewriter_builder_add_document_content_handlers(
@@ -116,7 +113,7 @@ void cool_thing_rewriter_builder_add_document_content_handlers(
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 //
 // WARNING: Pointers passed to handlers are valid only during the
@@ -163,7 +160,7 @@ cool_thing_rewriter_t *cool_thing_rewriter_build(
 
 // Write HTML chunk to rewriter.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_rewriter_write(
     cool_thing_rewriter_t *rewriter,
@@ -173,7 +170,7 @@ int cool_thing_rewriter_write(
 
 // Completes rewriting and flushes the remaining output.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_rewriter_end(cool_thing_rewriter_t *rewriter);
 
@@ -209,7 +206,7 @@ cool_thing_str_t cool_thing_comment_text_get(const cool_thing_comment_t *comment
 //
 // Text should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_comment_text_set(
     cool_thing_comment_t *comment,
@@ -221,7 +218,7 @@ int cool_thing_comment_text_set(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_comment_before(
     cool_thing_comment_t *comment,
@@ -234,7 +231,7 @@ int cool_thing_comment_before(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_comment_after(
     cool_thing_comment_t *comment,
@@ -248,7 +245,7 @@ int cool_thing_comment_after(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_comment_replace(
     cool_thing_comment_t *comment,
@@ -284,7 +281,7 @@ bool cool_thing_text_chunk_is_last_in_text_node(const cool_thing_text_chunk_t *c
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_text_chunk_before(
     cool_thing_text_chunk_t *chunk,
@@ -297,7 +294,7 @@ int cool_thing_text_chunk_before(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_text_chunk_after(
     cool_thing_text_chunk_t *chunk,
@@ -311,7 +308,7 @@ int cool_thing_text_chunk_after(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_text_chunk_replace(
     cool_thing_text_chunk_t *chunk,
@@ -337,7 +334,7 @@ cool_thing_str_t cool_thing_element_tag_name_get(const cool_thing_element_t *ele
 //
 // Name should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_tag_name_set(
     cool_thing_element_t *element,
@@ -403,7 +400,7 @@ int cool_thing_element_has_attribute(
 //
 // Name and value should be valid UTF8-strings.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_set_attribute(
     cool_thing_element_t *element,
@@ -417,7 +414,7 @@ int cool_thing_element_set_attribute(
 //
 // Name should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_remove_attribute(
     cool_thing_element_t *element,
@@ -429,7 +426,7 @@ int cool_thing_element_remove_attribute(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_before(
     cool_thing_element_t *element,
@@ -443,7 +440,7 @@ int cool_thing_element_before(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_prepend(
     cool_thing_element_t *element,
@@ -457,7 +454,7 @@ int cool_thing_element_prepend(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_append(
     cool_thing_element_t *element,
@@ -470,7 +467,7 @@ int cool_thing_element_append(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_after(
     cool_thing_element_t *element,
@@ -483,7 +480,7 @@ int cool_thing_element_after(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_set_inner_content(
     cool_thing_element_t *element,
@@ -496,7 +493,7 @@ int cool_thing_element_set_inner_content(
 //
 // Content should be a valid UTF8-string.
 //
-// Returns 0 in case of success and -1 othewise. The actual error message
+// Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 int cool_thing_element_replace(
     cool_thing_element_t *element,

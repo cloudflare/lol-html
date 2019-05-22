@@ -1,6 +1,9 @@
 use super::*;
 use libc::c_void;
 
+// NOTE: we use `ExternOutputSink` proxy type, because we need an
+// existential type parameter for the `HtmlRewriter` and FnMut can't
+// be used as such since it's a trait.
 pub struct ExternOutputSink {
     handler: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
     user_data: *mut c_void,
