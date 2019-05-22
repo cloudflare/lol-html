@@ -83,6 +83,10 @@ cool_thing_rewriter_builder_t *cool_thing_rewriter_builder_new();
 // performance - rewriter skips parsing of the content that doesn't
 // need to be processed.
 //
+// Each handler can optionally have associated user data which will be
+// passed to the handler on each invocation along with the rewritable
+// unit argument.
+//
 // Returns 0 in case of success and -1 othewise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 //
@@ -90,9 +94,12 @@ cool_thing_rewriter_builder_t *cool_thing_rewriter_builder_new();
 // handler execution. So they should never be leaked outside of handlers.
 void cool_thing_rewriter_builder_add_document_content_handlers(
     cool_thing_rewriter_builder_t *builder,
-    void (*doctype_handler)(cool_thing_doctype_t *doctype),
-    void (*comment_handler)(cool_thing_comment_t *comment),
-    void (*text_handler)(cool_thing_text_chunk_t *chunk)
+    void (*doctype_handler)(cool_thing_doctype_t *doctype, void *user_data),
+    void *doctype_handler_user_data,
+    void (*comment_handler)(cool_thing_comment_t *comment, void *user_data),
+    void *comment_handler_user_data,
+    void (*text_handler)(cool_thing_text_chunk_t *chunk, void *user_data),
+    void *text_handler_user_data
 );
 
 // Adds element content handlers to the builder for the
@@ -105,6 +112,10 @@ void cool_thing_rewriter_builder_add_document_content_handlers(
 // performance - rewriter skips parsing of the content that doesn't
 // need to be processed.
 //
+// Each handler can optionally have associated user data which will be
+// passed to the handler on each invocation along with the rewritable
+// unit argument.
+//
 // Returns 0 in case of success and -1 othewise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 //
@@ -114,9 +125,12 @@ int cool_thing_rewriter_builder_add_element_content_handlers(
     cool_thing_rewriter_builder_t *builder,
     const char *selector,
     size_t selector_len,
-    void (*element_handler)(cool_thing_element_t *element),
-    void (*comment_handler)(cool_thing_comment_t *comment),
-    void (*text_handler)(cool_thing_text_chunk_t *chunk)
+    void (*element_handler)(cool_thing_element_t *element, void *user_data),
+    void *element_handler_user_data,
+    void (*comment_handler)(cool_thing_comment_t *comment, void *user_data),
+    void *comment_handler_user_data,
+    void (*text_handler)(cool_thing_text_chunk_t *chunk, void *user_data),
+    void *text_handler_user_data
 );
 
 // Frees the memory held by the builder.
@@ -135,12 +149,16 @@ void cool_thing_rewriter_builder_free(cool_thing_rewriter_builder_t *builder);
 //
 // `output_sink` receives a zero-length chunk on the end of the output.
 //
+// `output_sink` can optionally have associated user data that will
+// be passed to handler on each invocation along with other arguments.
+//
 // In case of an error the function returns a NULL pointer.
 cool_thing_rewriter_t *cool_thing_rewriter_build(
     cool_thing_rewriter_builder_t *builder,
     const char *encoding,
     size_t encoding_len,
-    void (*output_sink)(const char *chunk, size_t chunk_len)
+    void (*output_sink)(const char *chunk, size_t chunk_len, void *user_data),
+    void *output_sink_user_data
 );
 
 // Write HTML chunk to rewriter.

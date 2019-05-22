@@ -1,17 +1,28 @@
 use super::*;
+use libc::c_void;
 
-pub struct ExternOutputSink(extern "C" fn(*const c_char, size_t));
+pub struct ExternOutputSink {
+    handler: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
+    user_data: *mut c_void,
+}
 
 impl ExternOutputSink {
-    fn new(sink: extern "C" fn(*const c_char, size_t)) -> Self {
-        ExternOutputSink(sink)
+    #[inline]
+    fn new(
+        handler: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
+        user_data: *mut c_void,
+    ) -> Self {
+        ExternOutputSink { handler, user_data }
     }
 }
 
 impl OutputSink for ExternOutputSink {
     #[inline]
     fn handle_chunk(&mut self, chunk: &[u8]) {
-        self.0(chunk.as_ptr() as *const c_char, chunk.len());
+        let chunk_len = chunk.len();
+        let chunk = chunk.as_ptr() as *const c_char;
+
+        unsafe { (self.handler)(chunk, chunk_len, self.user_data) };
     }
 }
 
@@ -20,14 +31,13 @@ pub extern "C" fn cool_thing_rewriter_build(
     builder: *mut HtmlRewriterBuilder<'static>,
     encoding: *const c_char,
     encoding_len: size_t,
-    output_sink: extern "C" fn(*const c_char, size_t),
+    output_sink: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
+    output_sink_user_data: *mut c_void,
 ) -> *mut HtmlRewriter<'static, ExternOutputSink> {
     let encoding = unwrap_or_ret_null! { to_str!(encoding, encoding_len) };
     let builder = to_ref!(builder);
-
-    let rewriter = unwrap_or_ret_null! {
-        builder.build(encoding, ExternOutputSink::new(output_sink))
-    };
+    let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);
+    let rewriter = unwrap_or_ret_null! { builder.build(encoding, output_sink) };
 
     to_ptr_mut(rewriter)
 }
