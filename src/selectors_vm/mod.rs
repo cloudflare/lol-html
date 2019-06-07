@@ -26,7 +26,7 @@ pub struct MatchInfo<P> {
 }
 
 pub type AuxStartTagInfoRequest<E, P> =
-    Box<dyn FnMut(&mut SelectorMatchingVm<E>, AuxStartTagInfo, &mut dyn FnMut(MatchInfo<P>))>;
+    Box<dyn FnOnce(&mut SelectorMatchingVm<E>, AuxStartTagInfo, &mut dyn FnMut(MatchInfo<P>))>;
 
 type RecoveryPointHandler<T, E, P> = fn(
     &mut SelectorMatchingVm<E>,
@@ -111,6 +111,12 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
     }
 }
 
+macro_rules! aux_info_request {
+    ($req:expr) => {
+        Err(Box::new($req))
+    };
+}
+
 pub struct SelectorMatchingVm<E: ElementData> {
     program: Program<E::MatchPayload>,
     stack: Stack<E>,
@@ -141,7 +147,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         } else if let StackDirective::PushIfNotSelfClosing = stack_directive {
             let mut ctx = ctx.into_owned();
 
-            return Self::aux_info_request(move |this, aux_info, match_handler| {
+            return aux_info_request!(move |this, aux_info, match_handler| {
                 let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ns);
 
                 ctx.with_content = !aux_info.self_closing;
@@ -192,22 +198,6 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         self.stack.current_element_data_mut()
     }
 
-    #[inline]
-    fn aux_info_request(
-        req: impl FnOnce(
-                &mut SelectorMatchingVm<E>,
-                AuxStartTagInfo,
-                &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-            ) + 'static,
-    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
-        // TODO: remove this hack when Box<dyn FnOnce> become callable in Rust 1.35.
-        let mut wrap = Some(req);
-
-        Err(Box::new(move |this, aux_info, match_handler| {
-            (wrap.take().expect("FnOnce called more than once"))(this, aux_info, match_handler)
-        }))
-    }
-
     fn bailout<T: 'static>(
         ctx: ExecutionCtx<E>,
         bailout: Bailout<T>,
@@ -215,7 +205,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
     ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
         let mut ctx = ctx.into_owned();
 
-        Self::aux_info_request(move |this, aux_info, match_handler| {
+        aux_info_request!(move |this, aux_info, match_handler| {
             let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ctx.ns);
 
             this.complete_instr_execution_with_attrs(

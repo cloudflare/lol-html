@@ -70,7 +70,7 @@ impl TransformController for HtmlRewriteController<'_> {
 
         match exec_result {
             Ok(_) => Ok(self.handlers_dispatcher.borrow().get_token_capture_flags()),
-            Err(mut aux_info_req) => Err(Box::new(move |this, aux_info| {
+            Err(aux_info_req) => Err(Box::new(move |this, aux_info| {
                 let mut match_handler = this.create_match_handler();
 
                 aux_info_req(&mut this.selector_matching_vm, aux_info, &mut match_handler);

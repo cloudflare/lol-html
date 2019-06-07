@@ -56,7 +56,7 @@ macro_rules! exec_for_start_tag_and_assert {
                 let result = $vm.exec_for_start_tag(local_name!(t), $ns, &mut match_handler);
 
                 if $expectation.should_bailout {
-                    let mut aux_info_req = result.expect_err("Bailout expected");
+                    let aux_info_req = result.expect_err("Bailout expected");
                     let (input, attr_buffer) = t.raw_attributes();
 
                     aux_info_req(
