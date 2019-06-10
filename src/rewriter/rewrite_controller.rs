@@ -1,5 +1,4 @@
-use super::content_handlers::SelectorHandlersLocator;
-use super::handlers_dispatcher::ContentHandlersDispatcher;
+use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
 use crate::selectors_vm::{ElementData, MatchInfo, SelectorMatchingVm};

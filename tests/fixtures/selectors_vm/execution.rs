@@ -33,7 +33,7 @@ macro_rules! create_vm {
         let mut ast = Ast::default();
 
         for (i, selector) in $selectors.iter().enumerate() {
-            ast.add_selector(selector, i).unwrap();
+            ast.add_selector(&selector.parse().unwrap(), i);
         }
 
         let vm: SelectorMatchingVm<TestElementData> = SelectorMatchingVm::new(&ast, UTF_8);

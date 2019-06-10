@@ -1,7 +1,6 @@
-use super::parser::{SelectorImplDescriptor, SelectorsParser};
-use super::SelectorError;
+use super::parser::{Selector, SelectorImplDescriptor};
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
-use selectors::parser::{Combinator, Component, Selector};
+use selectors::parser::{Combinator, Component};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -202,16 +201,6 @@ where
     P: PartialEq + Eq + Copy + Debug + Hash,
 {
     #[inline]
-    pub fn add_selector(&mut self, selector: &str, payload: P) -> Result<(), SelectorError> {
-        SelectorsParser::parse(selector)?
-            .0
-            .into_iter()
-            .for_each(|s| self.add_parsed_selector(s, payload));
-
-        Ok(())
-    }
-
-    #[inline]
     fn host_expressions(
         predicate: Predicate,
         branches: &mut Vec<AstNode<P>>,
@@ -232,36 +221,44 @@ where
         }
     }
 
-    fn add_parsed_selector(&mut self, selector: Selector<SelectorImplDescriptor>, payload: P) {
-        let mut predicate = Predicate::default();
-        let mut branches = &mut self.root;
+    pub fn add_selector(&mut self, selector: &Selector, payload: P) {
+        for selector_item in &(selector.0).0 {
+            let mut predicate = Predicate::default();
+            let mut branches = &mut self.root;
 
-        macro_rules! host_and_switch_branch_vec {
-            ($branches:ident) => {{
-                let node_idx =
-                    Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
+            macro_rules! host_and_switch_branch_vec {
+                ($branches:ident) => {{
+                    let node_idx = Self::host_expressions(
+                        predicate,
+                        branches,
+                        &mut self.cumulative_node_count,
+                    );
 
-                branches = &mut branches[node_idx].$branches;
-                predicate = Predicate::default();
-            }};
-        }
-
-        for component in selector.iter_raw_parse_order_from(0) {
-            match component {
-                Component::Combinator(c) => match c {
-                    Combinator::Child => host_and_switch_branch_vec!(children),
-                    Combinator::Descendant => host_and_switch_branch_vec!(descendants),
-                    _ => unreachable!(
-                        "Unsupported selector components should be filtered out by the parser."
-                    ),
-                },
-                Component::Negation(c) => c.iter().for_each(|c| predicate.add_component(c, true)),
-                _ => predicate.add_component(component, false),
+                    branches = &mut branches[node_idx].$branches;
+                    predicate = Predicate::default();
+                }};
             }
+
+            for component in selector_item.iter_raw_parse_order_from(0) {
+                match component {
+                    Component::Combinator(c) => match c {
+                        Combinator::Child => host_and_switch_branch_vec!(children),
+                        Combinator::Descendant => host_and_switch_branch_vec!(descendants),
+                        _ => unreachable!(
+                            "Unsupported selector components should be filtered out by the parser."
+                        ),
+                    },
+                    Component::Negation(c) => {
+                        c.iter().for_each(|c| predicate.add_component(c, true))
+                    }
+                    _ => predicate.add_component(component, false),
+                }
+            }
+
+            let node_idx =
+                Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
+
+            Rc::make_mut(&mut branches[node_idx].payload).insert(payload);
         }
-
-        let node_idx = Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
-
-        Rc::make_mut(&mut branches[node_idx].payload).insert(payload);
     }
 }

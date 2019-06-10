@@ -2,13 +2,14 @@ use cool_thing::selectors_vm::{
     Ast, AstNode, AttributeExpr, AttributeExprOperand, Expr, NonAttributeExpr, Predicate,
     SelectorError,
 };
+use cool_thing::Selector;
 use selectors::attr::ParsedCaseSensitivity;
 
 fn assert_ast(selectors: &[&str], expected: Ast<usize>) {
     let mut ast = Ast::default();
 
     for (idx, selector) in selectors.iter().enumerate() {
-        ast.add_selector(selector, idx).unwrap();
+        ast.add_selector(&selector.parse().unwrap(), idx);
     }
 
     assert_eq!(ast, expected);
@@ -16,7 +17,7 @@ fn assert_ast(selectors: &[&str], expected: Ast<usize>) {
 
 fn assert_err(selector: &str, expected_err: SelectorError) {
     assert_eq!(
-        Ast::default().add_selector(selector, 0).unwrap_err(),
+        selector.parse::<Selector>().unwrap_err(),
         expected_err
     );
 }

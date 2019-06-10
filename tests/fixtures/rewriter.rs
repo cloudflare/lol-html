@@ -1,9 +1,10 @@
+
 use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
 use cool_thing::{
     Bytes, ContentType, DocumentContentHandlers, ElementContentHandlers, EncodingError,
-    HtmlRewriter, HtmlRewriterBuilder, OutputSink,
+    HtmlRewriter, OutputSink,
 };
-use encoding_rs::{Encoding, UTF_8};
+use encoding_rs::Encoding;
 
 fn write_chunks<O: OutputSink>(
     rewriter: &mut HtmlRewriter<O>,
@@ -19,17 +20,13 @@ fn write_chunks<O: OutputSink>(
 
 test_fixture!("Rewriter", {
     test("Unknown encoding", {
-        let err = HtmlRewriterBuilder::default()
-            .build("hey-yo", |_: &[u8]| {})
-            .unwrap_err();
+        let err = HtmlRewriter::try_new(vec![], vec![], "hey-yo", |_: &[u8]| {}).unwrap_err();
 
         assert_eq!(err, EncodingError::UnknownEncoding);
     });
 
     test("Non-ASCII compatible encoding", {
-        let err = HtmlRewriterBuilder::default()
-            .build("utf-16be", |_: &[u8]| {})
-            .unwrap_err();
+        let err = HtmlRewriter::try_new(vec![], vec![], "utf-16be", |_: &[u8]| {}).unwrap_err();
 
         assert_eq!(err, EncodingError::NonAsciiCompatibleEncoding);
     });
@@ -39,14 +36,14 @@ test_fixture!("Rewriter", {
             let mut doctypes = Vec::default();
 
             {
-                let mut builder = HtmlRewriterBuilder::default();
-
-                builder.on_document(
-                    DocumentContentHandlers::default()
-                        .doctype(|d| doctypes.push((d.name(), d.public_id(), d.system_id()))),
-                );
-
-                let mut rewriter = builder.build(enc.name(), |_: &[u8]| {}).unwrap();
+                let mut rewriter = HtmlRewriter::try_new(
+                    vec![],
+                    vec![DocumentContentHandlers::default()
+                        .doctype(|d| doctypes.push((d.name(), d.public_id(), d.system_id())))],
+                    enc.name(),
+                    |_: &[u8]| {},
+                )
+                .unwrap();
 
                 write_chunks(
                     &mut rewriter,
@@ -80,21 +77,20 @@ test_fixture!("Rewriter", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let actual: String = {
                 let mut output = Output::new(enc);
-                let mut builder = HtmlRewriterBuilder::default();
 
-                builder
-                    .on(
-                        "*",
+                let mut rewriter = HtmlRewriter::try_new(
+                    vec![(
+                        &"*".parse().unwrap(),
                         ElementContentHandlers::default().element(|el| {
                             el.set_attribute("foo", "bar").unwrap();
                             el.prepend("<test></test>", ContentType::Html);
                         }),
-                    )
-                    .unwrap();
-
-                let mut rewriter = builder
-                    .build(enc.name(), |c: &[u8]| output.push(c))
-                    .unwrap();
+                    )],
+                    vec![],
+                    enc.name(),
+                    |c: &[u8]| output.push(c),
+                )
+                .unwrap();
 
                 write_chunks(
                     &mut rewriter,
@@ -132,10 +128,10 @@ test_fixture!("Rewriter", {
         for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let actual: String = {
                 let mut output = Output::new(enc);
-                let mut builder = HtmlRewriterBuilder::default();
 
-                builder.on_document(
-                    DocumentContentHandlers::default()
+                let mut rewriter = HtmlRewriter::try_new(
+                    vec![],
+                    vec![DocumentContentHandlers::default()
                         .comments(|c| {
                             c.set_text(&(c.text() + "1337")).unwrap();
                         })
@@ -143,12 +139,11 @@ test_fixture!("Rewriter", {
                             if c.last_in_text_node() {
                                 c.after("BAZ", ContentType::Text);
                             }
-                        }),
-                );
-
-                let mut rewriter = builder
-                    .build(enc.name(), |c: &[u8]| output.push(c))
-                    .unwrap();
+                        })],
+                    enc.name(),
+                    |c: &[u8]| output.push(c),
+                )
+                .unwrap();
 
                 write_chunks(
                     &mut rewriter,
@@ -184,47 +179,5 @@ test_fixture!("Rewriter", {
                 )
             );
         }
-    });
-
-    test("Multiple rewriters from the same builder", {
-        let mut output1 = Output::new(UTF_8);
-        let mut builder = HtmlRewriterBuilder::default();
-
-        builder
-            .on(
-                "span",
-                ElementContentHandlers::default().element(|el| {
-                    el.append("<!--span-->", ContentType::Html);
-                }),
-            )
-            .unwrap();
-
-        let mut rewriter1 = builder.build("utf-8", |c: &[u8]| output1.push(c)).unwrap();
-
-        rewriter1.write(b"<div><span>").unwrap();
-
-        builder
-            .on(
-                "div",
-                ElementContentHandlers::default().element(|el| {
-                    el.append("<!--div-->", ContentType::Html);
-                }),
-            )
-            .unwrap();
-
-        let mut output2 = Output::new(UTF_8);
-        let mut rewriter2 = builder.build("utf-8", |c: &[u8]| output2.push(c)).unwrap();
-
-        rewriter2.write(b"<div><span></span></div>").unwrap();
-        rewriter2.end().unwrap();
-
-        rewriter1.write(b"</span></div>").unwrap();
-        rewriter1.end().unwrap();
-
-        let output1: String = output1.into();
-        let output2: String = output2.into();
-
-        assert_eq!(output1, "<div><span><!--span--></span></div>");
-        assert_eq!(output2, "<div><span><!--span--></span><!--div--></div>");
     });
 });

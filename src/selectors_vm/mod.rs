@@ -16,7 +16,7 @@ pub use self::ast::*;
 pub use self::attribute_matcher::AttributeMatcher;
 pub use self::compiler::Compiler;
 pub use self::error::SelectorError;
-pub use self::parser::SelectorsParser;
+pub use self::parser::Selector;
 pub use self::program::{ExecutionBranch, Program};
 pub use self::stack::{ElementData, Stack, StackItem};
 

@@ -35,7 +35,7 @@ fn compile(
     let mut ast = Ast::default();
 
     for (idx, selector) in selectors.iter().enumerate() {
-        ast.add_selector(selector, idx).unwrap();
+        ast.add_selector(&selector.parse().unwrap(), idx);
     }
 
     let program = Compiler::new(encoding).compile(&ast);
