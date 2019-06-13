@@ -41,12 +41,12 @@ pub extern "C" fn cool_thing_rewriter_build(
     let encoding = unwrap_or_ret_null! { to_str!(encoding, encoding_len) };
     let builder = to_ref!(builder);
     let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);
-    let (document_content_handlers, element_content_handlers) = builder.get_handlers();
+    let handlers = builder.get_safe_handlers();
 
     let rewriter = unwrap_or_ret_null! {
         HtmlRewriter::try_new(
-            element_content_handlers,
-            document_content_handlers,
+            handlers.element,
+            handlers.document,
             encoding,
             output_sink,
         )
