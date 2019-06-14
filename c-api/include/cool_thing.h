@@ -503,10 +503,10 @@ int cool_thing_element_replace(
 );
 
 // Removes the element.
-void cool_thing_element_remove();
+void cool_thing_element_remove(const cool_thing_element_t *element);
 
 // Removes the element, but leaves its inner content intact.
-void cool_thing_element_remove_and_keep_content();
+void cool_thing_element_remove_and_keep_content(const cool_thing_element_t *element);
 
 // Returns `true` if the element has been removed.
 bool cool_thing_element_is_removed(const cool_thing_element_t *element);
