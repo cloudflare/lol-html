@@ -1,31 +1,33 @@
 use super::*;
 use libc::c_void;
 
-macro_rules! wrap_handler {
-    ($handler:ident, $user_data:expr) => {{
-        // NOTE: the closure actually holds a reference to the content
-        // handler object, but since we pass the object to the C side this
-        // ownership information gets erased.
-        // It's not a problem since handler is an extern static function that
-        // will remain intact even if Rust-side builder object gets freed.
-        // However, it's not a case for the user data pointer, it might become
-        // invalid if content handlers object that holds it gets freed before
-        // a handler invocation. Therefore, we close on a local variable instead
-        // of structure field.
-        let user_data = $user_data;
+macro_rules! add_handler {
+    ($handlers:ident, $self:ident.$ty:ident) => {{
+        if let Some(handler) = $self.$ty.func {
+            // NOTE: the closure actually holds a reference to the content
+            // handler object, but since we pass the object to the C side this
+            // ownership information gets erased.
+            // It's not a problem since handler is an extern static function that
+            // will remain intact even if Rust-side builder object gets freed.
+            // However, it's not a case for the user data pointer, it might become
+            // invalid if content handlers object that holds it gets freed before
+            // a handler invocation. Therefore, we close on a local variable instead
+            // of structure field.
+            let user_data = $self.$ty.user_data;
 
-        move |arg: &mut _| unsafe { $handler(arg, user_data) }
+            $handlers = $handlers.$ty(move |arg: &mut _| unsafe { handler(arg, user_data) });
+        }
     }};
 }
 
-struct ExternHandler<T> {
-    handler: Option<T>,
+struct ExternHandler<F> {
+    func: Option<F>,
     user_data: *mut c_void,
 }
 
-impl<T> ExternHandler<T> {
-    fn new(handler: Option<T>, user_data: *mut c_void) -> Self {
-        ExternHandler { handler, user_data }
+impl<F> ExternHandler<F> {
+    fn new(func: Option<F>, user_data: *mut c_void) -> Self {
+        ExternHandler { func, user_data }
     }
 }
 
@@ -39,17 +41,9 @@ impl ExternDocumentContentHandlers {
     pub fn as_safe_document_content_handlers(&self) -> DocumentContentHandlers {
         let mut handlers = DocumentContentHandlers::default();
 
-        if let Some(handler) = self.doctype.handler {
-            handlers = handlers.doctype(wrap_handler!(handler, self.doctype.user_data));
-        }
-
-        if let Some(handler) = self.comments.handler {
-            handlers = handlers.comments(wrap_handler!(handler, self.comments.user_data));
-        }
-
-        if let Some(handler) = self.text.handler {
-            handlers = handlers.text(wrap_handler!(handler, self.text.user_data));
-        }
+        add_handler!(handlers, self.doctype);
+        add_handler!(handlers, self.comments);
+        add_handler!(handlers, self.text);
 
         handlers
     }
@@ -65,17 +59,9 @@ impl ExternElementContentHandlers {
     pub fn as_safe_element_content_handlers(&self) -> ElementContentHandlers {
         let mut handlers = ElementContentHandlers::default();
 
-        if let Some(handler) = self.element.handler {
-            handlers = handlers.element(wrap_handler!(handler, self.element.user_data));
-        }
-
-        if let Some(handler) = self.comments.handler {
-            handlers = handlers.comments(wrap_handler!(handler, self.comments.user_data));
-        }
-
-        if let Some(handler) = self.text.handler {
-            handlers = handlers.text(wrap_handler!(handler, self.text.user_data));
-        }
+        add_handler!(handlers, self.element);
+        add_handler!(handlers, self.comments);
+        add_handler!(handlers, self.text);
 
         handlers
     }
