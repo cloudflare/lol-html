@@ -1,71 +1,67 @@
 use crate::rewritable_units::{Comment, Doctype, Element, EndTag, TextChunk};
-use std::cell::RefCell;
-use std::rc::Rc;
 
-pub type DoctypeHandler<'h> = Rc<RefCell<dyn FnMut(&mut Doctype) + 'h>>;
-pub type CommentHandler<'h> = Rc<RefCell<dyn FnMut(&mut Comment) + 'h>>;
-pub type TextHandler<'h> = Rc<RefCell<dyn FnMut(&mut TextChunk) + 'h>>;
-pub type ElementHandler<'h> = Rc<RefCell<dyn FnMut(&mut Element) + 'h>>;
-pub type EndTagHandler<'h> = Rc<RefCell<dyn FnMut(&mut EndTag) + 'h>>;
-
-#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
-pub struct SelectorHandlersLocator {
-    pub element_handler_idx: Option<usize>,
-    pub comment_handler_idx: Option<usize>,
-    pub text_handler_idx: Option<usize>,
-}
+pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) + 'h>;
+pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) + 'h>;
+pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) + 'h>;
+pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) + 'h>;
+pub type EndTagHandler<'h> = Box<dyn FnMut(&mut EndTag) + 'h>;
 
 #[derive(Default)]
-pub struct ContentHandlers<'h> {
-    pub doctype: Vec<DoctypeHandler<'h>>,
-    pub document_text: Vec<TextHandler<'h>>,
-    pub document_comments: Vec<CommentHandler<'h>>,
-    pub comment: Vec<CommentHandler<'h>>,
-    pub text: Vec<TextHandler<'h>>,
-    pub element: Vec<ElementHandler<'h>>,
+pub struct ElementContentHandlers<'h> {
+    pub(super) element: Option<ElementHandler<'h>>,
+    pub(super) comments: Option<CommentHandler<'h>>,
+    pub(super) text: Option<TextHandler<'h>>,
 }
 
-impl<'h> ContentHandlers<'h> {
+impl<'h> ElementContentHandlers<'h> {
     #[inline]
-    pub fn add_document_content_handlers(
-        &mut self,
-        doctype_handler: Option<DoctypeHandler<'h>>,
-        comment_handler: Option<CommentHandler<'h>>,
-        text_handler: Option<TextHandler<'h>>,
-    ) {
-        if let Some(handler) = doctype_handler {
-            self.doctype.push(handler);
-        }
+    pub fn element(mut self, handler: impl FnMut(&mut Element) + 'h) -> Self {
+        self.element = Some(Box::new(handler));
 
-        if let Some(handler) = comment_handler {
-            self.document_comments.push(handler);
-        }
-
-        if let Some(handler) = text_handler {
-            self.document_text.push(handler);
-        }
+        self
     }
 
     #[inline]
-    pub fn add_selector_associated_handlers(
-        &mut self,
-        element_handler: Option<ElementHandler<'h>>,
-        comment_handler: Option<CommentHandler<'h>>,
-        text_handler: Option<TextHandler<'h>>,
-    ) -> SelectorHandlersLocator {
-        SelectorHandlersLocator {
-            element_handler_idx: element_handler.map(|h| {
-                self.element.push(h);
-                self.element.len() - 1
-            }),
-            comment_handler_idx: comment_handler.map(|h| {
-                self.comment.push(h);
-                self.comment.len() - 1
-            }),
-            text_handler_idx: text_handler.map(|h| {
-                self.text.push(h);
-                self.text.len() - 1
-            }),
-        }
+    pub fn comments(mut self, handler: impl FnMut(&mut Comment) + 'h) -> Self {
+        self.comments = Some(Box::new(handler));
+
+        self
+    }
+
+    #[inline]
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) + 'h) -> Self {
+        self.text = Some(Box::new(handler));
+
+        self
+    }
+}
+
+#[derive(Default)]
+pub struct DocumentContentHandlers<'h> {
+    pub(super) doctype: Option<DoctypeHandler<'h>>,
+    pub(super) comments: Option<CommentHandler<'h>>,
+    pub(super) text: Option<TextHandler<'h>>,
+}
+
+impl<'h> DocumentContentHandlers<'h> {
+    #[inline]
+    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) + 'h) -> Self {
+        self.doctype = Some(Box::new(handler));
+
+        self
+    }
+
+    #[inline]
+    pub fn comments(mut self, handler: impl FnMut(&mut Comment) + 'h) -> Self {
+        self.comments = Some(Box::new(handler));
+
+        self
+    }
+
+    #[inline]
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) + 'h) -> Self {
+        self.text = Some(Box::new(handler));
+
+        self
     }
 }

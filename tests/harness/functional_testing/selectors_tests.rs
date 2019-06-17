@@ -1,6 +1,6 @@
 use super::{for_each_test_file, get_test_file_reader};
 use crate::harness::{Input, ASCII_COMPATIBLE_ENCODINGS};
-use cool_thing::selectors_vm::SelectorsParser;
+use cool_thing::Selector;
 use serde_json::{self, from_reader};
 use std::collections::HashMap;
 use std::io::prelude::*;
@@ -51,7 +51,7 @@ pub fn get_test_cases(suite: &'static str) -> Vec<TestCase> {
                     chunk_size
                 );
 
-                if SelectorsParser::parse(&selector).is_err() {
+                if selector.parse::<Selector>().is_err() {
                     ignore!(@info
                         "Ignoring test due to unsupported selector: `{}`",
                         description

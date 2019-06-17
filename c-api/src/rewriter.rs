@@ -1,3 +1,4 @@
+use super::rewriter_builder::HtmlRewriterBuilder;
 use super::*;
 use libc::c_void;
 
@@ -31,7 +32,7 @@ impl OutputSink for ExternOutputSink {
 
 #[no_mangle]
 pub extern "C" fn cool_thing_rewriter_build(
-    builder: *mut HtmlRewriterBuilder<'static>,
+    builder: *mut HtmlRewriterBuilder,
     encoding: *const c_char,
     encoding_len: size_t,
     output_sink: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
@@ -40,7 +41,16 @@ pub extern "C" fn cool_thing_rewriter_build(
     let encoding = unwrap_or_ret_null! { to_str!(encoding, encoding_len) };
     let builder = to_ref!(builder);
     let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);
-    let rewriter = unwrap_or_ret_null! { builder.build(encoding, output_sink) };
+    let handlers = builder.get_safe_handlers();
+
+    let rewriter = unwrap_or_ret_null! {
+        HtmlRewriter::try_new(
+            handlers.element,
+            handlers.document,
+            encoding,
+            output_sink,
+        )
+    };
 
     to_ptr_mut(rewriter)
 }

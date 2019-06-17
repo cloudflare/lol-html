@@ -1,7 +1,7 @@
+
 use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
 use cool_thing::{
-    AttributeNameError, ContentType, Element, ElementContentHandlers, HtmlRewriterBuilder,
-    TagNameError,
+    AttributeNameError, ContentType, Element, ElementContentHandlers, HtmlRewriter, TagNameError,
 };
 use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
@@ -15,34 +15,31 @@ fn rewrite_element(
     let mut output = Output::new(encoding);
 
     {
-        let mut builder = HtmlRewriterBuilder::default();
-
-        builder
-            .on(
-                selector,
-                ElementContentHandlers::default().element(|el| {
-                    handler_called = true;
-                    handler(el);
-                }),
-            )
-            .unwrap();
-
-        // NOTE: used to test inner content removal
-        builder
-            .on(
-                "inner-remove-me",
-                ElementContentHandlers::default().element(|el| {
-                    el.before("[before: should be removed]", ContentType::Text);
-                    el.after("[after: should be removed]", ContentType::Text);
-                    el.append("[append: should be removed]", ContentType::Text);
-                    el.before("[before: should be removed]", ContentType::Text);
-                }),
-            )
-            .unwrap();
-
-        let mut rewriter = builder
-            .build(encoding.name(), |c: &[u8]| output.push(c))
-            .unwrap();
+        let mut rewriter = HtmlRewriter::try_new(
+            vec![
+                (
+                    &selector.parse().unwrap(),
+                    ElementContentHandlers::default().element(|el| {
+                        handler_called = true;
+                        handler(el);
+                    }),
+                ),
+                // NOTE: used to test inner content removal
+                (
+                    &"inner-remove-me".parse().unwrap(),
+                    ElementContentHandlers::default().element(|el| {
+                        el.before("[before: should be removed]", ContentType::Text);
+                        el.after("[after: should be removed]", ContentType::Text);
+                        el.append("[append: should be removed]", ContentType::Text);
+                        el.before("[before: should be removed]", ContentType::Text);
+                    }),
+                ),
+            ],
+            vec![],
+            encoding.name(),
+            |c: &[u8]| output.push(c),
+        )
+        .unwrap();
 
         rewriter.write(html.as_bytes()).unwrap();
         rewriter.end().unwrap();
@@ -413,37 +410,34 @@ test_fixture!("Element rewritable unit", {
     test("Multiple consequent removes", {
         let html = "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>";
         let mut output = Output::new(UTF_8);
-        let mut builder = HtmlRewriterBuilder::default();
-
-        builder
-            .on(
-                "div",
-                ElementContentHandlers::default().element(|el| {
-                    el.replace("hey & ya", ContentType::Html);
-                }),
-            )
-            .unwrap();
-
-        builder
-            .on(
-                "h1",
-                ElementContentHandlers::default().element(|el| {
-                    el.remove();
-                }),
-            )
-            .unwrap();
-
-        builder
-            .on(
-                "h2",
-                ElementContentHandlers::default().element(|el| {
-                    el.remove_and_keep_content();
-                }),
-            )
-            .unwrap();
 
         {
-            let mut rewriter = builder.build("utf-8", |c: &[u8]| output.push(c)).unwrap();
+            let mut rewriter = HtmlRewriter::try_new(
+                vec![
+                    (
+                        &"div".parse().unwrap(),
+                        ElementContentHandlers::default().element(|el| {
+                            el.replace("hey & ya", ContentType::Html);
+                        }),
+                    ),
+                    (
+                        &"h1".parse().unwrap(),
+                        ElementContentHandlers::default().element(|el| {
+                            el.remove();
+                        }),
+                    ),
+                    (
+                        &"h2".parse().unwrap(),
+                        ElementContentHandlers::default().element(|el| {
+                            el.remove_and_keep_content();
+                        }),
+                    ),
+                ],
+                vec![],
+                "utf-8",
+                |c: &[u8]| output.push(c),
+            )
+            .unwrap();
 
             rewriter.write(html.as_bytes()).unwrap();
             rewriter.end().unwrap();

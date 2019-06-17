@@ -6,6 +6,7 @@ use selectors::parser::{
     SelectorParseErrorKind,
 };
 use std::fmt;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SelectorImplDescriptor;
@@ -57,7 +58,7 @@ impl ToCss for NonTSPseudoClassStub {
 }
 
 #[allow(dead_code)]
-pub struct SelectorsParser;
+struct SelectorsParser;
 
 impl SelectorsParser {
     fn validate_component(
@@ -145,4 +146,16 @@ impl SelectorsParser {
 impl<'i> Parser<'i> for SelectorsParser {
     type Impl = SelectorImplDescriptor;
     type Error = SelectorParseErrorKind<'i>;
+}
+
+#[derive(Debug)]
+pub struct Selector(pub(crate) SelectorList<SelectorImplDescriptor>);
+
+impl FromStr for Selector {
+    type Err = SelectorError;
+
+    #[inline]
+    fn from_str(selector: &str) -> Result<Self, Self::Err> {
+        Ok(Selector(SelectorsParser::parse(selector)?))
+    }
 }

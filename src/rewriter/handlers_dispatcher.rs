@@ -2,13 +2,19 @@ use super::content_handlers::*;
 use super::ElementDescriptor;
 use crate::rewritable_units::{Element, Token, TokenCaptureFlags};
 use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};
-use std::rc::Rc;
 
 #[derive(Eq, PartialEq)]
 enum ActionOnCall {
     None,
     Deactivate,
     Remove,
+}
+
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
+pub struct SelectorHandlersLocator {
+    pub element_handler_idx: Option<usize>,
+    pub comment_handler_idx: Option<usize>,
+    pub text_handler_idx: Option<usize>,
 }
 
 struct HandlerVecItem<H> {
@@ -102,54 +108,46 @@ pub struct ContentHandlersDispatcher<'h> {
     matched_elements_with_removed_content: usize,
 }
 
-impl<'h> From<&ContentHandlers<'h>> for ContentHandlersDispatcher<'h> {
-    fn from(handlers: &ContentHandlers<'h>) -> Self {
-        let mut dispatcher = ContentHandlersDispatcher::default();
-
-        // NOTE: document-level handlers are always active
-        for handler in &handlers.doctype {
-            dispatcher
-                .doctype_handlers
-                .push(Rc::clone(handler), true, ActionOnCall::None);
-        }
-
-        for handler in &handlers.element {
-            dispatcher
-                .element_handlers
-                .push(Rc::clone(handler), false, ActionOnCall::Deactivate)
-        }
-
-        // NOTE: for text and comment first push selector-associated handlers
-        // to preserve their original indices in selector handler locators.
-        for handler in &handlers.comment {
-            dispatcher
-                .comment_handlers
-                .push(Rc::clone(handler), false, ActionOnCall::None);
-        }
-
-        for handler in &handlers.document_comments {
-            dispatcher
-                .comment_handlers
-                .push(Rc::clone(handler), true, ActionOnCall::None);
-        }
-
-        for handler in &handlers.text {
-            dispatcher
-                .text_handlers
-                .push(Rc::clone(handler), false, ActionOnCall::None);
-        }
-
-        for handler in &handlers.document_text {
-            dispatcher
-                .text_handlers
-                .push(Rc::clone(handler), true, ActionOnCall::None);
-        }
-
-        dispatcher
-    }
-}
-
 impl<'h> ContentHandlersDispatcher<'h> {
+    #[inline]
+    pub fn add_document_content_handlers(&mut self, handlers: DocumentContentHandlers<'h>) {
+        if let Some(handler) = handlers.doctype {
+            self.doctype_handlers
+                .push(handler, true, ActionOnCall::None);
+        }
+
+        if let Some(handler) = handlers.comments {
+            self.comment_handlers
+                .push(handler, true, ActionOnCall::None);
+        }
+
+        if let Some(handler) = handlers.text {
+            self.text_handlers.push(handler, true, ActionOnCall::None);
+        }
+    }
+
+    #[inline]
+    pub fn add_selector_associated_handlers(
+        &mut self,
+        handlers: ElementContentHandlers<'h>,
+    ) -> SelectorHandlersLocator {
+        SelectorHandlersLocator {
+            element_handler_idx: handlers.element.map(|h| {
+                self.element_handlers
+                    .push(h, false, ActionOnCall::Deactivate);
+                self.element_handlers.len() - 1
+            }),
+            comment_handler_idx: handlers.comments.map(|h| {
+                self.comment_handlers.push(h, false, ActionOnCall::None);
+                self.comment_handlers.len() - 1
+            }),
+            text_handler_idx: handlers.text.map(|h| {
+                self.text_handlers.push(h, false, ActionOnCall::None);
+                self.text_handlers.len() - 1
+            }),
+        }
+    }
+
     #[inline]
     pub fn has_matched_elements_with_removed_content(&self) -> bool {
         self.matched_elements_with_removed_content > 0
@@ -204,20 +202,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
     ) {
         macro_rules! call_handlers {
             ($handlers:expr, $arg:expr) => {
-                $handlers.call_active_handlers(|h| {
-                    // NOTE: if we have handler already borrowed that means that
-                    // `.write()` or `.end()` of the current rewriter were invoked
-                    // from one of the handlers of the other rewriter that has been
-                    // constructed using the same builder. We have nothing better to do
-                    // than just panic.
-                    let handler = &mut *h.try_borrow_mut().expect(concat!(
-                        ".write() or .end() method of the rewriter has been called from one of the",
-                        " content handlers of the rewriter constructed using the same builder. ",
-                        "This behaviour is forbidden due to concurrency ambiguities."
-                    ));
-
-                    handler($arg);
-                });
+                $handlers.call_active_handlers(|h| h($arg));
             };
         }
 
