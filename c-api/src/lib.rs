@@ -6,43 +6,6 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-thread_local! {
-    static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
-}
-
-// NOTE: we don't use CStr and CString as the transfer type because UTF8
-// string comming from both sides can contain interior NULLs.
-#[repr(C)]
-pub struct Str {
-    data: *const c_char,
-    len: size_t,
-}
-
-impl Str {
-    fn new(string: String) -> Self {
-        let len = string.len();
-        let bytes = string.into_boxed_str().into_boxed_bytes();
-
-        Str {
-            data: Box::into_raw(bytes) as *const c_char,
-            len,
-        }
-    }
-
-    #[inline]
-    fn ptr(string: String) -> *const Self {
-        to_ptr(Self::new(string))
-    }
-
-    #[inline]
-    fn opt_ptr(string: Option<String>) -> *const Self {
-        match string {
-            Some(string) => Self::ptr(string),
-            None => ptr::null(),
-        }
-    }
-}
-
 #[inline]
 fn to_ptr<T>(val: T) -> *const T {
     Box::into_raw(Box::new(val))
@@ -101,7 +64,7 @@ macro_rules! unwrap_or_ret {
         match $expr {
             Ok(v) => v,
             Err(err) => {
-                LAST_ERROR.with(|e| *e.borrow_mut() = Some(err.into()));
+                crate::errors::LAST_ERROR.with(|e| *e.borrow_mut() = Some(err.into()));
                 return $ret_val;
             }
         }
@@ -141,7 +104,10 @@ macro_rules! content_insertion_fn_body {
 mod comment;
 mod doctype;
 mod element;
+mod errors;
 mod rewriter;
 mod rewriter_builder;
+mod string;
 mod text_chunk;
-mod utils;
+
+pub use self::string::Str;
