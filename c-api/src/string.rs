@@ -27,15 +27,9 @@ impl Str {
 
 impl Drop for Str {
     fn drop(&mut self) {
-        // NOTE: empty string buffer is essentialy a Unique::empty()
-        // which is a NonZero pointer with a phatom data attached.
-        // And NonZero is just a dangling non-zero pointer. So,
-        // attempt of freeing it will result in a segfault.
-        if self.len > 0 {
-            let string_data = self.data as *mut c_char;
+        let bytes = unsafe { slice::from_raw_parts_mut(self.data as *mut c_char, self.len) };
 
-            drop(to_box!(string_data));
-        }
+        drop(unsafe { Box::from_raw(bytes) });
     }
 }
 
