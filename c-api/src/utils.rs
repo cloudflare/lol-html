@@ -2,9 +2,15 @@ use super::*;
 
 #[no_mangle]
 pub extern "C" fn cool_thing_str_free(string: Str) {
-    let string_data = string.data as *mut c_char;
+    // NOTE: empty string buffer is essentialy a Unique::empty()
+    // which is a NonZero pointer with a phatom data attached.
+    // And NonZero is just a dangling non-zero pointer. So,
+    // attempt of freeing it will result in a segfault.
+    if string.len > 0 {
+        let string_data = string.data as *mut c_char;
 
-    drop(to_box!(string_data));
+        drop(to_box!(string_data));
+    }
 }
 
 #[no_mangle]

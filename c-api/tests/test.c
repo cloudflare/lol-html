@@ -380,6 +380,11 @@ EXPECT_OUTPUT(
     "<span></span>"
 );
 
+EXPECT_OUTPUT(
+    test_element_api_output6,
+    "<span foo>"
+);
+
 static void test_text_chunk_api() {
     int user_data = 42;
 
@@ -611,6 +616,25 @@ static void remove_element_and_keep_content(cool_thing_element_t *element, void 
     ok(cool_thing_element_is_removed(element));
 }
 
+static void get_and_free_empty_element_attribute(cool_thing_element_t *element, void *user_data) {
+    (void)(user_data);
+
+    const char *attr1 = "foo";
+
+    note("Has attribute");
+    ok(cool_thing_element_has_attribute(element, attr1, strlen(attr1)) == 1);
+
+    note("Get attribute");
+    cool_thing_str_t *value = cool_thing_element_get_attribute(
+        element,
+        attr1,
+        strlen(attr1)
+    );
+
+    str_eq(value, "");
+    cool_thing_str_free(*value);
+}
+
 EXPECT_OUTPUT(
     test_element_api_output1,
     "Hi <span>"
@@ -801,6 +825,29 @@ static void element_api_test() {
             ok(!err);
         }
     );
+
+    REWRITE(
+        "<span foo>",
+        test_element_api_output6,
+        {
+            const char *selector = "span";
+
+            int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector,
+                strlen(selector),
+                &get_and_free_empty_element_attribute,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+        }
+    );
+
 }
 
 int main() {
