@@ -10,24 +10,16 @@ pub struct Str {
 
 impl Str {
     pub fn new(string: String) -> Self {
-        let len = string.len();
-        let bytes = string.into_boxed_str().into_boxed_bytes();
-
         Str {
-            data: Box::into_raw(bytes) as *const c_char,
-            len,
+            len: string.len(),
+            data: Box::into_raw(string.into_boxed_str()) as *const c_char,
         }
-    }
-
-    #[inline]
-    pub fn ptr(string: String) -> *const Self {
-        to_ptr(Self::new(string))
     }
 
     #[inline]
     pub fn opt_ptr(string: Option<String>) -> *const Self {
         match string {
-            Some(string) => Self::ptr(string),
+            Some(string) => to_ptr(Self::new(string)),
             None => ptr::null(),
         }
     }
