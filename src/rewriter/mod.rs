@@ -56,7 +56,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
 
         let selector_matching_vm = SelectorMatchingVm::new(&selectors_ast, encoding);
         let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
-        let stream = TransformStream::new(controller, output_sink, 2048, encoding);
+        let stream = TransformStream::new(controller, output_sink, 200 * 1024, encoding);
 
         Ok(HtmlRewriter(stream))
     }
