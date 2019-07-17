@@ -21,7 +21,7 @@ pub mod functional_testing;
 mod parse;
 
 pub use self::io::{Input, Output};
-pub use self::parse::parse;
+pub use self::parse::{parse, TestTransformController};
 
 pub static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
     BIG5,

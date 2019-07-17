@@ -4,5 +4,6 @@ test_modules!(
     element,
     rewriter,
     selectors_vm,
-    functional
+    functional,
+    stream
 );

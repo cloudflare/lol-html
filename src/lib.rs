@@ -39,7 +39,7 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
         };
 
-        pub use self::base::Bytes;
+        pub use self::base::{Bytes, BufferCapacityExceededError};
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace, TAG_STR_PAIRS};
 
     } else {

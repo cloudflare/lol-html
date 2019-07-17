@@ -4,7 +4,7 @@ use failure::Error;
 
 type TokenHandler<'h> = Box<dyn FnMut(&mut Token) + 'h>;
 
-struct TestTransformController<'h> {
+pub struct TestTransformController<'h> {
     token_handler: TokenHandler<'h>,
     capture_flags: TokenCaptureFlags,
 }

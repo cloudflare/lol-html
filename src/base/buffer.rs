@@ -1,9 +1,9 @@
 use safemem::copy_over;
 
-#[derive(Fail, Debug)]
+#[derive(Fail, Debug, PartialEq)]
 #[fail(display = "The buffer capacity ({}B) has been exceeded.", capacity)]
 pub struct BufferCapacityExceededError {
-    capacity: usize,
+    pub capacity: usize,
 }
 
 impl BufferCapacityExceededError {
