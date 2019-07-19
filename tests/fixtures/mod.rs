@@ -5,5 +5,5 @@ test_modules!(
     rewriter,
     selectors_vm,
     functional,
-    stream
+    fatal_errors
 );

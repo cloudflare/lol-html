@@ -2,7 +2,8 @@
 use crate::harness::functional_testing::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::functional_testing::FunctionalTestFixture;
 use crate::harness::Output;
-use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter};
+use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings};
+use std::convert::TryFrom;
 
 // NOTE: Inner element content replacement functionality used as a basis for
 // the multiple element methods and it's easy to get it wrong, so we have
@@ -19,8 +20,8 @@ impl FunctionalTestFixture<TestCase> for ElementContentReplacementTests {
         let mut output = Output::new(encoding);
 
         {
-            let mut rewriter = HtmlRewriter::try_new(
-                vec![(
+            let mut rewriter = HtmlRewriter::try_from(Settings{
+                element_content_handlers: vec![(
                     &test.selector.parse().unwrap(),
                     ElementContentHandlers::default().element(|el| {
                         el.set_inner_content(
@@ -29,10 +30,11 @@ impl FunctionalTestFixture<TestCase> for ElementContentReplacementTests {
                         );
                     }),
                 )],
-                vec![],
-                encoding.name(),
-                |c: &[u8]| output.push(c),
-            )
+                document_content_handlers: vec![],
+                encoding: encoding.name(),
+                buffer_capacity: 2048,
+                output_sink: |c: &[u8]| output.push(c),
+            })
             .unwrap();
 
             for chunk in test.input.chunks() {

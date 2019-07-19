@@ -8,6 +8,7 @@ use crate::selectors_vm::{self, Selector, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;
+use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 
 pub use self::content_handlers::*;
@@ -31,44 +32,90 @@ fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingEr
     }
 }
 
-pub struct HtmlRewriter<'h, O: OutputSink>(TransformStream<HtmlRewriteController<'h>, O>);
+pub struct Settings<'h, 's, O: OutputSink> {
+    pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
+    pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
+    pub encoding: &'s str,
+    pub buffer_capacity: usize,
+    pub output_sink: O,
+}
 
-impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
-    pub fn try_new(
-        element_content_handlers: Vec<(&Selector, ElementContentHandlers<'h>)>,
-        document_content_handlers: Vec<DocumentContentHandlers<'h>>,
-        encoding: &str,
-        output_sink: O,
-    ) -> Result<Self, EncodingError> {
-        let encoding = try_encoding_from_str(encoding)?;
+pub struct HtmlRewriter<'h, O: OutputSink> {
+    stream: TransformStream<HtmlRewriteController<'h>, O>,
+    finished: bool,
+    poisoned: bool,
+}
+
+impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O> {
+    type Error = EncodingError;
+
+    fn try_from(settings: Settings<'h, 's, O>) -> Result<Self, Self::Error> {
+        let encoding = try_encoding_from_str(settings.encoding)?;
         let mut selectors_ast = selectors_vm::Ast::default();
         let mut dispatcher = ContentHandlersDispatcher::default();
 
-        for (selector, handlers) in element_content_handlers {
+        for (selector, handlers) in settings.element_content_handlers {
             let locator = dispatcher.add_selector_associated_handlers(handlers);
 
             selectors_ast.add_selector(selector, locator);
         }
 
-        for handlers in document_content_handlers {
+        for handlers in settings.document_content_handlers {
             dispatcher.add_document_content_handlers(handlers);
         }
 
         let selector_matching_vm = SelectorMatchingVm::new(&selectors_ast, encoding);
         let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
-        let stream = TransformStream::new(controller, output_sink, 200 * 1024, encoding);
 
-        Ok(HtmlRewriter(stream))
+        let stream = TransformStream::new(
+            controller,
+            settings.output_sink,
+            settings.buffer_capacity,
+            encoding,
+        );
+
+        Ok(HtmlRewriter {
+            stream,
+            finished: false,
+            poisoned: false,
+        })
     }
+}
 
+macro_rules! guarded {
+    ($self:ident, $expr:expr) => {{
+        assert!(
+            !$self.poisoned,
+            "Attempt to use the HtmlRewriter after a fatal error."
+        );
+
+        let res = $expr;
+
+        if res.is_err() {
+            $self.poisoned = true;
+        }
+
+        res
+    }};
+}
+
+impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     #[inline]
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
-        self.0.write(data)
+        assert!(
+            !self.finished,
+            "Data was written into the stream after it has ended."
+        );
+
+        guarded!(self, self.stream.write(data))
     }
 
     #[inline]
     pub fn end(&mut self) -> Result<(), Error> {
-        self.0.end()
+        assert!(!self.finished, "Stream was ended twice.");
+        self.finished = true;
+
+        guarded!(self, self.stream.end())
     }
 }
 

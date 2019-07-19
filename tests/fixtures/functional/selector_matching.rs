@@ -2,7 +2,8 @@
 use crate::harness::functional_testing::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::functional_testing::FunctionalTestFixture;
 use crate::harness::Output;
-use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter};
+use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings};
+use std::convert::TryFrom;
 
 pub struct SelectorMatchingTests;
 
@@ -17,8 +18,8 @@ impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
         let mut first_text_chunk_expected = true;
 
         {
-            let mut rewriter = HtmlRewriter::try_new(
-                vec![(
+            let mut rewriter = HtmlRewriter::try_from(Settings{
+               element_content_handlers: vec![(
                     &test.selector.parse().unwrap(),
                     ElementContentHandlers::default()
                         .element(|el| {
@@ -61,10 +62,11 @@ impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
                             }
                         }),
                 )],
-                vec![],
-                encoding.name(),
-                |c: &[u8]| output.push(c),
-            )
+                document_content_handlers: vec![],
+                encoding: encoding.name(),
+                buffer_capacity: 2048,
+                output_sink: |c: &[u8]| output.push(c),
+            })
             .unwrap();
 
             for chunk in test.input.chunks() {

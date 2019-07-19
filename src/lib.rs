@@ -15,7 +15,7 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter,
+    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter, Settings,
 };
 
 pub use self::rewritable_units::{

@@ -8,13 +8,13 @@ pub trait FunctionalTestFixture<T> {
 
 macro_rules! functional_test_fixture {
     ($fixture:ident) => {
-        use test::TestDescAndFn;
+        use test::{ShouldPanic, TestDescAndFn};
 
         pub fn get_tests() -> Vec<TestDescAndFn> {
             $fixture::test_cases()
                 .into_iter()
                 .map(|t| {
-                    create_test!(t.description.to_owned(), {
+                    create_test!(t.description.to_owned(), ShouldPanic::No, {
                         $fixture::run(&t);
                     })
                 })

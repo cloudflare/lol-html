@@ -2,8 +2,10 @@
 use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
 use cool_thing::{
     AttributeNameError, ContentType, Element, ElementContentHandlers, HtmlRewriter, TagNameError,
+    Settings
 };
 use encoding_rs::{Encoding, EUC_JP, UTF_8};
+use std::convert::TryFrom;
 
 fn rewrite_element(
     html: &str,
@@ -15,8 +17,8 @@ fn rewrite_element(
     let mut output = Output::new(encoding);
 
     {
-        let mut rewriter = HtmlRewriter::try_new(
-            vec![
+        let mut rewriter = HtmlRewriter::try_from(Settings{
+            element_content_handlers: vec![
                 (
                     &selector.parse().unwrap(),
                     ElementContentHandlers::default().element(|el| {
@@ -35,10 +37,11 @@ fn rewrite_element(
                     }),
                 ),
             ],
-            vec![],
-            encoding.name(),
-            |c: &[u8]| output.push(c),
-        )
+            document_content_handlers: vec![],
+            encoding: encoding.name(),
+            buffer_capacity: 2048,
+            output_sink: |c: &[u8]| output.push(c),
+        })
         .unwrap();
 
         rewriter.write(html.as_bytes()).unwrap();
@@ -412,8 +415,8 @@ test_fixture!("Element rewritable unit", {
         let mut output = Output::new(UTF_8);
 
         {
-            let mut rewriter = HtmlRewriter::try_new(
-                vec![
+            let mut rewriter = HtmlRewriter::try_from(Settings {
+                element_content_handlers: vec![
                     (
                         &"div".parse().unwrap(),
                         ElementContentHandlers::default().element(|el| {
@@ -433,10 +436,11 @@ test_fixture!("Element rewritable unit", {
                         }),
                     ),
                 ],
-                vec![],
-                "utf-8",
-                |c: &[u8]| output.push(c),
-            )
+                document_content_handlers: vec![],
+                encoding: "utf-8",
+                buffer_capacity: 2048,
+                output_sink: |c: &[u8]| output.push(c),
+            })
             .unwrap();
 
             rewriter.write(html.as_bytes()).unwrap();

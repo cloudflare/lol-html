@@ -154,6 +154,7 @@ cool_thing_rewriter_t *cool_thing_rewriter_build(
     cool_thing_rewriter_builder_t *builder,
     const char *encoding,
     size_t encoding_len,
+    size_t buffer_capacity,
     void (*output_sink)(const char *chunk, size_t chunk_len, void *user_data),
     void *output_sink_user_data
 );
@@ -162,6 +163,9 @@ cool_thing_rewriter_t *cool_thing_rewriter_build(
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
+//
+// WARNING: if this function errors the rewriter gets into the unrecovarable state,
+// so any further attempts to use the rewriter will cause a thread panic.
 int cool_thing_rewriter_write(
     cool_thing_rewriter_t *rewriter,
     const char *chunk,
@@ -172,6 +176,9 @@ int cool_thing_rewriter_write(
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
+//
+// WARNING: if this function errors the rewriter gets into the unrecovarable state,
+// so any further attempts to use the rewriter will cause a thread panic.
 int cool_thing_rewriter_end(cool_thing_rewriter_t *rewriter);
 
 // Frees the memory held by the rewriter.

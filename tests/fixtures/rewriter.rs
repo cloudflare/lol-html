@@ -2,9 +2,10 @@
 use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
 use cool_thing::{
     Bytes, ContentType, DocumentContentHandlers, ElementContentHandlers, EncodingError,
-    HtmlRewriter, OutputSink,
+    HtmlRewriter, OutputSink, Settings
 };
 use encoding_rs::Encoding;
+use std::convert::TryFrom;
 
 fn write_chunks<O: OutputSink>(
     rewriter: &mut HtmlRewriter<O>,
@@ -20,13 +21,25 @@ fn write_chunks<O: OutputSink>(
 
 test_fixture!("Rewriter", {
     test("Unknown encoding", {
-        let err = HtmlRewriter::try_new(vec![], vec![], "hey-yo", |_: &[u8]| {}).unwrap_err();
+        let err = HtmlRewriter::try_from(Settings {
+            element_content_handlers: vec![],
+            document_content_handlers: vec![],
+            encoding: "hey-yo",
+            buffer_capacity: 42,
+            output_sink: |_: &[u8]| {}
+        }).unwrap_err();
 
         assert_eq!(err, EncodingError::UnknownEncoding);
     });
 
     test("Non-ASCII compatible encoding", {
-        let err = HtmlRewriter::try_new(vec![], vec![], "utf-16be", |_: &[u8]| {}).unwrap_err();
+        let err = HtmlRewriter::try_from(Settings {
+            element_content_handlers: vec![],
+            document_content_handlers: vec![],
+            encoding: "utf-16be",
+            buffer_capacity: 42,
+            output_sink: |_: &[u8]| {}
+        }).unwrap_err();
 
         assert_eq!(err, EncodingError::NonAsciiCompatibleEncoding);
     });
@@ -36,13 +49,14 @@ test_fixture!("Rewriter", {
             let mut doctypes = Vec::default();
 
             {
-                let mut rewriter = HtmlRewriter::try_new(
-                    vec![],
-                    vec![DocumentContentHandlers::default()
+                let mut rewriter = HtmlRewriter::try_from(Settings{
+                    element_content_handlers: vec![],
+                    document_content_handlers: vec![DocumentContentHandlers::default()
                         .doctype(|d| doctypes.push((d.name(), d.public_id(), d.system_id())))],
-                    enc.name(),
-                    |_: &[u8]| {},
-                )
+                    encoding: enc.name(),
+                    buffer_capacity: 2048,
+                    output_sink: |_: &[u8]| {},
+                })
                 .unwrap();
 
                 write_chunks(
@@ -78,18 +92,19 @@ test_fixture!("Rewriter", {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_new(
-                    vec![(
+                let mut rewriter = HtmlRewriter::try_from(Settings{
+                    element_content_handlers: vec![(
                         &"*".parse().unwrap(),
                         ElementContentHandlers::default().element(|el| {
                             el.set_attribute("foo", "bar").unwrap();
                             el.prepend("<test></test>", ContentType::Html);
                         }),
                     )],
-                    vec![],
-                    enc.name(),
-                    |c: &[u8]| output.push(c),
-                )
+                    document_content_handlers: vec![],
+                    encoding: enc.name(),
+                    buffer_capacity: 2048,
+                    output_sink: |c: &[u8]| output.push(c),
+                })
                 .unwrap();
 
                 write_chunks(
@@ -129,9 +144,9 @@ test_fixture!("Rewriter", {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_new(
-                    vec![],
-                    vec![DocumentContentHandlers::default()
+                let mut rewriter = HtmlRewriter::try_from(Settings{
+                    element_content_handlers: vec![],
+                    document_content_handlers:vec![DocumentContentHandlers::default()
                         .comments(|c| {
                             c.set_text(&(c.text() + "1337")).unwrap();
                         })
@@ -140,9 +155,10 @@ test_fixture!("Rewriter", {
                                 c.after("BAZ", ContentType::Text);
                             }
                         })],
-                    enc.name(),
-                    |c: &[u8]| output.push(c),
-                )
+                    encoding: enc.name(),
+                    buffer_capacity: 2048,
+                    output_sink: |c: &[u8]| output.push(c),
+                })
                 .unwrap();
 
                 write_chunks(

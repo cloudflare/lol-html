@@ -36,6 +36,7 @@
             builder, \
             encoding, \
             strlen(encoding), \
+            2048, \
             &output_sink, \
             &output_sink_user_data \
         ); \
@@ -100,6 +101,7 @@ static void test_non_ascii_encoding() {
         builder,
         encoding,
         strlen(encoding),
+        16,
         &output_sink_stub,
         NULL
     );

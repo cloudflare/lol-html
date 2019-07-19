@@ -27,7 +27,6 @@ where
     parser: Parser<Dispatcher<C, O>>,
     buffer: Buffer,
     has_buffered_data: bool,
-    finished: bool,
 }
 
 impl<C, O> TransformStream<C, O>
@@ -58,7 +57,6 @@ where
             dispatcher,
             buffer: Buffer::new(buffer_capacity),
             has_buffered_data: false,
-            finished: false,
         }
     }
 
@@ -85,11 +83,6 @@ where
     }
 
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
-        assert!(
-            !self.finished,
-            "Data was written into the stream after it has ended."
-        );
-
         trace!(@write data);
 
         let chunk = if self.has_buffered_data {
@@ -118,10 +111,7 @@ where
     }
 
     pub fn end(&mut self) -> Result<(), Error> {
-        assert!(!self.finished, "Stream was ended twice.");
         trace!(@end);
-
-        self.finished = true;
 
         let chunk = if self.has_buffered_data {
             Chunk::last(self.buffer.bytes())

@@ -63,14 +63,14 @@ pub static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
 ];
 
 macro_rules! create_test {
-    ($name:expr, $body:tt) => {{
-        use test::{ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName};
+    ($name:expr, $should_panic:expr, $body:tt) => {{
+        use test::{TestDesc, TestDescAndFn, TestFn, TestName};
 
         TestDescAndFn {
             desc: TestDesc {
                 name: TestName::DynTestName($name),
                 ignore: false,
-                should_panic: ShouldPanic::No,
+                should_panic: $should_panic,
                 allow_fail: false,
             },
             testfn: TestFn::DynTestFn(Box::new(move || $body)),
@@ -79,24 +79,60 @@ macro_rules! create_test {
 }
 
 macro_rules! test_fixture {
-    ($fixture_name:expr, { $(test($name:expr, $body:tt);)+}) => {
-        use test::TestDescAndFn;
+    ($fixture_name:expr, { $($test_defs:tt)+}) => {
+        use test::{ShouldPanic, TestDescAndFn};
         use std::fmt::Write;
 
         pub fn get_tests() -> Vec<TestDescAndFn> {
             let mut tests = Vec::default();
 
-            $({
-                let mut name = String::new();
-
-                write!(&mut name, "{} - {}", $fixture_name, $name).unwrap();
-
-                tests.push(create_test!(name, $body));
-            })+
+            test_fixture!(@test |$fixture_name, tests|> $($test_defs)+);
 
             tests
         }
     };
+
+    // NOTE: recursively expand all tests
+    (@test |$fixture_name:expr, $tests:ident|>
+        test($name:expr, expect_panic:$panic:expr, $body:tt);
+        $($rest:tt)*
+    ) => {
+        test_fixture!(@test_body
+            $fixture_name,
+            $tests,
+            $name,
+            ShouldPanic::YesWithMessage($panic),
+            {
+                // NOTE: for some reason captured panics still get reported to
+                // the output. So, let's add this message to not lead folks into
+                // congnitive dissonance when they see green tests with panic messages.
+                println!("!!! Ignore the panic message below as it is expected by the test !!!");
+
+                $body
+            }
+        );
+
+        test_fixture!(@test |$fixture_name, $tests|> $($rest)*);
+    };
+
+    (@test |$fixture_name:expr, $tests:ident|>
+        test($name:expr, $body:tt);
+        $($rest:tt)*
+    ) => {
+        test_fixture!(@test_body $fixture_name, $tests, $name, ShouldPanic::No, $body);
+        test_fixture!(@test |$fixture_name, $tests|> $($rest)*);
+    };
+
+
+    // NOTE: end of recursion
+    (@test |$fixture_name:expr, $tests:ident|>) => {};
+
+    (@test_body $fixture_name:expr, $tests:ident, $name:expr, $should_panic:expr, $body:tt) => {{
+        let mut name = String::new();
+
+        write!(&mut name, "{} - {}", $fixture_name, $name).unwrap();
+        $tests.push(create_test!(name, $should_panic, $body));
+    }};
 }
 
 macro_rules! test_modules {
