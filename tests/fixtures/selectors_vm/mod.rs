@@ -4,12 +4,6 @@ macro_rules! set {
     };
 }
 
-macro_rules! rc_set {
-    ($($items:expr),*) => {
-        std::rc::Rc::new(set!($($items),*))
-    };
-}
-
 macro_rules! map {
     ($($items:expr),*) => {
         vec![$($items),*].iter().cloned().collect::<std::collections::HashMap<_, _>>()

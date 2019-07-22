@@ -5,7 +5,6 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Range;
-use std::rc::Rc;
 
 pub type AddressRange = Range<usize>;
 
@@ -14,7 +13,7 @@ pub struct ExecutionBranch<P>
 where
     P: Hash + Eq,
 {
-    pub matched_payload: Rc<HashSet<P>>,
+    pub matched_payload: HashSet<P>,
     pub jumps: Option<AddressRange>,
     pub hereditary_jumps: Option<AddressRange>,
 }

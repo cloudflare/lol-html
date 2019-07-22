@@ -10,7 +10,6 @@ use encoding_rs::Encoding;
 use selectors::attr::ParsedCaseSensitivity;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::rc::Rc;
 
 pub type CompiledNonAttributeExpr = Box<dyn Fn(&LocalName) -> bool>;
 pub type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher) -> bool>;
@@ -228,7 +227,7 @@ where
     }
 
     #[inline]
-    fn compile_descendants(&mut self, nodes: &[AstNode<P>]) -> Option<AddressRange> {
+    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>) -> Option<AddressRange> {
         if nodes.is_empty() {
             None
         } else {
@@ -236,16 +235,16 @@ where
         }
     }
 
-    fn compile_nodes(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
+    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
         // we can reference them by range instead of vector of addresses.
         let addr_range = self.reserve_space_for_nodes(&nodes);
 
-        for (i, node) in nodes.iter().enumerate() {
+        for (i, node) in nodes.into_iter().enumerate() {
             let branch = ExecutionBranch {
-                matched_payload: Rc::clone(&node.payload),
-                jumps: self.compile_descendants(&node.children),
-                hereditary_jumps: self.compile_descendants(&node.descendants),
+                matched_payload: node.payload,
+                jumps: self.compile_descendants(node.children),
+                hereditary_jumps: self.compile_descendants(node.descendants),
             };
 
             self.instructions[addr_range.start + i] =
@@ -255,11 +254,11 @@ where
         addr_range
     }
 
-    pub fn compile(mut self, ast: &Ast<P>) -> Program<P> {
+    pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
         self.instructions
             .resize_with(ast.cumulative_node_count, || InstrStub::new_boxed());
 
-        let entry_points = self.compile_nodes(&ast.root);
+        let entry_points = self.compile_nodes(ast.root);
 
         Program {
             instructions: self.instructions,
