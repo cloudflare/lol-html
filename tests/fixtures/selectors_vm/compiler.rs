@@ -7,7 +7,7 @@ use std::collections::HashSet;
 macro_rules! assert_instr_res {
     ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
         let expected_payload = if *$should_match {
-            Some(rc_set![0])
+            Some(set![0])
         } else {
             None
         };
@@ -38,7 +38,7 @@ fn compile(
         ast.add_selector(&selector.parse().unwrap(), idx);
     }
 
-    let program = Compiler::new(encoding).compile(&ast);
+    let program = Compiler::new(encoding).compile(ast);
 
     assert_eq!(
         program.entry_points.end - program.entry_points.start,

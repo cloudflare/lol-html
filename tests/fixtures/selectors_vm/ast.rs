@@ -66,7 +66,7 @@ test_fixture!("Selectors AST", {
                         },
                         children: vec![],
                         descendants: vec![],
-                        payload: rc_set![0],
+                        payload: set![0],
                     }],
                     cumulative_node_count: 1,
                 },
@@ -187,7 +187,7 @@ test_fixture!("Selectors AST", {
                         },
                         children: vec![],
                         descendants: vec![],
-                        payload: rc_set![0],
+                        payload: set![0],
                     }],
                     cumulative_node_count: 1,
                 },
@@ -222,7 +222,7 @@ test_fixture!("Selectors AST", {
                     },
                     children: vec![],
                     descendants: vec![],
-                    payload: rc_set![0],
+                    payload: set![0],
                 }],
                 cumulative_node_count: 1,
             },
@@ -243,7 +243,7 @@ test_fixture!("Selectors AST", {
                     },
                     children: vec![],
                     descendants: vec![],
-                    payload: rc_set![0, 1],
+                    payload: set![0, 1],
                 }],
                 cumulative_node_count: 1,
             },
@@ -273,7 +273,7 @@ test_fixture!("Selectors AST", {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: rc_set![0],
+                            payload: set![0],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -285,7 +285,7 @@ test_fixture!("Selectors AST", {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: rc_set![0],
+                            payload: set![0],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -297,7 +297,7 @@ test_fixture!("Selectors AST", {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: rc_set![1],
+                            payload: set![1],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -309,11 +309,11 @@ test_fixture!("Selectors AST", {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: rc_set![1],
+                            payload: set![1],
                         },
                     ],
                     descendants: vec![],
-                    payload: rc_set![],
+                    payload: set![],
                 }],
                 cumulative_node_count: 5,
             },
@@ -370,9 +370,9 @@ test_fixture!("Selectors AST", {
                                             },
                                             children: vec![],
                                             descendants: vec![],
-                                            payload: rc_set![0],
+                                            payload: set![0],
                                         }],
-                                        payload: rc_set![],
+                                        payload: set![],
                                     },
                                     AstNode {
                                         predicate: Predicate {
@@ -384,10 +384,10 @@ test_fixture!("Selectors AST", {
                                         },
                                         children: vec![],
                                         descendants: vec![],
-                                        payload: rc_set![1],
+                                        payload: set![1],
                                     },
                                 ],
-                                payload: rc_set![],
+                                payload: set![],
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -399,7 +399,7 @@ test_fixture!("Selectors AST", {
                                 },
                                 children: vec![],
                                 descendants: vec![],
-                                payload: rc_set![2],
+                                payload: set![2],
                             },
                         ],
                         descendants: vec![
@@ -413,7 +413,7 @@ test_fixture!("Selectors AST", {
                                 },
                                 children: vec![],
                                 descendants: vec![],
-                                payload: rc_set![3],
+                                payload: set![3],
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -436,12 +436,12 @@ test_fixture!("Selectors AST", {
                                     },
                                     children: vec![],
                                     descendants: vec![],
-                                    payload: rc_set![4],
+                                    payload: set![4],
                                 }],
-                                payload: rc_set![],
+                                payload: set![],
                             },
                         ],
-                        payload: rc_set![],
+                        payload: set![],
                     },
                     AstNode {
                         predicate: Predicate {
@@ -453,7 +453,7 @@ test_fixture!("Selectors AST", {
                         },
                         children: vec![],
                         descendants: vec![],
-                        payload: rc_set![5],
+                        payload: set![5],
                     },
                 ],
                 cumulative_node_count: 10,

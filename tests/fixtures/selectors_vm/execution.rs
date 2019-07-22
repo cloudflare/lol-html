@@ -36,7 +36,7 @@ macro_rules! create_vm {
             ast.add_selector(&selector.parse().unwrap(), i);
         }
 
-        let vm: SelectorMatchingVm<TestElementData> = SelectorMatchingVm::new(&ast, UTF_8);
+        let vm: SelectorMatchingVm<TestElementData> = SelectorMatchingVm::new(ast, UTF_8);
 
         vm
     }};

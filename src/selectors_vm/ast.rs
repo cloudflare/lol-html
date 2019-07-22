@@ -4,7 +4,6 @@ use selectors::parser::{Combinator, Component};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::rc::Rc;
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct AttributeExprOperand {
@@ -169,7 +168,7 @@ where
     pub predicate: Predicate,
     pub children: Vec<AstNode<P>>,
     pub descendants: Vec<AstNode<P>>,
-    pub payload: Rc<HashSet<P>>,
+    pub payload: HashSet<P>,
 }
 
 impl<P> AstNode<P>
@@ -181,7 +180,7 @@ where
             predicate,
             children: Vec::default(),
             descendants: Vec::default(),
-            payload: Rc::new(HashSet::default()),
+            payload: HashSet::default(),
         }
     }
 }
@@ -258,7 +257,7 @@ where
             let node_idx =
                 Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
 
-            Rc::make_mut(&mut branches[node_idx].payload).insert(payload);
+            branches[node_idx].payload.insert(payload);
         }
     }
 }

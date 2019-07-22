@@ -124,7 +124,7 @@ pub struct SelectorMatchingVm<E: ElementData> {
 
 impl<E: ElementData> SelectorMatchingVm<E> {
     #[inline]
-    pub fn new(ast: &Ast<E::MatchPayload>, encoding: &'static Encoding) -> Self {
+    pub fn new(ast: Ast<E::MatchPayload>, encoding: &'static Encoding) -> Self {
         let program = Compiler::new(encoding).compile(ast);
 
         SelectorMatchingVm {
