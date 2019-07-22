@@ -95,10 +95,13 @@ cfg_if! {
             let tag_hint_mode = matches.opt_present("H");
 
             let mut transform_stream = TransformStream::new(
-                TraceTransformController::new(tag_hint_mode),
-                |_: &[u8]| {},
-                2048,
-                UTF_8,
+                TransformStreamSettings {
+                    transform_controller: TraceTransformController::new(tag_hint_mode),
+                    output_sink: |_: &[u8]| {},
+                    buffer_capacity: 2048,
+                    encoding: UTF_8,
+                    strict: true
+                }
             );
 
             let parser = transform_stream.parser();

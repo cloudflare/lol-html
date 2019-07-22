@@ -206,6 +206,10 @@ void cool_thing_rewriter_builder_free(cool_thing_rewriter_builder_t *builder);
 // `output_sink` can optionally have associated user data that will
 // be passed to handler on each invocation along with other arguments.
 //
+// `strict` mode will bail out from tokenization process in cases when
+// there is no way to determine correct parsing context. Recommended
+// setting for safety reasons.
+//
 // In case of an error the function returns a NULL pointer.
 cool_thing_rewriter_t *cool_thing_rewriter_build(
     cool_thing_rewriter_builder_t *builder,
@@ -213,7 +217,8 @@ cool_thing_rewriter_t *cool_thing_rewriter_build(
     size_t encoding_len,
     size_t buffer_capacity,
     void (*output_sink)(const char *chunk, size_t chunk_len, void *user_data),
-    void *output_sink_user_data
+    void *output_sink_user_data,
+    bool strict
 );
 
 // Write HTML chunk to rewriter.

@@ -499,7 +499,7 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::{Token, TokenCaptureFlags};
-    use crate::transform_stream::{StartTagHandlingResult, TransformController, TransformStream};
+    use crate::transform_stream::{StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings};
     use encoding_rs::UTF_8;
     use failure::Error;
     use std::collections::{HashMap, HashSet};
@@ -554,10 +554,13 @@ mod tests {
         }
 
         let mut transform_stream = TransformStream::new(
-            TestTransformController(action),
-            |_: &[u8]| {},
-            2048,
-            encoding,
+            TransformStreamSettings {
+                transform_controller: TestTransformController(action),
+                output_sink: |_: &[u8]| {},
+                buffer_capacity: 2048,
+                encoding: UTF_8,
+                strict: true
+            }
         );
 
         transform_stream.write(&*html).unwrap();

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "deps/picotest/picotest.h"
 #include "../include/cool_thing.h"
 
@@ -37,7 +38,8 @@
             strlen(encoding), \
             2048, \
             &output_sink, \
-            &output_sink_user_data \
+            &output_sink_user_data, \
+            true \
         ); \
     \
         cool_thing_rewriter_builder_free(builder); \
@@ -104,7 +106,8 @@ static void test_non_ascii_encoding() {
         strlen(encoding),
         16,
         &output_sink_stub,
-        NULL
+        NULL,
+        true
     );
 
     cool_thing_rewriter_builder_free(builder);

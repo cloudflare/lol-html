@@ -82,8 +82,12 @@ macro_rules! with_current_sm {
 }
 
 impl<S: ParserOutputSink> Parser<S> {
-    pub fn new(output_sink: &Rc<RefCell<S>>, initial_directive: ParserDirective) -> Self {
-        let tree_builder_simulator = Rc::new(RefCell::new(TreeBuilderSimulator::default()));
+    pub fn new(
+        output_sink: &Rc<RefCell<S>>,
+        initial_directive: ParserDirective,
+        strict: bool,
+    ) -> Self {
+        let tree_builder_simulator = Rc::new(RefCell::new(TreeBuilderSimulator::new(strict)));
 
         Parser {
             lexer: Lexer::new(Rc::clone(output_sink), Rc::clone(&tree_builder_simulator)),

@@ -113,28 +113,30 @@ pub struct TreeBuilderSimulator {
     ns_stack: Vec<Namespace>,
     current_ns: Namespace,
     ambiguity_guard: AmbiguityGuard,
+    strict: bool,
 }
 
-impl Default for TreeBuilderSimulator {
-    fn default() -> Self {
+impl TreeBuilderSimulator {
+    pub fn new(strict: bool) -> Self {
         let mut simulator = TreeBuilderSimulator {
             ns_stack: Vec::with_capacity(DEFAULT_NS_STACK_CAPACITY),
             current_ns: Namespace::Html,
             ambiguity_guard: AmbiguityGuard::default(),
+            strict,
         };
 
         simulator.ns_stack.push(Namespace::Html);
 
         simulator
     }
-}
 
-impl TreeBuilderSimulator {
     pub fn get_feedback_for_start_tag(
         &mut self,
         tag_name: LocalNameHash,
     ) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
-        self.ambiguity_guard.track_start_tag(tag_name)?;
+        if self.strict {
+            self.ambiguity_guard.track_start_tag(tag_name)?;
+        }
 
         Ok(if tag_name == Tag::Svg {
             self.enter_ns(Namespace::Svg)
@@ -148,7 +150,9 @@ impl TreeBuilderSimulator {
     }
 
     pub fn get_feedback_for_end_tag(&mut self, tag_name: LocalNameHash) -> TreeBuilderFeedback {
-        self.ambiguity_guard.track_end_tag(tag_name);
+        if self.strict {
+            self.ambiguity_guard.track_end_tag(tag_name);
+        }
 
         if self.current_ns == Namespace::Html {
             self.check_integration_point_exit(tag_name)

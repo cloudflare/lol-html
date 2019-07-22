@@ -55,7 +55,7 @@ fn cool_thing_tokenizer_bench(
     move |b, i: &Input| {
         use cool_thing::{
             LocalName, Namespace, StartTagHandlingResult, Token, TransformController,
-            TransformStream,
+            TransformStream, TransformStreamSettings,
         };
 
         struct BenchTransformController {
@@ -102,12 +102,13 @@ fn cool_thing_tokenizer_bench(
         }
 
         b.iter(|| {
-            let mut transform_stream = TransformStream::new(
-                BenchTransformController::new(capture_flags),
-                |_: &[u8]| {},
-                2048,
-                UTF_8,
-            );
+            let mut transform_stream = TransformStream::new(TransformStreamSettings {
+                transform_controller: BenchTransformController::new(capture_flags),
+                output_sink: |_: &[u8]| {},
+                buffer_capacity: 2048,
+                encoding: UTF_8,
+                strict: true,
+            });
 
             for chunk in &i.chunks {
                 transform_stream.write(chunk.as_bytes()).unwrap();

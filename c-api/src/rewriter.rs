@@ -39,6 +39,7 @@ pub extern "C" fn cool_thing_rewriter_build(
     buffer_capacity: size_t,
     output_sink: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
     output_sink_user_data: *mut c_void,
+    strict: bool,
 ) -> *mut HtmlRewriter<'static, ExternOutputSink> {
     let builder = to_ref!(builder);
     let handlers = builder.get_safe_handlers();
@@ -49,6 +50,7 @@ pub extern "C" fn cool_thing_rewriter_build(
         encoding: unwrap_or_ret_null! { to_str!(encoding, encoding_len) },
         buffer_capacity,
         output_sink: ExternOutputSink::new(output_sink, output_sink_user_data),
+        strict,
     };
 
     let rewriter = unwrap_or_ret_null! { HtmlRewriter::try_from(settings) };

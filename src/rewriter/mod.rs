@@ -38,6 +38,7 @@ pub struct Settings<'h, 's, O: OutputSink> {
     pub encoding: &'s str,
     pub buffer_capacity: usize,
     pub output_sink: O,
+    pub strict: bool,
 }
 
 pub struct HtmlRewriter<'h, O: OutputSink> {
@@ -67,12 +68,13 @@ impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O>
         let selector_matching_vm = SelectorMatchingVm::new(selectors_ast, encoding);
         let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
 
-        let stream = TransformStream::new(
-            controller,
-            settings.output_sink,
-            settings.buffer_capacity,
+        let stream = TransformStream::new(TransformStreamSettings {
+            transform_controller: controller,
+            output_sink: settings.output_sink,
+            buffer_capacity: settings.buffer_capacity,
             encoding,
-        );
+            strict: settings.strict,
+        });
 
         Ok(HtmlRewriter {
             stream,
@@ -158,6 +160,7 @@ mod tests {
             encoding: "hey-yo",
             buffer_capacity: 42,
             output_sink: |_: &[u8]| {},
+            strict: true,
         })
         .unwrap_err();
 
@@ -172,6 +175,7 @@ mod tests {
             encoding: "utf-16be",
             buffer_capacity: 42,
             output_sink: |_: &[u8]| {},
+            strict: true,
         })
         .unwrap_err();
 
@@ -195,6 +199,7 @@ mod tests {
                     encoding: enc.name(),
                     buffer_capacity: 2048,
                     output_sink: |_: &[u8]| {},
+                    strict: true,
                 })
                 .unwrap();
 
@@ -245,6 +250,7 @@ mod tests {
                     encoding: enc.name(),
                     buffer_capacity: 2048,
                     output_sink: |c: &[u8]| output.push(c),
+                    strict: true,
                 })
                 .unwrap();
 
@@ -303,6 +309,7 @@ mod tests {
                     encoding: enc.name(),
                     buffer_capacity: 2048,
                     output_sink: |c: &[u8]| output.push(c),
+                    strict: true,
                 })
                 .unwrap();
 
@@ -374,6 +381,7 @@ mod tests {
             encoding: "utf-8",
             buffer_capacity: 2048,
             output_sink: |_: &[u8]| {},
+            strict: true,
         })
         .unwrap();
 
@@ -400,6 +408,7 @@ mod tests {
                 encoding: "utf-8",
                 buffer_capacity,
                 output_sink,
+                strict: true,
             })
             .unwrap()
         }
@@ -473,6 +482,7 @@ mod tests {
                     encoding: "utf-8",
                     buffer_capacity: 2048,
                     output_sink: |_: &[u8]| {},
+                    strict: true,
                 })
                 .unwrap();
 

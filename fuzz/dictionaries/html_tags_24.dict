@@ -1,0 +1,5 @@
+tag_s="<s>"
+tag_samp="<samp>"
+tag_script="<script>"
+tag_section="<section>"
+tag_select="<select>"

@@ -121,6 +121,7 @@ cfg_if! {
 
         pub use self::transform_stream::{
             StartTagHandlingResult, TransformController, TransformStream,
+            TransformStreamSettings
         };
 
         pub use self::rewritable_units::{EndTag, StartTag, Token, TokenCaptureFlags};

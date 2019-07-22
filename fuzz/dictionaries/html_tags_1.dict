@@ -1,0 +1,5 @@
+tag_a="<a>"
+tag_abbr="<abbr>"
+tag_acronym="<acronym>"
+tag_address="<address>"
+tag_annotation_xml="<annotation-xml>"

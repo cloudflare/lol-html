@@ -45,6 +45,7 @@ pre-commit = "0.5.2"
 rand = "0.5.5"
 rustc-test = "0.3.0"
 itertools = "0.6.0"
+cargo-fuzz = "0.5.2"
 
 [package.metadata.precommit]
 fmt = "cd c-api && cargo fmt && cd ../ && cargo fmt && git diff --name-only --cached | xargs git add"

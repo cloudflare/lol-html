@@ -36,6 +36,7 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
                 encoding: encoding.name(),
                 buffer_capacity: 2048,
                 output_sink: |c: &[u8]| output.push(c),
+                strict: true,
             })
             .unwrap();
 

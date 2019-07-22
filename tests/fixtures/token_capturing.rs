@@ -2,7 +2,9 @@ use crate::harness::suites::html5lib_tests::{
     get_test_cases, TestCase, TestToken, TestTokenList,
 };
 use crate::harness::{TestFixture, Input};
-use cool_thing::{LocalNameHash, TextType, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController, TransformStream, Namespace};
+use cool_thing::{LocalNameHash, TextType, TokenCaptureFlags,
+    LocalName, Token, StartTagHandlingResult, TransformController,
+    TransformStream, Namespace, TransformStreamSettings};
 use cool_thing::test_utils::Output;
 use failure::Error;
 
@@ -94,10 +96,13 @@ pub fn parse(
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
 
     let mut transform_stream = TransformStream::new(
-        transform_controller,
-        |chunk: &[u8]| output.push(chunk),
-        2048,
-        encoding,
+        TransformStreamSettings {
+            transform_controller,
+            output_sink: |chunk: &[u8]| output.push(chunk),
+            buffer_capacity: 2048,
+            encoding,
+            strict: true
+        }
     );
 
     let parser = transform_stream.parser();

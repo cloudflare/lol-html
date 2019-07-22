@@ -1,0 +1,9 @@
+[package]
+name = "afl-fuzz"
+version = "0.1.0"
+authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
+edition = "2018"
+
+[dependencies]
+common = { path = "../common" }
+afl = "0.4.4"

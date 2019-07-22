@@ -1,0 +1,9 @@
+[package]
+name = "hongg"
+version = "0.1.0"
+authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
+edition = "2018"
+
+[dependencies]
+honggfuzz = "0.5.45"
+common = { path = "../common" }

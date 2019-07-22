@@ -1,0 +1,11 @@
+[package]
+name = "common"
+version = "0.1.0"
+authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
+edition = "2018"
+
+[dependencies]
+cool_thing = { path = "../../" }
+encoding_rs = "0.8.13"
+libc = "0.2.61"
+rand = "0.7.0"

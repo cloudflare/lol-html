@@ -18,6 +18,18 @@ const BUFFER_ERROR_CONTEXT: &str = concat!(
     "tag or a comment that is captured by the specified selector."
 );
 
+pub struct TransformStreamSettings<C, O>
+where
+    C: TransformController,
+    O: OutputSink,
+{
+    pub transform_controller: C,
+    pub output_sink: O,
+    pub buffer_capacity: usize,
+    pub encoding: &'static Encoding,
+    pub strict: bool,
+}
+
 pub struct TransformStream<C, O>
 where
     C: TransformController,
@@ -34,28 +46,27 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    pub fn new(
-        transform_controller: C,
-        output_sink: O,
-        buffer_capacity: usize,
-        encoding: &'static Encoding,
-    ) -> Self {
-        let initial_parser_directive = if transform_controller.initial_capture_flags().is_empty() {
+    pub fn new(settings: TransformStreamSettings<C, O>) -> Self {
+        let initial_parser_directive = if settings
+            .transform_controller
+            .initial_capture_flags()
+            .is_empty()
+        {
             ParserDirective::WherePossibleScanForTagsOnly
         } else {
             ParserDirective::Lex
         };
 
         let dispatcher = Rc::new(RefCell::new(Dispatcher::new(
-            transform_controller,
-            output_sink,
-            encoding,
+            settings.transform_controller,
+            settings.output_sink,
+            settings.encoding,
         )));
 
         TransformStream {
-            parser: Parser::new(&dispatcher, initial_parser_directive),
+            parser: Parser::new(&dispatcher, initial_parser_directive, settings.strict),
             dispatcher,
-            buffer: Buffer::new(buffer_capacity),
+            buffer: Buffer::new(settings.buffer_capacity),
             has_buffered_data: false,
         }
     }
