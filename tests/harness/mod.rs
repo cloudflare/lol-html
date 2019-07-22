@@ -103,10 +103,8 @@ macro_rules! test_fixture {
             $name,
             ShouldPanic::YesWithMessage($panic),
             {
-                // NOTE: for some reason captured panics still get reported to
-                // the output. So, let's add this message to not lead folks into
-                // congnitive dissonance when they see green tests with panic messages.
-                println!("!!! Ignore the panic message below as it is expected by the test !!!");
+                // NOTE: prevent reporting of panic errors to the output when they are expected.
+                std::panic::set_hook(Box::new(|_|{}));
 
                 $body
             }
