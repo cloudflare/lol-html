@@ -30,8 +30,10 @@ impl TransformController for TestTransformController<'_> {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, token: &mut Token) {
+    fn handle_token(&mut self, token: &mut Token) -> Result<(), Error> {
         (self.token_handler)(token);
+
+        Ok(())
     }
 
     fn should_emit_content(&self) -> bool {

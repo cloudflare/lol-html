@@ -225,7 +225,8 @@ impl<'r, 't> Element<'r, 't> {
             });
 
             Some(Box::new(move |end_tag: &mut EndTag| {
-                (wrap.take().expect("FnOnce called more than once"))(end_tag)
+                (wrap.take().expect("FnOnce called more than once"))(end_tag);
+                Ok(())
             }))
         } else {
             None

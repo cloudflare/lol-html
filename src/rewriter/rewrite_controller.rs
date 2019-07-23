@@ -3,6 +3,7 @@ use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
 use crate::selectors_vm::{ElementData, MatchInfo, SelectorMatchingVm};
 use crate::transform_stream::*;
+use failure::Error;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -91,10 +92,10 @@ impl TransformController for HtmlRewriteController<'_> {
     }
 
     #[inline]
-    fn handle_token(&mut self, token: &mut Token) {
+    fn handle_token(&mut self, token: &mut Token) -> Result<(), Error> {
         self.handlers_dispatcher
             .borrow_mut()
-            .handle_token(token, &mut self.selector_matching_vm);
+            .handle_token(token, &mut self.selector_matching_vm)
     }
 
     #[inline]

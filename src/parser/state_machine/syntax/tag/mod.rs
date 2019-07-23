@@ -8,14 +8,14 @@ define_state_group!(tag_states_group = {
         b'/'  => ( --> end_tag_open_state )
         alpha => ( create_start_tag; start_token_part; update_tag_name_hash; --> tag_name_state )
         b'?'  => ( unmark_tag_start; create_comment; start_token_part; --> bogus_comment_state )
-        eof   => ( emit_text; emit_eof; )
-        _     => ( unmark_tag_start; emit_text; reconsume in data_state )
+        eof   => ( emit_text?; emit_eof?; )
+        _     => ( unmark_tag_start; emit_text?; reconsume in data_state )
     }
 
     end_tag_open_state {
         alpha => ( create_end_tag; start_token_part; update_tag_name_hash; --> tag_name_state )
-        b'>'  => ( unmark_tag_start; emit_raw_without_token; --> data_state )
-        eof   => ( emit_text; emit_eof; )
+        b'>'  => ( unmark_tag_start; emit_raw_without_token?; --> data_state )
+        eof   => ( emit_text?; emit_eof?; )
         _     => ( create_comment; start_token_part; reconsume in bogus_comment_state )
     }
 
@@ -25,7 +25,7 @@ define_state_group!(tag_states_group = {
 
         [ "[CDATA[" ] => (
             if cdata_allowed
-                ( emit_raw_without_token; enter_cdata; --> cdata_section_state )
+                ( emit_raw_without_token?; enter_cdata; --> cdata_section_state )
             else
                 ( create_comment; --> bogus_comment_state )
         )
@@ -38,13 +38,13 @@ define_state_group!(tag_states_group = {
         whitespace => ( finish_tag_name?; --> before_attribute_name_state )
         b'/'       => ( finish_tag_name?; --> self_closing_start_tag_state )
         b'>'       => ( finish_tag_name?; emit_tag?; --> data_state )
-        eof        => ( emit_raw_without_token_and_eof; )
+        eof        => ( emit_raw_without_token_and_eof?; )
         _          => ( update_tag_name_hash; )
     }
 
     self_closing_start_tag_state {
         b'>' => ( mark_as_self_closing; emit_tag?; --> data_state )
-        eof  => ( emit_raw_without_token_and_eof; )
+        eof  => ( emit_raw_without_token_and_eof?; )
         _    => ( reconsume in before_attribute_name_state )
     }
 });

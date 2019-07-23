@@ -63,13 +63,13 @@ pub type StateResult = Result<ParsingLoopDirective, Error>;
 pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, Error>;
 
 pub trait StateMachineActions {
-    fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>);
-    fn emit_text(&mut self, input: &Chunk, _ch: Option<u8>);
-    fn emit_current_token(&mut self, input: &Chunk, ch: Option<u8>);
+    fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
+    fn emit_text(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult;
+    fn emit_current_token(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
     fn emit_tag(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
-    fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
-    fn emit_raw_without_token(&mut self, input: &Chunk, ch: Option<u8>);
-    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>);
+    fn emit_current_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
+    fn emit_raw_without_token(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
+    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;
 
     fn create_start_tag(&mut self, input: &Chunk, ch: Option<u8>);
     fn create_end_tag(&mut self, input: &Chunk, ch: Option<u8>);
@@ -308,6 +308,19 @@ macro_rules! noop_action {
             #[inline]
             fn $fn_name(&mut self, _input: &Chunk, _ch: Option<u8>) {
                 trace!(@noop);
+            }
+        )*
+    };
+}
+
+macro_rules! noop_action_with_result {
+    ($($fn_name:ident),*) => {
+        $(
+            #[inline]
+            fn $fn_name(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
+                trace!(@noop);
+
+                Ok(ParsingLoopDirective::None)
             }
         )*
     };

@@ -35,24 +35,28 @@ pub enum ParserDirective {
 
 impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_tag(&mut self, lexeme: &TagLexeme) -> ParserDirective {
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, Error> {
         self.borrow_mut().handle_tag(lexeme)
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) {
-        self.borrow_mut().handle_non_tag_content(lexeme);
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), Error> {
+        self.borrow_mut().handle_non_tag_content(lexeme)
     }
 }
 
 impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_start_tag_hint(&mut self, name: LocalName, ns: Namespace) -> ParserDirective {
+    fn handle_start_tag_hint(
+        &mut self,
+        name: LocalName,
+        ns: Namespace,
+    ) -> Result<ParserDirective, Error> {
         self.borrow_mut().handle_start_tag_hint(name, ns)
     }
 
     #[inline]
-    fn handle_end_tag_hint(&mut self, name: LocalName) -> ParserDirective {
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, Error> {
         self.borrow_mut().handle_end_tag_hint(name)
     }
 }

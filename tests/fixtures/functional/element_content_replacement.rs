@@ -28,6 +28,8 @@ impl FunctionalTestFixture<TestCase> for ElementContentReplacementTests {
                             &format!("<!--Replaced ({}) -->", test.selector),
                             ContentType::Html,
                         );
+
+                        Ok(())
                     }),
                 )],
                 document_content_handlers: vec![],

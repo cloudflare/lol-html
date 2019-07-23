@@ -24,6 +24,7 @@ fn rewrite_element(
                     ElementContentHandlers::default().element(|el| {
                         handler_called = true;
                         handler(el);
+                        Ok(())
                     }),
                 ),
                 // NOTE: used to test inner content removal
@@ -34,6 +35,7 @@ fn rewrite_element(
                         el.after("[after: should be removed]", ContentType::Text);
                         el.append("[append: should be removed]", ContentType::Text);
                         el.before("[before: should be removed]", ContentType::Text);
+                        Ok(())
                     }),
                 ),
             ],
@@ -421,18 +423,21 @@ test_fixture!("Element rewritable unit", {
                         &"div".parse().unwrap(),
                         ElementContentHandlers::default().element(|el| {
                             el.replace("hey & ya", ContentType::Html);
+                            Ok(())
                         }),
                     ),
                     (
                         &"h1".parse().unwrap(),
                         ElementContentHandlers::default().element(|el| {
                             el.remove();
+                            Ok(())
                         }),
                     ),
                     (
                         &"h2".parse().unwrap(),
                         ElementContentHandlers::default().element(|el| {
                             el.remove_and_keep_content();
+                            Ok(())
                         }),
                     ),
                 ],

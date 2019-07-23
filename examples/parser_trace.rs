@@ -1,5 +1,6 @@
 use cool_thing::*;
 use encoding_rs::UTF_8;
+use failure::Error;
 use getopts::{Matches, Options};
 use std::env::args;
 
@@ -71,7 +72,9 @@ impl TransformController for TraceTransformController {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, _: &mut Token) {}
+    fn handle_token(&mut self, _: &mut Token) -> Result<(), Error> {
+        Ok(())
+    }
 
     fn should_emit_content(&self) -> bool {
         true

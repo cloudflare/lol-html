@@ -57,7 +57,6 @@ typedef struct {
     size_t len;
 } cool_thing_text_chunk_content_t;
 
-
 // Utilities
 //---------------------------------------------------------------------
 
@@ -73,6 +72,47 @@ cool_thing_str_t *cool_thing_take_last_error();
 cool_thing_rewriter_builder_t *cool_thing_rewriter_builder_new();
 
 
+// Content handler error
+//---------------------------------------------------------------------
+
+// User error that can be returned from a content handler.
+typedef struct cool_thing_ContentHandlerError cool_thing_content_handler_error_t;
+
+// Creates a content handler error object that can be returned from a
+// content handler.
+//
+// This object will be automatically freed by a rewriter when necessary
+// and provided `msg` pointer can be freed right after the construction
+// ot the object.
+//
+// In case of an error the function returns a NULL pointer.
+cool_thing_content_handler_error_t *cool_thing_content_handler_error_new(
+    const char *msg,
+    size_t msg_len
+);
+
+// Content handlers
+//---------------------------------------------------------------------
+typedef cool_thing_content_handler_error_t *(*cool_thing_doctype_handler_t)(
+    cool_thing_doctype_t *doctype,
+    void *user_data
+);
+
+typedef cool_thing_content_handler_error_t *(*cool_thing_comment_handler_t)(
+    cool_thing_comment_t *comment,
+    void *user_data
+);
+
+typedef cool_thing_content_handler_error_t *(*cool_thing_text_handler_handler_t)(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+);
+
+typedef cool_thing_content_handler_error_t *(*cool_thing_element_handler_t)(
+    cool_thing_element_t *element,
+    void *user_data
+);
+
 // Rewriter builder
 //---------------------------------------------------------------------
 
@@ -87,15 +127,22 @@ cool_thing_rewriter_builder_t *cool_thing_rewriter_builder_new();
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
+// Each handler can return a user-provided error constructed using
+// `cool_thing_content_handler_error_new()` method. In such a case
+// `cool_thing_rewriter_write()`/`cool_thing_rewriter_end()` will
+// immediately return with an error code and provided error message
+// will be available via `cool_thing_take_last_error()` call.
+//
+//
 // WARNING: Pointers passed to handlers are valid only during the
 // handler execution. So they should never be leaked outside of handlers.
 void cool_thing_rewriter_builder_add_document_content_handlers(
     cool_thing_rewriter_builder_t *builder,
-    void (*doctype_handler)(cool_thing_doctype_t *doctype, void *user_data),
+    cool_thing_doctype_handler_t doctype_handler,
     void *doctype_handler_user_data,
-    void (*comment_handler)(cool_thing_comment_t *comment, void *user_data),
+    cool_thing_comment_handler_t comment_handler,
     void *comment_handler_user_data,
-    void (*text_handler)(cool_thing_text_chunk_t *chunk, void *user_data),
+    cool_thing_text_handler_handler_t text_handler,
     void *text_handler_user_data
 );
 
@@ -113,6 +160,12 @@ void cool_thing_rewriter_builder_add_document_content_handlers(
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
+// Each handler can return a user-provided error constructed using
+// `cool_thing_content_handler_error_new()` method. In such a case
+// `cool_thing_rewriter_write()`/`cool_thing_rewriter_end()` will
+// immediately return with an error code and provided error message
+// will be available via `cool_thing_take_last_error()` call.
+//
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.
 //
@@ -122,11 +175,11 @@ int cool_thing_rewriter_builder_add_element_content_handlers(
     cool_thing_rewriter_builder_t *builder,
     const char *selector,
     size_t selector_len,
-    void (*element_handler)(cool_thing_element_t *element, void *user_data),
+    cool_thing_element_handler_t element_handler,
     void *element_handler_user_data,
-    void (*comment_handler)(cool_thing_comment_t *comment, void *user_data),
+    cool_thing_comment_handler_t comment_handler,
     void *comment_handler_user_data,
-    void (*text_handler)(cool_thing_text_chunk_t *chunk, void *user_data),
+    cool_thing_text_handler_handler_t text_handler,
     void *text_handler_user_data
 );
 

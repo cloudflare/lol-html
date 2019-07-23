@@ -12,6 +12,7 @@ use crate::parser::state_machine::{
 use crate::parser::{
     AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
 };
+use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -20,8 +21,8 @@ pub use self::lexeme::*;
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 pub trait LexemeSink {
-    fn handle_tag(&mut self, lexeme: &TagLexeme) -> ParserDirective;
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme);
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, Error>;
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), Error>;
 }
 
 pub type State<S> = fn(&mut Lexer<S>, &Chunk) -> StateResult;
@@ -110,15 +111,15 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme) {
+    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), Error> {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;
-        self.lexeme_sink.handle_non_tag_content(lexeme);
+        self.lexeme_sink.handle_non_tag_content(lexeme)
     }
 
     #[inline]
-    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme) -> ParserDirective {
+    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, Error> {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;

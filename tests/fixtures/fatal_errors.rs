@@ -1,5 +1,8 @@
 use cool_thing::*;
 use std::convert::TryFrom;
+use crate::harness::Input;
+use encoding_rs::UTF_8;
+use failure::format_err;
 
 fn create_rewriter<O: OutputSink>(
     buffer_capacity: usize,
@@ -8,7 +11,7 @@ fn create_rewriter<O: OutputSink>(
     HtmlRewriter::try_from(Settings {
         element_content_handlers: vec![(
             &"*".parse().unwrap(),
-            ElementContentHandlers::default().element(|_| {}),
+            ElementContentHandlers::default().element(|_| {Ok(())}),
         )],
         document_content_handlers: vec![],
         encoding: "utf-8",
@@ -72,5 +75,100 @@ test_fixture!("Fatal errors", {
 
         rewriter.write(chunk.as_bytes()).unwrap_err();
         rewriter.end().unwrap_err();
+    });
+
+    test("Content handler errors propagation", {
+        macro_rules! assert_err {
+            ($element_handlers:expr, $document_handlers:expr, $expected_err:expr) => {{
+                let mut rewriter = HtmlRewriter::try_from(Settings {
+                    element_content_handlers: vec![(
+                        &"*".parse().unwrap(),
+                        $element_handlers
+                    )],
+                    document_content_handlers: vec![$document_handlers],
+                    encoding: "utf-8",
+                    buffer_capacity: 2048,
+                    output_sink: |_: &[u8]| {},
+                })
+                .unwrap();
+
+                let mut input = Input::from(
+                    String::from("<!--doc comment--> Doc text <div><!--el comment-->El text</div>")
+                );
+
+                input.init(UTF_8, false).unwrap();
+
+                let mut err = None;
+
+                for chunk in input.chunks() {
+                    match rewriter.write(chunk) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            err = Some(e);
+                            break;
+                        }
+                    }
+                }
+
+                if err.is_none(){
+                    match rewriter.end() {
+                        Ok(_) => (),
+                        Err(e) => err = Some(e)
+                    }
+                }
+
+                let err = format!("{}", err.expect("Error expected"));
+
+                assert_eq!(err, $expected_err);
+            }};
+        }
+
+        assert_err!(
+            ElementContentHandlers::default(),
+            DocumentContentHandlers::default().comments(|_| {
+                Err(format_err!("Error in doc comment handler"))
+            }),
+            "Error in doc comment handler"
+        );
+
+        assert_err!(
+            ElementContentHandlers::default(),
+            DocumentContentHandlers::default().text(|_| {
+                Err(format_err!("Error in doc text handler"))
+            }),
+            "Error in doc text handler"
+        );
+
+        assert_err!(
+            ElementContentHandlers::default(),
+            DocumentContentHandlers::default().text(|_| {
+                Err(format_err!("Error in doctype handler"))
+            }),
+            "Error in doctype handler"
+        );
+
+        assert_err!(
+            ElementContentHandlers::default().element(|_| {
+                Err(format_err!("Error in element handler"))
+            }),
+            DocumentContentHandlers::default(),
+            "Error in element handler"
+        );
+
+        assert_err!(
+            ElementContentHandlers::default().comments(|_| {
+                Err(format_err!("Error in element comment handler"))
+            }),
+            DocumentContentHandlers::default(),
+            "Error in element comment handler"
+        );
+
+        assert_err!(
+            ElementContentHandlers::default().text(|_| {
+                Err(format_err!("Error in element text handler"))
+            }),
+            DocumentContentHandlers::default(),
+            "Error in element text handler"
+        );
     });
 });

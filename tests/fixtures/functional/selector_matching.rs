@@ -31,6 +31,8 @@ impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
                                 &format!("<!--[/ELEMENT('{}')]-->", test.selector),
                                 ContentType::Html,
                             );
+
+                            Ok(())
                         })
                         .comments(|c| {
                             c.before(
@@ -41,6 +43,8 @@ impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
                                 &format!("<!--[/COMMENT('{}')]-->", test.selector),
                                 ContentType::Html,
                             );
+
+                            Ok(())
                         })
                         .text(|t| {
                             if first_text_chunk_expected {
@@ -60,6 +64,8 @@ impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
 
                                 first_text_chunk_expected = true;
                             }
+
+                            Ok(())
                         }),
                 )],
                 document_content_handlers: vec![],

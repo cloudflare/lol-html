@@ -1,4 +1,5 @@
 use super::*;
+use failure::Error;
 use libc::c_void;
 
 macro_rules! add_handler {
@@ -15,10 +16,23 @@ macro_rules! add_handler {
             // of structure field.
             let user_data = $self.$ty.user_data;
 
-            $handlers = $handlers.$ty(move |arg: &mut _| unsafe { handler(arg, user_data) });
+            $handlers = $handlers.$ty(move |arg: &mut _| {
+                let err = unsafe { handler(arg, user_data) };
+
+                if err.is_null() {
+                    Ok(())
+                } else {
+                    Err(*to_box!(err))
+                }
+            });
         }
     }};
 }
+
+type ElementHandler = unsafe extern "C" fn(*mut Element, *mut c_void) -> *mut Error;
+type DoctypeHandler = unsafe extern "C" fn(*mut Doctype, *mut c_void) -> *mut Error;
+type CommentsHandler = unsafe extern "C" fn(*mut Comment, *mut c_void) -> *mut Error;
+type TextHandler = unsafe extern "C" fn(*mut TextChunk, *mut c_void) -> *mut Error;
 
 struct ExternHandler<F> {
     func: Option<F>,
@@ -32,9 +46,9 @@ impl<F> ExternHandler<F> {
 }
 
 pub struct ExternDocumentContentHandlers {
-    doctype: ExternHandler<unsafe extern "C" fn(*mut Doctype, *mut c_void)>,
-    comments: ExternHandler<unsafe extern "C" fn(*mut Comment, *mut c_void)>,
-    text: ExternHandler<unsafe extern "C" fn(*mut TextChunk, *mut c_void)>,
+    doctype: ExternHandler<DoctypeHandler>,
+    comments: ExternHandler<CommentsHandler>,
+    text: ExternHandler<TextHandler>,
 }
 
 impl ExternDocumentContentHandlers {
@@ -50,9 +64,9 @@ impl ExternDocumentContentHandlers {
 }
 
 pub struct ExternElementContentHandlers {
-    element: ExternHandler<unsafe extern "C" fn(*mut Element, *mut c_void)>,
-    comments: ExternHandler<unsafe extern "C" fn(*mut Comment, *mut c_void)>,
-    text: ExternHandler<unsafe extern "C" fn(*mut TextChunk, *mut c_void)>,
+    element: ExternHandler<ElementHandler>,
+    comments: ExternHandler<CommentsHandler>,
+    text: ExternHandler<TextHandler>,
 }
 
 impl ExternElementContentHandlers {
@@ -103,11 +117,11 @@ pub extern "C" fn cool_thing_rewriter_builder_new() -> *mut HtmlRewriterBuilder 
 #[no_mangle]
 pub extern "C" fn cool_thing_rewriter_builder_add_document_content_handlers(
     builder: *mut HtmlRewriterBuilder,
-    doctype_handler: Option<unsafe extern "C" fn(*mut Doctype, *mut c_void)>,
+    doctype_handler: Option<DoctypeHandler>,
     doctype_handler_user_data: *mut c_void,
-    comments_handler: Option<unsafe extern "C" fn(*mut Comment, *mut c_void)>,
+    comments_handler: Option<CommentsHandler>,
     comments_handler_user_data: *mut c_void,
-    text_handler: Option<unsafe extern "C" fn(*mut TextChunk, *mut c_void)>,
+    text_handler: Option<TextHandler>,
     text_handler_user_data: *mut c_void,
 ) {
     let builder = to_ref_mut!(builder);
@@ -126,11 +140,11 @@ pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
     builder: *mut HtmlRewriterBuilder,
     selector: *const c_char,
     selector_len: size_t,
-    element_handler: Option<unsafe extern "C" fn(*mut Element, *mut c_void)>,
+    element_handler: Option<ElementHandler>,
     element_handler_user_data: *mut c_void,
-    comments_handler: Option<unsafe extern "C" fn(*mut Comment, *mut c_void)>,
+    comments_handler: Option<CommentsHandler>,
     comments_handler_user_data: *mut c_void,
-    text_handler: Option<unsafe extern "C" fn(*mut TextChunk, *mut c_void)>,
+    text_handler: Option<TextHandler>,
     text_handler_user_data: *mut c_void,
 ) -> c_int {
     let selector = unwrap_or_ret_err_code! { to_str!(selector, selector_len) };

@@ -22,8 +22,7 @@
         } \
     }
 
-
-#define REWRITE(html, output_sink, assign_handlers) \
+#define RUN_REWRITER(html, output_sink, assign_handlers, actions) \
     do { \
         const char *in = html; \
         const char *encoding = "UTF-8"; \
@@ -42,12 +41,26 @@
         ); \
     \
         cool_thing_rewriter_builder_free(builder); \
-    \
-        ok(!cool_thing_rewriter_write(rewriter, in, strlen(in))); \
-        ok(!cool_thing_rewriter_end(rewriter)); \
+        actions \
         cool_thing_rewriter_free(rewriter); \
     } while(0)
 
+#define REWRITE(html, output_sink, assign_handlers) \
+    RUN_REWRITER(html, output_sink, assign_handlers, { \
+        ok(!cool_thing_rewriter_write(rewriter, in, strlen(in))); \
+        ok(!cool_thing_rewriter_end(rewriter)); \
+    })
+
+#define EXPECT_ERR(html, assign_handlers, err_msg) \
+    RUN_REWRITER(html, output_sink_stub, assign_handlers, { \
+        ok(cool_thing_rewriter_write(rewriter, in, strlen(in))); \
+    \
+        cool_thing_str_t *msg = cool_thing_take_last_error(); \
+    \
+        str_eq(msg, err_msg); \
+    \
+        cool_thing_str_free(*msg); \
+    })
 
 #define str_eq(actual, expected) { \
     ok((actual) != NULL); \
@@ -119,7 +132,10 @@ static void test_non_ascii_encoding() {
 
 // Doctype API
 //---------------------------------------------------------------------
-static void test_doctype_api_doctype_handler(cool_thing_doctype_t *doctype, void *user_data) {
+static cool_thing_content_handler_error_t *test_doctype_api_doctype_handler(
+    cool_thing_doctype_t *doctype,
+    void *user_data
+) {
     cool_thing_str_t *name = cool_thing_doctype_name_get(doctype);
     cool_thing_str_t *public_id = cool_thing_doctype_public_id_get(doctype);
     cool_thing_str_t *system_id = cool_thing_doctype_system_id_get(doctype);
@@ -133,6 +149,22 @@ static void test_doctype_api_doctype_handler(cool_thing_doctype_t *doctype, void
 
     note("User data");
     ok(*(int*)user_data == 42);
+
+    return NULL;
+}
+
+static cool_thing_content_handler_error_t *test_doctype_api_doctype_handler_error(
+    cool_thing_doctype_t *doctype,
+    void *user_data
+) {
+    (void)(doctype);
+    (void)(user_data);
+
+    note("Handler error");
+
+    const char *msg = "Doctype handler error";
+
+    return cool_thing_content_handler_error_new(msg, strlen(msg));
 }
 
 EXPECT_OUTPUT(
@@ -158,11 +190,30 @@ static void test_doctype_api() {
             );
         }
     );
+
+    EXPECT_ERR(
+        "<!doctype>",
+        {
+            cool_thing_rewriter_builder_add_document_content_handlers(
+                builder,
+                &test_doctype_api_doctype_handler_error,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            );
+        },
+        "Doctype handler error"
+    );
 }
 
 // Comment API
 //---------------------------------------------------------------------
-static void test_comment_api_comment_handler1(cool_thing_comment_t *comment, void *user_data) {
+static cool_thing_content_handler_error_t *test_comment_api_comment_handler1(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
     const char *before = "<div>";
     const char *after = "</div>";
     const char *new_text = "Yo";
@@ -185,9 +236,14 @@ static void test_comment_api_comment_handler1(cool_thing_comment_t *comment, voi
 
     note("User data");
     ok(*(int*)user_data == 42);
+
+    return NULL;
 }
 
-static void test_comment_api_comment_handler2_el(cool_thing_comment_t *comment, void *user_data) {
+static cool_thing_content_handler_error_t *test_comment_api_comment_handler2_el(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
     (void)(user_data);
 
     const char *replacement = "<repl>";
@@ -195,23 +251,49 @@ static void test_comment_api_comment_handler2_el(cool_thing_comment_t *comment, 
     note("Replace");
     ok(!cool_thing_comment_replace(comment, replacement, strlen(replacement), true));
     ok(cool_thing_comment_is_removed(comment));
+
+    return NULL;
 }
 
-static void test_comment_api_comment_handler2_doc(cool_thing_comment_t *comment, void *user_data) {
+static cool_thing_content_handler_error_t *test_comment_api_comment_handler2_doc(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
     (void)(user_data);
 
     const char *after = "<after>";
 
     note("Insert after replaced");
     ok(!cool_thing_comment_after(comment, after, strlen(after), true));
+
+    return NULL;
 }
 
-static void test_comment_api_comment_handler3(cool_thing_comment_t *comment, void *user_data) {
+static cool_thing_content_handler_error_t *test_comment_api_comment_handler3(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
     (void)(user_data);
 
     note("Remove");
     cool_thing_comment_remove(comment);
     ok(cool_thing_comment_is_removed(comment));
+
+    return NULL;
+}
+
+static cool_thing_content_handler_error_t *test_comment_api_comment_handler_error(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    (void)(comment);
+    (void)(user_data);
+
+    note("Handler error");
+
+    const char *msg = "Comment handler error";
+
+    return cool_thing_content_handler_error_new(msg, strlen(msg));
 }
 
 EXPECT_OUTPUT(
@@ -295,11 +377,49 @@ static void test_comment_api() {
             );
         }
     );
+
+    EXPECT_ERR(
+        "<!-- hey -->",
+        {
+             cool_thing_rewriter_builder_add_document_content_handlers(
+                builder,
+                NULL,
+                NULL,
+                &test_comment_api_comment_handler_error,
+                NULL,
+                NULL,
+                NULL
+            );
+        },
+        "Comment handler error"
+    );
+
+    EXPECT_ERR(
+        "<div><!-- foo --></div>",
+        {
+            const char *selector = "*";
+
+            int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector,
+                strlen(selector),
+                NULL,
+                NULL,
+                &test_comment_api_comment_handler_error,
+                NULL,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+        },
+        "Comment handler error"
+    );
 }
 
 // Text chunk API
 //---------------------------------------------------------------------
-static void test_text_chunk_api_text_chunk_handler1(
+static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler1(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -325,9 +445,11 @@ static void test_text_chunk_api_text_chunk_handler1(
 
     note("User data");
     ok(*(int*)user_data == 42);
+
+    return NULL;
 }
 
-static void test_text_chunk_api_text_chunk_handler2_el(
+static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler2_el(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -339,9 +461,11 @@ static void test_text_chunk_api_text_chunk_handler2_el(
         ok(!cool_thing_text_chunk_replace(chunk, replacement, strlen(replacement), true));
         ok(cool_thing_text_chunk_is_removed(chunk));
     }
+
+    return NULL;
 }
 
-static void test_text_chunk_api_text_chunk_handler2_doc(
+static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler2_doc(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -352,9 +476,11 @@ static void test_text_chunk_api_text_chunk_handler2_doc(
         note("Insert after replaced");
         ok(!cool_thing_text_chunk_after(chunk, after, strlen(after), true));
     }
+
+    return NULL;
 }
 
-static void test_text_chunk_api_text_chunk_handler3(
+static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler3(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -365,7 +491,24 @@ static void test_text_chunk_api_text_chunk_handler3(
         cool_thing_text_chunk_remove(chunk);
         ok(cool_thing_text_chunk_is_removed(chunk));
     }
+
+    return NULL;
 }
+
+static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler_error(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+) {
+    (void)(chunk);
+    (void)(user_data);
+
+    note("Handler error");
+
+    const char *msg = "Text handler error";
+
+    return cool_thing_content_handler_error_new(msg, strlen(msg));
+}
+
 
 EXPECT_OUTPUT(
     test_text_chunk_api_output1,
@@ -442,7 +585,7 @@ static void test_text_chunk_api() {
         "<span>0_0</span>",
         test_text_chunk_api_output3,
         {
-             cool_thing_rewriter_builder_add_document_content_handlers(
+            cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
                 NULL,
                 NULL,
@@ -453,11 +596,53 @@ static void test_text_chunk_api() {
             );
         }
     );
+
+    EXPECT_ERR(
+        "<div>42</div>",
+        {
+            const char *selector = "*";
+
+            int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector,
+                strlen(selector),
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                &test_text_chunk_api_text_chunk_handler_error,
+                NULL
+            );
+
+            ok(!err);
+        },
+        "Text handler error"
+    );
+
+    EXPECT_ERR(
+        "42",
+        {
+             cool_thing_rewriter_builder_add_document_content_handlers(
+                builder,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                &test_text_chunk_api_text_chunk_handler_error,
+                NULL
+            );
+        },
+        "Text handler error"
+    );
+
 }
 
 // Element
 //---------------------------------------------------------------------
-static void modify_element_tag_name(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *modify_element_tag_name(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     const char *new_name = "span";
 
     note("Get tag name");
@@ -481,9 +666,14 @@ static void modify_element_tag_name(cool_thing_element_t *element, void *user_da
 
     note("User data");
     ok(*(int*)user_data == 42);
+
+    return NULL;
 }
 
-static void iterate_element_attributes(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *iterate_element_attributes(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     (void)(user_data);
 
     note("Attributes iterator");
@@ -520,9 +710,14 @@ static void iterate_element_attributes(cool_thing_element_t *element, void *user
     ok(attr == NULL);
 
     cool_thing_attributes_iterator_free(iter);
+
+    return NULL;
 }
 
-static void get_and_modify_element_attributes(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *get_and_modify_element_attributes(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     (void)(user_data);
 
     const char *attr1 = "foo";
@@ -563,9 +758,14 @@ static void get_and_modify_element_attributes(cool_thing_element_t *element, voi
 
     note("Remove attribute");
     ok(!cool_thing_element_remove_attribute(element, attr1, strlen(attr1)));
+
+    return NULL;
 }
 
-static void element_surrounding_content_insertion(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *element_surrounding_content_insertion(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     (void)(user_data);
 
     const char *before = "&before";
@@ -580,45 +780,70 @@ static void element_surrounding_content_insertion(cool_thing_element_t *element,
     note("Insert after/append");
     ok(!cool_thing_element_append(element, append, strlen(append), true));
     ok(!cool_thing_element_after(element, after, strlen(after), false));
+
+    return NULL;
 }
 
-static void set_element_inner_content(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *set_element_inner_content(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     (void)(user_data);
 
     const char *content = "hey & ya";
 
     note("Set inner content");
     ok(!cool_thing_element_set_inner_content(element, content, strlen(content), false));
+
+    return NULL;
 }
 
-static void replace_element(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *replace_element(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     (void)(user_data);
 
     const char *content = "hey & ya";
 
     note("Replace");
     ok(!cool_thing_element_replace(element, content, strlen(content), true));
+
+    return NULL;
 }
 
-static void remove_element(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *remove_element(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     (void)(user_data);
 
     note("Remove");
     ok(!cool_thing_element_is_removed(element));
     cool_thing_element_remove(element);
     ok(cool_thing_element_is_removed(element));
+
+    return NULL;
 }
 
-static void remove_element_and_keep_content(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *remove_element_and_keep_content(
+    cool_thing_element_t *element,
+    void *user_data
+) {
     (void)(user_data);
 
     note("Remove and keep content");
     ok(!cool_thing_element_is_removed(element));
     cool_thing_element_remove_and_keep_content(element);
     ok(cool_thing_element_is_removed(element));
+
+    return NULL;
 }
 
-static void get_and_free_empty_element_attribute(cool_thing_element_t *element, void *user_data) {
+static cool_thing_content_handler_error_t *get_and_free_empty_element_attribute(
+    cool_thing_element_t *element, \
+    void *user_data
+) {
     (void)(user_data);
 
     const char *attr1 = "foo";
@@ -635,6 +860,22 @@ static void get_and_free_empty_element_attribute(cool_thing_element_t *element, 
 
     str_eq(value, "");
     cool_thing_str_free(*value);
+
+    return NULL;
+}
+
+static cool_thing_content_handler_error_t *test_element_api_element_handler_error(
+    cool_thing_element_t *element,
+    void *user_data
+) {
+    (void)(element);
+    (void)(user_data);
+
+    note("Handler error");
+
+    const char *msg = "Element handler error";
+
+    return cool_thing_content_handler_error_new(msg, strlen(msg));
 }
 
 EXPECT_OUTPUT(
@@ -848,6 +1089,28 @@ static void element_api_test() {
 
             ok(!err);
         }
+    );
+
+    EXPECT_ERR(
+        "<span foo>",
+        {
+            const char *selector = "span";
+
+            int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector,
+                strlen(selector),
+                &test_element_api_element_handler_error,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+        },
+        "Element handler error"
     );
 
 }

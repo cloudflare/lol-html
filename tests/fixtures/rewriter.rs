@@ -53,8 +53,13 @@ test_fixture!("Rewriter", {
             {
                 let mut rewriter = HtmlRewriter::try_from(Settings {
                     element_content_handlers: vec![],
-                    document_content_handlers: vec![DocumentContentHandlers::default()
-                        .doctype(|d| doctypes.push((d.name(), d.public_id(), d.system_id())))],
+                    document_content_handlers: vec![
+                        DocumentContentHandlers::default()
+                            .doctype(|d| {
+                                doctypes.push((d.name(), d.public_id(), d.system_id()));
+                                Ok(())
+                            })
+                    ],
                     encoding: enc.name(),
                     buffer_capacity: 2048,
                     output_sink: |_: &[u8]| {},
@@ -100,6 +105,7 @@ test_fixture!("Rewriter", {
                         ElementContentHandlers::default().element(|el| {
                             el.set_attribute("foo", "bar").unwrap();
                             el.prepend("<test></test>", ContentType::Html);
+                            Ok(())
                         }),
                     )],
                     document_content_handlers: vec![],
@@ -151,11 +157,14 @@ test_fixture!("Rewriter", {
                     document_content_handlers:vec![DocumentContentHandlers::default()
                         .comments(|c| {
                             c.set_text(&(c.text() + "1337")).unwrap();
+                            Ok(())
                         })
                         .text(|c| {
                             if c.last_in_text_node() {
                                 c.after("BAZ", ContentType::Text);
                             }
+
+                            Ok(())
                         })],
                     encoding: enc.name(),
                     buffer_capacity: 2048,
@@ -209,7 +218,10 @@ test_fixture!("Rewriter", {
                     ElementContentHandlers::default().element({
                         let handlers_executed = Rc::clone(&handlers_executed);
 
-                        move |_| handlers_executed.borrow_mut().push($idx)
+                        move |_| {
+                            handlers_executed.borrow_mut().push($idx);
+                            Ok(())
+                        }
                     })
                 )
             };

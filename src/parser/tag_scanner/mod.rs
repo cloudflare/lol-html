@@ -8,13 +8,18 @@ use crate::parser::state_machine::{FeedbackDirective, StateMachine, StateResult}
 use crate::parser::{
     AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
 };
+use failure::Error;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;
 
 pub trait TagHintSink {
-    fn handle_start_tag_hint(&mut self, name: LocalName, ns: Namespace) -> ParserDirective;
-    fn handle_end_tag_hint(&mut self, name: LocalName) -> ParserDirective;
+    fn handle_start_tag_hint(
+        &mut self,
+        name: LocalName,
+        ns: Namespace,
+    ) -> Result<ParserDirective, Error>;
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, Error>;
 }
 
 pub type State<S> = fn(&mut TagScanner<S>, &Chunk) -> StateResult;
@@ -72,7 +77,7 @@ impl<S: TagHintSink> TagScanner<S> {
         }
     }
 
-    fn emit_tag_hint(&mut self, input: &Chunk) -> ParserDirective {
+    fn emit_tag_hint(&mut self, input: &Chunk) -> Result<ParserDirective, Error> {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.input_cursor.pos(),

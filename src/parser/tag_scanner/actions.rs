@@ -50,7 +50,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
                 ParserDirective::Lex,
                 FeedbackDirective::ApplyUnhandledFeedback(unhandled_feedback),
             ),
-            None => match self.emit_tag_hint(input) {
+            None => match self.emit_tag_hint(input)? {
                 ParserDirective::WherePossibleScanForTagsOnly => ParsingLoopDirective::None,
                 ParserDirective::Lex => {
                     let feedback_directive = match self.pending_text_type_change.take() {
@@ -87,13 +87,16 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
         )
     }
 
-    noop_action!(
+    noop_action_with_result!(
         emit_eof,
         emit_text,
         emit_current_token,
         emit_current_token_and_eof,
         emit_raw_without_token,
-        emit_raw_without_token_and_eof,
+        emit_raw_without_token_and_eof
+    );
+
+    noop_action!(
         create_doctype,
         create_comment,
         start_token_part,

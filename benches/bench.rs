@@ -4,6 +4,7 @@ extern crate criterion;
 use cool_thing::TokenCaptureFlags as CoolThingTokenCaptureFlags;
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
 use encoding_rs::UTF_8;
+use failure::Error;
 use glob::glob;
 use std::fmt::{self, Debug};
 use std::fs::File;
@@ -89,8 +90,10 @@ fn cool_thing_tokenizer_bench(
                 self.capture_flags
             }
 
-            fn handle_token(&mut self, token: &mut Token) {
+            fn handle_token(&mut self, token: &mut Token) -> Result<(), Error> {
                 black_box(token);
+
+                Ok(())
             }
 
             fn should_emit_content(&self) -> bool {
