@@ -1,4 +1,10 @@
 use encoding_rs::*;
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    pub static ref TEST_CRITICAL_SECTION_MUTEX: Mutex<()> = Mutex::new(());
+}
 
 macro_rules! ignore {
     (@info $($args:expr),+) => {
@@ -94,19 +100,47 @@ macro_rules! test_fixture {
 
     // NOTE: recursively expand all tests
     (@test |$fixture_name:expr, $tests:ident|>
-        test($name:expr, expect_panic:$panic:expr, $body:tt);
+        test($name:expr, expect_panic:$panic_msg:expr, $body:tt);
         $($rest:tt)*
     ) => {
         test_fixture!(@test_body
             $fixture_name,
             $tests,
             $name,
-            ShouldPanic::YesWithMessage($panic),
             {
-                // NOTE: prevent reporting of panic errors to the output when they are expected.
-                std::panic::set_hook(Box::new(|_|{}));
+                use std::panic;
 
-                $body
+                // NOTE: since we generate tests dynamically we need to use a rip-off
+                // of Rust's test harness which is for some reason leaks panic error
+                // messages to the output even if they are expected.
+                //
+                // To workaround that, we deploy noop panic handler before the code
+                // that should panic and later restore the original handler to get
+                // proper assertion error reporting for the rest of the tests.
+                //
+                // Test harness uses multiple threads to run tests and the panic hook
+                // is global to the whole process, so we need to use mutex to synchronise
+                // access to it.
+                let res = {
+                    let mut cs = crate::harness::TEST_CRITICAL_SECTION_MUTEX.lock().unwrap();
+                    let original_hook = panic::take_hook();
+
+                    panic::set_hook(Box::new(|_|{}));
+
+                    let res = panic::catch_unwind(|| { $body });
+
+                    panic::set_hook(original_hook);
+
+                    // NOTE: mutex should be used, otherwise it unlocks immediately.
+                    *cs = ();
+
+                    res
+                };
+
+                let panic_err = res.expect_err("Panic expected");
+                let msg = panic_err.downcast_ref::<&str>().unwrap();
+
+                assert_eq!(msg, &$panic_msg);
             }
         );
 
@@ -117,7 +151,7 @@ macro_rules! test_fixture {
         test($name:expr, $body:tt);
         $($rest:tt)*
     ) => {
-        test_fixture!(@test_body $fixture_name, $tests, $name, ShouldPanic::No, $body);
+        test_fixture!(@test_body $fixture_name, $tests, $name, $body);
         test_fixture!(@test |$fixture_name, $tests|> $($rest)*);
     };
 
@@ -125,11 +159,11 @@ macro_rules! test_fixture {
     // NOTE: end of recursion
     (@test |$fixture_name:expr, $tests:ident|>) => {};
 
-    (@test_body $fixture_name:expr, $tests:ident, $name:expr, $should_panic:expr, $body:tt) => {{
+    (@test_body $fixture_name:expr, $tests:ident, $name:expr, $body:tt) => {{
         let mut name = String::new();
 
         write!(&mut name, "{} - {}", $fixture_name, $name).unwrap();
-        $tests.push(create_test!(name, $should_panic, $body));
+        $tests.push(create_test!(name, ShouldPanic::No, $body));
     }};
 }
 
