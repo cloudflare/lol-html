@@ -1,14 +1,7 @@
 use super::content_handlers::*;
 use super::ElementDescriptor;
-use crate::rewritable_units::{Element, Token, TokenCaptureFlags};
+use crate::rewritable_units::{Element, StartTag, Token, TokenCaptureFlags};
 use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};
-
-#[derive(Eq, PartialEq)]
-enum ActionOnCall {
-    None,
-    Deactivate,
-    Remove,
-}
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct SelectorHandlersLocator {
@@ -20,7 +13,6 @@ pub struct SelectorHandlersLocator {
 struct HandlerVecItem<H> {
     handler: H,
     user_count: usize,
-    action_on_call: ActionOnCall,
 }
 
 struct HandlerVec<H> {
@@ -39,11 +31,10 @@ impl<H> Default for HandlerVec<H> {
 
 impl<H> HandlerVec<H> {
     #[inline]
-    pub fn push(&mut self, handler: H, always_active: bool, action_on_call: ActionOnCall) {
+    pub fn push(&mut self, handler: H, always_active: bool) {
         let item = HandlerVecItem {
             handler,
             user_count: if always_active { 1 } else { 0 },
-            action_on_call,
         };
 
         self.user_count += item.user_count;
@@ -73,25 +64,36 @@ impl<H> HandlerVec<H> {
     }
 
     #[inline]
-    pub fn call_active_handlers(&mut self, mut caller: impl FnMut(&mut H)) {
-        // TODO rewrite this when drain_filter gets stable.
+    pub fn for_each_active(&mut self, cb: impl FnMut(&mut H)) {
+        self.items
+            .iter_mut()
+            .filter(|h| h.user_count > 0)
+            .map(|h| &mut h.handler)
+            .for_each(cb);
+    }
+
+    #[inline]
+    pub fn do_for_each_active_and_deactivate(&mut self, mut cb: impl FnMut(&mut H)) {
+        self.user_count = self.items.iter_mut().fold(0, |user_count, item| {
+            if item.user_count > 0 {
+                cb(&mut item.handler);
+                item.user_count = 0;
+            }
+
+            user_count + item.user_count
+        });
+    }
+
+    #[inline]
+    pub fn do_for_each_active_and_remove(&mut self, mut cb: impl FnMut(&mut H)) {
         for i in (0..self.items.len()).rev() {
             let item = &mut self.items[i];
 
             if item.user_count > 0 {
-                caller(&mut item.handler);
+                cb(&mut item.handler);
 
-                match item.action_on_call {
-                    ActionOnCall::None => (),
-                    ActionOnCall::Deactivate => {
-                        self.user_count -= item.user_count;
-                        item.user_count = 0;
-                    }
-                    ActionOnCall::Remove => {
-                        self.user_count -= item.user_count;
-                        self.items.remove(i);
-                    }
-                }
+                self.user_count -= item.user_count;
+                self.items.remove(i);
             }
         }
     }
@@ -112,17 +114,15 @@ impl<'h> ContentHandlersDispatcher<'h> {
     #[inline]
     pub fn add_document_content_handlers(&mut self, handlers: DocumentContentHandlers<'h>) {
         if let Some(handler) = handlers.doctype {
-            self.doctype_handlers
-                .push(handler, true, ActionOnCall::None);
+            self.doctype_handlers.push(handler, true);
         }
 
         if let Some(handler) = handlers.comments {
-            self.comment_handlers
-                .push(handler, true, ActionOnCall::None);
+            self.comment_handlers.push(handler, true);
         }
 
         if let Some(handler) = handlers.text {
-            self.text_handlers.push(handler, true, ActionOnCall::None);
+            self.text_handlers.push(handler, true);
         }
     }
 
@@ -133,16 +133,15 @@ impl<'h> ContentHandlersDispatcher<'h> {
     ) -> SelectorHandlersLocator {
         SelectorHandlersLocator {
             element_handler_idx: handlers.element.map(|h| {
-                self.element_handlers
-                    .push(h, false, ActionOnCall::Deactivate);
+                self.element_handlers.push(h, false);
                 self.element_handlers.len() - 1
             }),
             comment_handler_idx: handlers.comments.map(|h| {
-                self.comment_handlers.push(h, false, ActionOnCall::None);
+                self.comment_handlers.push(h, false);
                 self.comment_handlers.len() - 1
             }),
             text_handler_idx: handlers.text.map(|h| {
-                self.text_handlers.push(h, false, ActionOnCall::None);
+                self.text_handlers.push(h, false);
                 self.text_handlers.len() - 1
             }),
         }
@@ -195,48 +194,49 @@ impl<'h> ContentHandlersDispatcher<'h> {
         }
     }
 
+    pub fn handle_start_tag(
+        &mut self,
+        start_tag: &mut StartTag,
+        selector_matching_vm: &mut SelectorMatchingVm<ElementDescriptor>,
+    ) {
+        if self.matched_elements_with_removed_content > 0 {
+            start_tag.mutations.remove();
+        }
+
+        let mut element = Element::new(start_tag, self.next_element_can_have_content);
+
+        self.element_handlers
+            .do_for_each_active_and_deactivate(|h| h(&mut element));
+
+        if self.next_element_can_have_content {
+            if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
+                if element.should_remove_content() {
+                    elem_desc.remove_content = true;
+                    self.matched_elements_with_removed_content += 1;
+                }
+
+                if let Some(handler) = element.into_end_tag_handler() {
+                    elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.len());
+
+                    self.end_tag_handlers.push(handler, false);
+                }
+            }
+        }
+    }
+
     pub fn handle_token(
         &mut self,
         token: &mut Token,
         selector_matching_vm: &mut SelectorMatchingVm<ElementDescriptor>,
     ) {
-        macro_rules! call_handlers {
-            ($handlers:expr, $arg:expr) => {
-                $handlers.call_active_handlers(|h| h($arg));
-            };
-        }
-
         match token {
-            Token::Doctype(doctype) => call_handlers!(self.doctype_handlers, doctype),
-
-            Token::StartTag(start_tag) => {
-                if self.matched_elements_with_removed_content > 0 {
-                    start_tag.mutations.remove();
-                }
-
-                let mut element = Element::new(start_tag, self.next_element_can_have_content);
-
-                call_handlers!(self.element_handlers, &mut element);
-
-                if self.next_element_can_have_content {
-                    if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
-                        if element.should_remove_content() {
-                            elem_desc.remove_content = true;
-                            self.matched_elements_with_removed_content += 1;
-                        }
-
-                        if let Some(handler) = element.into_end_tag_handler() {
-                            elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.len());
-
-                            self.end_tag_handlers
-                                .push(handler, false, ActionOnCall::Remove);
-                        }
-                    }
-                }
-            }
-            Token::EndTag(end_tag) => call_handlers!(self.end_tag_handlers, end_tag),
-            Token::TextChunk(text) => call_handlers!(self.text_handlers, text),
-            Token::Comment(comment) => call_handlers!(self.comment_handlers, comment),
+            Token::Doctype(doctype) => self.doctype_handlers.for_each_active(|h| h(doctype)),
+            Token::StartTag(start_tag) => self.handle_start_tag(start_tag, selector_matching_vm),
+            Token::EndTag(end_tag) => self
+                .end_tag_handlers
+                .do_for_each_active_and_remove(|h| h(end_tag)),
+            Token::TextChunk(text) => self.text_handlers.for_each_active(|h| h(text)),
+            Token::Comment(comment) => self.comment_handlers.for_each_active(|h| h(comment)),
         }
     }
 

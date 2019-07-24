@@ -6,6 +6,8 @@ use cool_thing::{
 };
 use encoding_rs::Encoding;
 use std::convert::TryFrom;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 fn write_chunks<O: OutputSink>(
     rewriter: &mut HtmlRewriter<O>,
@@ -49,7 +51,7 @@ test_fixture!("Rewriter", {
             let mut doctypes = Vec::default();
 
             {
-                let mut rewriter = HtmlRewriter::try_from(Settings{
+                let mut rewriter = HtmlRewriter::try_from(Settings {
                     element_content_handlers: vec![],
                     document_content_handlers: vec![DocumentContentHandlers::default()
                         .doctype(|d| doctypes.push((d.name(), d.public_id(), d.system_id())))],
@@ -92,7 +94,7 @@ test_fixture!("Rewriter", {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_from(Settings{
+                let mut rewriter = HtmlRewriter::try_from(Settings {
                     element_content_handlers: vec![(
                         &"*".parse().unwrap(),
                         ElementContentHandlers::default().element(|el| {
@@ -144,7 +146,7 @@ test_fixture!("Rewriter", {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_from(Settings{
+                let mut rewriter = HtmlRewriter::try_from(Settings {
                     element_content_handlers: vec![],
                     document_content_handlers:vec![DocumentContentHandlers::default()
                         .comments(|c| {
@@ -195,5 +197,42 @@ test_fixture!("Rewriter", {
                 )
             );
         }
+    });
+
+    test("Handler invocation order", {
+        let handlers_executed = Rc::new(RefCell::new(Vec::default()));
+
+        macro_rules! create_handlers {
+            ($sel:expr, $idx:expr) => {
+                (
+                    &$sel.parse().unwrap(),
+                    ElementContentHandlers::default().element({
+                        let handlers_executed = Rc::clone(&handlers_executed);
+
+                        move |_| handlers_executed.borrow_mut().push($idx)
+                    })
+                )
+            };
+        }
+
+        let mut rewriter = HtmlRewriter::try_from(Settings {
+            element_content_handlers: vec![
+                create_handlers!("div span", 0),
+                create_handlers!("div > span", 1),
+                create_handlers!("span", 2),
+                create_handlers!("[foo]", 3),
+                create_handlers!("div span[foo]", 4)
+            ],
+            document_content_handlers: vec![],
+            encoding: "utf-8",
+            buffer_capacity: 2048,
+            output_sink: |_: &[u8]| {},
+        })
+        .unwrap();
+
+        rewriter.write(b"<div><span foo></span></div>").unwrap();
+        rewriter.end().unwrap();
+
+        assert_eq!(*handlers_executed.borrow(), vec![0, 1, 2, 3, 4]);
     });
 });
