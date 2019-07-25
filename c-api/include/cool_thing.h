@@ -71,44 +71,32 @@ cool_thing_str_t *cool_thing_take_last_error();
 // Creates new HTML rewriter builder.
 cool_thing_rewriter_builder_t *cool_thing_rewriter_builder_new();
 
-
-// Content handler error
-//---------------------------------------------------------------------
-
-// User error that can be returned from a content handler.
-typedef struct cool_thing_ContentHandlerError cool_thing_content_handler_error_t;
-
-// Creates a content handler error object that can be returned from a
-// content handler.
-//
-// This object will be automatically freed by a rewriter when necessary
-// and provided `msg` pointer can be freed right after the construction
-// ot the object.
-//
-// In case of an error the function returns a NULL pointer.
-cool_thing_content_handler_error_t *cool_thing_content_handler_error_new(
-    const char *msg,
-    size_t msg_len
-);
-
 // Content handlers
 //---------------------------------------------------------------------
-typedef cool_thing_content_handler_error_t *(*cool_thing_doctype_handler_t)(
+// Rewriter directive that should be returned from each content handler.
+// If COOL_THING_STOP directive is returned then rewriting stops immidiately
+// and `write()` or `end()` methods of the rewriter return an error code.
+typedef enum {
+    COOL_THING_CONTINUE,
+    COOL_THING_STOP
+} cool_thing_rewriter_directive_t;
+
+typedef cool_thing_rewriter_directive_t (*cool_thing_doctype_handler_t)(
     cool_thing_doctype_t *doctype,
     void *user_data
 );
 
-typedef cool_thing_content_handler_error_t *(*cool_thing_comment_handler_t)(
+typedef cool_thing_rewriter_directive_t (*cool_thing_comment_handler_t)(
     cool_thing_comment_t *comment,
     void *user_data
 );
 
-typedef cool_thing_content_handler_error_t *(*cool_thing_text_handler_handler_t)(
+typedef cool_thing_rewriter_directive_t (*cool_thing_text_handler_handler_t)(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 );
 
-typedef cool_thing_content_handler_error_t *(*cool_thing_element_handler_t)(
+typedef cool_thing_rewriter_directive_t (*cool_thing_element_handler_t)(
     cool_thing_element_t *element,
     void *user_data
 );
@@ -127,12 +115,9 @@ typedef cool_thing_content_handler_error_t *(*cool_thing_element_handler_t)(
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// Each handler can return a user-provided error constructed using
-// `cool_thing_content_handler_error_new()` method. In such a case
-// `cool_thing_rewriter_write()`/`cool_thing_rewriter_end()` will
-// immediately return with an error code and provided error message
-// will be available via `cool_thing_take_last_error()` call.
-//
+// If any of handlers return COOL_THING_STOP directive is then rewriting
+// stops immidiately and `write()` or `end()` of the rewriter methods
+// return an error code.
 //
 // WARNING: Pointers passed to handlers are valid only during the
 // handler execution. So they should never be leaked outside of handlers.
@@ -160,11 +145,9 @@ void cool_thing_rewriter_builder_add_document_content_handlers(
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// Each handler can return a user-provided error constructed using
-// `cool_thing_content_handler_error_new()` method. In such a case
-// `cool_thing_rewriter_write()`/`cool_thing_rewriter_end()` will
-// immediately return with an error code and provided error message
-// will be available via `cool_thing_take_last_error()` call.
+// If any of handlers return COOL_THING_STOP directive is then rewriting
+// stops immidiately and `write()` or `end()` of the rewriter methods
+// return an error code.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `cool_thing_take_last_error` function.

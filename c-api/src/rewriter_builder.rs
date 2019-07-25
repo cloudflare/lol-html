@@ -1,6 +1,28 @@
 use super::*;
-use failure::Error;
+use failure::{err_msg, Error};
 use libc::c_void;
+
+#[repr(C)]
+pub enum RewriterDirective {
+    Continue,
+    Stop,
+}
+
+type ElementHandler = unsafe extern "C" fn(*mut Element, *mut c_void) -> RewriterDirective;
+type DoctypeHandler = unsafe extern "C" fn(*mut Doctype, *mut c_void) -> RewriterDirective;
+type CommentsHandler = unsafe extern "C" fn(*mut Comment, *mut c_void) -> RewriterDirective;
+type TextHandler = unsafe extern "C" fn(*mut TextChunk, *mut c_void) -> RewriterDirective;
+
+struct ExternHandler<F> {
+    func: Option<F>,
+    user_data: *mut c_void,
+}
+
+impl<F> ExternHandler<F> {
+    fn new(func: Option<F>, user_data: *mut c_void) -> Self {
+        ExternHandler { func, user_data }
+    }
+}
 
 macro_rules! add_handler {
     ($handlers:ident, $self:ident.$ty:ident) => {{
@@ -16,33 +38,15 @@ macro_rules! add_handler {
             // of structure field.
             let user_data = $self.$ty.user_data;
 
-            $handlers = $handlers.$ty(move |arg: &mut _| {
-                let err = unsafe { handler(arg, user_data) };
-
-                if err.is_null() {
-                    Ok(())
-                } else {
-                    Err(*to_box!(err))
-                }
-            });
+            $handlers =
+                $handlers.$ty(
+                    move |arg: &mut _| match unsafe { handler(arg, user_data) } {
+                        RewriterDirective::Continue => Ok(()),
+                        RewriterDirective::Stop => Err(err_msg("The rewriter has been stopped.")),
+                    },
+                );
         }
     }};
-}
-
-type ElementHandler = unsafe extern "C" fn(*mut Element, *mut c_void) -> *mut Error;
-type DoctypeHandler = unsafe extern "C" fn(*mut Doctype, *mut c_void) -> *mut Error;
-type CommentsHandler = unsafe extern "C" fn(*mut Comment, *mut c_void) -> *mut Error;
-type TextHandler = unsafe extern "C" fn(*mut TextChunk, *mut c_void) -> *mut Error;
-
-struct ExternHandler<F> {
-    func: Option<F>,
-    user_data: *mut c_void,
-}
-
-impl<F> ExternHandler<F> {
-    fn new(func: Option<F>, user_data: *mut c_void) -> Self {
-        ExternHandler { func, user_data }
-    }
 }
 
 pub struct ExternDocumentContentHandlers {

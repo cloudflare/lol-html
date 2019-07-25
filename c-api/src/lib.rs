@@ -111,3 +111,7 @@ mod string;
 mod text_chunk;
 
 pub use self::string::Str;
+
+// NOTE: prevent dead code from complaining about enum
+// never being constructed in the Rust code.
+pub use self::rewriter_builder::RewriterDirective;

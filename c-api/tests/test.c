@@ -51,13 +51,13 @@
         ok(!cool_thing_rewriter_end(rewriter)); \
     })
 
-#define EXPECT_ERR(html, assign_handlers, err_msg) \
+#define EXPECT_STOP(html, assign_handlers) \
     RUN_REWRITER(html, output_sink_stub, assign_handlers, { \
         ok(cool_thing_rewriter_write(rewriter, in, strlen(in))); \
     \
         cool_thing_str_t *msg = cool_thing_take_last_error(); \
     \
-        str_eq(msg, err_msg); \
+        str_eq(msg, "The rewriter has been stopped."); \
     \
         cool_thing_str_free(*msg); \
     })
@@ -132,7 +132,7 @@ static void test_non_ascii_encoding() {
 
 // Doctype API
 //---------------------------------------------------------------------
-static cool_thing_content_handler_error_t *test_doctype_api_doctype_handler(
+static cool_thing_rewriter_directive_t test_doctype_api_doctype_handler(
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
@@ -150,21 +150,19 @@ static cool_thing_content_handler_error_t *test_doctype_api_doctype_handler(
     note("User data");
     ok(*(int*)user_data == 42);
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_doctype_api_doctype_handler_error(
+static cool_thing_rewriter_directive_t test_doctype_api_stop_rewriting (
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
     (void)(doctype);
     (void)(user_data);
 
-    note("Handler error");
+    note("Stop rewriting");
 
-    const char *msg = "Doctype handler error";
-
-    return cool_thing_content_handler_error_new(msg, strlen(msg));
+    return COOL_THING_STOP;
 }
 
 EXPECT_OUTPUT(
@@ -191,26 +189,25 @@ static void test_doctype_api() {
         }
     );
 
-    EXPECT_ERR(
+    EXPECT_STOP(
         "<!doctype>",
         {
             cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
-                &test_doctype_api_doctype_handler_error,
+                &test_doctype_api_stop_rewriting ,
                 NULL,
                 NULL,
                 NULL,
                 NULL,
                 NULL
             );
-        },
-        "Doctype handler error"
+        }
     );
 }
 
 // Comment API
 //---------------------------------------------------------------------
-static cool_thing_content_handler_error_t *test_comment_api_comment_handler1(
+static cool_thing_rewriter_directive_t test_comment_api_comment_handler1(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -237,10 +234,10 @@ static cool_thing_content_handler_error_t *test_comment_api_comment_handler1(
     note("User data");
     ok(*(int*)user_data == 42);
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_comment_api_comment_handler2_el(
+static cool_thing_rewriter_directive_t test_comment_api_comment_handler2_el(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -252,10 +249,10 @@ static cool_thing_content_handler_error_t *test_comment_api_comment_handler2_el(
     ok(!cool_thing_comment_replace(comment, replacement, strlen(replacement), true));
     ok(cool_thing_comment_is_removed(comment));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_comment_api_comment_handler2_doc(
+static cool_thing_rewriter_directive_t test_comment_api_comment_handler2_doc(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -266,10 +263,10 @@ static cool_thing_content_handler_error_t *test_comment_api_comment_handler2_doc
     note("Insert after replaced");
     ok(!cool_thing_comment_after(comment, after, strlen(after), true));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_comment_api_comment_handler3(
+static cool_thing_rewriter_directive_t test_comment_api_comment_handler3(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -279,21 +276,19 @@ static cool_thing_content_handler_error_t *test_comment_api_comment_handler3(
     cool_thing_comment_remove(comment);
     ok(cool_thing_comment_is_removed(comment));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_comment_api_comment_handler_error(
+static cool_thing_rewriter_directive_t test_comment_api_stop_rewriting(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
     (void)(comment);
     (void)(user_data);
 
-    note("Handler error");
+    note("Stop rewriting");
 
-    const char *msg = "Comment handler error";
-
-    return cool_thing_content_handler_error_new(msg, strlen(msg));
+    return COOL_THING_STOP;
 }
 
 EXPECT_OUTPUT(
@@ -378,23 +373,22 @@ static void test_comment_api() {
         }
     );
 
-    EXPECT_ERR(
+    EXPECT_STOP(
         "<!-- hey -->",
         {
              cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
                 NULL,
                 NULL,
-                &test_comment_api_comment_handler_error,
+                &test_comment_api_stop_rewriting,
                 NULL,
                 NULL,
                 NULL
             );
-        },
-        "Comment handler error"
+        }
     );
 
-    EXPECT_ERR(
+    EXPECT_STOP(
         "<div><!-- foo --></div>",
         {
             const char *selector = "*";
@@ -405,21 +399,20 @@ static void test_comment_api() {
                 strlen(selector),
                 NULL,
                 NULL,
-                &test_comment_api_comment_handler_error,
+                &test_comment_api_stop_rewriting,
                 NULL,
                 NULL,
                 NULL
             );
 
             ok(!err);
-        },
-        "Comment handler error"
+        }
     );
 }
 
 // Text chunk API
 //---------------------------------------------------------------------
-static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler1(
+static cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler1(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -446,10 +439,10 @@ static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handle
     note("User data");
     ok(*(int*)user_data == 42);
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler2_el(
+static cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_el(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -462,10 +455,10 @@ static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handle
         ok(cool_thing_text_chunk_is_removed(chunk));
     }
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler2_doc(
+static cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_doc(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -477,10 +470,10 @@ static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handle
         ok(!cool_thing_text_chunk_after(chunk, after, strlen(after), true));
     }
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler3(
+static cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler3(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -492,21 +485,19 @@ static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handle
         ok(cool_thing_text_chunk_is_removed(chunk));
     }
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_text_chunk_api_text_chunk_handler_error(
+static cool_thing_rewriter_directive_t test_text_chunk_api_stop_rewriting(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
     (void)(chunk);
     (void)(user_data);
 
-    note("Handler error");
+    note("Stop rewriting");
 
-    const char *msg = "Text handler error";
-
-    return cool_thing_content_handler_error_new(msg, strlen(msg));
+    return COOL_THING_STOP;
 }
 
 
@@ -597,7 +588,7 @@ static void test_text_chunk_api() {
         }
     );
 
-    EXPECT_ERR(
+    EXPECT_STOP(
         "<div>42</div>",
         {
             const char *selector = "*";
@@ -610,16 +601,15 @@ static void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_text_chunk_handler_error,
+                &test_text_chunk_api_stop_rewriting,
                 NULL
             );
 
             ok(!err);
-        },
-        "Text handler error"
+        }
     );
 
-    EXPECT_ERR(
+    EXPECT_STOP(
         "42",
         {
              cool_thing_rewriter_builder_add_document_content_handlers(
@@ -628,18 +618,17 @@ static void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_text_chunk_handler_error,
+                &test_text_chunk_api_stop_rewriting,
                 NULL
             );
-        },
-        "Text handler error"
+        }
     );
 
 }
 
 // Element
 //---------------------------------------------------------------------
-static cool_thing_content_handler_error_t *modify_element_tag_name(
+static cool_thing_rewriter_directive_t modify_element_tag_name(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -667,10 +656,10 @@ static cool_thing_content_handler_error_t *modify_element_tag_name(
     note("User data");
     ok(*(int*)user_data == 42);
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *iterate_element_attributes(
+static cool_thing_rewriter_directive_t iterate_element_attributes(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -711,10 +700,10 @@ static cool_thing_content_handler_error_t *iterate_element_attributes(
 
     cool_thing_attributes_iterator_free(iter);
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *get_and_modify_element_attributes(
+static cool_thing_rewriter_directive_t get_and_modify_element_attributes(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -759,10 +748,10 @@ static cool_thing_content_handler_error_t *get_and_modify_element_attributes(
     note("Remove attribute");
     ok(!cool_thing_element_remove_attribute(element, attr1, strlen(attr1)));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *element_surrounding_content_insertion(
+static cool_thing_rewriter_directive_t element_surrounding_content_insertion(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -781,10 +770,10 @@ static cool_thing_content_handler_error_t *element_surrounding_content_insertion
     ok(!cool_thing_element_append(element, append, strlen(append), true));
     ok(!cool_thing_element_after(element, after, strlen(after), false));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *set_element_inner_content(
+static cool_thing_rewriter_directive_t set_element_inner_content(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -795,10 +784,10 @@ static cool_thing_content_handler_error_t *set_element_inner_content(
     note("Set inner content");
     ok(!cool_thing_element_set_inner_content(element, content, strlen(content), false));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *replace_element(
+static cool_thing_rewriter_directive_t replace_element(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -809,10 +798,10 @@ static cool_thing_content_handler_error_t *replace_element(
     note("Replace");
     ok(!cool_thing_element_replace(element, content, strlen(content), true));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *remove_element(
+static cool_thing_rewriter_directive_t remove_element(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -823,10 +812,10 @@ static cool_thing_content_handler_error_t *remove_element(
     cool_thing_element_remove(element);
     ok(cool_thing_element_is_removed(element));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *remove_element_and_keep_content(
+static cool_thing_rewriter_directive_t remove_element_and_keep_content(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -837,10 +826,10 @@ static cool_thing_content_handler_error_t *remove_element_and_keep_content(
     cool_thing_element_remove_and_keep_content(element);
     ok(cool_thing_element_is_removed(element));
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *get_and_free_empty_element_attribute(
+static cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(
     cool_thing_element_t *element, \
     void *user_data
 ) {
@@ -861,21 +850,19 @@ static cool_thing_content_handler_error_t *get_and_free_empty_element_attribute(
     str_eq(value, "");
     cool_thing_str_free(*value);
 
-    return NULL;
+    return COOL_THING_CONTINUE;
 }
 
-static cool_thing_content_handler_error_t *test_element_api_element_handler_error(
+static cool_thing_rewriter_directive_t test_element_api_stop_rewriting(
     cool_thing_element_t *element,
     void *user_data
 ) {
     (void)(element);
     (void)(user_data);
 
-    note("Handler error");
+    note("Stop rewriting");
 
-    const char *msg = "Element handler error";
-
-    return cool_thing_content_handler_error_new(msg, strlen(msg));
+    return COOL_THING_STOP;
 }
 
 EXPECT_OUTPUT(
@@ -1091,7 +1078,7 @@ static void element_api_test() {
         }
     );
 
-    EXPECT_ERR(
+    EXPECT_STOP(
         "<span foo>",
         {
             const char *selector = "span";
@@ -1100,7 +1087,7 @@ static void element_api_test() {
                 builder,
                 selector,
                 strlen(selector),
-                &test_element_api_element_handler_error,
+                &test_element_api_stop_rewriting,
                 NULL,
                 NULL,
                 NULL,
@@ -1109,8 +1096,7 @@ static void element_api_test() {
             );
 
             ok(!err);
-        },
-        "Element handler error"
+        }
     );
 
 }
