@@ -2,6 +2,7 @@ use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, Start
 use crate::base::Bytes;
 use crate::rewriter::EndTagHandler;
 use encoding_rs::Encoding;
+use std::any::Any;
 use std::fmt::{self, Debug};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
@@ -24,6 +25,7 @@ pub struct Element<'r, 't> {
     can_have_content: bool,
     should_remove_content: bool,
     encoding: &'static Encoding,
+    user_data: Box<dyn Any>,
 }
 
 impl<'r, 't> Element<'r, 't> {
@@ -37,6 +39,7 @@ impl<'r, 't> Element<'r, 't> {
             can_have_content,
             should_remove_content: false,
             encoding,
+            user_data: Box::new(()),
         }
     }
 
@@ -233,6 +236,8 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 }
+
+impl_user_data!(Element<'_, '_>);
 
 impl Debug for Element<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

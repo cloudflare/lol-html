@@ -1,6 +1,7 @@
 use crate::base::Bytes;
 use crate::rewritable_units::{Serialize, Token};
 use encoding_rs::Encoding;
+use std::any::Any;
 use std::fmt::{self, Debug};
 
 pub struct Doctype<'i> {
@@ -10,6 +11,7 @@ pub struct Doctype<'i> {
     force_quirks: bool,
     raw: Bytes<'i>,
     encoding: &'static Encoding,
+    user_data: Box<dyn Any>,
 }
 
 impl<'i> Doctype<'i> {
@@ -28,6 +30,7 @@ impl<'i> Doctype<'i> {
             force_quirks,
             raw,
             encoding,
+            user_data: Box::new(()),
         })
     }
 
@@ -54,6 +57,8 @@ impl<'i> Doctype<'i> {
         self.force_quirks
     }
 }
+
+impl_user_data!(Doctype<'_>);
 
 impl Serialize for Doctype<'_> {
     #[inline]

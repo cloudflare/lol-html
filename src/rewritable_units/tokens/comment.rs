@@ -1,6 +1,7 @@
 use super::{Mutations, Token};
 use crate::base::Bytes;
 use encoding_rs::Encoding;
+use std::any::Any;
 use std::fmt::{self, Debug};
 
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
@@ -17,6 +18,7 @@ pub struct Comment<'i> {
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
     mutations: Mutations,
+    user_data: Box<dyn Any>,
 }
 
 impl<'i> Comment<'i> {
@@ -30,6 +32,7 @@ impl<'i> Comment<'i> {
             raw: Some(raw),
             encoding,
             mutations: Mutations::new(encoding),
+            user_data: Box::new(()),
         })
     }
 
@@ -74,6 +77,7 @@ impl<'i> Comment<'i> {
 
 inject_mutation_api!(Comment);
 impl_serialize!(Comment);
+impl_user_data!(Comment<'_>);
 
 impl Debug for Comment<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

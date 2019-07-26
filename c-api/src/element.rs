@@ -195,3 +195,13 @@ pub extern "C" fn cool_thing_element_remove_and_keep_content(element: *mut Eleme
 pub extern "C" fn cool_thing_element_is_removed(element: *mut Element) -> bool {
     to_ref_mut!(element).removed()
 }
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_user_data_set(element: *mut Element, user_data: *mut c_void) {
+    to_ref_mut!(element).set_user_data(user_data);
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_element_user_data_get(element: *mut Element) -> *mut c_void {
+    get_user_data!(element)
+}

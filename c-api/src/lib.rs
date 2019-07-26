@@ -1,10 +1,8 @@
 use cool_thing::*;
 use failure::Error;
-use libc::{c_char, c_int, size_t};
+use libc::{c_char, c_int, c_void, size_t};
 use std::cell::RefCell;
-use std::ptr;
-use std::slice;
-use std::str;
+use std::{ptr, slice, str};
 
 #[inline]
 fn to_ptr<T>(val: T) -> *const T {
@@ -99,6 +97,16 @@ macro_rules! content_insertion_fn_body {
 
         0
     }};
+}
+
+macro_rules! get_user_data {
+    ($unit:ident) => {
+        to_ref!($unit)
+            .user_data()
+            .downcast_ref::<*mut c_void>()
+            .map(|d| *d)
+            .unwrap_or(ptr::null_mut())
+    };
 }
 
 mod comment;

@@ -2,7 +2,7 @@
 use crate::harness::{Output, ASCII_COMPATIBLE_ENCODINGS};
 use cool_thing::{
     AttributeNameError, ContentType, Element, ElementContentHandlers, HtmlRewriter, TagNameError,
-    Settings
+    Settings, UserData,
 };
 use encoding_rs::{Encoding, EUC_JP, UTF_8};
 use std::convert::TryFrom;
@@ -473,5 +473,23 @@ test_fixture!("Element rewritable unit", {
         });
 
         assert_eq!(output, "<svg><bar/><!--after-->Hi</foo></svg>");
+    });
+
+    test("User data", {
+        rewrite_element("<div><span>Hi</span></div>", UTF_8, "span", |el| {
+            el.set_user_data(42usize);
+
+            assert_eq!(
+                *el.user_data().downcast_ref::<usize>().unwrap(),
+                42usize
+            );
+
+            *el.user_data_mut().downcast_mut::<usize>().unwrap() = 1337usize;
+
+            assert_eq!(
+                *el.user_data().downcast_ref::<usize>().unwrap(),
+                1337usize
+            );
+        });
     });
 });

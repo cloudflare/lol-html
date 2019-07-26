@@ -66,3 +66,16 @@ pub extern "C" fn cool_thing_text_chunk_remove(chunk: *mut TextChunk) {
 pub extern "C" fn cool_thing_text_chunk_is_removed(chunk: *const TextChunk) -> bool {
     to_ref!(chunk).removed()
 }
+
+#[no_mangle]
+pub extern "C" fn cool_thing_text_chunk_user_data_set(
+    chunk: *mut TextChunk,
+    user_data: *mut c_void,
+) {
+    to_ref_mut!(chunk).set_user_data(user_data);
+}
+
+#[no_mangle]
+pub extern "C" fn cool_thing_text_chunk_user_data_get(chunk: *const TextChunk) -> *mut c_void {
+    get_user_data!(chunk)
+}

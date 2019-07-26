@@ -1,6 +1,25 @@
-use cool_thing::{ContentType, TextChunk};
+use cool_thing::{ContentType, TextChunk, UserData};
+use encoding_rs::UTF_8;
 
 test_fixture!("Text chunk token", {
+    test("User data", {
+        parse_token!("foo", UTF_8, TextChunk, |c: &mut TextChunk| {
+            c.set_user_data(42usize);
+
+            assert_eq!(
+                *c.user_data().downcast_ref::<usize>().unwrap(),
+                42usize
+            );
+
+            *c.user_data_mut().downcast_mut::<usize>().unwrap() = 1337usize;
+
+            assert_eq!(
+                *c.user_data().downcast_ref::<usize>().unwrap(),
+                1337usize
+            );
+        });
+    });
+
     test("Serialization", {
         let src =
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor \

@@ -238,6 +238,18 @@ cool_thing_str_t *cool_thing_doctype_public_id_get(const cool_thing_doctype_t *d
 // Returns NULL if the doctype doesn't have a SYSTEM identifier.
 cool_thing_str_t *cool_thing_doctype_system_id_get(const cool_thing_doctype_t *doctype);
 
+// Attaches custom user data to the doctype.
+//
+// The same doctype can be passed to multiple handlers if it has been
+// captured by multiple selectors. It might be handy to store some processing
+// state on the doctype, so it can be shared between handlers.
+void cool_thing_doctype_user_data_set(
+    const cool_thing_doctype_t *doctype,
+    void *user_data
+);
+
+// Returns user data attached to the doctype.
+void *cool_thing_doctype_user_data_get(const cool_thing_doctype_t *doctype);
 
 // Comment
 //---------------------------------------------------------------------
@@ -303,6 +315,19 @@ void cool_thing_comment_remove(cool_thing_comment_t *comment);
 // Returns `true` if the comment has been removed.
 bool cool_thing_comment_is_removed(const cool_thing_comment_t *comment);
 
+// Attaches custom user data to the comment.
+//
+// The same comment can be passed to multiple handlers if it has been
+// captured by multiple selectors. It might be handy to store some
+// processing state on the comment, so it can be shared between handlers.
+void cool_thing_comment_user_data_set(
+    const cool_thing_comment_t *comment,
+    void *user_data
+);
+
+// Returns user data attached to the comment.
+void *cool_thing_comment_user_data_get(const cool_thing_comment_t *comment);
+
 
 // Text chunk
 //---------------------------------------------------------------------
@@ -365,6 +390,19 @@ void cool_thing_text_chunk_remove(cool_thing_text_chunk_t *chunk);
 
 // Returns `true` if the text chunk has been removed.
 bool cool_thing_text_chunk_is_removed(const cool_thing_text_chunk_t *chunk);
+
+// Attaches custom user data to the text chunk.
+//
+// The same text chunk can be passed to multiple handlers if it has been
+// captured by multiple selectors. It might be handy to store some processing
+// state on the chunk, so it can be shared between handlers.
+void cool_thing_text_chunk_user_data_set(
+    const cool_thing_text_chunk_t *chunk,
+    void *user_data
+);
+
+// Returns user data attached to the text chunk.
+void *cool_thing_text_chunk_user_data_get(const cool_thing_text_chunk_t *chunk);
 
 
 // Element
@@ -553,6 +591,19 @@ void cool_thing_element_remove_and_keep_content(const cool_thing_element_t *elem
 
 // Returns `true` if the element has been removed.
 bool cool_thing_element_is_removed(const cool_thing_element_t *element);
+
+// Attaches custom user data to the element.
+//
+// The same element can be passed to multiple handlers if it has been
+// captured by multiple selectors. It might be handy to store some processing
+// state on the element, so it can be shared between handlers.
+void cool_thing_element_user_data_set(
+    const cool_thing_element_t *element,
+    void *user_data
+);
+
+// Returns user data attached to the text chunk.
+void *cool_thing_element_user_data_get(const cool_thing_element_t *element);
 
 #if defined(__cplusplus)
 }  // extern C

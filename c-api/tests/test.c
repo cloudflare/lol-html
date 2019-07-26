@@ -136,6 +136,8 @@ static cool_thing_rewriter_directive_t test_doctype_api_doctype_handler(
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
+    note("Fields");
+
     cool_thing_str_t *name = cool_thing_doctype_name_get(doctype);
     cool_thing_str_t *public_id = cool_thing_doctype_public_id_get(doctype);
     cool_thing_str_t *system_id = cool_thing_doctype_system_id_get(doctype);
@@ -149,6 +151,24 @@ static cool_thing_rewriter_directive_t test_doctype_api_doctype_handler(
 
     note("User data");
     ok(*(int*)user_data == 42);
+
+    note("Set doctype user data");
+    cool_thing_doctype_user_data_set(doctype, user_data);
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t test_doctype_api_user_data_get(
+    cool_thing_doctype_t *doctype,
+    void *user_data
+) {
+    (void)(user_data);
+
+    note("Get doctype user data");
+
+    int doctype_user_data = *(int*)cool_thing_doctype_user_data_get(doctype);
+
+    ok(doctype_user_data == 42);
 
     return COOL_THING_CONTINUE;
 }
@@ -181,6 +201,16 @@ static void test_doctype_api() {
                 builder,
                 &test_doctype_api_doctype_handler,
                 &user_data,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            );
+
+            cool_thing_rewriter_builder_add_document_content_handlers(
+                builder,
+                &test_doctype_api_user_data_get,
+                NULL,
                 NULL,
                 NULL,
                 NULL,
@@ -233,6 +263,24 @@ static cool_thing_rewriter_directive_t test_comment_api_comment_handler1(
 
     note("User data");
     ok(*(int*)user_data == 42);
+
+    note("Set comment user data");
+    cool_thing_comment_user_data_set(comment, user_data);
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t test_comment_api_user_data_get(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    (void)(user_data);
+
+    note("Get comment user data");
+
+    int comment_user_data = *(int*)cool_thing_comment_user_data_get(comment);
+
+    ok(comment_user_data == 42);
 
     return COOL_THING_CONTINUE;
 }
@@ -319,6 +367,16 @@ static void test_comment_api() {
                 NULL,
                 &test_comment_api_comment_handler1,
                 &user_data,
+                NULL,
+                NULL
+            );
+
+            cool_thing_rewriter_builder_add_document_content_handlers(
+                builder,
+                NULL,
+                NULL,
+                &test_comment_api_user_data_get,
+                NULL,
                 NULL,
                 NULL
             );
@@ -439,6 +497,24 @@ static cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler1(
     note("User data");
     ok(*(int*)user_data == 42);
 
+    note("Set text chunk user data");
+    cool_thing_text_chunk_user_data_set(chunk, user_data);
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t test_text_chunk_api_user_data_get(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+) {
+    (void)(user_data);
+
+    note("Get text chunk user data");
+
+    int chunk_user_data = *(int*)cool_thing_text_chunk_user_data_get(chunk);
+
+    ok(chunk_user_data == 42);
+
     return COOL_THING_CONTINUE;
 }
 
@@ -536,6 +612,16 @@ static void test_text_chunk_api() {
                 NULL,
                 &test_text_chunk_api_text_chunk_handler1,
                 &user_data
+            );
+
+            cool_thing_rewriter_builder_add_document_content_handlers(
+                builder,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                &test_text_chunk_api_user_data_get,
+                NULL
             );
         }
     );
@@ -655,6 +741,24 @@ static cool_thing_rewriter_directive_t modify_element_tag_name(
 
     note("User data");
     ok(*(int*)user_data == 42);
+
+    note("Set element user data");
+    cool_thing_element_user_data_set(element, user_data);
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t test_element_api_user_data_get(
+    cool_thing_element_t *element,
+    void *user_data
+) {
+    (void)(user_data);
+
+    note("Get element user data");
+
+    int element_user_data = *(int*)cool_thing_element_user_data_get(element);
+
+    ok(element_user_data == 42);
 
     return COOL_THING_CONTINUE;
 }
@@ -905,6 +1009,20 @@ static void element_api_test() {
                 strlen(selector),
                 &modify_element_tag_name,
                 &user_data,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            );
+
+            ok(!err);
+
+            err = cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector,
+                strlen(selector),
+                &test_element_api_user_data_get,
+                NULL,
                 NULL,
                 NULL,
                 NULL,
