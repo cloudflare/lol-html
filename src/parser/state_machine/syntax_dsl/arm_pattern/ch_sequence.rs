@@ -103,7 +103,7 @@ macro_rules! ch_sequence_arm_pattern {
         ch_sequence_arm_pattern!(@match_block |[$self, $input, ch]|> $exp_ch, {
             $self.input_cursor().consume_several($depth);
             $self.leave_ch_sequence_matching();
-            action_list!(|$self, $input, $ch|> $($actions)*);
+            action_list!(|$self, $input|> $($actions)*);
 
             // NOTE: this may be unreachable on expansion, e.g. if
             // we have state transition in the action list.

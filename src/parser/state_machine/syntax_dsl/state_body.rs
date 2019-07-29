@@ -1,6 +1,6 @@
 macro_rules! state_body {
     ( | [ $self:tt, $input:ident, $ch:ident ] |> [$($arms:tt)+], [$($enter_actions:tt)*] ) => {
-        action_list!(@state_enter |$self, $input, $ch|> $($enter_actions)*);
+        action_list!(@state_enter |$self, $input|> $($enter_actions)*);
         state_body!(@map_arms | [$self, $input, $ch] |> [$($arms)+], [])
     };
 
@@ -44,7 +44,7 @@ macro_rules! state_body {
         match $ch {
             $(
                 $pat $(| $pat_cont)* $(if $pat_expr)* => {
-                    action_list!(|$self, $input, $ch|> $($actions)*);
+                    action_list!(|$self, $input|> $($actions)*);
                 }
             )*
         }

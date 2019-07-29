@@ -1,6 +1,6 @@
 macro_rules! action {
-    (| $self:tt, $input:ident, $ch:ident | > $action_fn:ident ? $($args:expr),* ) => {
-        let loop_directive = $self.$action_fn($input, $ch $(,$args),*)?;
+    (| $self:tt, $input:ident | > $action_fn:ident ? $($args:expr),* ) => {
+        let loop_directive = $self.$action_fn($input $(,$args),*)?;
 
         match loop_directive {
             ParsingLoopDirective::None => (),
@@ -10,8 +10,8 @@ macro_rules! action {
         }
     };
 
-    (| $self:tt, $input:ident, $ch:ident | > $action_fn:ident $($args:expr),* ) => {
-        $self.$action_fn($input, $ch $(,$args),*);
+    (| $self:tt, $input:ident | > $action_fn:ident $($args:expr),* ) => {
+        $self.$action_fn($input $(,$args),*);
     };
 
     ( @state_transition | $self:tt | > reconsume in $state:ident) => {
