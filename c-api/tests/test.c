@@ -78,24 +78,10 @@ static void output_sink_stub(const char *chunk, size_t chunk_len, void *user_dat
 // Unsupported selector
 //---------------------------------------------------------------------
 static void test_unsupported_selector() {
-    const char *selector = "p:last-child";
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    const char *selector_str = "p:last-child";
+    cool_thing_selector_t *selector = cool_thing_selector_parse(selector_str, strlen(selector_str));
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
-        builder,
-        selector,
-        strlen(selector),
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    cool_thing_rewriter_builder_free(builder);
-
-    ok(err == -1);
+    ok(selector == NULL);
 
     cool_thing_str_t *msg = cool_thing_take_last_error();
 
@@ -357,6 +343,13 @@ EXPECT_OUTPUT(
 static void test_comment_api() {
     int user_data = 42;
 
+    const char *selector_str = "*";
+
+    cool_thing_selector_t *selector = cool_thing_selector_parse(
+        selector_str,
+        strlen(selector_str)
+    );
+
     REWRITE(
         "<!--Hey 42-->",
         test_comment_api_output1,
@@ -387,12 +380,9 @@ static void test_comment_api() {
         "<div><!--Hello--></div>",
         test_comment_api_output2,
         {
-            const char *selector = "*";
-
             int err = cool_thing_rewriter_builder_add_element_content_handlers(
                 builder,
                 selector,
-                strlen(selector),
                 NULL,
                 NULL,
                 &test_comment_api_comment_handler2_el,
@@ -449,12 +439,9 @@ static void test_comment_api() {
     EXPECT_STOP(
         "<div><!-- foo --></div>",
         {
-            const char *selector = "*";
-
             int err = cool_thing_rewriter_builder_add_element_content_handlers(
                 builder,
                 selector,
-                strlen(selector),
                 NULL,
                 NULL,
                 &test_comment_api_stop_rewriting,
@@ -466,6 +453,8 @@ static void test_comment_api() {
             ok(!err);
         }
     );
+
+    cool_thing_selector_free(selector);
 }
 
 // Text chunk API
@@ -600,6 +589,13 @@ EXPECT_OUTPUT(
 static void test_text_chunk_api() {
     int user_data = 42;
 
+    const char *selector_str = "*";
+
+    cool_thing_selector_t *selector = cool_thing_selector_parse(
+        selector_str,
+        strlen(selector_str)
+    );
+
     REWRITE(
         "Hey 42",
         test_text_chunk_api_output1,
@@ -626,16 +622,16 @@ static void test_text_chunk_api() {
         }
     );
 
+
+
+
     REWRITE(
         "<div>Hello</div>",
         test_text_chunk_api_output2,
         {
-            const char *selector = "*";
-
             int err = cool_thing_rewriter_builder_add_element_content_handlers(
                 builder,
                 selector,
-                strlen(selector),
                 NULL,
                 NULL,
                 NULL,
@@ -677,12 +673,9 @@ static void test_text_chunk_api() {
     EXPECT_STOP(
         "<div>42</div>",
         {
-            const char *selector = "*";
-
             int err = cool_thing_rewriter_builder_add_element_content_handlers(
                 builder,
                 selector,
-                strlen(selector),
                 NULL,
                 NULL,
                 NULL,
@@ -710,6 +703,7 @@ static void test_text_chunk_api() {
         }
     );
 
+    cool_thing_selector_free(selector);
 }
 
 // Element
@@ -997,225 +991,255 @@ EXPECT_OUTPUT(
 static void element_api_test() {
     int user_data = 42;
 
-    REWRITE(
-        "Hi <div>",
-        test_element_api_output1,
-        {
-            const char *selector = "*";
+    {
+        const char *selector_str = "*";
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &modify_element_tag_name,
-                &user_data,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+        cool_thing_selector_t *selector = cool_thing_selector_parse(
+            selector_str,
+            strlen(selector_str)
+        );
 
-            ok(!err);
+        REWRITE(
+            "Hi <div>",
+            test_element_api_output1,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &modify_element_tag_name,
+                    &user_data,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-            err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &test_element_api_user_data_get,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+                ok(!err);
 
-            ok(!err);
-        }
-    );
+                err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &test_element_api_user_data_get,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-    REWRITE(
-        "<div foo=42 bar='1337'>",
-        output_sink_stub,
-        {
-            const char *selector = "*";
+                ok(!err);
+            }
+        );
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &iterate_element_attributes,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+        REWRITE(
+            "<div foo=42 bar='1337'>",
+            output_sink_stub,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &iterate_element_attributes,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-            ok(!err);
-        }
-    );
+                ok(!err);
+            }
+        );
 
-    REWRITE(
-        "<span foo=42>",
-        test_element_api_output2,
-        {
-            const char *selector = "*";
+        REWRITE(
+            "<span foo=42>",
+            test_element_api_output2,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &get_and_modify_element_attributes,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &get_and_modify_element_attributes,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+                ok(!err);
+            }
+        );
 
-            ok(!err);
-        }
-    );
+        REWRITE(
+            "<div>Hi</div>",
+            test_element_api_output3,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &element_surrounding_content_insertion,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-    REWRITE(
-        "<div>Hi</div>",
-        test_element_api_output3,
-        {
-            const char *selector = "*";
+                ok(!err);
+            }
+        );
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &element_surrounding_content_insertion,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+        cool_thing_selector_free(selector);
+    }
 
-            ok(!err);
-        }
-    );
+    {
+        const char *selector_str = "div";
 
+        cool_thing_selector_t *selector = cool_thing_selector_parse(
+            selector_str,
+            strlen(selector_str)
+        );
 
-    REWRITE(
-        "<div><span>42</span></div>",
-        test_element_api_output4,
-        {
-            const char *selector = "div";
+        REWRITE(
+            "<div><span>42</span></div>",
+            test_element_api_output4,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &set_element_inner_content,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &set_element_inner_content,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+                ok(!err);
+            }
+        );
 
-            ok(!err);
-        }
-    );
+        cool_thing_selector_free(selector);
+    }
 
-    REWRITE(
-        "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
-        test_element_api_output5,
-        {
-            const char *selector1 = "div";
-            const char *selector2 = "h1";
-            const char *selector3 = "h2";
+    {
+        const char *selector1_str = "div";
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector1,
-                strlen(selector1),
-                &replace_element,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+        cool_thing_selector_t *selector1 = cool_thing_selector_parse(
+            selector1_str,
+            strlen(selector1_str)
+        );
 
-            ok(!err);
+        const char *selector2_str = "h1";
 
-            err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector2,
-                strlen(selector2),
-                &remove_element,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+        cool_thing_selector_t *selector2 = cool_thing_selector_parse(
+            selector2_str,
+            strlen(selector2_str)
+        );
 
-            ok(!err);
+        const char *selector3_str = "h2";
 
-            err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector3,
-                strlen(selector3),
-                &remove_element_and_keep_content,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+        cool_thing_selector_t *selector3 = cool_thing_selector_parse(
+            selector3_str,
+            strlen(selector3_str)
+        );
 
-            ok(!err);
-        }
-    );
+        REWRITE(
+            "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
+            test_element_api_output5,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector1,
+                    &replace_element,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-    REWRITE(
-        "<span foo>",
-        test_element_api_output6,
-        {
-            const char *selector = "span";
+                ok(!err);
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &get_and_free_empty_element_attribute,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+                err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector2,
+                    &remove_element,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-            ok(!err);
-        }
-    );
+                ok(!err);
 
-    EXPECT_STOP(
-        "<span foo>",
-        {
-            const char *selector = "span";
+                err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector3,
+                    &remove_element_and_keep_content,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
 
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                strlen(selector),
-                &test_element_api_stop_rewriting,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
+                ok(!err);
+            }
+        );
 
-            ok(!err);
-        }
-    );
+        cool_thing_selector_free(selector1);
+        cool_thing_selector_free(selector2);
+        cool_thing_selector_free(selector3);
+    }
+
+    {
+        const char *selector_str = "span";
+
+        cool_thing_selector_t *selector = cool_thing_selector_parse(
+            selector_str,
+            strlen(selector_str)
+        );
+
+        REWRITE(
+            "<span foo>",
+            test_element_api_output6,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &get_and_free_empty_element_attribute,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
+
+                ok(!err);
+            }
+        );
+
+        EXPECT_STOP(
+            "<span foo>",
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &test_element_api_stop_rewriting,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
+
+                ok(!err);
+            }
+        );
+
+        cool_thing_selector_free(selector);
+    }
 
 }
 

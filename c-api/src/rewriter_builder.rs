@@ -1,5 +1,5 @@
 use super::*;
-use failure::{err_msg, Error};
+use failure::err_msg;
 use libc::c_void;
 
 #[repr(C)]
@@ -93,7 +93,7 @@ pub struct SafeContentHandlers<'b> {
 #[derive(Default)]
 pub struct HtmlRewriterBuilder {
     document_content_handlers: Vec<ExternDocumentContentHandlers>,
-    element_content_handlers: Vec<(Selector, ExternElementContentHandlers)>,
+    element_content_handlers: Vec<(&'static Selector, ExternElementContentHandlers)>,
 }
 
 impl HtmlRewriterBuilder {
@@ -107,7 +107,7 @@ impl HtmlRewriterBuilder {
             element: self
                 .element_content_handlers
                 .iter()
-                .map(|(s, h)| (s, h.as_safe_element_content_handlers()))
+                .map(|(s, h)| (*s, h.as_safe_element_content_handlers()))
                 .collect(),
         }
     }
@@ -142,8 +142,7 @@ pub extern "C" fn cool_thing_rewriter_builder_add_document_content_handlers(
 #[no_mangle]
 pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
     builder: *mut HtmlRewriterBuilder,
-    selector: *const c_char,
-    selector_len: size_t,
+    selector: *const Selector,
     element_handler: Option<ElementHandler>,
     element_handler_user_data: *mut c_void,
     comments_handler: Option<CommentsHandler>,
@@ -151,8 +150,7 @@ pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
     text_handler: Option<TextHandler>,
     text_handler_user_data: *mut c_void,
 ) -> c_int {
-    let selector = unwrap_or_ret_err_code! { to_str!(selector, selector_len) };
-    let selector = unwrap_or_ret_err_code! { selector.parse::<Selector>() };
+    let selector = to_ref!(selector);
     let builder = to_ref_mut!(builder);
 
     let handlers = ExternElementContentHandlers {

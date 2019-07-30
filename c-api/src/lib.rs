@@ -115,6 +115,7 @@ mod element;
 mod errors;
 mod rewriter;
 mod rewriter_builder;
+mod selector;
 mod string;
 mod text_chunk;
 

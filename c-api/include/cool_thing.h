@@ -27,6 +27,7 @@ typedef struct cool_thing_TextChunk cool_thing_text_chunk_t;
 typedef struct cool_thing_Element cool_thing_element_t;
 typedef struct cool_thing_AttributesIterator cool_thing_attributes_iterator_t;
 typedef struct cool_thing_Attribute cool_thing_attribute_t;
+typedef struct cool_thing_Selector cool_thing_selector_t;
 
 // Library-allocated UTF8 string fat pointer.
 //
@@ -101,6 +102,27 @@ typedef cool_thing_rewriter_directive_t (*cool_thing_element_handler_t)(
     void *user_data
 );
 
+// Selector
+//---------------------------------------------------------------------
+
+// Parses given CSS selector string.
+//
+// Returns NULL if parsing error occures. The actual error message
+// can be obtained using `cool_thing_take_last_error` function.
+//
+// WARNING: Selector SHOULD NOT be deallocated if there are any active rewriter
+// builders that accepted it as an argument to `cool_thing_rewriter_builder_add_element_content_handlers()`
+// method. Deallocate all dependant rewriter builders first and then
+// use `cool_thing_selector_free` function to free the selector.
+cool_thing_selector_t *cool_thing_selector_parse(
+    const char *selector,
+    size_t selector_len
+);
+
+// Frees the memory held by the parsed selector object.
+void cool_thing_selector_free(cool_thing_selector_t *selector);
+
+
 // Rewriter builder
 //---------------------------------------------------------------------
 
@@ -156,8 +178,7 @@ void cool_thing_rewriter_builder_add_document_content_handlers(
 // handler execution. So they should never be leaked outside of handlers.
 int cool_thing_rewriter_builder_add_element_content_handlers(
     cool_thing_rewriter_builder_t *builder,
-    const char *selector,
-    size_t selector_len,
+    const cool_thing_selector_t *selector,
     cool_thing_element_handler_t element_handler,
     void *element_handler_user_data,
     cool_thing_comment_handler_t comment_handler,
