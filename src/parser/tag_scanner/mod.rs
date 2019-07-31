@@ -2,7 +2,7 @@
 mod actions;
 mod conditions;
 
-use crate::base::{Align, Chunk, Cursor, Range};
+use crate::base::{Align, Chunk, Range};
 use crate::html::{LocalName, LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{FeedbackDirective, StateMachine, StateResult};
 use crate::parser::{
@@ -22,7 +22,7 @@ pub trait TagHintSink {
     fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, RewritingError>;
 }
 
-pub type State<S> = fn(&mut TagScanner<S>, &Chunk) -> StateResult;
+pub type State<S> = fn(&mut TagScanner<S>, &mut Chunk) -> StateResult;
 
 /// Tag scanner skips the majority of lexer operations and, thus,
 /// is faster. It also has much less requirements for buffering which makes it more
@@ -36,7 +36,6 @@ pub type State<S> = fn(&mut TagScanner<S>, &Chunk) -> StateResult;
 /// it's not a concern for our use case as no content will be erroneously captured
 /// in this case.
 pub struct TagScanner<S: TagHintSink> {
-    input_cursor: Cursor,
     tag_start: Option<usize>,
     ch_sequence_matching_start: Option<usize>,
     tag_name_start: usize,
@@ -59,7 +58,6 @@ impl<S: TagHintSink> TagScanner<S> {
         tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
     ) -> Self {
         TagScanner {
-            input_cursor: Cursor::default(),
             tag_start: None,
             ch_sequence_matching_start: None,
             tag_name_start: 0,
@@ -80,10 +78,11 @@ impl<S: TagHintSink> TagScanner<S> {
     fn emit_tag_hint(&mut self, input: &Chunk) -> Result<ParserDirective, RewritingError> {
         let name_range = Range {
             start: self.tag_name_start,
-            end: self.input_cursor.pos(),
+            end: input.pos(),
         };
 
-        let name = LocalName::new(input, name_range, self.tag_name_hash);
+        let input_bytes = input.as_bytes();
+        let name = LocalName::new(&input_bytes, name_range, self.tag_name_hash);
 
         trace!(@output name);
 
@@ -142,7 +141,7 @@ impl<S: TagHintSink> StateMachine for TagScanner<S> {
     }
 
     #[inline]
-    fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
+    fn get_consumed_byte_count(&self, input: &Chunk) -> usize {
         // NOTE: if we are in character sequence matching we need
         // to block from the position where matching starts. We don't
         // need to do that manually in the lexer because it
@@ -151,21 +150,18 @@ impl<S: TagHintSink> StateMachine for TagScanner<S> {
         // lexeme boundaries.
         match (self.tag_start, self.ch_sequence_matching_start) {
             (Some(tag_start), Some(ch_sequence_matching_start)) => {
-                input.len() - min(tag_start, ch_sequence_matching_start)
+                min(tag_start, ch_sequence_matching_start)
             }
-            (Some(tag_start), None) => input.len() - tag_start,
-            (None, Some(ch_sequence_matching_start)) => input.len() - ch_sequence_matching_start,
-            (None, None) => 0,
+            (Some(tag_start), None) => tag_start,
+            (None, Some(ch_sequence_matching_start)) => ch_sequence_matching_start,
+            (None, None) => input.len(),
         }
     }
 
     fn adjust_for_next_input(&mut self) {
         if let Some(tag_start) = self.tag_start {
-            self.input_cursor.align(tag_start);
             self.tag_name_start.align(tag_start);
             self.tag_start = Some(0);
-        } else {
-            self.input_cursor = Cursor::default();
         }
     }
 
@@ -175,8 +171,8 @@ impl<S: TagHintSink> StateMachine for TagScanner<S> {
     }
 
     #[inline]
-    fn enter_ch_sequence_matching(&mut self) {
-        self.ch_sequence_matching_start = Some(self.input_cursor.pos());
+    fn enter_ch_sequence_matching(&mut self, input: &mut Chunk) {
+        self.ch_sequence_matching_start = Some(input.pos());
     }
 
     #[inline]

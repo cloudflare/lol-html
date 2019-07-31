@@ -4,7 +4,7 @@ mod syntax_dsl;
 #[macro_use]
 mod syntax;
 
-use crate::base::{Chunk, Cursor};
+use crate::base::Chunk;
 use crate::html::{LocalNameHash, TextType};
 use crate::parser::{ParserDirective, TreeBuilderFeedback};
 use crate::rewriter::RewritingError;
@@ -50,7 +50,7 @@ pub struct StateMachineBookmark {
 
 pub enum ParsingLoopTerminationReason {
     ParserDirectiveChange(ParserDirective, StateMachineBookmark),
-    EndOfInput { blocked_byte_count: usize },
+    EndOfInput { consumed_byte_count: usize },
 }
 
 pub enum ParsingLoopDirective {
@@ -63,46 +63,46 @@ pub type StateResult = Result<ParsingLoopDirective, RewritingError>;
 pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, RewritingError>;
 
 pub trait StateMachineActions {
-    fn emit_eof(&mut self, input: &Chunk) -> StateResult;
-    fn emit_text(&mut self, input: &Chunk) -> StateResult;
-    fn emit_current_token(&mut self, input: &Chunk) -> StateResult;
-    fn emit_tag(&mut self, input: &Chunk) -> StateResult;
-    fn emit_current_token_and_eof(&mut self, input: &Chunk) -> StateResult;
-    fn emit_raw_without_token(&mut self, input: &Chunk) -> StateResult;
-    fn emit_raw_without_token_and_eof(&mut self, input: &Chunk) -> StateResult;
+    fn emit_eof(&mut self, input: &mut Chunk) -> StateResult;
+    fn emit_text(&mut self, input: &mut Chunk) -> StateResult;
+    fn emit_current_token(&mut self, input: &mut Chunk) -> StateResult;
+    fn emit_tag(&mut self, input: &mut Chunk) -> StateResult;
+    fn emit_current_token_and_eof(&mut self, input: &mut Chunk) -> StateResult;
+    fn emit_raw_without_token(&mut self, input: &mut Chunk) -> StateResult;
+    fn emit_raw_without_token_and_eof(&mut self, input: &mut Chunk) -> StateResult;
 
-    fn create_start_tag(&mut self, input: &Chunk);
-    fn create_end_tag(&mut self, input: &Chunk);
-    fn create_doctype(&mut self, input: &Chunk);
-    fn create_comment(&mut self, input: &Chunk);
+    fn create_start_tag(&mut self, input: &mut Chunk);
+    fn create_end_tag(&mut self, input: &mut Chunk);
+    fn create_doctype(&mut self, input: &mut Chunk);
+    fn create_comment(&mut self, input: &mut Chunk);
 
-    fn start_token_part(&mut self, input: &Chunk);
+    fn start_token_part(&mut self, input: &mut Chunk);
 
-    fn mark_comment_text_end(&mut self, input: &Chunk);
-    fn shift_comment_text_end_by(&mut self, input: &Chunk, offset: usize);
+    fn mark_comment_text_end(&mut self, input: &mut Chunk);
+    fn shift_comment_text_end_by(&mut self, input: &mut Chunk, offset: usize);
 
-    fn set_force_quirks(&mut self, input: &Chunk);
-    fn finish_doctype_name(&mut self, input: &Chunk);
-    fn finish_doctype_public_id(&mut self, input: &Chunk);
-    fn finish_doctype_system_id(&mut self, input: &Chunk);
+    fn set_force_quirks(&mut self, input: &mut Chunk);
+    fn finish_doctype_name(&mut self, input: &mut Chunk);
+    fn finish_doctype_public_id(&mut self, input: &mut Chunk);
+    fn finish_doctype_system_id(&mut self, input: &mut Chunk);
 
-    fn finish_tag_name(&mut self, input: &Chunk) -> StateResult;
-    fn update_tag_name_hash(&mut self, input: &Chunk);
-    fn mark_as_self_closing(&mut self, input: &Chunk);
+    fn finish_tag_name(&mut self, input: &mut Chunk) -> StateResult;
+    fn update_tag_name_hash(&mut self, input: &mut Chunk);
+    fn mark_as_self_closing(&mut self, input: &mut Chunk);
 
-    fn start_attr(&mut self, input: &Chunk);
-    fn finish_attr_name(&mut self, input: &Chunk);
-    fn finish_attr_value(&mut self, input: &Chunk);
-    fn finish_attr(&mut self, input: &Chunk);
+    fn start_attr(&mut self, input: &mut Chunk);
+    fn finish_attr_name(&mut self, input: &mut Chunk);
+    fn finish_attr_value(&mut self, input: &mut Chunk);
+    fn finish_attr(&mut self, input: &mut Chunk);
 
-    fn set_closing_quote_to_double(&mut self, input: &Chunk);
-    fn set_closing_quote_to_single(&mut self, input: &Chunk);
+    fn set_closing_quote_to_double(&mut self, input: &mut Chunk);
+    fn set_closing_quote_to_single(&mut self, input: &mut Chunk);
 
-    fn mark_tag_start(&mut self, input: &Chunk);
-    fn unmark_tag_start(&mut self, input: &Chunk);
+    fn mark_tag_start(&mut self, input: &mut Chunk);
+    fn unmark_tag_start(&mut self, input: &mut Chunk);
 
-    fn enter_cdata(&mut self, input: &Chunk);
-    fn leave_cdata(&mut self, input: &Chunk);
+    fn enter_cdata(&mut self, input: &mut Chunk);
+    fn leave_cdata(&mut self, input: &mut Chunk);
 }
 
 pub trait StateMachineConditions {
@@ -113,11 +113,8 @@ pub trait StateMachineConditions {
 pub trait StateMachine: StateMachineActions + StateMachineConditions {
     define_states!();
 
-    fn state(&self) -> fn(&mut Self, &Chunk) -> StateResult;
-    fn set_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult);
-
-    fn input_cursor(&mut self) -> &mut Cursor;
-    fn set_input_cursor(&mut self, input_cursor: Cursor);
+    fn state(&self) -> fn(&mut Self, &mut Chunk) -> StateResult;
+    fn set_state(&mut self, state: fn(&mut Self, &mut Chunk) -> StateResult);
 
     fn is_state_enter(&self) -> bool;
     fn set_is_state_enter(&mut self, val: bool);
@@ -134,11 +131,11 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
 
     fn adjust_for_next_input(&mut self);
     fn adjust_to_bookmark(&mut self, pos: usize, feedback_directive: FeedbackDirective);
-    fn enter_ch_sequence_matching(&mut self);
+    fn enter_ch_sequence_matching(&mut self, input: &mut Chunk);
     fn leave_ch_sequence_matching(&mut self);
-    fn get_blocked_byte_count(&self, input: &Chunk) -> usize;
+    fn get_consumed_byte_count(&self, input: &Chunk) -> usize;
 
-    fn run_parsing_loop(&mut self, input: &Chunk) -> ParsingLoopResult {
+    fn run_parsing_loop(&mut self, input: &mut Chunk) -> ParsingLoopResult {
         loop {
             let state = self.state();
 
@@ -150,28 +147,30 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
 
     fn continue_from_bookmark(
         &mut self,
-        input: &Chunk,
+        input: &mut Chunk,
         bookmark: StateMachineBookmark,
     ) -> ParsingLoopResult {
         self.set_cdata_allowed(bookmark.cdata_allowed);
         self.switch_text_type(bookmark.text_type);
         self.set_last_start_tag_name_hash(bookmark.last_start_tag_name_hash);
         self.adjust_to_bookmark(bookmark.pos, bookmark.feedback_directive);
-        self.set_input_cursor(Cursor::new(bookmark.pos));
+        input.set_pos(bookmark.pos);
 
         self.run_parsing_loop(input)
     }
 
     #[inline]
     fn break_on_end_of_input(&mut self, input: &Chunk) -> StateResult {
-        let blocked_byte_count = self.get_blocked_byte_count(input);
+        let consumed_byte_count = self.get_consumed_byte_count(input);
 
         if !input.is_last() {
             self.adjust_for_next_input()
         }
 
         Ok(ParsingLoopDirective::Break(
-            ParsingLoopTerminationReason::EndOfInput { blocked_byte_count },
+            ParsingLoopTerminationReason::EndOfInput {
+                consumed_byte_count,
+            },
         ))
     }
 
@@ -204,7 +203,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn switch_state(&mut self, state: fn(&mut Self, &Chunk) -> StateResult) {
+    fn switch_state(&mut self, state: fn(&mut Self, &mut Chunk) -> StateResult) {
         self.set_state(state);
         self.set_is_state_enter(true);
     }
@@ -226,16 +225,6 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
 
 macro_rules! impl_common_sm_accessors {
     () => {
-        #[inline]
-        fn input_cursor(&mut self) -> &mut Cursor {
-            &mut self.input_cursor
-        }
-
-        #[inline]
-        fn set_input_cursor(&mut self, input_cursor: Cursor) {
-            self.input_cursor = input_cursor;
-        }
-
         #[inline]
         fn is_state_enter(&self) -> bool {
             self.is_state_enter
@@ -281,22 +270,22 @@ macro_rules! impl_common_sm_accessors {
 macro_rules! impl_common_sm_actions {
     () => {
         #[inline]
-        fn set_closing_quote_to_double(&mut self, _input: &Chunk) {
+        fn set_closing_quote_to_double(&mut self, _input: &mut Chunk) {
             self.closing_quote = b'"';
         }
 
         #[inline]
-        fn set_closing_quote_to_single(&mut self, _input: &Chunk) {
+        fn set_closing_quote_to_single(&mut self, _input: &mut Chunk) {
             self.closing_quote = b'\'';
         }
 
         #[inline]
-        fn enter_cdata(&mut self, _input: &Chunk) {
+        fn enter_cdata(&mut self, _input: &mut Chunk) {
             self.set_last_text_type(TextType::CDataSection);
         }
 
         #[inline]
-        fn leave_cdata(&mut self, _input: &Chunk) {
+        fn leave_cdata(&mut self, _input: &mut Chunk) {
             self.set_last_text_type(TextType::Data);
         }
     };
@@ -306,7 +295,7 @@ macro_rules! noop_action {
     ($($fn_name:ident),*) => {
         $(
             #[inline]
-            fn $fn_name(&mut self, _input: &Chunk) {
+            fn $fn_name(&mut self, _input: &mut Chunk) {
                 trace!(@noop);
             }
         )*
@@ -317,7 +306,7 @@ macro_rules! noop_action_with_result {
     ($($fn_name:ident),*) => {
         $(
             #[inline]
-            fn $fn_name(&mut self, _input: &Chunk) -> StateResult {
+            fn $fn_name(&mut self, _input: &mut Chunk) -> StateResult {
                 trace!(@noop);
 
                 Ok(ParsingLoopDirective::None)

@@ -1,20 +1,26 @@
-use super::{Bytes, Range};
+use super::Bytes;
 
 #[derive(Debug)]
 pub struct Chunk<'b> {
     data: &'b [u8],
     last: bool,
+    next_pos: usize,
 }
 
 impl<'b> Chunk<'b> {
     pub fn last(data: &'b [u8]) -> Self {
-        Chunk { data, last: true }
+        Chunk {
+            data,
+            last: true,
+            next_pos: 0,
+        }
     }
 
     pub fn last_empty() -> Self {
         Chunk {
             data: &[],
             last: true,
+            next_pos: 0,
         }
     }
 
@@ -29,28 +35,68 @@ impl<'b> Chunk<'b> {
     }
 
     #[inline]
-    pub fn slice(&self, range: Range) -> Bytes {
-        self.data[range.start..range.end].into()
-    }
-
-    #[inline]
-    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes> {
-        range.map(|range| self.slice(range))
-    }
-
-    #[inline]
     pub fn get(&self, pos: usize) -> Option<u8> {
         self.data.get(pos).cloned()
     }
 
     #[inline]
-    pub(crate) fn as_debug_string(&self) -> String {
-        Bytes::from(self.data).as_debug_string()
+    pub fn pos(&self) -> usize {
+        self.next_pos - 1
+    }
+
+    #[inline]
+    pub fn set_pos(&mut self, pos: usize) {
+        self.next_pos = pos;
+    }
+
+    #[inline]
+    pub fn as_bytes(&self) -> Bytes<'b> {
+        Bytes::from(self.data)
+    }
+
+    #[inline]
+    #[allow(clippy::let_and_return)]
+    pub fn consume_ch(&mut self) -> Option<u8> {
+        let ch = self.get(self.next_pos);
+
+        self.next_pos += 1;
+
+        trace!(@chars "consume", ch);
+
+        ch
+    }
+
+    #[inline]
+    pub fn unconsume_ch(&mut self) {
+        self.next_pos -= 1;
+
+        trace!(@chars "unconsume");
+    }
+
+    #[inline]
+    pub fn consume_several(&mut self, count: usize) {
+        self.next_pos += count;
+
+        trace!(@chars "consume several");
+    }
+
+    #[inline]
+    #[allow(clippy::let_and_return)]
+    pub fn lookahead(&self, offset: usize) -> Option<u8> {
+        let ch = self.get(self.next_pos + offset - 1);
+
+        trace!(@chars "lookahead", ch);
+
+        ch
     }
 }
 
 impl<'b> From<&'b [u8]> for Chunk<'b> {
     fn from(data: &'b [u8]) -> Self {
-        Chunk { data, last: false }
+        Chunk {
+            data,
+            last: false,
+            next_pos: 0,
+        }
     }
 }

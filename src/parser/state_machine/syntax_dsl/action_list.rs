@@ -29,7 +29,7 @@ macro_rules! action_list {
     // NOTE: state transition should always be in the end of the action list
     ( | $self:tt, $input:ident|> $($transition:tt)+ ) => {
         trace!(@actions $($transition)+);
-        action!(@state_transition | $self |> $($transition)+);
+        action!(@state_transition | $self, $input |> $($transition)+);
     };
 
     // NOTE: end of the action list

@@ -14,12 +14,12 @@ macro_rules! action {
         $self.$action_fn($input $(,$args),*);
     };
 
-    ( @state_transition | $self:tt | > reconsume in $state:ident) => {
-        $self.input_cursor().unconsume_ch();
-        action!(@state_transition | $self | > --> $state);
+    ( @state_transition | $self:tt, $input:ident | > reconsume in $state:ident) => {
+        $input.unconsume_ch();
+        action!(@state_transition | $self, $input | > --> $state);
     };
 
-    ( @state_transition | $self:tt | > - -> $state:ident) => {
+    ( @state_transition | $self:tt, $input:ident | > - -> $state:ident) => {
         $self.switch_state(Self::$state);
 
         return Ok(ParsingLoopDirective::Continue);

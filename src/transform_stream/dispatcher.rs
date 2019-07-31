@@ -1,5 +1,5 @@
 use super::*;
-use crate::base::{Chunk, Range};
+use crate::base::{Bytes, Range};
 use crate::html::{LocalName, Namespace};
 use crate::parser::{
     Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHintSink,
@@ -15,7 +15,7 @@ use std::rc::Rc;
 use TagTokenOutline::*;
 
 pub struct AuxStartTagInfo<'i> {
-    pub input: &'i Chunk<'i>,
+    pub input: &'i Bytes<'i>,
     pub attr_buffer: SharedAttributeBuffer,
     pub self_closing: bool,
 }
@@ -92,10 +92,12 @@ where
         }
     }
 
-    pub fn flush_remaining_input(&mut self, input: &Chunk, blocked_byte_count: usize) {
-        let output = input.slice(Range {
+    pub fn flush_remaining_input(&mut self, input: &Chunk, consumed_byte_count: usize) {
+        let input_bytes = input.as_bytes();
+
+        let output = input_bytes.slice(Range {
             start: self.remaining_content_start,
-            end: input.len() - blocked_byte_count,
+            end: consumed_byte_count,
         });
 
         if self.emission_enabled && !output.is_empty() {
@@ -106,7 +108,7 @@ where
     }
 
     pub fn finish(&mut self, input: &Chunk) {
-        self.flush_remaining_input(input, 0);
+        self.flush_remaining_input(input, input.len());
 
         // NOTE: output the finalizing chunk.
         self.output_sink.handle_chunk(&[]);

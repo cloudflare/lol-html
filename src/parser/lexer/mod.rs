@@ -4,7 +4,7 @@ mod actions;
 mod conditions;
 mod lexeme;
 
-use crate::base::{Align, Chunk, Cursor, Range};
+use crate::base::{Align, Chunk, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
     FeedbackDirective, ParsingLoopDirective, StateMachine, StateResult,
@@ -28,11 +28,10 @@ pub trait LexemeSink {
     ) -> Result<(), RewritingError>;
 }
 
-pub type State<S> = fn(&mut Lexer<S>, &Chunk) -> StateResult;
+pub type State<S> = fn(&mut Lexer<S>, &mut Chunk) -> StateResult;
 pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOutline>>>;
 
 pub struct Lexer<S: LexemeSink> {
-    input_cursor: Cursor,
     lexeme_start: usize,
     token_part_start: usize,
     is_state_enter: bool,
@@ -53,7 +52,6 @@ pub struct Lexer<S: LexemeSink> {
 impl<S: LexemeSink> Lexer<S> {
     pub fn new(lexeme_sink: S, tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>) -> Self {
         Lexer {
-            input_cursor: Cursor::default(),
             lexeme_start: 0,
             token_part_start: 0,
             is_state_enter: true,
@@ -138,7 +136,7 @@ impl<S: LexemeSink> Lexer<S> {
         raw_end: usize,
     ) -> Lexeme<'i, T> {
         Lexeme::new(
-            input,
+            input.as_bytes(),
             token,
             Range {
                 start: self.lexeme_start,
@@ -153,7 +151,7 @@ impl<S: LexemeSink> Lexer<S> {
         input: &'i Chunk<'i>,
         token: T,
     ) -> Lexeme<'i, T> {
-        let raw_end = self.input_cursor.pos() + 1;
+        let raw_end = input.pos() + 1;
 
         self.create_lexeme_with_raw(input, token, raw_end)
     }
@@ -164,7 +162,7 @@ impl<S: LexemeSink> Lexer<S> {
         input: &'i Chunk<'i>,
         token: T,
     ) -> Lexeme<'i, T> {
-        let raw_end = self.input_cursor.pos();
+        let raw_end = input.pos();
 
         self.create_lexeme_with_raw(input, token, raw_end)
     }
@@ -184,12 +182,11 @@ impl<S: LexemeSink> StateMachine for Lexer<S> {
     }
 
     #[inline]
-    fn get_blocked_byte_count(&self, input: &Chunk) -> usize {
-        input.len() - self.lexeme_start
+    fn get_consumed_byte_count(&self, _input: &Chunk) -> usize {
+        self.lexeme_start
     }
 
     fn adjust_for_next_input(&mut self) {
-        self.input_cursor.align(self.lexeme_start);
         self.token_part_start.align(self.lexeme_start);
         self.current_tag_token.align(self.lexeme_start);
         self.current_non_tag_content_token.align(self.lexeme_start);
@@ -205,7 +202,7 @@ impl<S: LexemeSink> StateMachine for Lexer<S> {
     }
 
     #[inline]
-    fn enter_ch_sequence_matching(&mut self) {
+    fn enter_ch_sequence_matching(&mut self, _input: &mut Chunk) {
         trace!(@noop);
     }
 

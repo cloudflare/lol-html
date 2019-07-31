@@ -45,7 +45,7 @@ cfg_if! {
                 println!("{:#?}", $bookmark);
                 println!("Parser directive: `{:#?}`", $parser_directive);
 
-                let mut chunk_str = $chunk.as_debug_string();
+                let mut chunk_str = $chunk.as_bytes().as_debug_string();
 
                 chunk_str.insert_str($bookmark.pos, "|*|");
 

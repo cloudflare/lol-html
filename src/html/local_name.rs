@@ -1,5 +1,5 @@
 use super::Tag;
-use crate::base::{Bytes, Chunk, Range};
+use crate::base::{Bytes, Range};
 use encoding_rs::Encoding;
 
 // NOTE: All standard tag names contain only ASCII alpha characters
@@ -106,7 +106,7 @@ pub enum LocalName<'i> {
 
 impl<'i> LocalName<'i> {
     #[inline]
-    pub fn new(input: &'i Chunk<'i>, range: Range, hash: LocalNameHash) -> Self {
+    pub fn new(input: &'i Bytes<'i>, range: Range, hash: LocalNameHash) -> Self {
         if hash.is_empty() {
             LocalName::Bytes(input.slice(range))
         } else {

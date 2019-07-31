@@ -118,8 +118,10 @@ impl<S: ParserOutputSink> Parser<S> {
                         with_current_sm!(self, sm.continue_from_bookmark(input, sm_bookmark))?;
                 }
 
-                EndOfInput { blocked_byte_count } => {
-                    return Ok(blocked_byte_count);
+                EndOfInput {
+                    consumed_byte_count,
+                } => {
+                    return Ok(consumed_byte_count);
                 }
             }
         }

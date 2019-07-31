@@ -35,6 +35,7 @@ where
     parser: Parser<Dispatcher<C, O>>,
     buffer: Arena,
     has_buffered_data: bool,
+    next_chunk_pos: usize,
 }
 
 impl<C, O> TransformStream<C, O>
@@ -71,21 +72,20 @@ where
             parser,
             buffer,
             has_buffered_data: false,
+            next_chunk_pos: 0,
         }
     }
 
     fn buffer_blocked_bytes(
         &mut self,
         data: &[u8],
-        blocked_byte_count: usize,
+        consumed_byte_count: usize,
     ) -> Result<(), RewritingError> {
         if self.has_buffered_data {
-            self.buffer.shrink_to_last(blocked_byte_count);
+            self.buffer.shift(consumed_byte_count);
         } else {
-            let blocked_bytes = &data[data.len() - blocked_byte_count..];
-
             self.buffer
-                .init_with(blocked_bytes)
+                .init_with(&data[consumed_byte_count..])
                 .map_err(RewritingError::MemoryLimitExceeded)?;
 
             self.has_buffered_data = true;
@@ -99,26 +99,30 @@ where
     pub fn write(&mut self, data: &[u8]) -> Result<(), RewritingError> {
         trace!(@write data);
 
-        let chunk = if self.has_buffered_data {
+        let mut chunk = if self.has_buffered_data {
             self.buffer
                 .append(data)
                 .map_err(RewritingError::MemoryLimitExceeded)?;
+
             self.buffer.bytes()
         } else {
             data
-        }
-        .into();
+        };
+
+        chunk.set_pos(self.next_chunk_pos);
 
         trace!(@chunk chunk);
 
-        let blocked_byte_count = self.parser.parse(&chunk)?;
+        let consumed_byte_count = self.parser.parse(&mut chunk)?;
 
         self.dispatcher
             .borrow_mut()
-            .flush_remaining_input(&chunk, blocked_byte_count);
+            .flush_remaining_input(&chunk, consumed_byte_count);
 
-        if blocked_byte_count > 0 {
-            self.buffer_blocked_bytes(data, blocked_byte_count)?;
+        self.next_chunk_pos = chunk.pos() - consumed_byte_count;
+
+        if consumed_byte_count < chunk.len() {
+            self.buffer_blocked_bytes(data, consumed_byte_count)?;
         } else {
             self.has_buffered_data = false;
         }
@@ -129,15 +133,17 @@ where
     pub fn end(&mut self) -> Result<(), RewritingError> {
         trace!(@end);
 
-        let chunk = if self.has_buffered_data {
+        let mut chunk = if self.has_buffered_data {
             Chunk::last(self.buffer.bytes())
         } else {
             Chunk::last_empty()
         };
 
+        chunk.set_pos(self.next_chunk_pos);
+
         trace!(@chunk chunk);
 
-        self.parser.parse(&chunk)?;
+        self.parser.parse(&mut chunk)?;
         self.dispatcher.borrow_mut().finish(&chunk);
 
         Ok(())
