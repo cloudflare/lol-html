@@ -1,9 +1,5 @@
 test_modules!(
-    local_name_hash,
-    tokens,
-    element,
-    rewriter,
-    selectors_vm,
-    functional,
-    fatal_errors
+    token_capturing,
+    selector_matching,
+    element_content_replacement
 );

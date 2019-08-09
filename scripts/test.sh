@@ -2,6 +2,6 @@
 
 set -e
 
-cargo clippy --features=test_api --all-targets
-cargo test --features=test_api "$@"
+cargo clippy --features=integration_test --all-targets
+cargo test --features=integration_test "$@"
 make -C c-api test

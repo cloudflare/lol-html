@@ -18,7 +18,7 @@ impl TextType {
 }
 
 cfg_if! {
-    if #[cfg(feature = "test_api")] {
+    if #[cfg(feature = "integration_test")] {
         impl TextType {
             pub fn should_replace_unsafe_null_in_text(self) -> bool {
                 self != TextType::Data && self != TextType::CDataSection

@@ -68,16 +68,9 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    #[cfg(feature = "test_api")]
+    #[cfg(any(test, feature = "integration_test"))]
     pub fn self_closing(&self) -> bool {
         self.self_closing
-    }
-
-    #[inline]
-    #[cfg(feature = "test_api")]
-    pub fn set_self_closing(&mut self, self_closing: bool) {
-        self.self_closing = self_closing;
-        self.raw = None;
     }
 
     #[inline]
@@ -112,7 +105,7 @@ impl<'i> StartTag<'i> {
         }
     }
 
-    #[cfg(feature = "test_api")]
+    #[cfg(test)]
     pub fn raw_attributes(
         &self,
     ) -> (

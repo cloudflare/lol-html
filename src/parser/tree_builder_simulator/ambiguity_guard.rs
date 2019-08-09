@@ -2,7 +2,7 @@
 //! parsing context having a limited information about the current
 //! state of tree builder. This caused issues in the past where
 //! Cloudflare's security features were used as XSS gadgets
-//! (see https://!portswigger.net/blog/when-security-features-collide).
+//! (see https://portswigger.net/blog/when-security-features-collide).
 //! Therefore, due to these safety concerns in such cases we prefer
 //! to bail out from tokenization process.
 //!

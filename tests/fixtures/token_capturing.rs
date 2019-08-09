@@ -1,9 +1,10 @@
-use crate::harness::functional_testing::html5lib_tests::{
+use crate::harness::suites::html5lib_tests::{
     get_test_cases, TestCase, TestToken, TestTokenList,
 };
-use crate::harness::functional_testing::FunctionalTestFixture;
-use crate::harness::parse;
-use cool_thing::{LocalNameHash, TextType, TokenCaptureFlags};
+use crate::harness::{TestFixture, Input};
+use cool_thing::{LocalNameHash, TextType, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController, TransformStream, Namespace};
+use cool_thing::test_utils::Output;
+use failure::Error;
 
 macro_rules! expect_eql {
     ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {
@@ -35,6 +36,82 @@ macro_rules! expect {
             $msg, $state, $input,
         );
     };
+}
+
+
+type TokenHandler<'h> = Box<dyn FnMut(&mut Token) + 'h>;
+
+pub struct TestTransformController<'h> {
+    token_handler: TokenHandler<'h>,
+    capture_flags: TokenCaptureFlags,
+}
+
+impl<'h> TestTransformController<'h> {
+    pub fn new(token_handler: TokenHandler<'h>, capture_flags: TokenCaptureFlags) -> Self {
+        TestTransformController {
+            token_handler,
+            capture_flags,
+        }
+    }
+}
+
+impl TransformController for TestTransformController<'_> {
+    fn initial_capture_flags(&self) -> TokenCaptureFlags {
+        self.capture_flags
+    }
+    fn handle_start_tag(&mut self, _: LocalName, _: Namespace) -> StartTagHandlingResult<Self> {
+        Ok(self.capture_flags)
+    }
+
+    fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
+        self.capture_flags
+    }
+
+    fn handle_token(&mut self, token: &mut Token) -> Result<(), Error> {
+        (self.token_handler)(token);
+
+        Ok(())
+    }
+
+    fn should_emit_content(&self) -> bool {
+        true
+    }
+}
+
+pub fn parse(
+    input: &Input,
+    capture_flags: TokenCaptureFlags,
+    initial_text_type: TextType,
+    last_start_tag_name_hash: LocalNameHash,
+    token_handler: TokenHandler,
+) -> Result<String, Error> {
+    let encoding = input
+        .encoding()
+        .expect("Input should be initialized before parsing");
+
+    let mut output = Output::new(encoding);
+
+    let transform_controller = TestTransformController::new(token_handler, capture_flags);
+
+    let mut transform_stream = TransformStream::new(
+        transform_controller,
+        |chunk: &[u8]| output.push(chunk),
+        2048,
+        encoding,
+    );
+
+    let parser = transform_stream.parser();
+
+    parser.set_last_start_tag_name_hash(last_start_tag_name_hash);
+    parser.switch_text_type(initial_text_type);
+
+    for chunk in input.chunks() {
+        transform_stream.write(chunk)?;
+    }
+
+    transform_stream.end()?;
+
+    Ok(output.into())
 }
 
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
@@ -158,7 +235,7 @@ impl TokenCapturingTests {
     }
 }
 
-impl FunctionalTestFixture<TestCase> for TokenCapturingTests {
+impl TestFixture<TestCase> for TokenCapturingTests {
     fn test_cases() -> Vec<TestCase> {
         get_test_cases()
     }
@@ -174,4 +251,4 @@ impl FunctionalTestFixture<TestCase> for TokenCapturingTests {
     }
 }
 
-functional_test_fixture!(TokenCapturingTests);
+test_fixture!(TokenCapturingTests);

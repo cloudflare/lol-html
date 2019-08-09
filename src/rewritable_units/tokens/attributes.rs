@@ -202,7 +202,7 @@ impl<'i> Attributes<'i> {
             .expect("Items should be initialized")
     }
 
-    #[cfg(feature = "test_api")]
+    #[cfg(test)]
     pub fn raw_attributes(&self) -> (&'i Chunk<'i>, SharedAttributeBuffer) {
         (self.input, std::rc::Rc::clone(&self.attribute_buffer))
     }

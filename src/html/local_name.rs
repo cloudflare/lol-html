@@ -148,3 +148,23 @@ impl PartialEq<Tag> for LocalName<'_> {
 }
 
 impl Eq for LocalName<'_> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_str() {
+        assert_eq!(LocalNameHash::from("div"), LocalNameHash(Some(9691u64)));
+    }
+
+    #[test]
+    fn hash_invalidation_for_non_ascii_chars() {
+        assert!(LocalNameHash::from("div@&").is_empty());
+    }
+
+    #[test]
+    fn hash_invalidation_for_long_values() {
+        assert!(LocalNameHash::from("aaaaaaaaaaaaaa").is_empty());
+    }
+}

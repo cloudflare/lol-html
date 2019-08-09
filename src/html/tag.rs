@@ -8,8 +8,8 @@ macro_rules! declare_tags {
 
         // NOTE: used in the test that checks the consistency of
         // hash values with the hashing algorithm.
-        #[cfg(feature = "test_api")]
-        pub static TAG_STR_PAIRS: &[(Tag, &str)] = &[
+        #[cfg(test)]
+        static TAG_STR_PAIRS: &[(Tag, &str)] = &[
             $((Tag::$name, stringify!($name))),+
         ];
     };
@@ -102,4 +102,17 @@ macro_rules! tag_is_one_of {
     ($hash:expr, [$($tag:ident),+]) => {
         $($hash == Tag::$tag)||+
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::html::LocalNameHash;
+
+    #[test]
+    fn precalculated_hash_values_consistency_with_current_implementation() {
+        for &(tag, tag_string) in TAG_STR_PAIRS {
+            assert_eq!(LocalNameHash::from(tag_string), tag);
+        }
+    }
 }

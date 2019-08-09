@@ -10,11 +10,11 @@ doctest = false
 
 [features]
 debug_trace = []
-test_api = []
+integration_test = []
 
 [[test]]
 harness = false
-name = "main"
+name = "integration_tests"
 
 [[bench]]
 harness = false
@@ -43,10 +43,8 @@ serde_derive = "1.0.19"
 serde_json = "1.0.5"
 pre-commit = "0.5.2"
 rand = "0.5.5"
+rustc-test = "0.3.0"
 itertools = "0.6.0"
 
 [package.metadata.precommit]
 fmt = "cd c-api && cargo fmt && cd ../ && cargo fmt && git add -u"
-
-[dev-dependencies.rustc-test]
-version = "0.2.0"

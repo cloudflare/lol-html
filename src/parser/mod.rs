@@ -120,7 +120,7 @@ impl<S: ParserOutputSink> Parser<S> {
 }
 
 cfg_if! {
-    if #[cfg(feature = "test_api")] {
+    if #[cfg(feature = "integration_test")] {
         use crate::html::{LocalNameHash, TextType};
 
         impl<S: ParserOutputSink> Parser<S> {

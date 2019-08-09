@@ -1,2 +1,2 @@
 #!/bin/sh
-cargo run --features test_api --example=selectors_ast "$@"
+cargo run --features integration_test --example=selectors_ast "$@"

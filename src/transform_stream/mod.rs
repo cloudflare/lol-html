@@ -127,7 +127,7 @@ where
         Ok(())
     }
 
-    #[cfg(feature = "test_api")]
+    #[cfg(feature = "integration_test")]
     pub fn parser(&mut self) -> &mut Parser<Dispatcher<C, O>> {
         &mut self.parser
     }

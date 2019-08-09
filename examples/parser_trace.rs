@@ -1,122 +1,135 @@
-use cool_thing::*;
-use encoding_rs::UTF_8;
-use failure::Error;
-use getopts::{Matches, Options};
-use std::env::args;
+use cfg_if::cfg_if;
 
-fn parse_options() -> Option<Matches> {
-    let mut opts = Options::new();
+cfg_if! {
+    if #[cfg(feature="integration_test")] {
+        use cool_thing::*;
+        use encoding_rs::UTF_8;
+        use failure::Error;
+        use getopts::{Matches, Options};
+        use std::env::args;
 
-    opts.optopt(
-        "t",
-        "text_type",
-        "Initial text type",
-        "-t (Data state|PLAINTEXT state|RCDATA state|RAWTEXT state|Script data state|CDATA section state)",
-    );
+        fn parse_options() -> Option<Matches> {
+            let mut opts = Options::new();
 
-    opts.optopt("l", "last_start_tag", "Last start tag name", "-l");
-    opts.optopt("c", "chunk_size", "Chunk size", "-c");
-    opts.optflag("H", "tag_hint_mode", "Trace in tag hint mode");
-    opts.optflag("h", "help", "Show this help");
+            opts.optopt(
+                "t",
+                "text_type",
+                "Initial text type",
+                "-t (Data state|PLAINTEXT state|RCDATA state|RAWTEXT state|Script data state|CDATA section state)",
+            );
 
-    let matches = match opts.parse(args().skip(1)) {
-        Ok(matches) => {
-            if matches.free.is_empty() {
-                eprintln!("Missing HTML input");
-                None
-            } else if matches.opt_present("h") {
-                None
-            } else {
-                Some(matches)
+            opts.optopt("l", "last_start_tag", "Last start tag name", "-l");
+            opts.optopt("c", "chunk_size", "Chunk size", "-c");
+            opts.optflag("H", "tag_hint_mode", "Trace in tag hint mode");
+            opts.optflag("h", "help", "Show this help");
+
+            let matches = match opts.parse(args().skip(1)) {
+                Ok(matches) => {
+                    if matches.free.is_empty() {
+                        eprintln!("Missing HTML input");
+                        None
+                    } else if matches.opt_present("h") {
+                        None
+                    } else {
+                        Some(matches)
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{}", e);
+                    None
+                }
+            };
+
+            if matches.is_none() {
+                eprintln!("{}", opts.usage("Usage: ./scripts/parser_trace.sh -- [options] INPUT"));
+            }
+
+            matches
+        }
+
+        struct TraceTransformController {
+            capture_flags: TokenCaptureFlags,
+        }
+
+        impl TraceTransformController {
+            pub fn new(tag_hint_mode: bool) -> Self {
+                TraceTransformController {
+                    capture_flags: if tag_hint_mode {
+                        TokenCaptureFlags::empty()
+                    } else {
+                        TokenCaptureFlags::all()
+                    },
+                }
             }
         }
-        Err(e) => {
-            eprintln!("{}", e);
-            None
+
+        impl TransformController for TraceTransformController {
+            fn initial_capture_flags(&self) -> TokenCaptureFlags {
+                self.capture_flags
+            }
+
+            fn handle_start_tag(&mut self, _: LocalName, _: Namespace) -> StartTagHandlingResult<Self> {
+                Ok(self.capture_flags)
+            }
+
+            fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
+                self.capture_flags
+            }
+
+            fn handle_token(&mut self, _: &mut Token) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn should_emit_content(&self) -> bool {
+                true
+            }
         }
-    };
 
-    if matches.is_none() {
-        eprintln!("{}", opts.usage("Usage: trace [options] INPUT"));
-    }
+        fn main() {
+            let matches = match parse_options() {
+                Some(m) => m,
+                None => return,
+            };
 
-    matches
-}
+            let html = matches.free.first().unwrap();
+            let tag_hint_mode = matches.opt_present("H");
 
-struct TraceTransformController {
-    capture_flags: TokenCaptureFlags,
-}
+            let mut transform_stream = TransformStream::new(
+                TraceTransformController::new(tag_hint_mode),
+                |_: &[u8]| {},
+                2048,
+                UTF_8,
+            );
 
-impl TraceTransformController {
-    pub fn new(tag_hint_mode: bool) -> Self {
-        TraceTransformController {
-            capture_flags: if tag_hint_mode {
-                TokenCaptureFlags::empty()
+            let parser = transform_stream.parser();
+
+            parser.switch_text_type(match matches.opt_str("t").as_ref().map(String::as_str) {
+                None => TextType::Data,
+                Some(state) => TextType::from(state),
+            });
+
+            if let Some(ref tag_name) = matches.opt_str("l") {
+                parser.set_last_start_tag_name_hash(tag_name.as_str().into());
+            }
+
+            let chunks = if let Some(chunk_size) = matches.opt_get("c").unwrap() {
+                html.as_bytes().chunks(chunk_size).collect()
             } else {
-                TokenCaptureFlags::all()
-            },
+                vec![html.as_bytes()]
+            };
+
+            for chunk in chunks {
+                transform_stream.write(chunk).unwrap();
+            }
+
+            transform_stream.end().unwrap();
+        }
+    } else {
+        fn main() {
+            panic!(concat![
+                "Parser trace hasn't been compiled. ",
+                "To compile it either run `./scripts/parser_trace.sh` or `./scripts/test.sh`"
+            ]);
         }
     }
-}
-
-impl TransformController for TraceTransformController {
-    fn initial_capture_flags(&self) -> TokenCaptureFlags {
-        self.capture_flags
-    }
-
-    fn handle_start_tag(&mut self, _: LocalName, _: Namespace) -> StartTagHandlingResult<Self> {
-        Ok(self.capture_flags)
-    }
-
-    fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
-        self.capture_flags
-    }
-
-    fn handle_token(&mut self, _: &mut Token) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn should_emit_content(&self) -> bool {
-        true
-    }
-}
-
-fn main() {
-    let matches = match parse_options() {
-        Some(m) => m,
-        None => return,
-    };
-
-    let html = matches.free.first().unwrap();
-    let tag_hint_mode = matches.opt_present("H");
-
-    let mut transform_stream = TransformStream::new(
-        TraceTransformController::new(tag_hint_mode),
-        |_: &[u8]| {},
-        2048,
-        UTF_8,
-    );
-
-    let parser = transform_stream.parser();
-
-    parser.switch_text_type(match matches.opt_str("t").as_ref().map(String::as_str) {
-        None => TextType::Data,
-        Some(state) => TextType::from(state),
-    });
-
-    if let Some(ref tag_name) = matches.opt_str("l") {
-        parser.set_last_start_tag_name_hash(tag_name.as_str().into());
-    }
-
-    let chunks = if let Some(chunk_size) = matches.opt_get("c").unwrap() {
-        html.as_bytes().chunks(chunk_size).collect()
-    } else {
-        vec![html.as_bytes()]
-    };
-
-    for chunk in chunks {
-        transform_stream.write(chunk).unwrap();
-    }
-
-    transform_stream.end().unwrap();
 }

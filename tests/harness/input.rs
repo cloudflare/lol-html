@@ -1,4 +1,4 @@
-use crate::harness::functional_testing::html5lib_tests::Unescape;
+use crate::harness::suites::html5lib_tests::Unescape;
 use encoding_rs::Encoding;
 use failure::{ensure, Error};
 use rand::{thread_rng, Rng};
@@ -123,48 +123,5 @@ impl Unescape for Input {
         self.input.unescape()?;
 
         Ok(())
-    }
-}
-
-pub struct Output {
-    bytes: Vec<u8>,
-    encoding: &'static Encoding,
-    finalizing_chunk_received: bool,
-}
-
-impl Output {
-    pub fn new(encoding: &'static Encoding) -> Self {
-        Output {
-            bytes: Vec::default(),
-            encoding,
-            finalizing_chunk_received: false,
-        }
-    }
-
-    pub fn push(&mut self, chunk: &[u8]) {
-        if chunk.is_empty() {
-            self.finalizing_chunk_received = true;
-        } else {
-            assert!(
-                !self.finalizing_chunk_received,
-                "Chunk written to the output after the finalizing chunk."
-            );
-
-            self.bytes.extend_from_slice(chunk);
-        }
-    }
-}
-
-impl Into<String> for Output {
-    fn into(self) -> String {
-        assert!(
-            self.finalizing_chunk_received,
-            "Finalizing chunk for the output hasn't been received."
-        );
-
-        self.encoding
-            .decode_without_bom_handling(&self.bytes)
-            .0
-            .into_owned()
     }
 }

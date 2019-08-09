@@ -52,7 +52,7 @@ impl<'i> Doctype<'i> {
     }
 
     #[inline]
-    #[cfg(feature = "test_api")]
+    #[cfg(feature = "integration_test")]
     pub fn force_quirks(&self) -> bool {
         self.force_quirks
     }
@@ -75,5 +75,58 @@ impl Debug for Doctype<'_> {
             .field("system_id", &self.system_id())
             .field("force_quirks", &self.force_quirks)
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::rewritable_units::test_utils::*;
+    use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
+    use crate::*;
+    use encoding_rs::{Encoding, UTF_8};
+
+    fn rewrite_doctype(
+        html: &str,
+        encoding: &'static Encoding,
+        mut handler: impl FnMut(&mut Doctype),
+    ) -> String {
+        let mut handler_called = false;
+
+        let output = rewrite_html(
+            html,
+            encoding,
+            vec![],
+            vec![DocumentContentHandlers::default().doctype(|c| {
+                handler_called = true;
+                handler(c);
+                Ok(())
+            })],
+        );
+
+        assert!(handler_called);
+
+        output
+    }
+
+    #[test]
+    fn user_data() {
+        rewrite_doctype("<!doctype>", UTF_8, |d| {
+            d.set_user_data(42usize);
+
+            assert_eq!(*d.user_data().downcast_ref::<usize>().unwrap(), 42usize);
+
+            *d.user_data_mut().downcast_mut::<usize>().unwrap() = 1337usize;
+
+            assert_eq!(*d.user_data().downcast_ref::<usize>().unwrap(), 1337usize);
+        });
+    }
+
+    #[test]
+    fn serialization() {
+        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+            let output = rewrite_doctype(r#"<!DOCTYPE html SYSTEM "hey">"#, enc, |_| {});
+
+            assert_eq!(output, r#"<!DOCTYPE html SYSTEM "hey">"#);
+        }
     }
 }

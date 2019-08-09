@@ -1,22 +1,35 @@
-use cool_thing::selectors_vm::Ast;
-use std::env::args;
+use cfg_if::cfg_if;
 
-fn main() {
-    let arg = args()
-        .nth(1)
-        .expect("Tool should have at least one argument");
+cfg_if! {
+    if #[cfg(feature="integration_test")] {
+        use cool_thing::selectors_vm::Ast;
+        use std::env::args;
 
-    let mut ast = Ast::default();
+        fn main() {
+            let arg = args()
+                .nth(1)
+                .expect("Tool should have at least one argument");
 
-    serde_json::from_str::<Vec<String>>(&arg)
-        .expect("Expected JSON-list of selector strings")
-        .iter()
-        .enumerate()
-        .for_each(|(i, s)| {
-            let selector = s.parse().map_err(|e| format!("{}", e)).unwrap();
+            let mut ast = Ast::default();
 
-            ast.add_selector(&selector, i)
-        });
+            serde_json::from_str::<Vec<String>>(&arg)
+                .expect("Expected JSON-list of selector strings")
+                .iter()
+                .enumerate()
+                .for_each(|(i, s)| {
+                    let selector = s.parse().map_err(|e| format!("{}", e)).unwrap();
 
-    println!("{:#?}", ast);
+                    ast.add_selector(&selector, i)
+                });
+
+            println!("{:#?}", ast);
+        }
+    } else {
+        fn main() {
+            panic!(concat![
+                "Selector's AST printer hasn't been compiled. ",
+                "To compile it either run `./scripts/selectors_ast.sh` or `./scripts/test.sh`"
+            ]);
+        }
+    }
 }

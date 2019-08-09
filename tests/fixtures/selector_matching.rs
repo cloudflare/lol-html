@@ -1,13 +1,13 @@
 
-use crate::harness::functional_testing::selectors_tests::{get_test_cases, TestCase};
-use crate::harness::functional_testing::FunctionalTestFixture;
-use crate::harness::Output;
+use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
+use crate::harness::TestFixture;
+use cool_thing::test_utils::Output;
 use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings};
 use std::convert::TryFrom;
 
 pub struct SelectorMatchingTests;
 
-impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
+impl TestFixture<TestCase> for SelectorMatchingTests {
     fn test_cases() -> Vec<TestCase> {
         get_test_cases("selector_matching")
     }
@@ -88,4 +88,4 @@ impl FunctionalTestFixture<TestCase> for SelectorMatchingTests {
     }
 }
 
-functional_test_fixture!(SelectorMatchingTests);
+test_fixture!(SelectorMatchingTests);

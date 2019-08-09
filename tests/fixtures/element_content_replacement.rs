@@ -1,7 +1,7 @@
 
-use crate::harness::functional_testing::selectors_tests::{get_test_cases, TestCase};
-use crate::harness::functional_testing::FunctionalTestFixture;
-use crate::harness::Output;
+use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
+use crate::harness::TestFixture;
+use cool_thing::test_utils::Output;
 use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings};
 use std::convert::TryFrom;
 
@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 // a dedicated set of functional tests for that.
 pub struct ElementContentReplacementTests;
 
-impl FunctionalTestFixture<TestCase> for ElementContentReplacementTests {
+impl TestFixture<TestCase> for ElementContentReplacementTests {
     fn test_cases() -> Vec<TestCase> {
         get_test_cases("element_content_replacement")
     }
@@ -52,4 +52,4 @@ impl FunctionalTestFixture<TestCase> for ElementContentReplacementTests {
     }
 }
 
-functional_test_fixture!(ElementContentReplacementTests);
+test_fixture!(ElementContentReplacementTests);
