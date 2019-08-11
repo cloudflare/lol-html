@@ -59,6 +59,9 @@ pub enum ParsingLoopDirective {
     None,
 }
 
+// Move Break to error
+// Directive SwitchState(bool)
+
 pub type StateResult = Result<ParsingLoopDirective, RewritingError>;
 pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, RewritingError>;
 

@@ -107,7 +107,7 @@ macro_rules! ch_sequence_arm_pattern {
 
             // NOTE: this may be unreachable on expansion, e.g. if
             // we have state transition in the action list.
-            #[allow(unreachable_code)] { return Ok(ParsingLoopDirective::Continue); }
+            #[allow(unreachable_code)] { continue; }
         }, $($case_mod)*);
     }};
 }
