@@ -68,6 +68,8 @@
     ok(!memcmp((actual)->data, expected, (actual)->len)); \
 }
 
+#define c_str_eq(actual, expected) ok(!strcmp(actual, expected))
+
 static void output_sink_stub(const char *chunk, size_t chunk_len, void *user_data) {
     (void)(chunk);
     (void)(chunk_len);
@@ -963,6 +965,32 @@ static cool_thing_rewriter_directive_t test_element_api_stop_rewriting(
     return COOL_THING_STOP;
 }
 
+static cool_thing_rewriter_directive_t assert_element_ns_is_html(
+    cool_thing_element_t *element,
+    void *user_data
+) {
+    (void)(user_data);
+
+    const char *ns = cool_thing_element_namespace_uri_get(element);
+
+    c_str_eq(ns, "http://www.w3.org/1999/xhtml");
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t assert_element_ns_is_svg(
+    cool_thing_element_t *element,
+    void *user_data
+) {
+    (void)(user_data);
+
+    const char *ns = cool_thing_element_namespace_uri_get(element);
+
+    c_str_eq(ns, "http://www.w3.org/2000/svg");
+
+    return COOL_THING_CONTINUE;
+}
+
 EXPECT_OUTPUT(
     test_element_api_output1,
     "Hi <span>"
@@ -1239,6 +1267,56 @@ static void element_api_test() {
         );
 
         cool_thing_selector_free(selector);
+    }
+
+    {
+
+        note("NamespaceURI");
+
+        const char *selector_str = "script";
+
+        cool_thing_selector_t *selector = cool_thing_selector_parse(
+            selector_str,
+            strlen(selector_str)
+        );
+
+        REWRITE(
+            "<script></script>",
+            output_sink_stub,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &assert_element_ns_is_html,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
+
+                ok(!err);
+            }
+        );
+
+        REWRITE(
+            "<svg><script></script></svg>",
+            output_sink_stub,
+            {
+                int err = cool_thing_rewriter_builder_add_element_content_handlers(
+                    builder,
+                    selector,
+                    &assert_element_ns_is_svg,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                );
+
+                ok(!err);
+            }
+        );
     }
 
 }

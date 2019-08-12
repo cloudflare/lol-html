@@ -1,12 +1,14 @@
 use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
 use crate::base::Bytes;
+use crate::html::Namespace;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
 pub struct StartTag<'i> {
     name: Bytes<'i>,
     attributes: Attributes<'i>,
+    ns: Namespace,
     self_closing: bool,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
@@ -17,6 +19,7 @@ impl<'i> StartTag<'i> {
     pub(super) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
+        ns: Namespace,
         self_closing: bool,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
@@ -24,6 +27,7 @@ impl<'i> StartTag<'i> {
         Token::StartTag(StartTag {
             name,
             attributes,
+            ns,
             self_closing,
             raw: Some(raw),
             encoding,
@@ -45,6 +49,11 @@ impl<'i> StartTag<'i> {
     pub fn set_name(&mut self, name: Bytes<'static>) {
         self.name = name;
         self.raw = None;
+    }
+
+    #[inline]
+    pub fn namespace_uri(&self) -> &'static str {
+        self.ns.uri()
     }
 
     #[inline]

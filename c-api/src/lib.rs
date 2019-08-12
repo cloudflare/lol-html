@@ -57,6 +57,12 @@ macro_rules! to_str {
     };
 }
 
+macro_rules! static_c_str {
+    ($s:expr) => {
+        concat!($s, "\0").as_ptr() as *const c_char
+    };
+}
+
 macro_rules! unwrap_or_ret {
     ($expr:expr, $ret_val:expr) => {
         match $expr {

@@ -444,6 +444,12 @@ int cool_thing_element_tag_name_set(
     size_t name_len
 );
 
+// Returns the namespace URI of the element.
+//
+// NOTE: This method returns static zero-terminated C string, so it don't
+// need to be freed.
+const char* cool_thing_element_namespace_uri_get(const cool_thing_element_t *element);
+
 // Returns the iterator over the element attributes.
 //
 // WARNING: The iterator is valid only during the handler execution and

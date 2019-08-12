@@ -101,6 +101,11 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     #[inline]
+    pub fn namespace_uri(&self) -> &'static str {
+        self.start_tag.namespace_uri()
+    }
+
+    #[inline]
     pub fn attributes(&self) -> &[Attribute<'t>] {
         self.start_tag.attributes()
     }
@@ -330,6 +335,30 @@ mod tests {
             let err = el.set_tag_name("1foo").unwrap_err();
 
             assert_eq!(err, TagNameError::InvalidFirstCharacter);
+        });
+    }
+
+    #[test]
+    fn namespace_uri() {
+        rewrite_element("<script></script>", UTF_8, "script", |el| {
+            assert_eq!(el.namespace_uri(), "http://www.w3.org/1999/xhtml");
+        });
+
+        rewrite_element("<svg><script></script></svg>", UTF_8, "script", |el| {
+            assert_eq!(el.namespace_uri(), "http://www.w3.org/2000/svg");
+        });
+
+        rewrite_element(
+            "<svg><foreignObject><script></script></foreignObject></svg>",
+            UTF_8,
+            "script",
+            |el| {
+                assert_eq!(el.namespace_uri(), "http://www.w3.org/1999/xhtml");
+            },
+        );
+
+        rewrite_element("<math><script></script></math>", UTF_8, "script", |el| {
+            assert_eq!(el.namespace_uri(), "http://www.w3.org/1998/Math/MathML");
         });
     }
 

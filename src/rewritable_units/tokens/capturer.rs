@@ -56,6 +56,7 @@ impl ToToken for TagLexeme<'_> {
             TagTokenOutline::StartTag {
                 name,
                 ref attributes,
+                ns,
                 self_closing,
                 ..
             } if capture_flags.contains(TokenCaptureFlags::NEXT_START_TAG) => {
@@ -65,6 +66,7 @@ impl ToToken for TagLexeme<'_> {
                 StartTag::new_token(
                     self.part(name),
                     Attributes::new(self.input(), Rc::clone(attributes), encoding),
+                    ns,
                     self_closing,
                     self.raw(),
                     encoding,
