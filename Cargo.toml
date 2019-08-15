@@ -47,4 +47,4 @@ rustc-test = "0.3.0"
 itertools = "0.6.0"
 
 [package.metadata.precommit]
-fmt = "cd c-api && cargo fmt && cd ../ && cargo fmt && git add -u"
+fmt = "cd c-api && cargo fmt && cd ../ && cargo fmt && git diff --name-only --cached | xargs git add"
