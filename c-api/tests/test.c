@@ -23,7 +23,7 @@
         } \
     }
 
-#define RUN_REWRITER(html, output_sink, assign_handlers, actions) \
+#define RUN_REWRITER_WITH_MAX_MEMORY(html, output_sink, assign_handlers, actions, max_memory) \
     do { \
         const char *in = html; \
         const char *encoding = "UTF-8"; \
@@ -36,7 +36,8 @@
             builder, \
             encoding, \
             strlen(encoding), \
-            2048, \
+            0, /* initial_memory */ \
+            max_memory, \
             &output_sink, \
             &output_sink_user_data, \
             true \
@@ -46,6 +47,9 @@
         actions \
         cool_thing_rewriter_free(rewriter); \
     } while(0)
+
+#define RUN_REWRITER(html, output_sink, assign_handlers, actions) \
+    RUN_REWRITER_WITH_MAX_MEMORY(html, output_sink, assign_handlers, actions, 2048)
 
 #define REWRITE(html, output_sink, assign_handlers) \
     RUN_REWRITER(html, output_sink, assign_handlers, { \
@@ -68,6 +72,11 @@
     ok((actual) != NULL); \
     ok((actual)->len == strlen(expected)); \
     ok(!memcmp((actual)->data, expected, (actual)->len)); \
+}
+
+#define str_contains(actual, expected) { \
+    ok((actual) != NULL); \
+    ok(strstr(actual->data, expected) != NULL); \
 }
 
 #define c_str_eq(actual, expected) ok(!strcmp(actual, expected))
@@ -104,7 +113,8 @@ static void test_non_ascii_encoding() {
         builder,
         encoding,
         strlen(encoding),
-        16,
+        0, // initial_memory
+        16, // max_memory
         &output_sink_stub,
         NULL,
         true
@@ -1324,6 +1334,43 @@ static void element_api_test() {
 
 }
 
+// Out of memory
+//---------------------------------------------------------------------
+
+static void test_out_of_memory() {
+    const char *chunk1 = "<span alt='aaaaa";
+
+    RUN_REWRITER_WITH_MAX_MEMORY(chunk1, output_sink_stub,
+        {
+            const char *selector_str = "span";
+            cool_thing_selector_t *selector = cool_thing_selector_parse(
+                selector_str,
+                strlen(selector_str)
+            );
+
+            cool_thing_rewriter_builder_add_element_content_handlers(
+                builder,
+                selector,
+                &get_and_free_empty_element_attribute,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            );
+        },
+        {
+            ok(cool_thing_rewriter_write(rewriter, in, strlen(in)) == -1);
+
+            cool_thing_str_t *msg = cool_thing_take_last_error();
+            ok(msg != NULL);
+
+            str_contains(msg, "exceeded limits.");
+            cool_thing_str_free(*msg);
+        },
+    5);
+}
+
 int main() {
     subtest("Unsupported selector", test_unsupported_selector);
     subtest("Non-ASCII encoding", test_non_ascii_encoding);
@@ -1331,6 +1378,7 @@ int main() {
     subtest("Comment API", test_comment_api);
     subtest("Text chunk API", test_text_chunk_api);
     subtest("Element API", element_api_test);
+    subtest("Out of memory", test_out_of_memory);
 
     return done_testing();
 }

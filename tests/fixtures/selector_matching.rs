@@ -1,4 +1,3 @@
-
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
 use cool_thing::test_utils::Output;
@@ -18,8 +17,8 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
         let mut first_text_chunk_expected = true;
 
         {
-            let mut rewriter = HtmlRewriter::try_from(Settings{
-               element_content_handlers: vec![(
+            let mut rewriter = HtmlRewriter::try_from(Settings {
+                element_content_handlers: vec![(
                     &test.selector.parse().unwrap(),
                     ElementContentHandlers::default()
                         .element(|el| {
@@ -70,7 +69,8 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
                 )],
                 document_content_handlers: vec![],
                 encoding: encoding.name(),
-                buffer_capacity: 2048,
+                max_memory: 200 * 1024,
+                initial_memory: 0,
                 output_sink: |c: &[u8]| output.push(c),
                 strict: true,
             })

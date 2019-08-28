@@ -40,7 +40,6 @@ macro_rules! expect {
     };
 }
 
-
 type TokenHandler<'h> = Box<dyn FnMut(&mut Token) + 'h>;
 
 pub struct TestTransformController<'h> {
@@ -95,7 +94,10 @@ pub fn parse(
 
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
 
+    let memory_limiter = MemoryLimiter::new_shared(2048);
+
     let mut transform_stream = TransformStream::new(
+<<<<<<< HEAD
         TransformStreamSettings {
             transform_controller,
             output_sink: |chunk: &[u8]| output.push(chunk),
@@ -104,6 +106,14 @@ pub fn parse(
             strict: true
         }
     );
+=======
+        transform_controller,
+        |chunk: &[u8]| output.push(chunk),
+        2048,
+        encoding,
+        memory_limiter,
+    )?;
+>>>>>>> PAR-43: refactor memory management
 
     let parser = transform_stream.parser();
 

@@ -94,11 +94,14 @@ cfg_if! {
             let html = matches.free.first().unwrap();
             let tag_hint_mode = matches.opt_present("H");
 
+            let memory_manager = MemoryLimiter::new_shared(2048);
+
             let mut transform_stream = TransformStream::new(
                 TransformStreamSettings {
                     transform_controller: TraceTransformController::new(tag_hint_mode),
                     output_sink: |_: &[u8]| {},
-                    buffer_capacity: 2048,
+                    initial_memory: 2048,
+                    memory_manager: MemoryLimiter::new_shared(2048),
                     encoding: UTF_8,
                     strict: true
                 }

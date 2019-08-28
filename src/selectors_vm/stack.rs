@@ -1,4 +1,5 @@
 use super::program::AddressRange;
+use crate::base::mem::{ExceededLimitsError, LimitedVec, SharedMemoryLimiter};
 use crate::html::{LocalName, Namespace, Tag};
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -67,9 +68,13 @@ impl<'i, E: ElementData> StackItem<'i, E> {
     }
 }
 
-pub struct Stack<E: ElementData>(Vec<StackItem<'static, E>>);
+pub struct Stack<E: ElementData>(LimitedVec<StackItem<'static, E>>);
 
 impl<E: ElementData> Stack<E> {
+    pub fn new(memory_limiter: SharedMemoryLimiter) -> Self {
+        Stack(LimitedVec::new(memory_limiter))
+    }
+
     #[inline]
     pub fn get_stack_directive(&mut self, item: &StackItem<E>, ns: Namespace) -> StackDirective {
         if ns == Namespace::Html {
@@ -90,7 +95,7 @@ impl<E: ElementData> Stack<E> {
     ) {
         for i in (0..self.0.len()).rev() {
             if self.0[i].local_name == local_name {
-                for item in self.0.drain(i..) {
+                for item in self.0.drain(i..self.0.len()) {
                     popped_element_data_handler(item.element_data);
                 }
 
@@ -110,27 +115,25 @@ impl<E: ElementData> Stack<E> {
     }
 
     #[inline]
-    pub fn push_item(&mut self, mut item: StackItem<'static, E>) {
+    pub fn push_item(
+        &mut self,
+        mut item: StackItem<'static, E>,
+    ) -> Result<(), ExceededLimitsError> {
         if let Some(last) = self.0.last() {
             if last.has_ancestor_with_hereditary_jumps || !last.hereditary_jumps.is_empty() {
                 item.has_ancestor_with_hereditary_jumps = true;
             }
         }
 
-        self.0.push(item);
-    }
-}
-
-impl<E: ElementData> Default for Stack<E> {
-    #[inline]
-    fn default() -> Self {
-        Stack(Vec::default())
+        self.0.push(item)?;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MemoryLimiter;
     use encoding_rs::UTF_8;
 
     #[derive(Default)]
@@ -158,19 +161,19 @@ mod tests {
 
     #[test]
     fn hereditary_jumps_flag() {
-        let mut stack = Stack::default();
+        let mut stack = Stack::new(MemoryLimiter::new_shared(2048));
 
-        stack.push_item(item("item1", 0));
+        stack.push_item(item("item1", 0)).unwrap();
 
         let mut item2 = item("item2", 1);
         item2.hereditary_jumps.push(0..0);
-        stack.push_item(item2);
+        stack.push_item(item2).unwrap();
 
         let mut item3 = item("item3", 2);
         item3.hereditary_jumps.push(0..0);
-        stack.push_item(item3);
+        stack.push_item(item3).unwrap();
 
-        stack.push_item(item("item4", 3));
+        stack.push_item(item("item4", 3)).unwrap();
 
         assert_eq!(
             stack
@@ -186,13 +189,13 @@ mod tests {
     fn pop_up_to() {
         macro_rules! assert_pop_result {
             ($up_to:expr, $expected_unmatched:expr, $expected_items:expr) => {{
-                let mut stack = Stack::default();
+                let mut stack = Stack::new(MemoryLimiter::new_shared(2048));
 
-                stack.push_item(item("html", 0));
-                stack.push_item(item("body", 1));
-                stack.push_item(item("div", 2));
-                stack.push_item(item("div", 3));
-                stack.push_item(item("span", 4));
+                stack.push_item(item("html", 0)).unwrap();
+                stack.push_item(item("body", 1)).unwrap();
+                stack.push_item(item("div", 2)).unwrap();
+                stack.push_item(item("div", 3)).unwrap();
+                stack.push_item(item("span", 4)).unwrap();
 
                 let mut unmatched = Vec::default();
 
@@ -228,7 +231,7 @@ mod tests {
 
     #[test]
     fn pop_up_to_on_empty_stack() {
-        let mut stack = Stack::default();
+        let mut stack = Stack::new(MemoryLimiter::new_shared(2048));
         let mut handler_called = false;
 
         stack.pop_up_to(local_name("div"), |_: TestElementData| {

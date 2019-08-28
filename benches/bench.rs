@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
-use cool_thing::TokenCaptureFlags as CoolThingTokenCaptureFlags;
+use cool_thing::{MemoryLimiter, TokenCaptureFlags as CoolThingTokenCaptureFlags};
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
 use encoding_rs::UTF_8;
 use failure::Error;
@@ -105,7 +105,8 @@ fn cool_thing_tokenizer_bench(
             let mut transform_stream = TransformStream::new(TransformStreamSettings {
                 transform_controller: BenchTransformController::new(capture_flags),
                 output_sink: |_: &[u8]| {},
-                buffer_capacity: 2048,
+                initial_memory: 2048,
+                memory_manager: MemoryLimiter::new_shared(1024 * 1024),
                 encoding: UTF_8,
                 strict: true,
             });

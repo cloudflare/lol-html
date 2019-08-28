@@ -1,7 +1,7 @@
 use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
-use crate::selectors_vm::{ElementData, MatchInfo, SelectorMatchingVm};
+use crate::selectors_vm::{ElementData, MatchInfo, SelectorMatchingVm, VmError};
 use crate::transform_stream::*;
 use failure::Error;
 use std::cell::RefCell;
@@ -70,13 +70,16 @@ impl TransformController for HtmlRewriteController<'_> {
 
         match exec_result {
             Ok(_) => Ok(self.handlers_dispatcher.borrow().get_token_capture_flags()),
-            Err(aux_info_req) => Err(Box::new(move |this, aux_info| {
-                let mut match_handler = this.create_match_handler();
+            Err(VmError::InfoRequest(aux_info_req)) => Err(DispatcherErr::InfoRequest(Box::new(
+                move |this, aux_info| -> Result<TokenCaptureFlags, Error> {
+                    let mut match_handler = this.create_match_handler();
 
-                aux_info_req(&mut this.selector_matching_vm, aux_info, &mut match_handler);
+                    aux_info_req(&mut this.selector_matching_vm, aux_info, &mut match_handler)?;
 
-                this.handlers_dispatcher.borrow().get_token_capture_flags()
-            })),
+                    Ok(this.handlers_dispatcher.borrow().get_token_capture_flags())
+                },
+            ))),
+            Err(VmError::Fatal(e)) => Err(DispatcherErr::Fatal(e)),
         }
     }
 

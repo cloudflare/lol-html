@@ -20,8 +20,15 @@ pub struct AuxStartTagInfo<'i> {
     pub self_closing: bool,
 }
 
-type AuxStartTagInfoRequest<C> = Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> TokenCaptureFlags>;
-pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, AuxStartTagInfoRequest<C>>;
+type AuxStartTagInfoRequest<C> =
+    Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, Error>>;
+
+pub enum DispatcherErr<C> {
+    InfoRequest(AuxStartTagInfoRequest<C>),
+    Fatal(Error),
+}
+
+pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherErr<C>>;
 
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
@@ -148,7 +155,7 @@ where
         }
     }
 
-    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme) {
+    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme) -> Result<(), Error> {
         let input = lexeme.input();
 
         macro_rules! get_flags_from_aux_info_res {
@@ -189,22 +196,28 @@ where
                     let name = LocalName::new(input, name, name_hash);
 
                     match self.transform_controller.handle_start_tag(name, ns) {
-                        Ok(flags) => flags,
-                        Err(aux_info_req) => {
+                        Ok(flags) => Ok(flags),
+                        Err(DispatcherErr::InfoRequest(aux_info_req)) => {
                             get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing)
                         }
+                        Err(DispatcherErr::Fatal(e)) => Err(e),
                     }
                 }
 
                 EndTag { name, name_hash } => {
                     let name = LocalName::new(input, name, name_hash);
-
-                    self.transform_controller.handle_end_tag(name)
+                    Ok(self.transform_controller.handle_end_tag(name))
                 }
             },
         };
 
-        self.token_capturer.set_capture_flags(capture_flags);
+        match capture_flags {
+            Ok(flags) => {
+                self.token_capturer.set_capture_flags(flags);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 
     #[inline]
@@ -262,7 +275,7 @@ where
         if self.got_flags_from_hint {
             self.got_flags_from_hint = false;
         } else {
-            self.adjust_capture_flags_for_tag_lexeme(lexeme);
+            self.adjust_capture_flags_for_tag_lexeme(lexeme)?;
         }
 
         if let TagTokenOutline::EndTag { .. } = lexeme.token_outline() {
@@ -294,15 +307,18 @@ where
         name: LocalName,
         ns: Namespace,
     ) -> Result<ParserDirective, Error> {
-        Ok(match self.transform_controller.handle_start_tag(name, ns) {
-            Ok(flags) => self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags),
-            Err(aux_info_req) => {
+        match self.transform_controller.handle_start_tag(name, ns) {
+            Ok(flags) => {
+                Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags))
+            }
+            Err(DispatcherErr::InfoRequest(aux_info_req)) => {
                 self.got_flags_from_hint = false;
                 self.pending_element_aux_info_req = Some(aux_info_req);
 
-                ParserDirective::Lex
+                Ok(ParserDirective::Lex)
             }
-        })
+            Err(DispatcherErr::Fatal(e)) => Err(e),
+        }
     }
 
     fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, Error> {

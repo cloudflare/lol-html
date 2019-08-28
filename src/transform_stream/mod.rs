@@ -1,7 +1,8 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
-use crate::base::{Buffer, Chunk};
+use crate::base::mem::{Buffer, SharedMemoryLimiter};
+use crate::base::Chunk;
 
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use encoding_rs::Encoding;
@@ -10,7 +11,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::dispatcher::{
-    AuxStartTagInfo, OutputSink, StartTagHandlingResult, TransformController,
+    AuxStartTagInfo, DispatcherErr, OutputSink, StartTagHandlingResult, TransformController,
 };
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
@@ -63,10 +64,13 @@ where
             settings.encoding,
         )));
 
+        let buffer = Buffer::new(Rc::clone(&setting.memory_limiter), settings.initial_memory);
+        let parser = Parser::new(&dispatcher, initial_parser_directive, settings.strict);
+
         TransformStream {
-            parser: Parser::new(&dispatcher, initial_parser_directive, settings.strict),
             dispatcher,
-            buffer: Buffer::new(settings.buffer_capacity),
+            parser,
+            buffer,
             has_buffered_data: false,
         }
     }

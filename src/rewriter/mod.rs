@@ -1,25 +1,21 @@
 mod content_handlers;
+mod error;
 mod handlers_dispatcher;
 mod rewrite_controller;
 
 use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::*;
+use crate::base::mem::MemoryLimiter;
 use crate::selectors_vm::{self, Selector, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;
 use std::convert::TryFrom;
 use std::fmt::{self, Debug};
+use std::rc::Rc;
 
 pub use self::content_handlers::*;
-
-#[derive(Fail, Debug, PartialEq, Copy, Clone)]
-pub enum EncodingError {
-    #[fail(display = "Unknown character encoding has been provided.")]
-    UnknownEncoding,
-    #[fail(display = "Expected ASCII-compatible encoding.")]
-    NonAsciiCompatibleEncoding,
-}
+pub use self::error::*;
 
 fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingError> {
     let encoding = Encoding::for_label_no_replacement(encoding.as_bytes())
@@ -36,7 +32,8 @@ pub struct Settings<'h, 's, O: OutputSink> {
     pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
     pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
     pub encoding: &'s str,
-    pub buffer_capacity: usize,
+    pub initial_memory: usize,
+    pub max_memory: usize,
     pub output_sink: O,
     pub strict: bool,
 }
@@ -48,7 +45,7 @@ pub struct HtmlRewriter<'h, O: OutputSink> {
 }
 
 impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O> {
-    type Error = EncodingError;
+    type Error = RewriterError;
 
     fn try_from(settings: Settings<'h, 's, O>) -> Result<Self, Self::Error> {
         let encoding = try_encoding_from_str(settings.encoding)?;
@@ -65,13 +62,23 @@ impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O>
             dispatcher.add_document_content_handlers(handlers);
         }
 
-        let selector_matching_vm = SelectorMatchingVm::new(selectors_ast, encoding);
+        if settings.initial_memory > settings.max_memory {
+            return Err(RewriterError::InvalidSettings(
+                "initial_memory must be lower than max_memory".to_string(),
+            ));
+        }
+
+        let memory_limiter = MemoryLimiter::new_shared(settings.max_memory);
+
+        let selector_matching_vm =
+            SelectorMatchingVm::new(selectors_ast, encoding, Rc::clone(&memory_limiter));
         let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
 
         let stream = TransformStream::new(TransformStreamSettings {
             transform_controller: controller,
             output_sink: settings.output_sink,
-            buffer_capacity: settings.buffer_capacity,
+            initial_memory: settings.initial_memory,
+            memory_limiter,
             encoding,
             strict: settings.strict,
         });
@@ -158,13 +165,17 @@ mod tests {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
             encoding: "hey-yo",
-            buffer_capacity: 42,
+            initial_memory: 0,
+            max_memory: 42,
             output_sink: |_: &[u8]| {},
             strict: true,
         })
         .unwrap_err();
 
-        assert_eq!(err, EncodingError::UnknownEncoding);
+        match err {
+            RewriterError::EncodingError(err) => assert_eq!(err, EncodingError::UnknownEncoding),
+            _ => unreachable!(),
+        }
     }
 
     #[test]
@@ -173,13 +184,19 @@ mod tests {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
             encoding: "utf-16be",
-            buffer_capacity: 42,
+            initial_memory: 0,
+            max_memory: 42,
             output_sink: |_: &[u8]| {},
             strict: true,
         })
         .unwrap_err();
 
-        assert_eq!(err, EncodingError::NonAsciiCompatibleEncoding);
+        match err {
+            RewriterError::EncodingError(err) => {
+                assert_eq!(err, EncodingError::NonAsciiCompatibleEncoding)
+            }
+            _ => unreachable!(),
+        }
     }
 
     #[test]
@@ -197,7 +214,8 @@ mod tests {
                         },
                     )],
                     encoding: enc.name(),
-                    buffer_capacity: 2048,
+                    initial_memory: 0,
+                    max_memory: 2048,
                     output_sink: |_: &[u8]| {},
                     strict: true,
                 })
@@ -248,7 +266,8 @@ mod tests {
                     )],
                     document_content_handlers: vec![],
                     encoding: enc.name(),
-                    buffer_capacity: 2048,
+                    initial_memory: 0,
+                    max_memory: 2048,
                     output_sink: |c: &[u8]| output.push(c),
                     strict: true,
                 })
@@ -307,7 +326,8 @@ mod tests {
                             Ok(())
                         })],
                     encoding: enc.name(),
-                    buffer_capacity: 2048,
+                    initial_memory: 0,
+                    max_memory: 2048,
                     output_sink: |c: &[u8]| output.push(c),
                     strict: true,
                 })
@@ -379,7 +399,8 @@ mod tests {
             ],
             document_content_handlers: vec![],
             encoding: "utf-8",
-            buffer_capacity: 2048,
+            initial_memory: 0,
+            max_memory: 2048,
             output_sink: |_: &[u8]| {},
             strict: true,
         })
@@ -393,7 +414,7 @@ mod tests {
 
     mod fatal_errors {
         use super::*;
-        use crate::BufferCapacityExceededError;
+        use crate::ExceededLimitsError;
 
         fn create_rewriter<O: OutputSink>(
             buffer_capacity: usize,
@@ -406,7 +427,9 @@ mod tests {
                 )],
                 document_content_handlers: vec![],
                 encoding: "utf-8",
-                buffer_capacity,
+                initial_memory: 0,
+                // initial_memory: buffer_capacity,
+                max_memory: buffer_capacity,
                 output_sink,
                 strict: true,
             })
@@ -415,14 +438,14 @@ mod tests {
 
         #[test]
         fn buffer_capacity_limit() {
-            const BUFFER_SIZE: usize = 20;
+            const BUFFER_SIZE: usize = 100;
 
             let mut rewriter = create_rewriter(BUFFER_SIZE, |_: &[u8]| {});
 
             // Use two chunks for the stream to force the usage of the buffer and
             // make sure to overflow it.
-            let chunk_1 = format!("<img alt=\"{}", "l".repeat(BUFFER_SIZE / 2));
-            let chunk_2 = format!("{}\" />", "r".repeat(BUFFER_SIZE / 2));
+            let chunk_1 = format!("<img alt=\"{}", "l".repeat(BUFFER_SIZE / 2)); // 60 bytes
+            let chunk_2 = format!("{}\" />", "r".repeat(BUFFER_SIZE / 2)); // 54 bytes
 
             rewriter.write(chunk_1.as_bytes()).unwrap();
 
@@ -430,12 +453,14 @@ mod tests {
 
             let buffer_capacity_err = write_err
                 .find_root_cause()
-                .downcast_ref::<BufferCapacityExceededError>()
+                .downcast_ref::<ExceededLimitsError>()
                 .unwrap();
 
             assert_eq!(
                 *buffer_capacity_err,
-                BufferCapacityExceededError { capacity: 20 }
+                ExceededLimitsError {
+                    current_usage: 60 + 54
+                }
             );
         }
 
@@ -480,7 +505,8 @@ mod tests {
                     element_content_handlers: vec![(&"*".parse().unwrap(), element_handlers)],
                     document_content_handlers: vec![document_handlers],
                     encoding: "utf-8",
-                    buffer_capacity: 2048,
+                    initial_memory: 0,
+                    max_memory: 2048,
                     output_sink: |_: &[u8]| {},
                     strict: true,
                 })

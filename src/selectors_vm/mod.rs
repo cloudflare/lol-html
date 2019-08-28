@@ -8,9 +8,12 @@ mod stack;
 
 use self::program::AddressRange;
 use self::stack::StackDirective;
+use crate::base::mem::SharedMemoryLimiter;
 use crate::html::{LocalName, Namespace};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
+
+use failure::Error;
 
 pub use self::ast::*;
 pub use self::attribute_matcher::AttributeMatcher;
@@ -25,8 +28,18 @@ pub struct MatchInfo<P> {
     pub with_content: bool,
 }
 
-pub type AuxStartTagInfoRequest<E, P> =
-    Box<dyn FnOnce(&mut SelectorMatchingVm<E>, AuxStartTagInfo, &mut dyn FnMut(MatchInfo<P>))>;
+pub type AuxStartTagInfoRequest<E, P> = Box<
+    dyn FnOnce(
+        &mut SelectorMatchingVm<E>,
+        AuxStartTagInfo,
+        &mut dyn FnMut(MatchInfo<P>),
+    ) -> Result<(), Error>,
+>;
+
+pub enum VmError<E: ElementData, MatchPayload> {
+    InfoRequest(AuxStartTagInfoRequest<E, MatchPayload>),
+    Fatal(Error),
+}
 
 type RecoveryPointHandler<T, E, P> = fn(
     &mut SelectorMatchingVm<E>,
@@ -113,7 +126,7 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
 
 macro_rules! aux_info_request {
     ($req:expr) => {
-        Err(Box::new($req))
+        Err(VmError::InfoRequest(Box::new($req)))
     };
 }
 
@@ -124,12 +137,16 @@ pub struct SelectorMatchingVm<E: ElementData> {
 
 impl<E: ElementData> SelectorMatchingVm<E> {
     #[inline]
-    pub fn new(ast: Ast<E::MatchPayload>, encoding: &'static Encoding) -> Self {
+    pub fn new(
+        ast: Ast<E::MatchPayload>,
+        encoding: &'static Encoding,
+        memory_limiter: SharedMemoryLimiter,
+    ) -> Self {
         let program = Compiler::new(encoding).compile(ast);
 
         SelectorMatchingVm {
             program,
-            stack: Stack::default(),
+            stack: Stack::new(memory_limiter),
         }
     }
 
@@ -138,7 +155,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         local_name: LocalName,
         ns: Namespace,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
+    ) -> Result<(), VmError<E, E::MatchPayload>> {
         let mut ctx = ExecutionCtx::new(local_name, ns);
         let stack_directive = self.stack.get_stack_directive(&ctx.stack_item, ns);
 
@@ -147,7 +164,10 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         } else if let StackDirective::PushIfNotSelfClosing = stack_directive {
             let mut ctx = ctx.into_owned();
 
-            return aux_info_request!(move |this, aux_info, match_handler| {
+            return aux_info_request!(move |this: &mut SelectorMatchingVm<E>,
+                                           aux_info: AuxStartTagInfo,
+                                           match_handler|
+                  -> Result<(), Error> {
                 let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ns);
 
                 ctx.with_content = !aux_info.self_closing;
@@ -175,8 +195,10 @@ impl<E: ElementData> SelectorMatchingVm<E> {
                 );
 
                 if ctx.with_content {
-                    this.stack.push_item(ctx.stack_item);
+                    this.stack.push_item(ctx.stack_item)?;
                 }
+
+                Ok(())
             });
         }
 
@@ -202,10 +224,10 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         ctx: ExecutionCtx<E>,
         bailout: Bailout<T>,
         recovery_point_handler: RecoveryPointHandler<T, E, E::MatchPayload>,
-    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
+    ) -> Result<(), VmError<E, E::MatchPayload>> {
         let mut ctx = ctx.into_owned();
 
-        aux_info_request!(move |this, aux_info, match_handler| {
+        aux_info_request!(move |this, aux_info, match_handler| -> Result<(), Error> {
             let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ctx.ns);
 
             this.complete_instr_execution_with_attrs(
@@ -224,8 +246,10 @@ impl<E: ElementData> SelectorMatchingVm<E> {
             );
 
             if ctx.with_content {
-                this.stack.push_item(ctx.stack_item);
+                this.stack.push_item(ctx.stack_item)?;
             }
+
+            Ok(())
         })
     }
 
@@ -285,7 +309,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         &mut self,
         mut ctx: ExecutionCtx<E>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) -> Result<(), AuxStartTagInfoRequest<E, E::MatchPayload>> {
+    ) -> Result<(), VmError<E, E::MatchPayload>> {
         if let Err(b) = self.try_exec_instr_set_without_attrs(
             self.program.entry_points.clone(),
             &mut ctx,
@@ -303,10 +327,12 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         }
 
         if ctx.with_content {
-            self.stack.push_item(ctx.stack_item.into_owned());
+            self.stack
+                .push_item(ctx.stack_item.into_owned())
+                .map_err(|e| VmError::Fatal(e.into()))
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 
     #[inline]
@@ -499,9 +525,8 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::{Token, TokenCaptureFlags};
-    use crate::transform_stream::{
-        StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
-    };
+    use crate::transform_stream::{StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings};
+    use crate::MemoryLimiter;
     use encoding_rs::UTF_8;
     use failure::Error;
     use std::collections::{HashMap, HashSet};
@@ -570,13 +595,16 @@ mod tests {
             }
         }
 
-        let mut transform_stream = TransformStream::new(TransformStreamSettings {
-            transform_controller: TestTransformController(test_fn),
-            output_sink: |_: &[u8]| {},
-            buffer_capacity: 2048,
-            encoding,
-            strict: true,
-        });
+        let mut transform_stream = TransformStream::new(
+            TransformStreamSettings {
+                transform_controller: TestTransformController(action),
+                output_sink: |_: &[u8]| {},
+                buffer_capacity: 2048,
+                encoding: UTF_8,
+                memory_limiter: MemoryLimiter::new_shared(2048),
+                strict: true
+            }
+        );
 
         transform_stream.write(&*html).unwrap();
         transform_stream.end().unwrap();
@@ -609,7 +637,9 @@ mod tests {
                 ast.add_selector(&selector.parse().unwrap(), i);
             }
 
-            let vm: SelectorMatchingVm<TestElementData> = SelectorMatchingVm::new(ast, UTF_8);
+            let memory_limiter = MemoryLimiter::new_shared(2048);
+            let vm: SelectorMatchingVm<TestElementData> =
+                SelectorMatchingVm::new(ast, UTF_8, memory_limiter);
 
             vm
         }};
@@ -635,15 +665,19 @@ mod tests {
                                 let aux_info_req = result.expect_err("Bailout expected");
                                 let (input, attr_buffer) = t.raw_attributes();
 
-                                aux_info_req(
-                                    &mut $vm,
-                                    AuxStartTagInfo {
-                                        input,
-                                        attr_buffer,
-                                        self_closing: t.self_closing(),
-                                    },
-                                    &mut match_handler,
-                                );
+                                match aux_info_req {
+                                    VmError::InfoRequest(f) => f(
+                                        &mut $vm,
+                                        AuxStartTagInfo {
+                                            input,
+                                            attr_buffer,
+                                            self_closing: t.self_closing(),
+                                        },
+                                        &mut match_handler,
+                                    )
+                                    .unwrap(),
+                                    VmError::Fatal(e) => panic!(e),
+                                }
                             } else {
                                 // NOTE: can't use unwrap() or expect() here, because
                                 // Debug is not implemented for the closure in the error type.

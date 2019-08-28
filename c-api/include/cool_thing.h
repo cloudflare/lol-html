@@ -215,7 +215,8 @@ cool_thing_rewriter_t *cool_thing_rewriter_build(
     cool_thing_rewriter_builder_t *builder,
     const char *encoding,
     size_t encoding_len,
-    size_t buffer_capacity,
+    size_t initial_memory,
+    size_t max_memory,
     void (*output_sink)(const char *chunk, size_t chunk_len, void *user_data),
     void *output_sink_user_data,
     bool strict
