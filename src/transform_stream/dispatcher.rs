@@ -92,13 +92,8 @@ where
         }
     }
 
-    pub fn flush_remaining_input(&mut self, input: &Chunk, consumed_byte_count: usize) {
-        let input_bytes = input.as_bytes();
-
-        let output = input_bytes.slice(Range {
-            start: self.remaining_content_start,
-            end: consumed_byte_count,
-        });
+    pub fn flush_remaining_input(&mut self, input: &[u8], consumed_byte_count: usize) {
+        let output = &input[self.remaining_content_start..consumed_byte_count];
 
         if self.emission_enabled && !output.is_empty() {
             self.output_sink.handle_chunk(&output);
@@ -107,7 +102,7 @@ where
         self.remaining_content_start = 0;
     }
 
-    pub fn finish(&mut self, input: &Chunk) {
+    pub fn finish(&mut self, input: &[u8]) {
         self.flush_remaining_input(input, input.len());
 
         // NOTE: output the finalizing chunk.

@@ -6,11 +6,11 @@ macro_rules! state {
 
         $($rest:tt)*
     ) => {
-        fn $name(&mut self, input: &mut Chunk) -> StateResult {
+        fn $name(&mut self, input: &[u8]) -> StateResult {
             // NOTE: clippy complains about some states that break the loop in each match arm
             #[allow(clippy::never_loop)]
             loop {
-                let ch = input.consume_ch();
+                let ch = self.consume_ch(input);
 
                 state_body!(|[self, input, ch]|> [$($arms)*], [$($($enter_actions)*)*]);
             }

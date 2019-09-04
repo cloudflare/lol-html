@@ -1,8 +1,13 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
+<<<<<<< HEAD
 use crate::base::Chunk;
 use crate::memory::{Arena, SharedMemoryLimiter};
+=======
+use crate::base::Buffer;
+
+>>>>>>> Get rid of Chunk
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use crate::rewriter::RewritingError;
 use encoding_rs::Encoding;
@@ -35,7 +40,6 @@ where
     parser: Parser<Dispatcher<C, O>>,
     buffer: Arena,
     has_buffered_data: bool,
-    next_chunk_pos: usize,
 }
 
 impl<C, O> TransformStream<C, O>
@@ -72,7 +76,6 @@ where
             parser,
             buffer,
             has_buffered_data: false,
-            next_chunk_pos: 0,
         }
     }
 
@@ -109,17 +112,13 @@ where
             data
         };
 
-        chunk.set_pos(self.next_chunk_pos);
-
         trace!(@chunk chunk);
 
-        let consumed_byte_count = self.parser.parse(&mut chunk)?;
+        let consumed_byte_count = self.parser.parse(chunk, false)?;
 
         self.dispatcher
             .borrow_mut()
             .flush_remaining_input(&chunk, consumed_byte_count);
-
-        self.next_chunk_pos = chunk.pos() - consumed_byte_count;
 
         if consumed_byte_count < chunk.len() {
             self.buffer_blocked_bytes(data, consumed_byte_count)?;
@@ -133,18 +132,16 @@ where
     pub fn end(&mut self) -> Result<(), RewritingError> {
         trace!(@end);
 
-        let mut chunk = if self.has_buffered_data {
-            Chunk::last(self.buffer.bytes())
+        let chunk = if self.has_buffered_data {
+            self.buffer.bytes()
         } else {
-            Chunk::last_empty()
+            &[]
         };
-
-        chunk.set_pos(self.next_chunk_pos);
 
         trace!(@chunk chunk);
 
-        self.parser.parse(&mut chunk)?;
-        self.dispatcher.borrow_mut().finish(&chunk);
+        self.parser.parse(chunk, true)?;
+        self.dispatcher.borrow_mut().finish(chunk);
 
         Ok(())
     }

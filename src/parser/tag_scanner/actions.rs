@@ -1,42 +1,41 @@
 use super::*;
-use crate::base::Chunk;
 use crate::parser::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
 
 impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     impl_common_sm_actions!();
 
     #[inline]
-    fn create_start_tag(&mut self, input: &mut Chunk) {
-        self.tag_name_start = input.pos();
+    fn create_start_tag(&mut self, _input: &[u8]) {
+        self.tag_name_start = self.pos();
         self.tag_name_hash = LocalNameHash::new();
     }
 
     #[inline]
-    fn create_end_tag(&mut self, input: &mut Chunk) {
-        self.tag_name_start = input.pos();
+    fn create_end_tag(&mut self, _input: &[u8]) {
+        self.tag_name_start = self.pos();
         self.tag_name_hash = LocalNameHash::new();
         self.is_in_end_tag = true;
     }
 
     #[inline]
-    fn mark_tag_start(&mut self, input: &mut Chunk) {
-        self.tag_start = Some(input.pos());
+    fn mark_tag_start(&mut self, _input: &[u8]) {
+        self.tag_start = Some(self.pos());
     }
 
     #[inline]
-    fn unmark_tag_start(&mut self, _input: &mut Chunk) {
+    fn unmark_tag_start(&mut self, _input: &[u8]) {
         self.tag_start = None;
     }
 
     #[inline]
-    fn update_tag_name_hash(&mut self, input: &mut Chunk) {
-        if let Some(ch) = input.get(input.pos()) {
+    fn update_tag_name_hash(&mut self, input: &[u8]) {
+        if let Some(ch) = input.get(self.pos()).copied() {
             self.tag_name_hash.update(ch);
         }
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, input: &mut Chunk) -> StateResult {
+    fn finish_tag_name(&mut self, input: &[u8]) -> StateResult {
         let tag_start = self
             .tag_start
             .take()
@@ -73,7 +72,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     }
 
     #[inline]
-    fn emit_tag(&mut self, _input: &mut Chunk) -> StateResult {
+    fn emit_tag(&mut self, _input: &[u8]) -> StateResult {
         Ok(
             if let Some(text_type) = self.pending_text_type_change.take() {
                 self.switch_text_type(text_type);
@@ -115,7 +114,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     );
 
     #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &mut Chunk, _offset: usize) {
+    fn shift_comment_text_end_by(&mut self, _input: &[u8], _offset: usize) {
         trace!(@noop);
     }
 }

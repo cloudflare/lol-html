@@ -59,7 +59,7 @@ macro_rules! ch_sequence_arm_pattern {
             Some(ch) if ch_sequence_arm_pattern!(@cmp_exp ch, $exp_ch $(, $case_mod)*) => {
                $body
             },
-            None if !$input.is_last() => {
+            None if !$self.is_last_input() => {
                 return $self.break_on_end_of_input($input);
             },
             _ => $self.leave_ch_sequence_matching(),
@@ -71,7 +71,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @first | [$self:tt, $input:ident, $ch:ident] |>
         [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {
-        $self.enter_ch_sequence_matching($input);
+        $self.enter_ch_sequence_matching();
         ch_sequence_arm_pattern!(@match_block |[$self, $input, $ch]|> $exp_ch, {
             ch_sequence_arm_pattern!(
                 @iter |[$self, $input, $ch]|> 1, [ $($rest_chs)* ], $actions, $($case_mod)*
@@ -85,7 +85,7 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input:ident, $ch:ident] |>
         $depth:expr, [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {{
-        let ch = $input.lookahead($depth);
+        let ch = $self.lookahead($input, $depth);
 
         ch_sequence_arm_pattern!(@match_block |[$self, $input, ch]|> $exp_ch, {
             ch_sequence_arm_pattern!(
@@ -98,10 +98,10 @@ macro_rules! ch_sequence_arm_pattern {
     ( @iter | [$self:tt, $input:ident, $ch:ident] |>
         $depth:expr, [$exp_ch:expr], ( $($actions:tt)* ), $($case_mod:ident)*
     ) => {{
-        let ch = $input.lookahead($depth);
+        let ch = $self.lookahead($input, $depth);
 
         ch_sequence_arm_pattern!(@match_block |[$self, $input, ch]|> $exp_ch, {
-            $input.consume_several($depth);
+            $self.consume_several($depth);
             $self.leave_ch_sequence_matching();
             action_list!(|$self, $input|> $($actions)*);
 

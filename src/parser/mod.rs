@@ -9,7 +9,6 @@ use self::lexer::Lexer;
 use self::state_machine::{ParsingLoopTerminationReason, StateMachine};
 use self::tag_scanner::TagScanner;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
-use crate::base::Chunk;
 use crate::html::{LocalName, Namespace};
 use crate::rewriter::RewritingError;
 use cfg_if::cfg_if;
@@ -102,10 +101,10 @@ impl<S: ParserOutputSink> Parser<S> {
         }
     }
 
-    pub fn parse(&mut self, input: &Chunk) -> Result<usize, RewritingError> {
+    pub fn parse(&mut self, input: &[u8], last: bool) -> Result<usize, RewritingError> {
         use ParsingLoopTerminationReason::*;
 
-        let mut loop_termination_reason = with_current_sm!(self, sm.run_parsing_loop(input))?;
+        let mut loop_termination_reason = with_current_sm!(self, sm.run_parsing_loop(input, last))?;
 
         loop {
             match loop_termination_reason {
@@ -114,8 +113,10 @@ impl<S: ParserOutputSink> Parser<S> {
 
                     trace!(@continue_from_bookmark sm_bookmark, self.current_directive, input);
 
-                    loop_termination_reason =
-                        with_current_sm!(self, sm.continue_from_bookmark(input, sm_bookmark))?;
+                    loop_termination_reason = with_current_sm!(
+                        self,
+                        sm.continue_from_bookmark(input, last, sm_bookmark)
+                    )?;
                 }
 
                 EndOfInput {

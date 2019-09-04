@@ -4,7 +4,7 @@ mod actions;
 mod conditions;
 mod lexeme;
 
-use crate::base::{Align, Chunk, Range};
+use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
     FeedbackDirective, ParsingLoopDirective, StateMachine, StateResult,
@@ -28,10 +28,12 @@ pub trait LexemeSink {
     ) -> Result<(), RewritingError>;
 }
 
-pub type State<S> = fn(&mut Lexer<S>, &mut Chunk) -> StateResult;
+pub type State<S> = fn(&mut Lexer<S>, &[u8]) -> StateResult;
 pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOutline>>>;
 
 pub struct Lexer<S: LexemeSink> {
+    next_pos: usize,
+    is_last_input: bool,
     lexeme_start: usize,
     token_part_start: usize,
     is_state_enter: bool,
@@ -52,6 +54,8 @@ pub struct Lexer<S: LexemeSink> {
 impl<S: LexemeSink> Lexer<S> {
     pub fn new(lexeme_sink: S, tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>) -> Self {
         Lexer {
+            next_pos: 0,
+            is_last_input: false,
             lexeme_start: 0,
             token_part_start: 0,
             is_state_enter: true,
@@ -131,12 +135,12 @@ impl<S: LexemeSink> Lexer<S> {
     #[inline]
     fn create_lexeme_with_raw<'i, T>(
         &mut self,
-        input: &'i Chunk<'i>,
+        input: &'i [u8],
         token: T,
         raw_end: usize,
     ) -> Lexeme<'i, T> {
         Lexeme::new(
-            input.as_bytes(),
+            input.into(),
             token,
             Range {
                 start: self.lexeme_start,
@@ -148,10 +152,10 @@ impl<S: LexemeSink> Lexer<S> {
     #[inline]
     fn create_lexeme_with_raw_inclusive<'i, T>(
         &mut self,
-        input: &'i Chunk<'i>,
+        input: &'i [u8],
         token: T,
     ) -> Lexeme<'i, T> {
-        let raw_end = input.pos() + 1;
+        let raw_end = self.pos() + 1;
 
         self.create_lexeme_with_raw(input, token, raw_end)
     }
@@ -159,10 +163,10 @@ impl<S: LexemeSink> Lexer<S> {
     #[inline]
     fn create_lexeme_with_raw_exclusive<'i, T>(
         &mut self,
-        input: &'i Chunk<'i>,
+        input: &'i [u8],
         token: T,
     ) -> Lexeme<'i, T> {
-        let raw_end = input.pos();
+        let raw_end = self.pos();
 
         self.create_lexeme_with_raw(input, token, raw_end)
     }
@@ -170,6 +174,7 @@ impl<S: LexemeSink> Lexer<S> {
 
 impl<S: LexemeSink> StateMachine for Lexer<S> {
     impl_common_sm_accessors!();
+    impl_common_input_cursor_methods!();
 
     #[inline]
     fn set_state(&mut self, state: State<S>) {
@@ -182,7 +187,7 @@ impl<S: LexemeSink> StateMachine for Lexer<S> {
     }
 
     #[inline]
-    fn get_consumed_byte_count(&self, _input: &Chunk) -> usize {
+    fn get_consumed_byte_count(&self, _input: &[u8]) -> usize {
         self.lexeme_start
     }
 
@@ -202,7 +207,7 @@ impl<S: LexemeSink> StateMachine for Lexer<S> {
     }
 
     #[inline]
-    fn enter_ch_sequence_matching(&mut self, _input: &mut Chunk) {
+    fn enter_ch_sequence_matching(&mut self) {
         trace!(@noop);
     }
 
