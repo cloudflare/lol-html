@@ -39,13 +39,35 @@ mod tokens;
 
 #[cfg(test)]
 mod test_utils {
-    use crate::test_utils::Output;
+    use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS};
     use crate::*;
     use encoding_rs::Encoding;
     use std::convert::TryFrom;
 
+    pub fn encoded(input: &str) -> Vec<(Vec<u8>, &'static Encoding)> {
+        ASCII_COMPATIBLE_ENCODINGS
+            .iter()
+            .filter_map(|enc| {
+                let (input, _, has_unmappable_characters) = enc.encode(input);
+
+                // NOTE: there is no character in existence outside of ASCII range
+                // that can be represented in all the ASCII-compatible encodings.
+                // So, if test cases contains some non-ASCII characters that can't
+                // be represented in the given encoding then we just skip it.
+                // It is OK to do so, because our intention is not to test the
+                // encoding library itself (it is already well tested), but test
+                // how our own code works with non-ASCII characters.
+                if has_unmappable_characters {
+                    None
+                } else {
+                    Some((input.into_owned(), *enc))
+                }
+            })
+            .collect()
+    }
+
     pub fn rewrite_html(
-        html: &str,
+        html: &[u8],
         encoding: &'static Encoding,
         element_content_handlers: Vec<(&Selector, ElementContentHandlers)>,
         document_content_handlers: Vec<DocumentContentHandlers>,
@@ -63,7 +85,7 @@ mod test_utils {
             })
             .unwrap();
 
-            rewriter.write(html.as_bytes()).unwrap();
+            rewriter.write(html).unwrap();
             rewriter.end().unwrap();
         }
 

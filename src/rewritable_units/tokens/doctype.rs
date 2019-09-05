@@ -81,12 +81,11 @@ impl Debug for Doctype<'_> {
 #[cfg(test)]
 mod tests {
     use crate::rewritable_units::test_utils::*;
-    use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use crate::*;
     use encoding_rs::{Encoding, UTF_8};
 
     fn rewrite_doctype(
-        html: &str,
+        html: &[u8],
         encoding: &'static Encoding,
         mut handler: impl FnMut(&mut Doctype),
     ) -> String {
@@ -110,7 +109,7 @@ mod tests {
 
     #[test]
     fn user_data() {
-        rewrite_doctype("<!doctype>", UTF_8, |d| {
+        rewrite_doctype(b"<!doctype>", UTF_8, |d| {
             d.set_user_data(42usize);
 
             assert_eq!(*d.user_data().downcast_ref::<usize>().unwrap(), 42usize);
@@ -123,10 +122,10 @@ mod tests {
 
     #[test]
     fn serialization() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_doctype(r#"<!DOCTYPE html SYSTEM "hey">"#, enc, |_| {});
+        for (html, enc) in encoded(r#"<!DOCTYPE html SYSTEM "Ĥey">"#) {
+            let output = rewrite_doctype(&html, enc, |_| {});
 
-            assert_eq!(output, r#"<!DOCTYPE html SYSTEM "hey">"#);
+            assert_eq!(output, r#"<!DOCTYPE html SYSTEM "Ĥey">"#);
         }
     }
 }

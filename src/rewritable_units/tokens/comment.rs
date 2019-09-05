@@ -90,12 +90,11 @@ impl Debug for Comment<'_> {
 #[cfg(test)]
 mod tests {
     use crate::rewritable_units::test_utils::*;
-    use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use crate::*;
     use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
     fn rewrite_comment(
-        html: &str,
+        html: &[u8],
         encoding: &'static Encoding,
         mut handler: impl FnMut(&mut Comment),
     ) -> String {
@@ -119,7 +118,7 @@ mod tests {
 
     #[test]
     fn comment_closing_sequence_in_text() {
-        rewrite_comment("<!-- foo -->", UTF_8, |c| {
+        rewrite_comment(b"<!-- foo -->", UTF_8, |c| {
             let err = c.set_text("foo -- bar --> baz").unwrap_err();
 
             assert_eq!(err, CommentTextError::CommentClosingSequence);
@@ -128,7 +127,7 @@ mod tests {
 
     #[test]
     fn encoding_unmappable_chars_in_text() {
-        rewrite_comment("<!-- foo -->", EUC_JP, |c| {
+        rewrite_comment(b"<!-- foo -->", EUC_JP, |c| {
             let err = c.set_text("foo\u{00F8}bar").unwrap_err();
 
             assert_eq!(err, CommentTextError::UnencodableCharacter);
@@ -137,7 +136,7 @@ mod tests {
 
     #[test]
     fn user_data() {
-        rewrite_comment("<!-- foo -->", UTF_8, |c| {
+        rewrite_comment(b"<!-- foo -->", UTF_8, |c| {
             c.set_user_data(42usize);
 
             assert_eq!(*c.user_data().downcast_ref::<usize>().unwrap(), 42usize);
@@ -151,28 +150,28 @@ mod tests {
     mod serialization {
         use super::*;
 
-        const HTML: &str = "<!-- foo -- bar -->";
+        const HTML: &str = "<!-- fooé -- bar -->";
 
         macro_rules! test {
             ($handler:expr, $expected:expr) => {
-                for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-                    assert_eq!(rewrite_comment(HTML, enc, $handler), $expected);
+                for (html, enc) in encoded(HTML) {
+                    assert_eq!(rewrite_comment(&html, enc, $handler), $expected);
                 }
             };
         }
 
         #[test]
         fn parsed() {
-            test!(|_| {}, "<!-- foo -- bar -->");
+            test!(|_| {}, "<!-- fooé -- bar -->");
         }
 
         #[test]
         fn modified_text() {
             test!(
                 |c| {
-                    c.set_text("42 <!-").unwrap();
+                    c.set_text("42é <!-").unwrap();
                 },
-                "<!--42 <!--->"
+                "<!--42é <!--->"
             );
         }
 
@@ -184,12 +183,12 @@ mod tests {
                     c.before("<div>Hey</div>", ContentType::Html);
                     c.before("<foo>", ContentType::Html);
                     c.after("</foo>", ContentType::Html);
-                    c.after("<!-- 42 -->", ContentType::Html);
+                    c.after("<!-- 42é -->", ContentType::Html);
                     c.after("<foo & bar>", ContentType::Text);
                 },
                 concat!(
-                    "&lt;span&gt;<div>Hey</div><foo><!-- foo -- bar -->",
-                    "&lt;foo &amp; bar&gt;<!-- 42 --></foo>",
+                    "&lt;span&gt;<div>Hey</div><foo><!-- fooé -- bar -->",
+                    "&lt;foo &amp; bar&gt;<!-- 42é --></foo>",
                 )
             );
         }

@@ -98,7 +98,7 @@ impl PartialEq<Tag> for LocalNameHash {
 /// LocalName is used for the comparison of tag names.
 /// In the majority of cases it will be represented as a hash, however for long
 /// non-standard tag names it fallsback to the Name representation.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub enum LocalName<'i> {
     Hash(LocalNameHash),
     Bytes(Bytes<'i>),
@@ -147,7 +147,18 @@ impl PartialEq<Tag> for LocalName<'_> {
     }
 }
 
-impl Eq for LocalName<'_> {}
+impl PartialEq<LocalName<'_>> for LocalName<'_> {
+    #[inline]
+    fn eq(&self, other: &LocalName<'_>) -> bool {
+        use LocalName::*;
+
+        match (self, other) {
+            (Hash(s), Hash(o)) => s == o,
+            (Bytes(s), Bytes(o)) => s.eq_ignore_ascii_case(&o),
+            _ => false,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

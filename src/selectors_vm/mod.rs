@@ -499,7 +499,9 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::{Token, TokenCaptureFlags};
-    use crate::transform_stream::{StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings};
+    use crate::transform_stream::{
+        StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
+    };
     use encoding_rs::UTF_8;
     use failure::Error;
     use std::collections::{HashMap, HashSet};
@@ -521,8 +523,23 @@ mod tests {
         }
     }
 
-    pub fn parse_token(html: &str, encoding: &'static Encoding, action: impl FnMut(&mut Token)) {
-        let (html, _, _) = encoding.encode(html);
+    pub fn test_with_token(
+        html: &str,
+        encoding: &'static Encoding,
+        test_fn: impl FnMut(&mut Token),
+    ) {
+        let (html, _, has_unmappable_characters) = encoding.encode(html);
+
+        // NOTE: there is no character in existence outside of ASCII range
+        // that can be represented in all the ASCII-compatible encodings.
+        // So, if test cases contains some non-ASCII characters that can't
+        // be represented in the given encoding then we just skip it.
+        // It is OK to do so, because our intention is not to test the
+        // encoding library itself (it is already well tested), but test
+        // how our own code works with non-ASCII characters.
+        if has_unmappable_characters {
+            return;
+        }
 
         pub struct TestTransformController<T: FnMut(&mut Token)>(T);
 
@@ -553,15 +570,13 @@ mod tests {
             }
         }
 
-        let mut transform_stream = TransformStream::new(
-            TransformStreamSettings {
-                transform_controller: TestTransformController(action),
-                output_sink: |_: &[u8]| {},
-                buffer_capacity: 2048,
-                encoding: UTF_8,
-                strict: true
-            }
-        );
+        let mut transform_stream = TransformStream::new(TransformStreamSettings {
+            transform_controller: TestTransformController(test_fn),
+            output_sink: |_: &[u8]| {},
+            buffer_capacity: 2048,
+            encoding,
+            strict: true,
+        });
 
         transform_stream.write(&*html).unwrap();
         transform_stream.end().unwrap();
@@ -602,7 +617,7 @@ mod tests {
 
     macro_rules! exec_for_start_tag_and_assert {
         ($vm:expr, $tag_html:expr, $ns:expr, $expectation:expr) => {
-            parse_token($tag_html, UTF_8, |t| {
+            test_with_token($tag_html, UTF_8, |t| {
                 match t {
                     Token::StartTag(t) => {
                         let mut matched_payload = HashSet::default();
@@ -650,7 +665,7 @@ mod tests {
 
     macro_rules! exec_for_end_tag_and_assert {
         ($vm:expr, $tag_html:expr, $expected_unmatched_payload:expr) => {
-            parse_token($tag_html, UTF_8, |t| match t {
+            test_with_token($tag_html, UTF_8, |t| match t {
                 Token::EndTag(t) => {
                     let mut unmatched_payload = HashMap::default();
 

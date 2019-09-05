@@ -256,12 +256,11 @@ impl Debug for Element<'_, '_> {
 #[cfg(test)]
 mod tests {
     use crate::rewritable_units::test_utils::*;
-    use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use crate::*;
     use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
     fn rewrite_element(
-        html: &str,
+        html: &[u8],
         encoding: &'static Encoding,
         selector: &str,
         mut handler: impl FnMut(&mut Element),
@@ -295,14 +294,14 @@ mod tests {
             vec![],
         );
 
-        assert!(handler_called);
+        assert!(handler_called, "Handler not called.");
 
         output
     }
 
     #[test]
     fn empty_tag_name() {
-        rewrite_element("<div>", UTF_8, "div", |el| {
+        rewrite_element(b"<div>", UTF_8, "div", |el| {
             let err = el.set_tag_name("").unwrap_err();
 
             assert_eq!(err, TagNameError::Empty);
@@ -311,7 +310,7 @@ mod tests {
 
     #[test]
     fn forbidden_characters_in_tag_name() {
-        rewrite_element("<div>", UTF_8, "div", |el| {
+        rewrite_element(b"<div>", UTF_8, "div", |el| {
             for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>'] {
                 let err = el.set_tag_name(&format!("foo{}bar", ch)).unwrap_err();
 
@@ -322,7 +321,7 @@ mod tests {
 
     #[test]
     fn encoding_unmappable_chars_in_tag_name() {
-        rewrite_element("<div>", EUC_JP, "div", |el| {
+        rewrite_element(b"<div>", EUC_JP, "div", |el| {
             let err = el.set_tag_name("foo\u{00F8}bar").unwrap_err();
 
             assert_eq!(err, TagNameError::UnencodableCharacter);
@@ -331,7 +330,7 @@ mod tests {
 
     #[test]
     fn invalid_first_char_of_tag_name() {
-        rewrite_element("<div>", UTF_8, "div", |el| {
+        rewrite_element(b"<div>", UTF_8, "div", |el| {
             let err = el.set_tag_name("1foo").unwrap_err();
 
             assert_eq!(err, TagNameError::InvalidFirstCharacter);
@@ -340,16 +339,16 @@ mod tests {
 
     #[test]
     fn namespace_uri() {
-        rewrite_element("<script></script>", UTF_8, "script", |el| {
+        rewrite_element(b"<script></script>", UTF_8, "script", |el| {
             assert_eq!(el.namespace_uri(), "http://www.w3.org/1999/xhtml");
         });
 
-        rewrite_element("<svg><script></script></svg>", UTF_8, "script", |el| {
+        rewrite_element(b"<svg><script></script></svg>", UTF_8, "script", |el| {
             assert_eq!(el.namespace_uri(), "http://www.w3.org/2000/svg");
         });
 
         rewrite_element(
-            "<svg><foreignObject><script></script></foreignObject></svg>",
+            b"<svg><foreignObject><script></script></foreignObject></svg>",
             UTF_8,
             "script",
             |el| {
@@ -357,14 +356,14 @@ mod tests {
             },
         );
 
-        rewrite_element("<math><script></script></math>", UTF_8, "script", |el| {
+        rewrite_element(b"<math><script></script></math>", UTF_8, "script", |el| {
             assert_eq!(el.namespace_uri(), "http://www.w3.org/1998/Math/MathML");
         });
     }
 
     #[test]
     fn empty_attr_name() {
-        rewrite_element("<div>", UTF_8, "div", |el| {
+        rewrite_element(b"<div>", UTF_8, "div", |el| {
             let err = el.set_attribute("", "").unwrap_err();
 
             assert_eq!(err, AttributeNameError::Empty);
@@ -373,7 +372,7 @@ mod tests {
 
     #[test]
     fn forbidden_characters_in_attr_name() {
-        rewrite_element("<div>", UTF_8, "div", |el| {
+        rewrite_element(b"<div>", UTF_8, "div", |el| {
             for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>', '='] {
                 let err = el.set_attribute(&format!("foo{}bar", ch), "").unwrap_err();
 
@@ -384,7 +383,7 @@ mod tests {
 
     #[test]
     fn encoding_unmappable_character_in_attr_name() {
-        rewrite_element("<div>", EUC_JP, "div", |el| {
+        rewrite_element(b"<div>", EUC_JP, "div", |el| {
             let err = el.set_attribute("foo\u{00F8}bar", "").unwrap_err();
 
             assert_eq!(err, AttributeNameError::UnencodableCharacter);
@@ -393,47 +392,47 @@ mod tests {
 
     #[test]
     fn tag_name_getter_and_setter() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<Foo><div><span></span></div></foo>", enc, "foo", |el| {
-                assert_eq!(el.tag_name(), "foo", "Encoding: {}", enc.name());
+        for (html, enc) in encoded("<FooǼ><div><span></span></div></FooǼ>") {
+            let output = rewrite_element(&html, enc, "fooǼ", |el| {
+                assert_eq!(el.tag_name(), "fooǼ", "Encoding: {}", enc.name());
 
-                el.set_tag_name("BaZ").unwrap();
+                el.set_tag_name("BaZǽ").unwrap();
 
-                assert_eq!(el.tag_name(), "baz", "Encoding: {}", enc.name());
+                assert_eq!(el.tag_name(), "bazǽ", "Encoding: {}", enc.name());
             });
 
-            assert_eq!(output, "<BaZ><div><span></span></div></BaZ>");
+            assert_eq!(output, "<BaZǽ><div><span></span></div></BaZǽ>");
         }
     }
 
     #[test]
     fn attribute_list() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
+        for (html, enc) in encoded("<Foo Fooα1=Barβ1 Fooγ2=Barδ2>") {
+            rewrite_element(&html, enc, "foo", |el| {
                 assert_eq!(el.attributes().len(), 2, "Encoding: {}", enc.name());
                 assert_eq!(
                     el.attributes()[0].name(),
-                    "foo1",
+                    "fooα1",
                     "Encoding: {}",
                     enc.name()
                 );
                 assert_eq!(
                     el.attributes()[1].name(),
-                    "foo2",
+                    "fooγ2",
                     "Encoding: {}",
                     enc.name()
                 );
 
                 assert_eq!(
                     el.attributes()[0].value(),
-                    "Bar1",
+                    "Barβ1",
                     "Encoding: {}",
                     enc.name()
                 );
 
                 assert_eq!(
                     el.attributes()[1].value(),
-                    "Bar2",
+                    "Barδ2",
                     "Encoding: {}",
                     enc.name()
                 );
@@ -443,32 +442,32 @@ mod tests {
 
     #[test]
     fn get_attrs() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
+        for (html, enc) in encoded("<Foo Fooα1=Barβ1 Fooγ2=Barδ2>") {
+            rewrite_element(&html, enc, "foo", |el| {
                 assert_eq!(
-                    el.get_attribute("fOo1").unwrap(),
-                    "Bar1",
+                    el.get_attribute("fOoα1").unwrap(),
+                    "Barβ1",
                     "Encoding: {}",
                     enc.name()
                 );
 
                 assert_eq!(
-                    el.get_attribute("Foo1").unwrap(),
-                    "Bar1",
+                    el.get_attribute("Fooα1").unwrap(),
+                    "Barβ1",
                     "Encoding: {}",
                     enc.name()
                 );
 
                 assert_eq!(
-                    el.get_attribute("FOO2").unwrap(),
-                    "Bar2",
+                    el.get_attribute("FOOγ2").unwrap(),
+                    "Barδ2",
                     "Encoding: {}",
                     enc.name()
                 );
 
                 assert_eq!(
-                    el.get_attribute("foo2").unwrap(),
-                    "Bar2",
+                    el.get_attribute("fooγ2").unwrap(),
+                    "Barδ2",
                     "Encoding: {}",
                     enc.name()
                 );
@@ -480,11 +479,11 @@ mod tests {
 
     #[test]
     fn has_attr() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
-                assert!(el.has_attribute("FOo1"), "Encoding: {}", enc.name());
-                assert!(el.has_attribute("foo1"), "Encoding: {}", enc.name());
-                assert!(el.has_attribute("FOO2"), "Encoding: {}", enc.name());
+        for (html, enc) in encoded("<Foo FooѦ1=Bar1 FooѤ2=Bar2>") {
+            rewrite_element(&html, enc, "foo", |el| {
+                assert!(el.has_attribute("FOoѦ1"), "Encoding: {}", enc.name());
+                assert!(el.has_attribute("fooѦ1"), "Encoding: {}", enc.name());
+                assert!(el.has_attribute("FOOѤ2"), "Encoding: {}", enc.name());
                 assert!(!el.has_attribute("foo3"), "Encoding: {}", enc.name());
             });
         }
@@ -492,21 +491,21 @@ mod tests {
 
     #[test]
     fn set_attr() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            rewrite_element("<div>", enc, "div", |el| {
-                el.set_attribute("Foo", "Bar1").unwrap();
+        for (html, enc) in encoded("<div҈>") {
+            rewrite_element(&html, enc, "div҈", |el| {
+                el.set_attribute("FooѴ", "҈Bar1҈").unwrap();
 
                 assert_eq!(
-                    el.get_attribute("foo").unwrap(),
-                    "Bar1",
+                    el.get_attribute("fooѴ").unwrap(),
+                    "҈Bar1҈",
                     "Encoding: {}",
                     enc.name()
                 );
 
-                el.set_attribute("fOO", "Bar2").unwrap();
+                el.set_attribute("fOOѴ", "Bar2").unwrap();
 
                 assert_eq!(
-                    el.get_attribute("foo").unwrap(),
+                    el.get_attribute("fooѴ").unwrap(),
                     "Bar2",
                     "Encoding: {}",
                     enc.name()
@@ -517,158 +516,149 @@ mod tests {
 
     #[test]
     fn remove_attr() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            rewrite_element("<Foo Foo1=Bar1 Foo2=Bar2>", enc, "foo", |el| {
+        for (html, enc) in encoded("<Foo Foo1இ=Bar1 Foo2இ=Bar2>") {
+            rewrite_element(&html, enc, "foo", |el| {
                 el.remove_attribute("Unknown");
 
                 assert_eq!(el.attributes().len(), 2, "Encoding: {}", enc.name());
 
-                el.remove_attribute("Foo1");
+                el.remove_attribute("Foo1இ");
 
                 assert_eq!(el.attributes().len(), 1, "Encoding: {}", enc.name());
-                assert_eq!(el.get_attribute("foo1"), None, "Encoding: {}", enc.name());
+                assert_eq!(
+                    el.get_attribute("foo1இ"),
+                    None,
+                    "Encoding: {}",
+                    enc.name()
+                );
 
-                el.remove_attribute("FoO2");
+                el.remove_attribute("FoO2இ");
 
                 assert!(el.attributes().is_empty(), "Encoding: {}", enc.name());
-                assert_eq!(el.get_attribute("foo2"), None, "Encoding: {}", enc.name());
+                assert_eq!(
+                    el.get_attribute("foo2இ"),
+                    None,
+                    "Encoding: {}",
+                    enc.name()
+                );
             });
         }
     }
 
     #[test]
     fn insert_content_before() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.before("<img>", ContentType::Html);
-                el.before("<img>", ContentType::Text);
+        for (html, enc) in encoded("<div><span>ĥi</span></div>") {
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.before("<imgĤ>", ContentType::Html);
+                el.before("<imgĤ>", ContentType::Text);
             });
 
-            assert_eq!(output, "<div><img>&lt;img&gt;<span>Hi</span></div>");
+            assert_eq!(output, "<div><imgĤ>&lt;imgĤ&gt;<span>ĥi</span></div>");
         }
     }
 
     #[test]
     fn prepend_content() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.prepend("<img>", ContentType::Html);
-                el.prepend("<img>", ContentType::Text);
+        for (html, enc) in encoded("<div><span>ĥi</span></div>") {
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.prepend("<imgĤ>", ContentType::Html);
+                el.prepend("<imgĤ>", ContentType::Text);
             });
 
-            assert_eq!(output, "<div><span>&lt;img&gt;<img>Hi</span></div>");
+            assert_eq!(output, "<div><span>&lt;imgĤ&gt;<imgĤ>ĥi</span></div>");
         }
     }
 
     #[test]
     fn append_content() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.append("<img>", ContentType::Html);
-                el.append("<img>", ContentType::Text);
+        for (html, enc) in encoded("<div><span>ĥi</span></div>") {
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.append("<imgĤ>", ContentType::Html);
+                el.append("<imgĤ>", ContentType::Text);
             });
 
-            assert_eq!(output, "<div><span>Hi<img>&lt;img&gt;</span></div>");
+            assert_eq!(output, "<div><span>ĥi<imgĤ>&lt;imgĤ&gt;</span></div>");
         }
     }
 
     #[test]
     fn insert_content_after() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
-                el.after("<img>", ContentType::Html);
-                el.after("<img>", ContentType::Text);
+        for (html, enc) in encoded("<div><span>ĥi</span></div>") {
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.after("<imgĤ>", ContentType::Html);
+                el.after("<imgĤ>", ContentType::Text);
             });
 
-            assert_eq!(output, "<div><span>Hi</span>&lt;img&gt;<img></div>");
+            assert_eq!(output, "<div><span>ĥi</span>&lt;imgĤ&gt;<imgĤ></div>");
         }
     }
 
     #[test]
     fn set_content_after() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element(
-                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
-                enc,
-                "span",
-                |el| {
-                    el.prepend("<prepended>", ContentType::Html);
-                    el.append("<appended>", ContentType::Html);
-                    el.set_inner_content("<img>", ContentType::Html);
-                    el.set_inner_content("<img>", ContentType::Text);
-                },
-            );
+        for (html, enc) in
+            encoded("<div><span>Hi<inner-remove-me>RemoveŴ</inner-remove-me></span></div>")
+        {
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.set_inner_content("<imgŵ>", ContentType::Html);
+                el.set_inner_content("<imgŵ>", ContentType::Text);
+            });
 
-            assert_eq!(output, "<div><span>&lt;img&gt;</span></div>");
+            assert_eq!(output, "<div><span>&lt;imgŵ&gt;</span></div>");
 
-            let output = rewrite_element(
-                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
-                enc,
-                "span",
-                |el| {
-                    el.prepend("<prepended>", ContentType::Html);
-                    el.append("<appended>", ContentType::Html);
-                    el.set_inner_content("<img>", ContentType::Text);
-                    el.set_inner_content("<img>", ContentType::Html);
-                },
-            );
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.set_inner_content("<imgŵ>", ContentType::Text);
+                el.set_inner_content("<imgŵ>", ContentType::Html);
+            });
 
-            assert_eq!(output, "<div><span><img></span></div>");
+            assert_eq!(output, "<div><span><imgŵ></span></div>");
         }
     }
 
     #[test]
     fn replace() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element(
-                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
-                enc,
-                "span",
-                |el| {
-                    el.prepend("<prepended>", ContentType::Html);
-                    el.append("<appended>", ContentType::Html);
-                    el.replace("<img>", ContentType::Html);
-                    el.replace("<img>", ContentType::Text);
+        for (html, enc) in
+            encoded("<div><span>Hi<inner-remove-me>Remove㘗</inner-remove-me></span></div>")
+        {
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.replace("<img㘘>", ContentType::Html);
+                el.replace("<img㘘>", ContentType::Text);
 
-                    assert!(el.removed());
-                },
-            );
+                assert!(el.removed());
+            });
 
-            assert_eq!(output, "<div>&lt;img&gt;</div>");
+            assert_eq!(output, "<div>&lt;img㘘&gt;</div>");
 
-            let output = rewrite_element(
-                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
-                enc,
-                "span",
-                |el| {
-                    el.prepend("<prepended>", ContentType::Html);
-                    el.append("<appended>", ContentType::Html);
-                    el.replace("<img>", ContentType::Text);
-                    el.replace("<img>", ContentType::Html);
+            let output = rewrite_element(&html, enc, "span", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.replace("<img㘘>", ContentType::Text);
+                el.replace("<img㘘>", ContentType::Html);
 
-                    assert!(el.removed());
-                },
-            );
+                assert!(el.removed());
+            });
 
-            assert_eq!(output, "<div><img></div>");
+            assert_eq!(output, "<div><img㘘></div>");
         }
     }
 
     #[test]
     fn remove() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element(
-                "<div><span>Hi<inner-remove-me>Remove</inner-remove-me></span></div>",
-                enc,
-                "span",
-                |el| {
-                    el.prepend("<prepended>", ContentType::Html);
-                    el.append("<appended>", ContentType::Html);
-                    el.remove();
+        for (html, enc) in
+            encoded("<div><span㗵>Hi<inner-remove-me>Remove</inner-remove-me></span㗵></div>")
+        {
+            let output = rewrite_element(&html, enc, "span㗵", |el| {
+                el.prepend("<prepended>", ContentType::Html);
+                el.append("<appended>", ContentType::Html);
+                el.remove();
 
-                    assert!(el.removed());
-                },
-            );
+                assert!(el.removed());
+            });
 
             assert_eq!(output, "<div></div>");
         }
@@ -676,8 +666,8 @@ mod tests {
 
     #[test]
     fn remove_with_unfinished_end_tag() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Heello</span  ", enc, "span", |el| {
+        for (html, enc) in encoded("<div><span㚴>Heello</span㚴  ") {
+            let output = rewrite_element(&html, enc, "span㚴", |el| {
                 el.remove();
 
                 assert!(el.removed());
@@ -689,8 +679,8 @@ mod tests {
 
     #[test]
     fn remove_and_keep_content() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-            let output = rewrite_element("<div><span>Hi</span></div>", enc, "span", |el| {
+        for (html, enc) in encoded("<div><spanЫ>Hi</spanЫ></div>") {
+            let output = rewrite_element(&html, enc, "spanЫ", |el| {
                 el.prepend("<prepended>", ContentType::Html);
                 el.append("<appended>", ContentType::Html);
                 el.remove_and_keep_content();
@@ -705,7 +695,7 @@ mod tests {
     #[test]
     fn multiple_consequent_removes() {
         let output = rewrite_html(
-            "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
+            b"<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
             UTF_8,
             vec![
                 (
@@ -738,7 +728,7 @@ mod tests {
 
     #[test]
     fn void_element() {
-        let output = rewrite_element("<img><span>Hi</span></img>", UTF_8, "img", |el| {
+        let output = rewrite_element(b"<img><span>Hi</span></img>", UTF_8, "img", |el| {
             el.after("<!--after-->", ContentType::Html);
             el.set_tag_name("img-foo").unwrap();
         });
@@ -748,7 +738,7 @@ mod tests {
 
     #[test]
     fn self_closing_element() {
-        let output = rewrite_element("<svg><foo/>Hi</foo></svg>", UTF_8, "foo", |el| {
+        let output = rewrite_element(b"<svg><foo/>Hi</foo></svg>", UTF_8, "foo", |el| {
             el.after("<!--after-->", ContentType::Html);
             el.set_tag_name("bar").unwrap();
         });
@@ -758,7 +748,7 @@ mod tests {
 
     #[test]
     fn user_data() {
-        rewrite_element("<div><span>Hi</span></div>", UTF_8, "span", |el| {
+        rewrite_element(b"<div><span>Hi</span></div>", UTF_8, "span", |el| {
             el.set_user_data(42usize);
 
             assert_eq!(*el.user_data().downcast_ref::<usize>().unwrap(), 42usize);
@@ -772,13 +762,13 @@ mod tests {
     mod serialization {
         use super::*;
 
-        const HTML: &str = r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4></a>"#;
+        const HTML: &str = r#"<a a1='foo " baré " baz' / a2="foo ' bar ' baz" a3=foo/bar a4></a>"#;
         const SELECTOR: &str = "a";
 
         macro_rules! test {
             ($handler:expr, $expected:expr) => {
-                for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-                    assert_eq!(rewrite_element(HTML, enc, SELECTOR, $handler), $expected);
+                for (html, enc) in encoded(HTML) {
+                    assert_eq!(rewrite_element(&html, enc, SELECTOR, $handler), $expected);
                 }
             };
         }
@@ -787,7 +777,7 @@ mod tests {
         fn parsed() {
             test!(
                 |_| {},
-                r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4></a>"#
+                r#"<a a1='foo " baré " baz' / a2="foo ' bar ' baz" a3=foo/bar a4></a>"#
             );
         }
 
@@ -797,7 +787,7 @@ mod tests {
                 |el| {
                     el.set_tag_name("div").unwrap();
                 },
-                r#"<div a1='foo " bar " baz' a2="foo ' bar ' baz" a3=foo/bar a4></div>"#
+                r#"<div a1='foo " baré " baz' a2="foo ' bar ' baz" a3=foo/bar a4></div>"#
             );
         }
 
@@ -807,7 +797,7 @@ mod tests {
                 |el| {
                     el.set_attribute("a2", "foo ' bar ' baz42").unwrap();
                 },
-                r#"<a a1='foo " bar " baz' a2="foo ' bar ' baz42" a3=foo/bar a4></a>"#
+                r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz42" a3=foo/bar a4></a>"#
             );
         }
 
@@ -817,7 +807,7 @@ mod tests {
                 |el| {
                     el.set_attribute("a2", "foo ' bar ' baz42").unwrap();
                 },
-                r#"<a a1='foo " bar " baz' a2="foo ' bar ' baz42" a3=foo/bar a4></a>"#
+                r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz42" a3=foo/bar a4></a>"#
             );
         }
 
@@ -827,7 +817,7 @@ mod tests {
                 |el| {
                     el.set_attribute("a3", "foo/bar42").unwrap();
                 },
-                r#"<a a1='foo " bar " baz' a2="foo ' bar ' baz" a3="foo/bar42" a4></a>"#
+                r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz" a3="foo/bar42" a4></a>"#
             );
         }
 
@@ -837,7 +827,7 @@ mod tests {
                 |el| {
                     el.set_attribute("a4", "42").unwrap();
                 },
-                r#"<a a1='foo " bar " baz' a2="foo ' bar ' baz" a3=foo/bar a4="42"></a>"#
+                r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz" a3=foo/bar a4="42"></a>"#
             );
         }
 
@@ -847,7 +837,7 @@ mod tests {
             |el| {
                 el.set_attribute("a5", r#"42'"42"#).unwrap();
             },
-            r#"<a a1='foo " bar " baz' a2="foo ' bar ' baz" a3=foo/bar a4 a5="42'&quot;42"></a>"#
+            r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz" a3=foo/bar a4 a5="42'&quot;42"></a>"#
         );
         }
 
@@ -856,14 +846,14 @@ mod tests {
             // NOTE: we should add space between valueless attr and self-closing slash
             // during serialization. Otherwise, it will be interpreted as a part of the
             // attribute name.
-            let mut output = rewrite_element("<img a1=42 a2 />", UTF_8, "img", |el| {
+            let mut output = rewrite_element(b"<img a1=42 a2 />", UTF_8, "img", |el| {
                 el.set_attribute("a1", "foo").unwrap();
             });
 
             assert_eq!(output, r#"<img a1="foo" a2 />"#);
 
             // NOTE: but we shouldn't add space if there are no attributes.
-            output = rewrite_element("<img a1 />", UTF_8, "img", |el| {
+            output = rewrite_element(b"<img a1 />", UTF_8, "img", |el| {
                 el.remove_attribute("a1");
             });
 
@@ -876,7 +866,7 @@ mod tests {
                 |el| {
                     el.remove_attribute("a5");
                 },
-                r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4></a>"#
+                r#"<a a1='foo " baré " baz' / a2="foo ' bar ' baz" a3=foo/bar a4></a>"#
             );
         }
 
@@ -905,7 +895,7 @@ mod tests {
                 },
                 concat!(
                     "&lt;span&gt;<div>Hey</div><foo>",
-                    r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
+                    r#"<a a1='foo " baré " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
                     "&lt;foo &amp; bar&gt;<!-- 42 --></foo>",
                     "</a>"
                 )
@@ -924,7 +914,7 @@ mod tests {
                     el.after("<foo & bar>", ContentType::Text);
                 },
                 concat!(
-                    r#"<a a1='foo " bar " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
+                    r#"<a a1='foo " baré " baz' / a2="foo ' bar ' baz" a3=foo/bar a4>"#,
                     "&lt;span&gt;<div>Hey</div><foo>",
                     "</a>",
                     "&lt;foo &amp; bar&gt;<!-- 42 --></foo>",
@@ -987,5 +977,4 @@ mod tests {
             );
         }
     }
-
 }

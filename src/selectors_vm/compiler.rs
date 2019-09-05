@@ -272,7 +272,7 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::Token;
-    use crate::selectors_vm::tests::parse_token;
+    use crate::selectors_vm::tests::test_with_token;
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
     use std::collections::HashSet;
@@ -342,7 +342,7 @@ mod tests {
         encoding: &'static Encoding,
         mut action: impl FnMut(LocalName, AttributeMatcher),
     ) {
-        parse_token(html, encoding, |t| match t {
+        test_with_token(html, encoding, |t| match t {
             Token::StartTag(t) => {
                 let (input, attrs) = t.raw_attributes();
                 let tag_name = t.name();
@@ -539,7 +539,12 @@ mod tests {
             assert_non_attr_expr_matches_and_negation_reverses_match(
                 "*",
                 encoding,
-                &[("<div>", true), ("<span>", true), ("<anything-else>", true)],
+                &[
+                    ("<div>", true),
+                    ("<span>", true),
+                    ("<anything-else>", true),
+                    ("<FуБар>", true),
+                ],
             );
 
             assert_non_attr_expr_matches_and_negation_reverses_match(
@@ -557,10 +562,18 @@ mod tests {
                 encoding,
                 &[
                     ("<div>", true),
+                    ("<Div>", true),
                     ("<divnotdiv>", false),
                     ("<span>", false),
                     ("<anything-else>", false),
                 ],
+            );
+
+            // NOTE: case-insensitivity for local names that can't be represented by a hash.
+            assert_non_attr_expr_matches_and_negation_reverses_match(
+                "fooƔ",
+                encoding,
+                &[("<fooƔ", true), ("<FooƔ>", true)],
             );
 
             assert_non_attr_expr_matches_and_negation_reverses_match(
@@ -569,6 +582,7 @@ mod tests {
                 &[
                     ("<div>", false),
                     ("<span>", true),
+                    ("<spanϰ>", false),
                     ("<anything-else>", false),
                 ],
             );
@@ -589,11 +603,11 @@ mod tests {
     fn compiled_attr_expression() {
         for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
             assert_attr_expr_matches_and_negation_reverses_match(
-                "#foo",
+                "#foo⾕",
                 encoding,
                 &[
-                    ("<div bar=baz qux id='foo'>", true),
-                    ("<div iD='foo'>", true),
+                    ("<div bar=baz qux id='foo⾕'>", true),
+                    ("<div iD='foo⾕'>", true),
                     ("<div bar=baz qux id='foo1'>", false),
                     ("<div bar=baz qux>", false),
                 ],
@@ -611,59 +625,59 @@ mod tests {
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                "[foo]",
+                "[foo⽅]",
                 encoding,
                 &[
-                    ("<div foo1 foo2 foo>", true),
-                    ("<div FOo=123>", true),
+                    ("<div foo1 foo2 foo⽅>", true),
+                    ("<div FOo⽅=123>", true),
                     ("<div id='baz'>", false),
                     ("<div bar=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo="bar"]"#,
+                r#"[foo="barα"]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar'>", true),
-                    ("<div foo=bar>", true),
-                    ("<div foo='BaR'>", false),
+                    ("<div fOo='barα'>", true),
+                    ("<div foo=barα>", true),
+                    ("<div foo='BaRα'>", false),
                     ("<div foo='42'>", false),
                     ("<div bar=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo="bar" i]"#,
+                r#"[foo="barα" i]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar'>", true),
-                    ("<div foo=bar>", true),
-                    ("<div foo='BaR'>", true),
+                    ("<div fOo='barα'>", true),
+                    ("<div foo=barα>", true),
+                    ("<div foo='BaRα'>", true),
                     ("<div foo='42'>", false),
                     ("<div bar=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo~="bar3"]"#,
+                r#"[foo~="μbar3"]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar4'>", true),
-                    ("<div foo='bar3'>", true),
-                    ("<div foo='bar1 bar2 BAR3'>", false),
+                    ("<div fOo='bar1\nbar2 μbar3\tbar4'>", true),
+                    ("<div foo='μbar3'>", true),
+                    ("<div foo='bar1 bar2 μBAR3'>", false),
                     ("<div foo='42'>", false),
                     ("<div bar=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo~="bar3" i]"#,
+                r#"[foo~="μbar3" i]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar4'>", true),
-                    ("<div foo='bar3'>", true),
-                    ("<div foo='bar1 bar2 BAR3'>", true),
+                    ("<div fOo='bar1\nbar2 μbar3\tbar4'>", true),
+                    ("<div foo='μbar3'>", true),
+                    ("<div foo='bar1 bar2 μBAR3'>", true),
                     ("<div foo='42'>", false),
                     ("<div bar=baz qux>", false),
                 ],
@@ -699,99 +713,100 @@ mod tests {
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo^="bar"]"#,
+                r#"[foo^="barБ"]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar4'>", true),
-                    ("<div foo='bar'>", true),
-                    ("<div foo='BaR'>", false),
-                    ("<div foo='bazbar'>", false),
+                    ("<div fOo='barБ1\nbar2 bar3\tbar4'>", true),
+                    ("<div foo='barБ'>", true),
+                    ("<div foo='BaRБ'>", false),
+                    ("<div foo='bazbarБ'>", false),
                     ("<div foo='42'>", false),
-                    ("<div bar=baz qux>", false),
+                    ("<div barБ=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo^="bar" i]"#,
+                r#"[foo^="bar㕦" i]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar4'>", true),
-                    ("<div foo='bar'>", true),
-                    ("<div foo='BaR'>", true),
-                    ("<div foo='bazbar'>", false),
+                    ("<div fOo='bar㕦1\nbar2 bar3\tbar4'>", true),
+                    ("<div foo='bar㕦'>", true),
+                    ("<div foo='BaR㕦'>", true),
+                    ("<div foo='bazbar㕦'>", false),
                     ("<div foo='42'>", false),
-                    ("<div bar=baz qux>", false),
+                    ("<div bar㕦=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo*="bar"]"#,
+                r#"[foo*="barφ"]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar4'>", true),
-                    ("<div foo='bar'>", true),
-                    ("<div foo='42BaR42'>", false),
-                    ("<div foo='bazbatbar'>", true),
+                    ("<div fOo='bar1\nbarφ2 bar3\tbar4'>", true),
+                    ("<div foo='barφ'>", true),
+                    ("<div foo='42BaRφ42'>", false),
+                    ("<div foo='bazbatbarφ'>", true),
                     ("<div foo='42'>", false),
-                    ("<div bar=baz qux>", false),
+                    ("<div barφ=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo*="bar" i]"#,
+                r#"[foo*="barφ" i]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar4'>", true),
-                    ("<div foo='bar'>", true),
-                    ("<div foo='42BaR42'>", true),
-                    ("<div foo='bazbatbar'>", true),
+                    ("<div fOo='bar1\nbarφ2 bar3\tbar4'>", true),
+                    ("<div foo='barφ'>", true),
+                    ("<div foo='42BaRφ42'>", true),
+                    ("<div foo='bazbatbarφ'>", true),
                     ("<div foo='42'>", false),
-                    ("<div bar=baz qux>", false),
+                    ("<div barφ=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo$="bar"]"#,
+                r#"[foo$="barЫ"]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar'>", true),
-                    ("<div foo='bar'>", true),
-                    ("<div foo='bazbar'>", true),
-                    ("<div foo='BaR'>", false),
+                    ("<div fOo='bar1\nbar2 bar3\tbarЫ'>", true),
+                    ("<div foo='barЫ'>", true),
+                    ("<div foo='bazbarЫ'>", true),
+                    ("<div foo='BaRЫ'>", false),
                     ("<div foo='42'>", false),
-                    ("<div bar=baz qux>", false),
+                    ("<div barЫ=baz qux>", false),
+                    ("<div foo='bar'>", false),
                 ],
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo$="bar" i]"#,
+                r#"[foo$="barЫ" i]"#,
                 encoding,
                 &[
-                    ("<div fOo='bar1\nbar2 bar3\tbar'>", true),
-                    ("<div foo='bar'>", true),
-                    ("<div foo='bazbar'>", true),
-                    ("<div foo='BaR'>", true),
+                    ("<div fOo='bar1\nbar2 bar3\tbarЫ'>", true),
+                    ("<div foo='barЫ'>", true),
+                    ("<div foo='bazbarЫ'>", true),
+                    ("<div foo='BaRЫ'>", true),
                     ("<div foo='42'>", false),
-                    ("<div bar=baz qux>", false),
+                    ("<div barЫ=baz qux>", false),
                 ],
             );
 
             assert_attr_expr_matches(
-                r#"#foo1.c1.c2[foo3][foo2$="bar"]"#,
+                r#"#foo1.c1.c2[foo3][foo2$="barЫ"]"#,
                 encoding,
                 &[
-                    ("<div id='foo1' class='c4 c2 c3 c1' foo3 foo2=heybar>", true),
+                    ("<div id='foo1' class='c4 c2 c3 c1' foo3 foo2=heybarЫ>", true),
                     (
-                        "<div ID='foo1' class='c4 c2 c3 c1' foo3=test foo2=bar>",
+                        "<div ID='foo1' class='c4 c2 c3 c1' foo3=test foo2=barЫ>",
                         true,
                     ),
                     ("<div id='foo1' class='c4 c2 c3 c1' foo3>", false),
                     (
-                        "<div id='foo1' class='c4 c2 c3 c5' foo3 foo2=heybar>",
+                        "<div id='foo1' class='c4 c2 c3 c5' foo3 foo2=heybarЫ>",
                         false,
                     ),
                     (
-                        "<div id='foo12' class='c4 c2 c3 c5' foo3 foo2=heybar>",
+                        "<div id='foo12' class='c4 c2 c3 c5' foo3 foo2=heybarЫ>",
                         false,
                     ),
                 ],
@@ -803,25 +818,25 @@ mod tests {
     fn generic_expressions() {
         for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
             assert_generic_expr_matches(
-                r#"div#foo1.c1.c2[foo3][foo2$="bar"]"#,
+                r#"div#foo1.c1.c2[foo3੦][foo2$="bar"]"#,
                 encoding,
                 &[
-                    ("<div id='foo1' class='c4 c2 c3 c1' foo3 foo2=heybar>", true),
+                    ("<div id='foo1' class='c4 c2 c3 c1' foo3੦ foo2=heybar>", true),
                     (
-                        "<span id='foo1' class='c4 c2 c3 c1' foo3 foo2=heybar>",
+                        "<span id='foo1' class='c4 c2 c3 c1' foo3੦ foo2=heybar>",
                         false,
                     ),
                     (
-                        "<div ID='foo1' class='c4 c2 c3 c1' foo3=test foo2=bar>",
+                        "<div ID='foo1' class='c4 c2 c3 c1' foo3੦=test foo2=bar>",
                         true,
                     ),
-                    ("<div id='foo1' class='c4 c2 c3 c1' foo3>", false),
+                    ("<div id='foo1' class='c4 c2 c3 c1' foo3੦>", false),
                     (
-                        "<div id='foo1' class='c4 c2 c3 c5' foo3 foo2=heybar>",
+                        "<div id='foo1' class='c4 c2 c3 c5' foo3੦ foo2=heybar>",
                         false,
                     ),
                     (
-                        "<div id='foo12' class='c4 c2 c3 c5' foo3 foo2=heybar>",
+                        "<div id='foo12' class='c4 c2 c3 c5' foo3੦ foo2=heybar>",
                         false,
                     ),
                 ],

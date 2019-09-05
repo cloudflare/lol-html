@@ -76,12 +76,11 @@ impl Debug for TextChunk<'_> {
 #[cfg(test)]
 mod tests {
     use crate::rewritable_units::test_utils::*;
-    use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use crate::*;
     use encoding_rs::{Encoding, UTF_8};
 
     fn rewrite_text_chunk(
-        html: &str,
+        html: &[u8],
         encoding: &'static Encoding,
         mut handler: impl FnMut(&mut TextChunk),
     ) -> String {
@@ -105,7 +104,7 @@ mod tests {
 
     #[test]
     fn user_data() {
-        rewrite_text_chunk("foo", UTF_8, |c| {
+        rewrite_text_chunk(b"foo", UTF_8, |c| {
             c.set_user_data(42usize);
 
             assert_eq!(*c.user_data().downcast_ref::<usize>().unwrap(), 42usize);
@@ -120,14 +119,14 @@ mod tests {
         use super::*;
 
         const HTML: &str =
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor \
+            "Lorem ipsum dolor sit amet, cÔnsectetur adipiscing elit, sed do eiusmod tempor \
              incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud \
              exercitation & ullamco laboris nisi ut aliquip ex ea commodo > consequat.";
 
         macro_rules! test {
             ($handler:expr, $expected:expr) => {
-                for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
-                    assert_eq!(rewrite_text_chunk(HTML, enc, $handler), $expected);
+                for (html, enc) in encoded(HTML) {
+                    assert_eq!(rewrite_text_chunk(&html, enc, $handler), $expected);
                 }
             };
         }
@@ -160,7 +159,7 @@ mod tests {
                 },
                 concat!(
                     "&lt;span&gt;<div>Hey</div><foo>",
-                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod \
+                    "Lorem ipsum dolor sit amet, cÔnsectetur adipiscing elit, sed do eiusmod \
                      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim \
                      veniam, quis nostrud exercitation & ullamco laboris nisi ut aliquip \
                      ex ea commodo > consequat.",
