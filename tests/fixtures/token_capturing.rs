@@ -2,9 +2,11 @@ use crate::harness::suites::html5lib_tests::{
     get_test_cases, TestCase, TestToken, TestTokenList,
 };
 use crate::harness::{TestFixture, Input};
-use cool_thing::{LocalNameHash, TextType, TokenCaptureFlags,
-    LocalName, Token, StartTagHandlingResult, TransformController,
-    TransformStream, Namespace, TransformStreamSettings, MemoryLimiter};
+use cool_thing::{
+    LocalNameHash, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController,
+    TransformStream, Namespace, TransformStreamSettings, MemoryLimiter
+};
+use cool_thing::html_content::TextType;
 use cool_thing::test_utils::Output;
 use failure::Error;
 

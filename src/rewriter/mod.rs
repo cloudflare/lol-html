@@ -159,8 +159,8 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::html_content::ContentType;
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS};
-    use crate::ContentType;
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -419,7 +419,7 @@ mod tests {
 
     mod fatal_errors {
         use super::*;
-        use crate::MemoryLimitExceededError;
+        use crate::errors::MemoryLimitExceededError;
 
         fn create_rewriter<O: OutputSink>(
             max_allowed_memory_usage: usize,

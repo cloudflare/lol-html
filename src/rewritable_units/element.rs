@@ -18,6 +18,9 @@ pub enum TagNameError {
     UnencodableCharacter,
 }
 
+/// An HTML element rewritable unit.
+///
+/// Exposes API for examination and modification of a parsed HTML element.
 pub struct Element<'r, 't> {
     start_tag: &'r mut StartTag<'t>,
     end_tag_mutations: Option<Mutations>,
@@ -82,11 +85,13 @@ impl<'r, 't> Element<'r, 't> {
             .get_or_insert_with(|| Mutations::new(encoding))
     }
 
+    /// Returns the tag name of the element.
     #[inline]
     pub fn tag_name(&self) -> String {
         self.start_tag.name()
     }
 
+    /// Sets the tag name of the element.
     #[inline]
     pub fn set_tag_name(&mut self, name: &str) -> Result<(), TagNameError> {
         let name = self.tag_name_bytes_from_str(name)?;
@@ -100,16 +105,23 @@ impl<'r, 't> Element<'r, 't> {
         Ok(())
     }
 
+    /// Returns the [namespace URI] of the element.
+    ///
+    /// [namespace URI]: https://developer.mozilla.org/en-US/docs/Web/API/Element/namespaceURI
     #[inline]
     pub fn namespace_uri(&self) -> &'static str {
         self.start_tag.namespace_uri()
     }
 
+    /// Returns an immutable collection of element's attributes.
     #[inline]
     pub fn attributes(&self) -> &[Attribute<'t>] {
         self.start_tag.attributes()
     }
 
+    /// Returns the value of an attribute with the `name`.
+    ///
+    /// Returns `None` if the element doesn't have an attribute with the `name`.
     #[inline]
     pub fn get_attribute(&self, name: &str) -> Option<String> {
         let name = name.to_ascii_lowercase();
@@ -123,6 +135,7 @@ impl<'r, 't> Element<'r, 't> {
         })
     }
 
+    /// Returns `true` if the element has an attribute with `name`.
     #[inline]
     pub fn has_attribute(&self, name: &str) -> bool {
         let name = name.to_ascii_lowercase();
@@ -130,21 +143,32 @@ impl<'r, 't> Element<'r, 't> {
         self.attributes().iter().any(|attr| attr.name() == name)
     }
 
+    /// Sets `value` of element's attribute with `name`.
+    ///
+    /// If element doesn't have an attribute with the `name`, method adds new attribute
+    /// to the element with `name` and `value`.
     #[inline]
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
         self.start_tag.set_attribute(name, value)
     }
 
+    /// Removes an attribute with the `name` if it is present.
     #[inline]
     pub fn remove_attribute(&mut self, name: &str) {
         self.start_tag.remove_attribute(name);
     }
 
+    /// Inserts `content` before the element.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.start_tag.mutations.before(content, content_type);
     }
 
+    /// Inserts `content` after the element.
+    ///
+    /// Consequent calls to the method prepend `content` to the previously inserted content.
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
@@ -154,11 +178,27 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
+    /// Prepends `content` to the element's inner content, i.e. inserts content right after
+    /// the element's start tag.
+    ///
+    /// Consequent calls to the method prepend `content` to the previously inserted content.
+    /// A call to the method doesn't make any effect if the element is an [empty element].
+    ///
+    /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
     #[inline]
     pub fn prepend(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.mutations.after(content, content_type);
+        if self.can_have_content {
+            self.start_tag.mutations.after(content, content_type);
+        }
     }
 
+    /// Appends `content` to the element's inner content, i.e. inserts content right before
+    /// the element's end tag.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
+    /// A call to the method doesn't make any effect if the element is an [empty element].
+    ///
+    /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
@@ -166,6 +206,12 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
+    /// Replaces inner content of the element with `content`.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
+    /// A call to the method doesn't make any effect if the element is an [empty element].
+    ///
+    /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
     #[inline]
     pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
@@ -174,6 +220,9 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
+    /// Replaces the element and its inner content with `content`.
+    ///
+    /// Consequent calls to the method overwrite previously inserted content.
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
         self.start_tag.mutations.replace(content, content_type);
@@ -184,6 +233,7 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
+    /// Removes the element and its inner content.
     #[inline]
     pub fn remove(&mut self) {
         self.start_tag.mutations.remove();
@@ -194,6 +244,7 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
+    /// Removes the element, but keeps its content. I.e. remove start and end tags of the element.
     #[inline]
     pub fn remove_and_keep_content(&mut self) {
         self.start_tag.mutations.remove();
@@ -203,6 +254,7 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
+    /// Returns `true` if the element has been removed or replaced with some content.
     #[inline]
     pub fn removed(&self) -> bool {
         self.start_tag.mutations.removed()
@@ -255,6 +307,8 @@ impl Debug for Element<'_, '_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::errors::*;
+    use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
     use crate::*;
     use encoding_rs::{Encoding, EUC_JP, UTF_8};
@@ -730,6 +784,9 @@ mod tests {
     fn void_element() {
         let output = rewrite_element(b"<img><span>Hi</span></img>", UTF_8, "img", |el| {
             el.after("<!--after-->", ContentType::Html);
+            el.append("<!--append-->", ContentType::Html);
+            el.prepend("<!--prepend-->", ContentType::Html);
+            el.set_inner_content("<!--set_inner_content-->", ContentType::Html);
             el.set_tag_name("img-foo").unwrap();
         });
 

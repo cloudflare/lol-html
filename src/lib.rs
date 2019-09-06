@@ -15,20 +15,26 @@ mod transform_stream;
 
 use cfg_if::cfg_if;
 
-pub use self::rewriter::{
-    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter, MemorySettings,
-    Settings,
-};
-
-pub use self::rewritable_units::{
-    Attribute, AttributeNameError, Comment, CommentTextError, ContentType, Doctype, Element,
-    TagNameError, TextChunk, UserData,
-};
-
-pub use self::html::TextType;
-pub use self::memory::MemoryLimitExceededError;
-pub use self::selectors_vm::{Selector, SelectorError};
+pub use self::rewriter::{DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, Settings, MemorySettings};
+pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
+
+/// The errors that can be produced by the crate's API.
+pub mod errors {
+    pub use super::memory::MemoryLimitExceededError;
+    pub use super::rewritable_units::{AttributeNameError, CommentTextError, TagNameError};
+    pub use super::rewriter::EncodingError;
+    pub use super::selectors_vm::SelectorError;
+}
+
+/// HTML content descriptors that can be produced and modified by a rewriter.
+pub mod html_content {
+    pub use super::rewritable_units::{
+        Attribute, Comment, ContentType, Doctype, Element, TextChunk, UserData,
+    };
+
+    pub use super::html::TextType;
+}
 
 #[cfg(any(test, feature = "integration_test"))]
 pub mod test_utils {

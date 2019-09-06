@@ -4,6 +4,12 @@ use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
 
+/// A [document type declaration] preamble.
+///
+/// Note that unlike other HTML content, `Doctype` can't be modified and should be used only for
+/// the examination purposes.
+///
+/// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
 pub struct Doctype<'i> {
     name: Option<Bytes<'i>>,
     public_id: Option<Bytes<'i>>,
@@ -34,6 +40,7 @@ impl<'i> Doctype<'i> {
         })
     }
 
+    /// The name of the doctype.
     #[inline]
     pub fn name(&self) -> Option<String> {
         self.name
@@ -41,11 +48,13 @@ impl<'i> Doctype<'i> {
             .map(|n| n.as_lowercase_string(self.encoding))
     }
 
+    /// The public identifier of the doctype.
     #[inline]
     pub fn public_id(&self) -> Option<String> {
         self.public_id.as_ref().map(|i| i.as_string(self.encoding))
     }
 
+    /// The system identifier of the doctype.
     #[inline]
     pub fn system_id(&self) -> Option<String> {
         self.system_id.as_ref().map(|i| i.as_string(self.encoding))
@@ -80,6 +89,7 @@ impl Debug for Doctype<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
     use crate::*;
     use encoding_rs::{Encoding, UTF_8};

@@ -17,6 +17,12 @@ pub enum AttributeNameError {
     UnencodableCharacter,
 }
 
+/// An attribute of an [`Element`].
+///
+/// This is an immutable representation of an attribute. To modify element's attributes use
+/// approriate [`Element`]'s methods.
+///
+/// [`Element`]: struct.Element.html
 pub struct Attribute<'i> {
     name: Bytes<'i>,
     value: Bytes<'i>,
@@ -72,11 +78,13 @@ impl<'i> Attribute<'i> {
         })
     }
 
+    /// Returns the name of the attribute.
     #[inline]
     pub fn name(&self) -> String {
         self.name.as_lowercase_string(self.encoding)
     }
 
+    /// Returns the value of the attribute.
     #[inline]
     pub fn value(&self) -> String {
         self.value.as_string(self.encoding)

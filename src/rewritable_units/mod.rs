@@ -4,6 +4,7 @@ pub use self::element::*;
 pub use self::mutations::{ContentType, Mutations};
 pub use self::tokens::*;
 
+/// TODO docs with examples
 pub trait UserData {
     fn user_data(&self) -> &dyn Any;
     fn user_data_mut(&mut self) -> &mut dyn Any;

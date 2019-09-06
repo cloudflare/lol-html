@@ -13,6 +13,9 @@ pub enum CommentTextError {
     UnencodableCharacter,
 }
 
+/// An HTML comment rewritable unit.
+///
+/// Exposes API for examination and modification of a parsed HTML comment.
 pub struct Comment<'i> {
     text: Bytes<'i>,
     raw: Option<Bytes<'i>>,
@@ -36,11 +39,13 @@ impl<'i> Comment<'i> {
         })
     }
 
+    /// Returns the text of the comment.
     #[inline]
     pub fn text(&self) -> String {
         self.text.as_string(self.encoding)
     }
 
+    /// Sets the text of the comment.
     #[inline]
     pub fn set_text(&mut self, text: &str) -> Result<(), CommentTextError> {
         if text.find("-->").is_some() {
@@ -75,7 +80,7 @@ impl<'i> Comment<'i> {
     }
 }
 
-inject_mutation_api!(Comment);
+inject_mutation_api!(Comment, "comment");
 impl_serialize!(Comment);
 impl_user_data!(Comment<'_>);
 
@@ -89,6 +94,8 @@ impl Debug for Comment<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::errors::*;
+    use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
     use crate::*;
     use encoding_rs::{Encoding, EUC_JP, UTF_8};

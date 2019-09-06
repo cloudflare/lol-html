@@ -1,8 +1,14 @@
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 
+/// The type of inserted content.
 pub enum ContentType {
+    /// HTML content type. The rewriter will insert the content as is.
     Html,
+    /// Text content type. The rewriter will HTML-escape the content before insertion:
+    ///     - `<` will be replaced with `&lt;`
+    ///     - `>` will be replaced with `&gt;`
+    ///     - `&` will be replaced with `&amp;`
     Text,
 }
 
@@ -88,43 +94,87 @@ impl Mutations {
 }
 
 macro_rules! inject_mutation_api {
-    ($Token:ident) => {
+    ($Token:ident, $doc_name:expr) => {
+        use doc_comment::doc_comment;
+
         impl<'i> $Token<'i> {
-            #[inline]
-            pub fn before(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                self.mutations.before(content, content_type);
+            doc_comment! {
+                concat![
+                    "Inserts `content` before the ", $doc_name, ".\n",
+                    "\n",
+                    "Consequent calls to the method append `content` to the previously ",
+                    "inserted content."
+                ],
+
+                #[inline]
+                pub fn before(
+                    &mut self,
+                    content: &str,
+                    content_type: crate::rewritable_units::ContentType,
+                ) {
+                    self.mutations.before(content, content_type);
+                }
             }
 
-            #[inline]
-            pub fn after(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                self.mutations.after(content, content_type);
+            doc_comment! {
+                concat![
+                    "Inserts content after the ", $doc_name, ".\n",
+                    "\n",
+                    "Consequent calls to the method prepend `content` to the previously ",
+                    "inserted content."
+                ],
+
+                #[inline]
+                pub fn after(
+                    &mut self,
+                    content: &str,
+                    content_type: crate::rewritable_units::ContentType,
+                ) {
+                    self.mutations.after(content, content_type);
+                }
             }
 
-            #[inline]
-            pub fn replace(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                self.mutations.replace(content, content_type);
+            doc_comment! {
+                concat![
+                    "Replaces the ", $doc_name, " with the `content`.\n",
+                    "\n",
+                    "Consequent calls to the method overwrite previous replacement content."
+                ],
+
+                #[inline]
+                pub fn replace(
+                    &mut self,
+                    content: &str,
+                    content_type: crate::rewritable_units::ContentType,
+                ) {
+                    self.mutations.replace(content, content_type);
+                }
             }
 
-            #[inline]
-            pub fn remove(&mut self) {
-                self.mutations.remove();
+            doc_comment! {
+                concat![
+                    "Removes the ", $doc_name, "."
+                ],
+
+                #[inline]
+                pub fn remove(&mut self) {
+                    self.mutations.remove();
+                }
             }
 
-            #[inline]
-            pub fn removed(&self) -> bool {
-                self.mutations.removed()
+            doc_comment! {
+                concat![
+                    "Returns `true` if the ", $doc_name, " has been removed by calling ",
+                    "[`replace`] or [`remove`].\n",
+                    "\n",
+                    "[`replace`]: #method.replace\n",
+                    "[`remove`]: #method.remove\n",
+                ],
+
+                #[inline]
+                pub fn removed(&self) -> bool {
+                    self.mutations.removed()
+                }
             }
         }
     };

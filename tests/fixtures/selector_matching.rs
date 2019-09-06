@@ -1,7 +1,8 @@
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
 use cool_thing::test_utils::Output;
-use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings, MemorySettings};
+use cool_thing::{ElementContentHandlers, HtmlRewriter, Settings, MemorySettings};
+use cool_thing::html_content::ContentType;
 use std::convert::TryFrom;
 
 pub struct SelectorMatchingTests;

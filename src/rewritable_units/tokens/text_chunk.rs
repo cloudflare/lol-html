@@ -6,6 +6,19 @@ use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
 
+/// An HTML text node chunk.
+///
+/// Since the rewriter operates on a streaming input with minimal internal buffering, HTML
+/// text node can be represented by multiple text chunks. The size of a chunk depends on multiple
+/// parameters, such as decoding buffer size and input chunk size.
+///
+/// It is up to a user of the rewriter to buffer content of chunks to get whole text node content
+/// where desired. Last chunk in a text node can be determined by calling [`last_in_text_node`]
+/// method of the chunk.
+///
+/// Note that the last chunk in a text node can have empty textual content.
+///
+/// [`last_in_text_node`]: #method.last_in_text_node
 pub struct TextChunk<'i> {
     text: Cow<'i, str>,
     text_type: TextType,
@@ -32,16 +45,27 @@ impl<'i> TextChunk<'i> {
         })
     }
 
+    /// Returns the textual content of the chunk.
     #[inline]
     pub fn as_str(&self) -> &str {
         &*self.text
     }
 
+    /// Returns the type of the text in the chunk.
+    ///
+    /// The type of the text depends on the surrounding context of the text. E.g. regular visible
+    /// text and text inside a `<script>` element will have different types. Refer to [`TextType`]
+    /// for more information about possible text types.
+    ///
+    /// [`TextType`]: enum.TextType.html
     #[inline]
     pub fn text_type(&self) -> TextType {
         self.text_type
     }
 
+    /// Returns `true` if the chunk is last in a HTML text node.
+    ///
+    /// Note that last chunk can have empty textual content.
     #[inline]
     pub fn last_in_text_node(&self) -> bool {
         self.last_in_text_node
@@ -60,7 +84,7 @@ impl<'i> TextChunk<'i> {
     }
 }
 
-inject_mutation_api!(TextChunk);
+inject_mutation_api!(TextChunk, "text chunk");
 impl_serialize!(TextChunk);
 impl_user_data!(TextChunk<'_>);
 
@@ -75,6 +99,7 @@ impl Debug for TextChunk<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
     use crate::*;
     use encoding_rs::{Encoding, UTF_8};

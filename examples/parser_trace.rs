@@ -3,6 +3,7 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(feature="integration_test")] {
         use cool_thing::*;
+        use cool_thing::html_content::*;
         use encoding_rs::UTF_8;
         use failure::Error;
         use getopts::{Matches, Options};
