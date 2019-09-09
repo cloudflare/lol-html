@@ -2,7 +2,7 @@ mod dispatcher;
 
 use self::dispatcher::Dispatcher;
 use crate::base::Chunk;
-use crate::memory::{Buffer, SharedMemoryLimiter};
+use crate::memory::{Arena, SharedMemoryLimiter};
 
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use encoding_rs::Encoding;
@@ -39,7 +39,7 @@ where
 {
     dispatcher: Rc<RefCell<Dispatcher<C, O>>>,
     parser: Parser<Dispatcher<C, O>>,
-    buffer: Buffer,
+    buffer: Arena,
     has_buffered_data: bool,
 }
 
@@ -65,7 +65,7 @@ where
             settings.encoding,
         )));
 
-        let buffer = Buffer::new(settings.memory_limiter, settings.preallocated_memory);
+        let buffer = Arena::new(settings.memory_limiter, settings.preallocated_memory);
         let parser = Parser::new(&dispatcher, initial_parser_directive, settings.strict);
 
         TransformStream {

@@ -1,7 +1,7 @@
-pub mod buffer;
-pub mod limiter;
-pub mod vec;
+mod arena;
+mod limited_vec;
+mod limiter;
 
-pub use buffer::Buffer;
+pub use arena::Arena;
+pub use limited_vec::LimitedVec;
 pub use limiter::{MemoryLimitExceededError, MemoryLimiter, SharedMemoryLimiter};
-pub use vec::LimitedVec;
