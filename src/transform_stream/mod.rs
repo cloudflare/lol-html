@@ -26,7 +26,7 @@ where
 {
     pub transform_controller: C,
     pub output_sink: O,
-    pub preallocated_memory: usize,
+    pub preallocated_parsing_buffer_size: usize,
     pub memory_limiter: SharedMemoryLimiter,
     pub encoding: &'static Encoding,
     pub strict: bool,
@@ -65,7 +65,11 @@ where
             settings.encoding,
         )));
 
-        let buffer = Arena::new(settings.memory_limiter, settings.preallocated_memory);
+        let buffer = Arena::new(
+            settings.memory_limiter,
+            settings.preallocated_parsing_buffer_size,
+        );
+
         let parser = Parser::new(&dispatcher, initial_parser_directive, settings.strict);
 
         TransformStream {

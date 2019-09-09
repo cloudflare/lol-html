@@ -197,6 +197,20 @@ void cool_thing_rewriter_builder_free(cool_thing_rewriter_builder_t *builder);
 // Rewriter
 //---------------------------------------------------------------------
 
+// Memory management settings for the rewriter.
+typedef struct {
+    // Preallocated size of the parsing buffer.
+    //
+    // Can be set to 0. In this case rewriter won't consume any memory initially,
+    // though there might be a performance penalty due to later reallocations.
+    size_t preallocated_parsing_buffer_size;
+    // Maximum amount of memory to be used by a rewriter.
+    //
+    // `cool_thing_rewriter_write` and `cool_thing_rewriter_end` will return an error
+    // if this limit is exceeded.
+    size_t max_allowed_memory_usage;
+} cool_thing_memory_settings_t;
+
 // Builds HTML-rewriter out of the provided builder. Can be called
 // multiple times to construct different rewriters from the same
 // builder.
@@ -215,8 +229,7 @@ cool_thing_rewriter_t *cool_thing_rewriter_build(
     cool_thing_rewriter_builder_t *builder,
     const char *encoding,
     size_t encoding_len,
-    size_t preallocated_memory,
-    size_t max_memory,
+    cool_thing_memory_settings_t memory_settings,
     void (*output_sink)(const char *chunk, size_t chunk_len, void *user_data),
     void *output_sink_user_data,
     bool strict

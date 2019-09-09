@@ -98,7 +98,7 @@ cfg_if! {
                 TransformStreamSettings {
                     transform_controller: TraceTransformController::new(tag_hint_mode),
                     output_sink: |_: &[u8]| {},
-                    preallocated_memory: 0,
+                    preallocated_parsing_buffer_size: 0,
                     memory_limiter: MemoryLimiter::new_shared(2048),
                     encoding: UTF_8,
                     strict: true

@@ -34,12 +34,28 @@ pub enum EncodingError {
     NonAsciiCompatibleEncoding,
 }
 
+// NOTE: exposed in C API as well, thus repr(C).
+#[repr(C)]
+pub struct MemorySettings {
+    preallocated_parsing_buffer_size: usize,
+    max_allowed_memory_usage: usize,
+}
+
+impl Default for MemorySettings {
+    #[inline]
+    fn default() -> Self {
+        MemorySettings {
+            preallocated_parsing_buffer_size: 1024,
+            max_allowed_memory_usage: std::usize::MAX,
+        }
+    }
+}
+
 pub struct Settings<'h, 's, O: OutputSink> {
     pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
     pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
     pub encoding: &'s str,
-    pub preallocated_memory: usize,
-    pub max_memory: usize,
+    pub memory_settings: MemorySettings,
     pub output_sink: O,
     pub strict: bool,
 }
@@ -68,7 +84,8 @@ impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O>
             dispatcher.add_document_content_handlers(handlers);
         }
 
-        let memory_limiter = MemoryLimiter::new_shared(settings.max_memory);
+        let memory_limiter =
+            MemoryLimiter::new_shared(settings.memory_settings.max_allowed_memory_usage);
 
         let selector_matching_vm =
             SelectorMatchingVm::new(selectors_ast, encoding, Rc::clone(&memory_limiter));
@@ -77,7 +94,9 @@ impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O>
         let stream = TransformStream::new(TransformStreamSettings {
             transform_controller: controller,
             output_sink: settings.output_sink,
-            preallocated_memory: settings.preallocated_memory,
+            preallocated_parsing_buffer_size: settings
+                .memory_settings
+                .preallocated_parsing_buffer_size,
             memory_limiter,
             encoding,
             strict: settings.strict,
@@ -165,8 +184,7 @@ mod tests {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
             encoding: "hey-yo",
-            preallocated_memory: 0,
-            max_memory: 42,
+            memory_settings: MemorySettings::default(),
             output_sink: |_: &[u8]| {},
             strict: true,
         })
@@ -181,8 +199,7 @@ mod tests {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
             encoding: "utf-16be",
-            preallocated_memory: 0,
-            max_memory: 42,
+            memory_settings: MemorySettings::default(),
             output_sink: |_: &[u8]| {},
             strict: true,
         })
@@ -206,8 +223,7 @@ mod tests {
                         },
                     )],
                     encoding: enc.name(),
-                    preallocated_memory: 0,
-                    max_memory: 2048,
+                    memory_settings: MemorySettings::default(),
                     output_sink: |_: &[u8]| {},
                     strict: true,
                 })
@@ -258,8 +274,7 @@ mod tests {
                     )],
                     document_content_handlers: vec![],
                     encoding: enc.name(),
-                    preallocated_memory: 0,
-                    max_memory: 2048,
+                    memory_settings: MemorySettings::default(),
                     output_sink: |c: &[u8]| output.push(c),
                     strict: true,
                 })
@@ -318,8 +333,7 @@ mod tests {
                             Ok(())
                         })],
                     encoding: enc.name(),
-                    preallocated_memory: 0,
-                    max_memory: 2048,
+                    memory_settings: MemorySettings::default(),
                     output_sink: |c: &[u8]| output.push(c),
                     strict: true,
                 })
@@ -391,8 +405,7 @@ mod tests {
             ],
             document_content_handlers: vec![],
             encoding: "utf-8",
-            preallocated_memory: 0,
-            max_memory: 2048,
+            memory_settings: MemorySettings::default(),
             output_sink: |_: &[u8]| {},
             strict: true,
         })
@@ -409,7 +422,7 @@ mod tests {
         use crate::MemoryLimitExceededError;
 
         fn create_rewriter<O: OutputSink>(
-            buffer_capacity: usize,
+            max_allowed_memory_usage: usize,
             output_sink: O,
         ) -> HtmlRewriter<'static, O> {
             HtmlRewriter::try_from(Settings {
@@ -419,8 +432,10 @@ mod tests {
                 )],
                 document_content_handlers: vec![],
                 encoding: "utf-8",
-                preallocated_memory: 0,
-                max_memory: buffer_capacity,
+                memory_settings: MemorySettings {
+                    max_allowed_memory_usage,
+                    preallocated_parsing_buffer_size: 0,
+                },
                 output_sink,
                 strict: true,
             })
@@ -429,14 +444,14 @@ mod tests {
 
         #[test]
         fn buffer_capacity_limit() {
-            const BUFFER_SIZE: usize = 100;
+            const MAX: usize = 100;
 
-            let mut rewriter = create_rewriter(BUFFER_SIZE, |_: &[u8]| {});
+            let mut rewriter = create_rewriter(MAX, |_: &[u8]| {});
 
             // Use two chunks for the stream to force the usage of the buffer and
             // make sure to overflow it.
-            let chunk_1 = format!("<img alt=\"{}", "l".repeat(BUFFER_SIZE / 2));
-            let chunk_2 = format!("{}\" />", "r".repeat(BUFFER_SIZE / 2));
+            let chunk_1 = format!("<img alt=\"{}", "l".repeat(MAX / 2));
+            let chunk_2 = format!("{}\" />", "r".repeat(MAX / 2));
             let mem_used = chunk_1.len() + chunk_2.len();
 
             rewriter.write(chunk_1.as_bytes()).unwrap();
@@ -452,7 +467,7 @@ mod tests {
                 *buffer_capacity_err,
                 MemoryLimitExceededError {
                     current_usage: mem_used,
-                    max: BUFFER_SIZE
+                    max: MAX
                 }
             );
         }
@@ -478,10 +493,10 @@ mod tests {
         #[test]
         #[should_panic(expected = "Attempt to use the HtmlRewriter after a fatal error.")]
         fn poisoning_after_fatal_error() {
-            const BUFFER_SIZE: usize = 10;
+            const MAX: usize = 10;
 
-            let mut rewriter = create_rewriter(BUFFER_SIZE, |_: &[u8]| {});
-            let chunk = format!("<img alt=\"{}", "l".repeat(BUFFER_SIZE));
+            let mut rewriter = create_rewriter(MAX, |_: &[u8]| {});
+            let chunk = format!("<img alt=\"{}", "l".repeat(MAX));
 
             rewriter.write(chunk.as_bytes()).unwrap_err();
             rewriter.end().unwrap_err();
@@ -498,8 +513,7 @@ mod tests {
                     element_content_handlers: vec![(&"*".parse().unwrap(), element_handlers)],
                     document_content_handlers: vec![document_handlers],
                     encoding: "utf-8",
-                    preallocated_memory: 0,
-                    max_memory: 2048,
+                    memory_settings: MemorySettings::default(),
                     output_sink: |_: &[u8]| {},
                     strict: true,
                 })

@@ -14,8 +14,7 @@ impl Arena {
     pub fn new(limiter: SharedMemoryLimiter, preallocated_size: usize) -> Self {
         limiter
             .borrow_mut()
-            .increase_usage(preallocated_size * size_of::<u8>())
-            .expect("preallocated_memory should be less than max_memory");
+            .preallocate(preallocated_size * size_of::<u8>());
 
         Arena {
             limiter,
@@ -24,19 +23,16 @@ impl Arena {
         }
     }
 
-    #[inline]
-    // NOTE: the capacity (i.e. the amount of memory that can be used without reallocation) is
-    // basically a length of the underlying memory pool.
-    fn capacity(&self) -> usize {
-        self.mem_pool.len()
-    }
-
     pub fn append(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {
-        if self.watermark + slice.len() > self.capacity() {
+        // NOTE: the capacity (i.e. the amount of memory that can be used without reallocation)
+        // is basically a current length of the underlying memory pool.
+        let capacity = self.mem_pool.len();
+        let new_watermark = self.watermark + slice.len();
+
+        if new_watermark > capacity {
             // NOTE: we can't fit in the whole slice with the memory available.
             // Split the slice into two parts: one that we can fit in now and the one
             // for which we need to allocate additional memory.
-            let capacity = self.capacity();
             let space_left = capacity - self.watermark;
             let (within_capacity, rest) = slice.split_at(space_left);
 
@@ -47,15 +43,11 @@ impl Arena {
 
             self.mem_pool[self.watermark..capacity].copy_from_slice(within_capacity);
             self.mem_pool.extend_from_slice(rest);
-
-            self.watermark += slice.len();
         } else {
-            let new_watermark = self.watermark + slice.len();
-
             self.mem_pool[self.watermark..new_watermark].copy_from_slice(slice);
-
-            self.watermark = new_watermark;
         }
+
+        self.watermark = new_watermark;
 
         Ok(())
     }
@@ -109,11 +101,11 @@ mod tests {
         assert_eq!(arena.bytes(), &[1, 2, 3, 4]);
         assert_eq!(limiter.borrow().current_usage(), 4);
 
-        arena.append(&[5, 6, 7]).unwrap();
-        assert_eq!(arena.bytes(), &[1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(limiter.borrow().current_usage(), 7);
+        arena.append(&[5, 6, 7, 8, 9, 10]).unwrap();
+        assert_eq!(arena.bytes(), &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        assert_eq!(limiter.borrow().current_usage(), 10);
 
-        let err = arena.append(&[8, 9, 10, 11]).unwrap_err();
+        let err = arena.append(&[11]).unwrap_err();
 
         assert_eq!(
             err,

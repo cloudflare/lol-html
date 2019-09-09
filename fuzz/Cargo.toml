@@ -12,7 +12,6 @@ cargo-fuzz = true
 [dependencies]
 common = { path = "./common" }
 
-
 [dependencies.libfuzzer-sys]
 git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 

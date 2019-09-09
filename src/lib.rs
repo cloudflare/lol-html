@@ -16,7 +16,8 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter, Settings,
+    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter, MemorySettings,
+    Settings,
 };
 
 pub use self::rewritable_units::{
@@ -129,7 +130,8 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
         };
 
-        pub use self::base::{Bytes, MemoryLimiter, LimitedVec, Buffer};
+        pub use self::base::Bytes;
+        pub use self::memory::MemoryLimiter;
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace};
     } else {
         mod selectors_vm;

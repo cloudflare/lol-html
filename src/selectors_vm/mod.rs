@@ -8,8 +8,8 @@ mod stack;
 
 use self::program::AddressRange;
 use self::stack::StackDirective;
-use crate::memory::SharedMemoryLimiter;
 use crate::html::{LocalName, Namespace};
+use crate::memory::SharedMemoryLimiter;
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
 use failure::Error;
@@ -522,8 +522,8 @@ impl<E: ElementData> SelectorMatchingVm<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::MemoryLimiter;
     use crate::html::Namespace;
+    use crate::memory::MemoryLimiter;
     use crate::rewritable_units::{Token, TokenCaptureFlags};
     use crate::transform_stream::{
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
@@ -599,7 +599,7 @@ mod tests {
         let mut transform_stream = TransformStream::new(TransformStreamSettings {
             transform_controller: TestTransformController(test_fn),
             output_sink: |_: &[u8]| {},
-            preallocated_memory: 0,
+            preallocated_parsing_buffer_size: 0,
             encoding,
             memory_limiter: MemoryLimiter::new_shared(2048),
             strict: true,

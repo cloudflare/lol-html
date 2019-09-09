@@ -98,7 +98,7 @@ pub fn parse(
         TransformStreamSettings {
             transform_controller,
             output_sink: |chunk: &[u8]| output.push(chunk),
-            preallocated_memory: 0,
+            preallocated_parsing_buffer_size: 0,
             memory_limiter,
             encoding,
             strict: true

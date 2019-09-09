@@ -47,6 +47,13 @@ impl MemoryLimiter {
     }
 
     #[inline]
+    pub fn preallocate(&mut self, byte_count: usize) {
+        self.increase_usage(byte_count).expect(
+            "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`.",
+        );
+    }
+
+    #[inline]
     pub fn decrease_usage(&mut self, byte_count: usize) {
         self.current_usage -= byte_count;
     }
@@ -81,5 +88,19 @@ mod tests {
                 max: 10
             }
         );
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`."
+    )]
+    fn preallocate() {
+        let limiter = MemoryLimiter::new_shared(10);
+        let mut limiter = limiter.borrow_mut();
+
+        limiter.preallocate(8);
+        assert_eq!(limiter.current_usage(), 8);
+
+        limiter.preallocate(10);
     }
 }

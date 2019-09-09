@@ -82,7 +82,6 @@ static SUPPORTED_SELECTORS: [&str; 16] = [
 extern "C" fn empty_handler(_foo: *const c_char, _size: size_t, _boo: *mut c_void) -> () {}
 
 
-
 pub fn run_rewriter(data: &[u8]) -> () {
     // fuzzing with randomly picked selector and encoding
     // works much faster (50 times) that iterating over all

@@ -1,7 +1,7 @@
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
 use cool_thing::test_utils::Output;
-use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings};
+use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings, MemorySettings};
 use std::convert::TryFrom;
 
 pub struct SelectorMatchingTests;
@@ -69,8 +69,7 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
                 )],
                 document_content_handlers: vec![],
                 encoding: encoding.name(),
-                max_memory: 200 * 1024,
-                preallocated_memory: 0,
+                memory_settings: MemorySettings::default(),
                 output_sink: |c: &[u8]| output.push(c),
                 strict: true,
             })

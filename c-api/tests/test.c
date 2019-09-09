@@ -36,8 +36,10 @@
             builder, \
             encoding, \
             strlen(encoding), \
-            0, /* preallocated_memory */ \
-            max_memory, \
+            (cool_thing_memory_settings_t) { \
+                .preallocated_parsing_buffer_size = 0, \
+                .max_allowed_memory_usage = max_memory \
+            }, \
             &output_sink, \
             &output_sink_user_data, \
             true \
@@ -108,8 +110,10 @@ static void test_non_ascii_encoding() {
         builder,
         encoding,
         strlen(encoding),
-        0, // preallocated_memory
-        16, // max_memory
+        (cool_thing_memory_settings_t) {
+            .preallocated_parsing_buffer_size = 0,
+            .max_allowed_memory_usage = 16
+        },
         &output_sink_stub,
         NULL,
         true
