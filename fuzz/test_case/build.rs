@@ -10,7 +10,7 @@ fn main() {
     let bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .header("../c-api/include/cool_thing.h")
+        .header("../../c-api/include/cool_thing.h")
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
@@ -18,6 +18,6 @@ fn main() {
 
     // Write the bindings to the fuzz/bindings/bindings.rs file.
     bindings
-        .write_to_file("./bindings.rs")
+        .write_to_file("./target/bindings.rs")
         .expect("Couldn't write bindings!");
 }

@@ -5,5 +5,5 @@ authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
 edition = "2018"
 
 [dependencies]
-common = { path = "../common" }
+test_case = { path = "../test_case" }
 afl = "0.4.4"

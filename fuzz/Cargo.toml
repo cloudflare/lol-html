@@ -4,20 +4,15 @@ name = "cool_thing-fuzz"
 version = "0.0.1"
 authors = ["Automatically generated"]
 publish = false
-build = "build.rs"
 
 [package.metadata]
 cargo-fuzz = true
 
 [dependencies]
-common = { path = "./common" }
+test_case = { path = "./test_case" }
 
 [dependencies.libfuzzer-sys]
 git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
-
-
-[build-dependencies]
-bindgen = "0.50"
 
 [[bin]]
 name = "fuzz_c_api"

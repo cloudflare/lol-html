@@ -2,7 +2,6 @@
 target
 corpus
 artifacts
-bindings.rs
 afl/target
 afl/out
 hongg/hfuzz_target

@@ -1,7 +1,7 @@
 #[macro_use] extern crate honggfuzz;
-extern crate common;
+extern crate test_case;
 
-use common::run_rewriter;
+use test_case::run_rewriter;
 
 fn main() {
     loop {

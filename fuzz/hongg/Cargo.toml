@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 honggfuzz = "0.5.45"
-common = { path = "../common" }
+test_case = { path = "../test_case" }

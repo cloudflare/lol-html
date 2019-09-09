@@ -1,5 +1,5 @@
 [package]
-name = "common"
+name = "test_case"
 version = "0.1.0"
 authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
 edition = "2018"
@@ -9,3 +9,6 @@ cool_thing = { path = "../../" }
 encoding_rs = "0.8.13"
 libc = "0.2.61"
 rand = "0.7.0"
+
+[build-dependencies]
+bindgen = "0.50"
