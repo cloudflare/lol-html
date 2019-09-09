@@ -36,7 +36,7 @@
             builder, \
             encoding, \
             strlen(encoding), \
-            0, /* initial_memory */ \
+            0, /* preallocated_memory */ \
             max_memory, \
             &output_sink, \
             &output_sink_user_data, \
@@ -74,11 +74,6 @@
     ok(!memcmp((actual)->data, expected, (actual)->len)); \
 }
 
-#define str_contains(actual, expected) { \
-    ok((actual) != NULL); \
-    ok(strstr(actual->data, expected) != NULL); \
-}
-
 #define c_str_eq(actual, expected) ok(!strcmp(actual, expected))
 
 static void output_sink_stub(const char *chunk, size_t chunk_len, void *user_data) {
@@ -113,7 +108,7 @@ static void test_non_ascii_encoding() {
         builder,
         encoding,
         strlen(encoding),
-        0, // initial_memory
+        0, // preallocated_memory
         16, // max_memory
         &output_sink_stub,
         NULL,
@@ -1334,11 +1329,11 @@ static void element_api_test() {
 
 }
 
-// Out of memory
+// Memory limiting
 //---------------------------------------------------------------------
-
-static void test_out_of_memory() {
+static void test_memory_limiting() {
     const char *chunk1 = "<span alt='aaaaa";
+    const int max_memory = 5;
 
     RUN_REWRITER_WITH_MAX_MEMORY(chunk1, output_sink_stub,
         {
@@ -1363,12 +1358,11 @@ static void test_out_of_memory() {
             ok(cool_thing_rewriter_write(rewriter, in, strlen(in)) == -1);
 
             cool_thing_str_t *msg = cool_thing_take_last_error();
-            ok(msg != NULL);
 
-            str_contains(msg, "exceeded limits.");
+            str_eq(msg, "Memory limit of 5 bytes has been exceeded: 176 bytes were used.");
             cool_thing_str_free(*msg);
         },
-    5);
+    max_memory);
 }
 
 int main() {
@@ -1378,7 +1372,7 @@ int main() {
     subtest("Comment API", test_comment_api);
     subtest("Text chunk API", test_text_chunk_api);
     subtest("Element API", element_api_test);
-    subtest("Out of memory", test_out_of_memory);
+    subtest("Memory limiting", test_memory_limiting);
 
     return done_testing();
 }

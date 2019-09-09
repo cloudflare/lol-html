@@ -105,8 +105,8 @@ fn cool_thing_tokenizer_bench(
             let mut transform_stream = TransformStream::new(TransformStreamSettings {
                 transform_controller: BenchTransformController::new(capture_flags),
                 output_sink: |_: &[u8]| {},
-                initial_memory: 2048,
-                memory_manager: MemoryLimiter::new_shared(1024 * 1024),
+                preallocated_memory: 2048,
+                memory_limiter: MemoryLimiter::new_shared(1024 * 1024),
                 encoding: UTF_8,
                 strict: true,
             });

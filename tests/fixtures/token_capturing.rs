@@ -4,7 +4,7 @@ use crate::harness::suites::html5lib_tests::{
 use crate::harness::{TestFixture, Input};
 use cool_thing::{LocalNameHash, TextType, TokenCaptureFlags,
     LocalName, Token, StartTagHandlingResult, TransformController,
-    TransformStream, Namespace, TransformStreamSettings};
+    TransformStream, Namespace, TransformStreamSettings, MemoryLimiter};
 use cool_thing::test_utils::Output;
 use failure::Error;
 
@@ -91,29 +91,19 @@ pub fn parse(
         .expect("Input should be initialized before parsing");
 
     let mut output = Output::new(encoding);
-
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
-
     let memory_limiter = MemoryLimiter::new_shared(2048);
 
     let mut transform_stream = TransformStream::new(
-<<<<<<< HEAD
         TransformStreamSettings {
             transform_controller,
             output_sink: |chunk: &[u8]| output.push(chunk),
-            buffer_capacity: 2048,
+            preallocated_memory: 0,
+            memory_limiter,
             encoding,
             strict: true
         }
     );
-=======
-        transform_controller,
-        |chunk: &[u8]| output.push(chunk),
-        2048,
-        encoding,
-        memory_limiter,
-    )?;
->>>>>>> PAR-43: refactor memory management
 
     let parser = transform_stream.parser();
 

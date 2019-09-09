@@ -15,8 +15,7 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter, RewriterError,
-    Settings,
+    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter, Settings,
 };
 
 pub use self::rewritable_units::{
@@ -24,6 +23,7 @@ pub use self::rewritable_units::{
     TagNameError, TextChunk, UserData,
 };
 
+pub use self::base::MemoryLimitExceededError;
 pub use self::html::TextType;
 pub use self::selectors_vm::{Selector, SelectorError};
 pub use self::transform_stream::OutputSink;
@@ -128,8 +128,7 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
         };
 
-        pub use self::base::{Bytes};
-        pub use self::base::mem::{ExceededLimitsError, MemoryLimiter, LimitedVec, Buffer};
+        pub use self::base::{Bytes, MemoryLimiter, LimitedVec, Buffer};
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace};
     } else {
         mod selectors_vm;

@@ -1,16 +1,17 @@
 #![allow(clippy::len_without_is_empty)]
 
 use std::mem::size_of;
-use std::ops::{Bound, Deref, Index, RangeBounds};
+use std::ops::{Deref, Index, RangeBounds};
 use std::vec::Drain;
 
-use super::{ExceededLimitsError, SharedMemoryLimiter};
+use super::{MemoryLimitExceededError, SharedMemoryLimiter};
 
 #[derive(Debug)]
 pub struct LimitedVec<T> {
     limiter: SharedMemoryLimiter,
     vec: Vec<T>,
 }
+
 impl<T> LimitedVec<T> {
     pub fn new(limiter: SharedMemoryLimiter) -> Self {
         LimitedVec {
@@ -19,8 +20,8 @@ impl<T> LimitedVec<T> {
         }
     }
 
-    pub fn push(&mut self, element: T) -> Result<(), ExceededLimitsError> {
-        self.limiter.borrow_mut().increase_mem(size_of::<T>())?;
+    pub fn push(&mut self, element: T) -> Result<(), MemoryLimitExceededError> {
+        self.limiter.borrow_mut().increase_usage(size_of::<T>())?;
         self.vec.push(element);
         Ok(())
     }
@@ -49,14 +50,23 @@ impl<T> LimitedVec<T> {
     where
         R: RangeBounds<usize>,
     {
-        let (start, end) = match (range.start_bound(), range.end_bound()) {
-            (Bound::Included(start), Bound::Excluded(end)) => (start, end),
-            _ => unreachable!("unsupported"),
+        use std::ops::Bound::*;
+
+        let start = match range.start_bound() {
+            Included(&n) => n,
+            Excluded(&n) => n + 1,
+            Unbounded => 0,
+        };
+
+        let end = match range.end_bound() {
+            Included(&n) => n + 1,
+            Excluded(&n) => n,
+            Unbounded => self.len(),
         };
 
         self.limiter
             .borrow_mut()
-            .decrease_mem(size_of::<T>() * (end - 1 - start));
+            .decrease_usage(size_of::<T>() * (end - start));
 
         self.vec.drain(range)
     }
@@ -83,7 +93,7 @@ impl<T> Drop for LimitedVec<T> {
     fn drop(&mut self) {
         self.limiter
             .borrow_mut()
-            .decrease_mem(size_of::<T>() * self.vec.len());
+            .decrease_usage(size_of::<T>() * self.vec.len());
     }
 }
 
@@ -91,13 +101,13 @@ impl<T> Drop for LimitedVec<T> {
 mod tests {
     use super::super::MemoryLimiter;
     use super::*;
-    use std::ops::Range;
+    use std::rc::Rc;
 
     #[test]
     fn current_usage() {
         {
             let limiter = MemoryLimiter::new_shared(10);
-            let mut vec_u8: LimitedVec<u8> = LimitedVec::new(limiter.clone());
+            let mut vec_u8: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
 
             vec_u8.push(1).unwrap();
             vec_u8.push(2).unwrap();
@@ -106,7 +116,7 @@ mod tests {
 
         {
             let limiter = MemoryLimiter::new_shared(10);
-            let mut vec_u32: LimitedVec<u32> = LimitedVec::new(limiter.clone());
+            let mut vec_u32: LimitedVec<u32> = LimitedVec::new(Rc::clone(&limiter));
 
             vec_u32.push(1).unwrap();
             vec_u32.push(2).unwrap();
@@ -117,13 +127,20 @@ mod tests {
     #[test]
     fn max_limit() {
         let limiter = MemoryLimiter::new_shared(2);
-        let mut vec_u8: LimitedVec<u8> = LimitedVec::new(limiter.clone());
+        let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
 
-        vec_u8.push(1).unwrap();
-        vec_u8.push(2).unwrap();
+        vector.push(1).unwrap();
+        vector.push(2).unwrap();
 
-        let alloc_err = vec_u8.push(3).unwrap_err();
-        assert_eq!(alloc_err, ExceededLimitsError { current_usage: 3 });
+        let err = vector.push(3).unwrap_err();
+
+        assert_eq!(
+            err,
+            MemoryLimitExceededError {
+                current_usage: 3,
+                max: 2
+            }
+        );
     }
 
     #[test]
@@ -131,9 +148,10 @@ mod tests {
         let limiter = MemoryLimiter::new_shared(1);
 
         {
-            let mut vec_u8: LimitedVec<u8> = LimitedVec::new(limiter.clone());
-            vec_u8.push(1).unwrap();
-            assert_eq!(limiter.clone().borrow().current_usage(), 1);
+            let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+
+            vector.push(1).unwrap();
+            assert_eq!(limiter.borrow().current_usage(), 1);
         }
 
         assert_eq!(limiter.borrow().current_usage(), 0);
@@ -142,13 +160,23 @@ mod tests {
     #[test]
     fn drain() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut vec_u8: LimitedVec<u8> = LimitedVec::new(limiter.clone());
+        let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
 
-        vec_u8.push(1).unwrap();
-        vec_u8.push(2).unwrap();
-        vec_u8.push(3).unwrap();
-        vec_u8.drain(Range { start: 0, end: 3 });
+        vector.push(1).unwrap();
+        vector.push(2).unwrap();
+        vector.push(3).unwrap();
+        assert_eq!(limiter.borrow().current_usage(), 3);
 
-        assert_eq!(limiter.borrow().current_usage(), 1);
+        vector.drain(0..3);
+        assert_eq!(limiter.borrow().current_usage(), 0);
+
+        vector.push(1).unwrap();
+        vector.push(2).unwrap();
+        vector.push(3).unwrap();
+        vector.push(4).unwrap();
+        assert_eq!(limiter.borrow().current_usage(), 4);
+
+        vector.drain(1..=2);
+        assert_eq!(limiter.borrow().current_usage(), 2);
     }
 }

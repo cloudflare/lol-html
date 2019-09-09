@@ -23,12 +23,12 @@ pub struct AuxStartTagInfo<'i> {
 type AuxStartTagInfoRequest<C> =
     Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, Error>>;
 
-pub enum DispatcherErr<C> {
+pub enum DispatcherError<C> {
     InfoRequest(AuxStartTagInfoRequest<C>),
     Fatal(Error),
 }
 
-pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherErr<C>>;
+pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherError<C>>;
 
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
@@ -197,10 +197,10 @@ where
 
                     match self.transform_controller.handle_start_tag(name, ns) {
                         Ok(flags) => Ok(flags),
-                        Err(DispatcherErr::InfoRequest(aux_info_req)) => {
+                        Err(DispatcherError::InfoRequest(aux_info_req)) => {
                             get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing)
                         }
-                        Err(DispatcherErr::Fatal(e)) => Err(e),
+                        Err(DispatcherError::Fatal(e)) => Err(e),
                     }
                 }
 
@@ -311,13 +311,13 @@ where
             Ok(flags) => {
                 Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags))
             }
-            Err(DispatcherErr::InfoRequest(aux_info_req)) => {
+            Err(DispatcherError::InfoRequest(aux_info_req)) => {
                 self.got_flags_from_hint = false;
                 self.pending_element_aux_info_req = Some(aux_info_req);
 
                 Ok(ParserDirective::Lex)
             }
-            Err(DispatcherErr::Fatal(e)) => Err(e),
+            Err(DispatcherError::Fatal(e)) => Err(e),
         }
     }
 

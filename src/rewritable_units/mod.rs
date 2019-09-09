@@ -79,7 +79,7 @@ mod test_utils {
                 element_content_handlers,
                 document_content_handlers,
                 encoding: encoding.name(),
-                initial_memory: 2048,
+                preallocated_memory: 2048,
                 max_memory: 4096,
                 output_sink: |c: &[u8]| output.push(c),
                 strict: true,

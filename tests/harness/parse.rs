@@ -60,7 +60,7 @@ pub fn parse(
     let mut transform_stream = TransformStream::new(
         transform_controller,
         |chunk: &[u8]| output.push(chunk),
-        2048, // initial_memory
+        2048, // preallocated_memory
         encoding,
         memory_limiter,
     )

@@ -1,78 +1,84 @@
 use safemem::copy_over;
-use std::cmp::max;
 use std::mem::size_of;
 
-use super::{ExceededLimitsError, SharedMemoryLimiter};
+use super::{MemoryLimitExceededError, SharedMemoryLimiter};
 
+#[derive(Debug)]
 pub struct Buffer {
     limiter: SharedMemoryLimiter,
-    data: Vec<u8>,
-    length: usize,
-    space_left: usize,
+    mem_pool: Vec<u8>,
+    watermark: usize,
 }
 
 impl Buffer {
-    pub fn try_new(
-        limiter: SharedMemoryLimiter,
-        initial_size: usize,
-    ) -> Result<Buffer, ExceededLimitsError> {
+    pub fn new(limiter: SharedMemoryLimiter, preallocated_size: usize) -> Self {
         limiter
             .borrow_mut()
-            .increase_mem(initial_size * size_of::<u8>())?;
+            .increase_usage(preallocated_size * size_of::<u8>())
+            .expect("preallocated_memory should be less than max_memory");
 
-        Ok(Buffer {
+        Buffer {
             limiter,
-            data: vec![0; initial_size],
-            space_left: initial_size,
-            length: 0,
-        })
+            mem_pool: vec![0; preallocated_size],
+            watermark: 0,
+        }
     }
 
-    pub fn append(&mut self, slice: &[u8]) -> Result<(), ExceededLimitsError> {
-        // check if we can rely on our preallocated capacity
-        if self.space_left > 0 {
-            let new_space_left = self.space_left as isize - slice.len() as isize;
+    #[inline]
+    // NOTE: the capacity (i.e. the amount of memory that can be used without reallocation) is
+    // basically a length of the underlying memory pool.
+    fn capacity(&self) -> usize {
+        self.mem_pool.len()
+    }
 
-            // negative space left, we need to notify the limiter
-            if new_space_left < 0 {
-                self.limiter
-                    .borrow_mut()
-                    .increase_mem(new_space_left.abs() as usize * size_of::<u8>())?;
-            }
+    pub fn append(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {
+        if self.watermark + slice.len() > self.capacity() {
+            // NOTE: we can't fit in the whole slice with the memory available.
+            // Split the slice into two parts: one that we can fit in now and the one
+            // for which we need to allocate additional memory.
+            let capacity = self.capacity();
+            let space_left = capacity - self.watermark;
+            let (within_capacity, rest) = slice.split_at(space_left);
 
-            self.space_left = max(new_space_left, 0) as usize;
-        } else {
-            // the size of the buffer exceeded its initial capacity, we need to notify
-            // the ManagedLimiter for future allocations.
+            // NOTE: ask the limiter if we can have more space
             self.limiter
                 .borrow_mut()
-                .increase_mem(slice.len() * size_of::<u8>())?;
+                .increase_usage(rest.len() * size_of::<u8>())?;
+
+            self.mem_pool[self.watermark..capacity].copy_from_slice(within_capacity);
+            self.mem_pool.extend_from_slice(rest);
+
+            self.watermark += slice.len();
+        } else {
+            let new_watermark = self.watermark + slice.len();
+
+            self.mem_pool[self.watermark..new_watermark].copy_from_slice(slice);
+
+            self.watermark = new_watermark;
         }
-
-        let new_length = self.length + slice.len();
-
-        self.data.resize(new_length, 0);
-
-        self.data
-            .splice(self.length..new_length, slice.iter().cloned());
-        self.length = new_length;
 
         Ok(())
     }
 
-    pub fn init_with(&mut self, slice: &[u8]) -> Result<(), ExceededLimitsError> {
-        self.length = 0;
+    pub fn init_with(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {
+        self.watermark = 0;
+
         self.append(slice)
     }
 
     pub fn shrink_to_last(&mut self, byte_count: usize) {
-        copy_over(&mut self.data, self.length - byte_count, 0, byte_count);
+        copy_over(
+            &mut self.mem_pool,
+            self.watermark - byte_count,
+            0,
+            byte_count,
+        );
 
-        self.length = byte_count;
+        self.watermark = byte_count;
     }
 
     pub fn bytes(&self) -> &[u8] {
-        &self.data[..self.length]
+        &self.mem_pool[..self.watermark]
     }
 }
 
@@ -80,7 +86,7 @@ impl Drop for Buffer {
     fn drop(&mut self) {
         self.limiter
             .borrow_mut()
-            .decrease_mem(self.data.len() * size_of::<u8>());
+            .decrease_usage(self.mem_pool.len() * size_of::<u8>());
     }
 }
 
@@ -88,75 +94,89 @@ impl Drop for Buffer {
 mod tests {
     use super::super::limiter::MemoryLimiter;
     use super::*;
+    use std::rc::Rc;
 
     #[test]
-    fn current_usage() {
+    fn append() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut buffer = Buffer::try_new(limiter.clone(), 0).unwrap();
-        buffer.append(&[0, 0]).unwrap();
+        let mut buffer = Buffer::new(Rc::clone(&limiter), 2);
 
+        buffer.append(&[1, 2]).unwrap();
+        assert_eq!(buffer.bytes(), &[1, 2]);
         assert_eq!(limiter.borrow().current_usage(), 2);
+
+        buffer.append(&[3, 4]).unwrap();
+        assert_eq!(buffer.bytes(), &[1, 2, 3, 4]);
+        assert_eq!(limiter.borrow().current_usage(), 4);
+
+        buffer.append(&[5, 6, 7]).unwrap();
+        assert_eq!(buffer.bytes(), &[1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(limiter.borrow().current_usage(), 7);
+
+        let err = buffer.append(&[8, 9, 10, 11]).unwrap_err();
+
+        assert_eq!(
+            err,
+            MemoryLimitExceededError {
+                current_usage: 11,
+                max: 10
+            }
+        );
     }
 
     #[test]
-    fn max_limit() {
-        let limiter = MemoryLimiter::new_shared(2);
-        let mut buffer = Buffer::try_new(limiter.clone(), 0).unwrap();
-        let alloc_err = buffer.append(&[0, 0, 0]).unwrap_err();
+    fn init_with() {
+        let limiter = MemoryLimiter::new_shared(5);
+        let mut buffer = Buffer::new(Rc::clone(&limiter), 0);
 
-        assert_eq!(alloc_err, ExceededLimitsError { current_usage: 3 });
-    }
+        buffer.init_with(&[1]).unwrap();
+        assert_eq!(buffer.bytes(), &[1]);
+        assert_eq!(limiter.borrow().current_usage(), 1);
 
-    #[test]
-    fn force_allocation_after_initial_capacity() {
-        let limiter = MemoryLimiter::new_shared(10);
-        let mut buffer = Buffer::try_new(limiter, 2).unwrap();
+        buffer.append(&[1, 2]).unwrap();
+        assert_eq!(buffer.bytes(), &[1, 1, 2]);
+        assert_eq!(limiter.borrow().current_usage(), 3);
 
-        buffer.append(&[0, 0]).unwrap(); // pre-allocated
-        buffer.append(&[1, 1]).unwrap(); // force allocation
+        buffer.init_with(&[1, 2, 3]).unwrap();
+        assert_eq!(buffer.bytes(), &[1, 2, 3]);
+        assert_eq!(limiter.borrow().current_usage(), 3);
 
-        assert_eq!(buffer.bytes(), &[0, 0, 1, 1]);
+        buffer.init_with(&[]).unwrap();
+        assert_eq!(buffer.bytes(), &[]);
+        assert_eq!(limiter.borrow().current_usage(), 3);
+
+        let err = buffer.init_with(&[1, 2, 3, 4, 5, 6, 7]).unwrap_err();
+
+        assert_eq!(
+            err,
+            MemoryLimitExceededError {
+                current_usage: 7,
+                max: 5
+            }
+        );
     }
 
     #[test]
     fn shrink_to_last() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut buffer = Buffer::try_new(limiter.clone(), 0).unwrap();
+        let mut buffer = Buffer::new(Rc::clone(&limiter), 0);
 
         buffer.append(&[0, 1, 2, 3]).unwrap();
         buffer.shrink_to_last(2);
         assert_eq!(buffer.bytes(), &[2, 3]);
+        assert_eq!(limiter.borrow().current_usage(), 4);
 
         buffer.append(&[0, 1]).unwrap();
         assert_eq!(buffer.bytes(), &[2, 3, 0, 1]);
+        assert_eq!(limiter.borrow().current_usage(), 4);
 
-        assert_eq!(limiter.borrow().current_usage(), 6);
-    }
+        buffer.shrink_to_last(1);
+        assert_eq!(buffer.bytes(), &[1]);
+        assert_eq!(limiter.borrow().current_usage(), 4);
 
-    #[test]
-    fn init_with() {
-        let limiter = MemoryLimiter::new_shared(10);
-        let mut buffer = Buffer::try_new(limiter.clone(), 0).unwrap();
-
-        buffer.init_with(&[1]).unwrap();
-        assert_eq!(limiter.borrow().current_usage(), 1);
-
-        buffer.append(&[1, 2]).unwrap();
-        assert_eq!(limiter.borrow().current_usage(), 3);
-
-        buffer.init_with(&[1, 2, 3]).unwrap();
-        assert_eq!(limiter.borrow().current_usage(), 6);
-
-        buffer.init_with(&[]).unwrap();
-        assert_eq!(limiter.borrow().current_usage(), 6);
-    }
-
-    #[test]
-    fn preallocated_capacity() {
-        let limiter = MemoryLimiter::new_shared(2);
-        let mut buffer = Buffer::try_new(limiter.clone(), 2).unwrap();
-
-        buffer.append(&[0]).unwrap();
-        buffer.append(&[1]).unwrap();
+        buffer.append(&[2, 3, 4, 5]).unwrap();
+        buffer.shrink_to_last(4);
+        assert_eq!(buffer.bytes(), &[2, 3, 4, 5]);
+        assert_eq!(limiter.borrow().current_usage(), 5);
     }
 }

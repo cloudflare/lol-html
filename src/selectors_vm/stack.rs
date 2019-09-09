@@ -1,5 +1,5 @@
 use super::program::AddressRange;
-use crate::base::mem::{ExceededLimitsError, LimitedVec, SharedMemoryLimiter};
+use crate::base::{MemoryLimitExceededError, LimitedVec, SharedMemoryLimiter};
 use crate::html::{LocalName, Namespace, Tag};
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -118,7 +118,7 @@ impl<E: ElementData> Stack<E> {
     pub fn push_item(
         &mut self,
         mut item: StackItem<'static, E>,
-    ) -> Result<(), ExceededLimitsError> {
+    ) -> Result<(), MemoryLimitExceededError> {
         if let Some(last) = self.0.last() {
             if last.has_ancestor_with_hereditary_jumps || !last.hereditary_jumps.is_empty() {
                 item.has_ancestor_with_hereditary_jumps = true;
@@ -133,7 +133,7 @@ impl<E: ElementData> Stack<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::MemoryLimiter;
+    use crate::base::MemoryLimiter;
     use encoding_rs::UTF_8;
 
     #[derive(Default)]

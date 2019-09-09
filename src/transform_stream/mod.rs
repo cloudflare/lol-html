@@ -1,8 +1,7 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
-use crate::base::mem::{Buffer, SharedMemoryLimiter};
-use crate::base::Chunk;
+use crate::base::{Buffer, Chunk, SharedMemoryLimiter};
 
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use encoding_rs::Encoding;
@@ -11,7 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::dispatcher::{
-    AuxStartTagInfo, DispatcherErr, OutputSink, StartTagHandlingResult, TransformController,
+    AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
 };
 
 const BUFFER_ERROR_CONTEXT: &str = concat!(
@@ -26,7 +25,8 @@ where
 {
     pub transform_controller: C,
     pub output_sink: O,
-    pub buffer_capacity: usize,
+    pub preallocated_memory: usize,
+    pub memory_limiter: SharedMemoryLimiter,
     pub encoding: &'static Encoding,
     pub strict: bool,
 }
@@ -64,7 +64,7 @@ where
             settings.encoding,
         )));
 
-        let buffer = Buffer::new(Rc::clone(&setting.memory_limiter), settings.initial_memory);
+        let buffer = Buffer::new(settings.memory_limiter, settings.preallocated_memory);
         let parser = Parser::new(&dispatcher, initial_parser_directive, settings.strict);
 
         TransformStream {

@@ -36,7 +36,7 @@ pub extern "C" fn cool_thing_rewriter_build(
     builder: *mut HtmlRewriterBuilder,
     encoding: *const c_char,
     encoding_len: size_t,
-    initial_memory: size_t,
+    preallocated_memory: size_t,
     max_memory: size_t,
     output_sink: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
     output_sink_user_data: *mut c_void,
@@ -50,7 +50,7 @@ pub extern "C" fn cool_thing_rewriter_build(
         document_content_handlers: handlers.document,
         encoding: unwrap_or_ret_null! { to_str!(encoding, encoding_len) },
         max_memory,
-        initial_memory,
+        preallocated_memory,
         output_sink: ExternOutputSink::new(output_sink, output_sink_user_data),
         strict,
     };

@@ -8,11 +8,10 @@ mod stack;
 
 use self::program::AddressRange;
 use self::stack::StackDirective;
-use crate::base::mem::SharedMemoryLimiter;
+use crate::base::SharedMemoryLimiter;
 use crate::html::{LocalName, Namespace};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
-
 use failure::Error;
 
 pub use self::ast::*;
@@ -523,10 +522,12 @@ impl<E: ElementData> SelectorMatchingVm<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::base::MemoryLimiter;
     use crate::html::Namespace;
     use crate::rewritable_units::{Token, TokenCaptureFlags};
-    use crate::transform_stream::{StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings};
-    use crate::MemoryLimiter;
+    use crate::transform_stream::{
+        StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
+    };
     use encoding_rs::UTF_8;
     use failure::Error;
     use std::collections::{HashMap, HashSet};
@@ -595,16 +596,14 @@ mod tests {
             }
         }
 
-        let mut transform_stream = TransformStream::new(
-            TransformStreamSettings {
-                transform_controller: TestTransformController(action),
-                output_sink: |_: &[u8]| {},
-                buffer_capacity: 2048,
-                encoding: UTF_8,
-                memory_limiter: MemoryLimiter::new_shared(2048),
-                strict: true
-            }
-        );
+        let mut transform_stream = TransformStream::new(TransformStreamSettings {
+            transform_controller: TestTransformController(test_fn),
+            output_sink: |_: &[u8]| {},
+            preallocated_memory: 0,
+            encoding,
+            memory_limiter: MemoryLimiter::new_shared(2048),
+            strict: true,
+        });
 
         transform_stream.write(&*html).unwrap();
         transform_stream.end().unwrap();

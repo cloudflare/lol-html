@@ -34,7 +34,7 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
                 document_content_handlers: vec![],
                 encoding: encoding.name(),
                 max_memory: 200 * 1024,
-                initial_memory: 0,
+                preallocated_memory: 0,
                 output_sink: |c: &[u8]| output.push(c),
                 strict: true,
             })
