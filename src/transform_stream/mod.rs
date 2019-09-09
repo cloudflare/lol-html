@@ -1,7 +1,8 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
-use crate::base::{Buffer, Chunk, SharedMemoryLimiter};
+use crate::base::Chunk;
+use crate::memory::{Buffer, SharedMemoryLimiter};
 
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use encoding_rs::Encoding;

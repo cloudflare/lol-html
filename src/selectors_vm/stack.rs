@@ -1,5 +1,5 @@
 use super::program::AddressRange;
-use crate::base::{MemoryLimitExceededError, LimitedVec, SharedMemoryLimiter};
+use crate::memory::{MemoryLimitExceededError, LimitedVec, SharedMemoryLimiter};
 use crate::html::{LocalName, Namespace, Tag};
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -133,7 +133,7 @@ impl<E: ElementData> Stack<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::base::MemoryLimiter;
+    use crate::memory::MemoryLimiter;
     use encoding_rs::UTF_8;
 
     #[derive(Default)]

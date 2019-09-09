@@ -7,6 +7,7 @@ mod base;
 #[macro_use]
 mod html;
 
+mod memory;
 mod parser;
 mod rewritable_units;
 mod rewriter;
@@ -23,8 +24,8 @@ pub use self::rewritable_units::{
     TagNameError, TextChunk, UserData,
 };
 
-pub use self::base::MemoryLimitExceededError;
 pub use self::html::TextType;
+pub use self::memory::MemoryLimitExceededError;
 pub use self::selectors_vm::{Selector, SelectorError};
 pub use self::transform_stream::OutputSink;
 

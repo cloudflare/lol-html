@@ -4,7 +4,7 @@ mod rewrite_controller;
 
 use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::*;
-use crate::base::MemoryLimiter;
+use crate::memory::MemoryLimiter;
 use crate::selectors_vm::{self, Selector, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;

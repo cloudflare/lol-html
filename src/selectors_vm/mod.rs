@@ -8,7 +8,7 @@ mod stack;
 
 use self::program::AddressRange;
 use self::stack::StackDirective;
-use crate::base::SharedMemoryLimiter;
+use crate::memory::SharedMemoryLimiter;
 use crate::html::{LocalName, Namespace};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
@@ -522,7 +522,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::base::MemoryLimiter;
+    use crate::memory::MemoryLimiter;
     use crate::html::Namespace;
     use crate::rewritable_units::{Token, TokenCaptureFlags};
     use crate::transform_stream::{
