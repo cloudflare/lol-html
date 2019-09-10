@@ -1,7 +1,5 @@
-use safemem::copy_over;
-use std::mem::size_of;
-
 use super::{MemoryLimitExceededError, SharedMemoryLimiter};
+use safemem::copy_over;
 
 #[derive(Debug)]
 pub struct Arena {
@@ -12,9 +10,7 @@ pub struct Arena {
 
 impl Arena {
     pub fn new(limiter: SharedMemoryLimiter, preallocated_size: usize) -> Self {
-        limiter
-            .borrow_mut()
-            .preallocate(preallocated_size * size_of::<u8>());
+        limiter.borrow_mut().preallocate(preallocated_size);
 
         Arena {
             limiter,
@@ -37,9 +33,7 @@ impl Arena {
             let (within_capacity, rest) = slice.split_at(space_left);
 
             // NOTE: ask the limiter if we can have more space
-            self.limiter
-                .borrow_mut()
-                .increase_usage(rest.len() * size_of::<u8>())?;
+            self.limiter.borrow_mut().increase_usage(rest.len())?;
 
             self.mem_pool[self.watermark..capacity].copy_from_slice(within_capacity);
             self.mem_pool.extend_from_slice(rest);
@@ -78,7 +72,7 @@ impl Drop for Arena {
     fn drop(&mut self) {
         self.limiter
             .borrow_mut()
-            .decrease_usage(self.mem_pool.len() * size_of::<u8>());
+            .decrease_usage(self.mem_pool.len());
     }
 }
 
