@@ -1,6 +1,10 @@
-extern crate bindgen;
+use std::env;
+use std::path::PathBuf;
 
 fn main() {
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let out_path = PathBuf::from(&out_dir);
+
     println!("cargo:rustc-link-search=../c-api/target/debug");
     println!("cargo:rustc-link-lib=coolthing");
 
@@ -16,8 +20,7 @@ fn main() {
         // Unwrap the Result and panic on failure.
         .expect("Unable to generate bindings");
 
-    // Write the bindings to the fuzz/bindings/bindings.rs file.
     bindings
-        .write_to_file("./target/bindings.rs")
+        .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
 }

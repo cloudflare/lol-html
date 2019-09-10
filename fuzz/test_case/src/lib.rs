@@ -19,7 +19,7 @@ use cool_thing::{
 use encoding_rs::*;
 use std::convert::TryFrom;
 
-include!("../target/bindings.rs");
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
     BIG5,
