@@ -1,11 +1,12 @@
 use super::{MemoryLimitExceededError, SharedMemoryLimiter};
 use safemem::copy_over;
 
+/// Preallocated region of memory that can grow and never deallocates during the lifetime of
+/// the limiter.
 #[derive(Debug)]
 pub struct Arena {
     limiter: SharedMemoryLimiter,
-    mem_pool: Vec<u8>,
-    watermark: usize,
+    data: Vec<u8>,
 }
 
 impl Arena {
@@ -14,65 +15,47 @@ impl Arena {
 
         Arena {
             limiter,
-            mem_pool: vec![0; preallocated_size],
-            watermark: 0,
+            data: Vec::with_capacity(preallocated_size),
         }
     }
 
     pub fn append(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {
-        // NOTE: the capacity (i.e. the amount of memory that can be used without reallocation)
-        // is basically a current length of the underlying memory pool.
-        let capacity = self.mem_pool.len();
-        let new_watermark = self.watermark + slice.len();
+        let new_len = self.data.len() + slice.len();
+        let capacity = self.data.capacity();
 
-        if new_watermark > capacity {
-            // NOTE: we can't fit in the whole slice with the memory available.
-            // Split the slice into two parts: one that we can fit in now and the one
-            // for which we need to allocate additional memory.
-            let space_left = capacity - self.watermark;
-            let (within_capacity, rest) = slice.split_at(space_left);
+        if new_len > capacity {
+            let additional = new_len - capacity;
 
-            // NOTE: ask the limiter if we can have more space
-            self.limiter.borrow_mut().increase_usage(rest.len())?;
+            // NOTE: approximate usage, as `Vec::reserve_exact` doesn't
+            // give guarantees about exact capacity value :).
+            self.limiter.borrow_mut().increase_usage(additional)?;
 
-            self.mem_pool[self.watermark..capacity].copy_from_slice(within_capacity);
-            self.mem_pool.extend_from_slice(rest);
-        } else {
-            self.mem_pool[self.watermark..new_watermark].copy_from_slice(slice);
+            // NOTE: with wicely choosen preallocated size this branch should be
+            // executed quite rarely. We can't afford to use double capacity
+            // strategy used by default (see: https://github.com/rust-lang/rust/blob/bdfd698f37184da42254a03ed466ab1f90e6fb6c/src/liballoc/raw_vec.rs#L424)
+            // as we'll run out of the space allowance quite quickly.
+            self.data.reserve_exact(slice.len());
         }
 
-        self.watermark = new_watermark;
+        self.data.extend_from_slice(slice);
 
         Ok(())
     }
 
     pub fn init_with(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {
-        self.watermark = 0;
-
+        self.data.clear();
         self.append(slice)
     }
 
     pub fn shrink_to_last(&mut self, byte_count: usize) {
-        copy_over(
-            &mut self.mem_pool,
-            self.watermark - byte_count,
-            0,
-            byte_count,
-        );
+        let from = self.data.len() - byte_count;
 
-        self.watermark = byte_count;
+        copy_over(&mut self.data, from, 0, byte_count);
+        self.data.truncate(byte_count);
     }
 
     pub fn bytes(&self) -> &[u8] {
-        &self.mem_pool[..self.watermark]
-    }
-}
-
-impl Drop for Arena {
-    fn drop(&mut self) {
-        self.limiter
-            .borrow_mut()
-            .decrease_usage(self.mem_pool.len());
+        &self.data
     }
 }
 
