@@ -115,7 +115,7 @@ mod tests {
             html,
             encoding,
             vec![],
-            vec![DocumentContentHandlers::default().text(|c| {
+            vec![doc_text!(|c| {
                 handler_called = true;
                 handler(c);
                 Ok(())

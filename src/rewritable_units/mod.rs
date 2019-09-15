@@ -43,7 +43,6 @@ mod test_utils {
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS};
     use crate::*;
     use encoding_rs::Encoding;
-    use std::convert::TryFrom;
 
     pub fn encoded(input: &str) -> Vec<(Vec<u8>, &'static Encoding)> {
         ASCII_COMPATIBLE_ENCODINGS
@@ -76,14 +75,15 @@ mod test_utils {
         let mut output = Output::new(encoding);
 
         {
-            let mut rewriter = HtmlRewriter::try_from(Settings {
-                element_content_handlers,
-                document_content_handlers,
-                encoding: encoding.name(),
-                memory_settings: MemorySettings::default(),
-                output_sink: |c: &[u8]| output.push(c),
-                strict: true,
-            })
+            let mut rewriter = HtmlRewriter::try_new(
+                Settings {
+                    element_content_handlers,
+                    document_content_handlers,
+                    encoding: encoding.name(),
+                    ..Settings::default()
+                },
+                |c: &[u8]| output.push(c),
+            )
             .unwrap();
 
             rewriter.write(html).unwrap();

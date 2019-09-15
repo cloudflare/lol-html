@@ -1,9 +1,8 @@
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
 use cool_thing::test_utils::Output;
-use cool_thing::{ElementContentHandlers, HtmlRewriter, Settings, MemorySettings};
+use cool_thing::{HtmlRewriter, Settings, element};
 use cool_thing::html_content::ContentType;
-use std::convert::TryFrom;
 
 // NOTE: Inner element content replacement functionality used as a basis for
 // the multiple element methods and it's easy to get it wrong, so we have
@@ -20,24 +19,22 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
         let mut output = Output::new(encoding);
 
         {
-            let mut rewriter = HtmlRewriter::try_from(Settings {
-                element_content_handlers: vec![(
-                    &test.selector.parse().unwrap(),
-                    ElementContentHandlers::default().element(|el| {
-                        el.set_inner_content(
-                            &format!("<!--Replaced ({}) -->", test.selector),
-                            ContentType::Html,
-                        );
+            let mut rewriter = HtmlRewriter::try_new(Settings {
+                    element_content_handlers: vec![
+                        element!(test.selector, |el| {
+                            el.set_inner_content(
+                                &format!("<!--Replaced ({}) -->", test.selector),
+                                ContentType::Html,
+                            );
 
-                        Ok(())
-                    }),
-                )],
-                document_content_handlers: vec![],
-                encoding: encoding.name(),
-                memory_settings: MemorySettings::default(),
-                output_sink: |c: &[u8]| output.push(c),
-                strict: true,
-            })
+                            Ok(())
+                        })
+                    ],
+                    encoding: encoding.name(),
+                    ..Settings::default()
+                },
+                |c: &[u8]| output.push(c)
+            )
             .unwrap();
 
             for chunk in test.input.chunks() {

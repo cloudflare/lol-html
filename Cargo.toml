@@ -5,9 +5,6 @@ authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 autotests = false
 edition = "2018"
 
-[package.metadata.precommit]
-fmt = "cd c-api && cargo fmt && cd ../ && cargo fmt && git add -u"
-
 [features]
 debug_trace = []
 integration_test = []

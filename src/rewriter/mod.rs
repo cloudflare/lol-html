@@ -1,19 +1,20 @@
-mod content_handlers;
 mod handlers_dispatcher;
 mod rewrite_controller;
+
+#[macro_use]
+mod settings;
 
 use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::*;
 use crate::memory::MemoryLimiter;
-use crate::selectors_vm::{self, Selector, SelectorMatchingVm};
+use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;
-use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
-pub use self::content_handlers::*;
+pub use self::settings::*;
 
 fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingError> {
     let encoding = Encoding::for_label_no_replacement(encoding.as_bytes())
@@ -34,80 +35,10 @@ pub enum EncodingError {
     NonAsciiCompatibleEncoding,
 }
 
-// NOTE: exposed in C API as well, thus repr(C).
-#[repr(C)]
-pub struct MemorySettings {
-    preallocated_parsing_buffer_size: usize,
-    max_allowed_memory_usage: usize,
-}
-
-impl Default for MemorySettings {
-    #[inline]
-    fn default() -> Self {
-        MemorySettings {
-            preallocated_parsing_buffer_size: 1024,
-            max_allowed_memory_usage: std::usize::MAX,
-        }
-    }
-}
-
-pub struct Settings<'h, 's, O: OutputSink> {
-    pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
-    pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
-    pub encoding: &'s str,
-    pub memory_settings: MemorySettings,
-    pub output_sink: O,
-    pub strict: bool,
-}
-
 pub struct HtmlRewriter<'h, O: OutputSink> {
     stream: TransformStream<HtmlRewriteController<'h>, O>,
     finished: bool,
     poisoned: bool,
-}
-
-impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O> {
-    type Error = EncodingError;
-
-    fn try_from(settings: Settings<'h, 's, O>) -> Result<Self, Self::Error> {
-        let encoding = try_encoding_from_str(settings.encoding)?;
-        let mut selectors_ast = selectors_vm::Ast::default();
-        let mut dispatcher = ContentHandlersDispatcher::default();
-
-        for (selector, handlers) in settings.element_content_handlers {
-            let locator = dispatcher.add_selector_associated_handlers(handlers);
-
-            selectors_ast.add_selector(selector, locator);
-        }
-
-        for handlers in settings.document_content_handlers {
-            dispatcher.add_document_content_handlers(handlers);
-        }
-
-        let memory_limiter =
-            MemoryLimiter::new_shared(settings.memory_settings.max_allowed_memory_usage);
-
-        let selector_matching_vm =
-            SelectorMatchingVm::new(selectors_ast, encoding, Rc::clone(&memory_limiter));
-        let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
-
-        let stream = TransformStream::new(TransformStreamSettings {
-            transform_controller: controller,
-            output_sink: settings.output_sink,
-            preallocated_parsing_buffer_size: settings
-                .memory_settings
-                .preallocated_parsing_buffer_size,
-            memory_limiter,
-            encoding,
-            strict: settings.strict,
-        });
-
-        Ok(HtmlRewriter {
-            stream,
-            finished: false,
-            poisoned: false,
-        })
-    }
 }
 
 macro_rules! guarded {
@@ -128,6 +59,47 @@ macro_rules! guarded {
 }
 
 impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
+    pub fn try_new<'s>(settings: Settings<'h, 's>, output_sink: O) -> Result<Self, EncodingError> {
+        let encoding = try_encoding_from_str(settings.encoding)?;
+        let mut selectors_ast = selectors_vm::Ast::default();
+        let mut dispatcher = ContentHandlersDispatcher::default();
+
+        for (selector, handlers) in settings.element_content_handlers {
+            let locator = dispatcher.add_selector_associated_handlers(handlers);
+
+            selectors_ast.add_selector(selector, locator);
+        }
+
+        for handlers in settings.document_content_handlers {
+            dispatcher.add_document_content_handlers(handlers);
+        }
+
+        let memory_limiter =
+            MemoryLimiter::new_shared(settings.memory_settings.max_allowed_memory_usage);
+
+        let selector_matching_vm =
+            SelectorMatchingVm::new(selectors_ast, encoding, Rc::clone(&memory_limiter));
+
+        let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
+
+        let stream = TransformStream::new(TransformStreamSettings {
+            transform_controller: controller,
+            output_sink,
+            preallocated_parsing_buffer_size: settings
+                .memory_settings
+                .preallocated_parsing_buffer_size,
+            memory_limiter,
+            encoding,
+            strict: settings.strict,
+        });
+
+        Ok(HtmlRewriter {
+            stream,
+            finished: false,
+            poisoned: false,
+        })
+    }
+
     #[inline]
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         assert!(
@@ -180,14 +152,13 @@ mod tests {
 
     #[test]
     fn unknown_encoding() {
-        let err = HtmlRewriter::try_from(Settings {
-            element_content_handlers: vec![],
-            document_content_handlers: vec![],
-            encoding: "hey-yo",
-            memory_settings: MemorySettings::default(),
-            output_sink: |_: &[u8]| {},
-            strict: true,
-        })
+        let err = HtmlRewriter::try_new(
+            Settings {
+                encoding: "hey-yo",
+                ..Settings::default()
+            },
+            |_: &[u8]| {},
+        )
         .unwrap_err();
 
         assert_eq!(err, EncodingError::UnknownEncoding);
@@ -195,14 +166,13 @@ mod tests {
 
     #[test]
     fn non_ascii_compatible_encoding() {
-        let err = HtmlRewriter::try_from(Settings {
-            element_content_handlers: vec![],
-            document_content_handlers: vec![],
-            encoding: "utf-16be",
-            memory_settings: MemorySettings::default(),
-            output_sink: |_: &[u8]| {},
-            strict: true,
-        })
+        let err = HtmlRewriter::try_new(
+            Settings {
+                encoding: "utf-16be",
+                ..Settings::default()
+            },
+            |_: &[u8]| {},
+        )
         .unwrap_err();
 
         assert_eq!(err, EncodingError::NonAsciiCompatibleEncoding);
@@ -214,19 +184,17 @@ mod tests {
             let mut doctypes = Vec::default();
 
             {
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![],
-                    document_content_handlers: vec![DocumentContentHandlers::default().doctype(
-                        |d| {
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        document_content_handlers: vec![doctype!(|d| {
                             doctypes.push((d.name(), d.public_id(), d.system_id()));
                             Ok(())
-                        },
-                    )],
-                    encoding: enc.name(),
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |_: &[u8]| {},
-                    strict: true,
-                })
+                        })],
+                        encoding: enc.name(),
+                        ..Settings::default()
+                    },
+                    |_: &[u8]| {},
+                )
                 .unwrap();
 
                 write_chunks(
@@ -263,21 +231,18 @@ mod tests {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![(
-                        &"*".parse().unwrap(),
-                        ElementContentHandlers::default().element(|el| {
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        element_content_handlers: vec![element!("*", |el| {
                             el.set_attribute("foo", "bar").unwrap();
                             el.prepend("<test></test>", ContentType::Html);
                             Ok(())
-                        }),
-                    )],
-                    document_content_handlers: vec![],
-                    encoding: enc.name(),
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |c: &[u8]| output.push(c),
-                    strict: true,
-                })
+                        })],
+                        encoding: enc.name(),
+                        ..Settings::default()
+                    },
+                    |c: &[u8]| output.push(c),
+                )
                 .unwrap();
 
                 write_chunks(
@@ -318,25 +283,27 @@ mod tests {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![],
-                    document_content_handlers: vec![DocumentContentHandlers::default()
-                        .comments(|c| {
-                            c.set_text(&(c.text() + "1337")).unwrap();
-                            Ok(())
-                        })
-                        .text(|c| {
-                            if c.last_in_text_node() {
-                                c.after("BAZ", ContentType::Text);
-                            }
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        element_content_handlers: vec![],
+                        document_content_handlers: vec![
+                            doc_comments!(|c| {
+                                c.set_text(&(c.text() + "1337")).unwrap();
+                                Ok(())
+                            }),
+                            doc_text!(|c| {
+                                if c.last_in_text_node() {
+                                    c.after("BAZ", ContentType::Text);
+                                }
 
-                            Ok(())
-                        })],
-                    encoding: enc.name(),
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |c: &[u8]| output.push(c),
-                    strict: true,
-                })
+                                Ok(())
+                            }),
+                        ],
+                        encoding: enc.name(),
+                        ..Settings::default()
+                    },
+                    |c: &[u8]| output.push(c),
+                )
                 .unwrap();
 
                 write_chunks(
@@ -381,34 +348,30 @@ mod tests {
 
         macro_rules! create_handlers {
             ($sel:expr, $idx:expr) => {
-                (
-                    &$sel.parse().unwrap(),
-                    ElementContentHandlers::default().element({
-                        let handlers_executed = Rc::clone(&handlers_executed);
+                element!($sel, {
+                    let handlers_executed = Rc::clone(&handlers_executed);
 
-                        move |_| {
-                            handlers_executed.borrow_mut().push($idx);
-                            Ok(())
-                        }
-                    }),
-                )
+                    move |_| {
+                        handlers_executed.borrow_mut().push($idx);
+                        Ok(())
+                    }
+                })
             };
         }
 
-        let mut rewriter = HtmlRewriter::try_from(Settings {
-            element_content_handlers: vec![
-                create_handlers!("div span", 0),
-                create_handlers!("div > span", 1),
-                create_handlers!("span", 2),
-                create_handlers!("[foo]", 3),
-                create_handlers!("div span[foo]", 4),
-            ],
-            document_content_handlers: vec![],
-            encoding: "utf-8",
-            memory_settings: MemorySettings::default(),
-            output_sink: |_: &[u8]| {},
-            strict: true,
-        })
+        let mut rewriter = HtmlRewriter::try_new(
+            Settings {
+                element_content_handlers: vec![
+                    create_handlers!("div span", 0),
+                    create_handlers!("div > span", 1),
+                    create_handlers!("span", 2),
+                    create_handlers!("[foo]", 3),
+                    create_handlers!("div span[foo]", 4),
+                ],
+                ..Settings::default()
+            },
+            |_: &[u8]| {},
+        )
         .unwrap();
 
         rewriter.write(b"<div><span foo></span></div>").unwrap();
@@ -425,20 +388,17 @@ mod tests {
             max_allowed_memory_usage: usize,
             output_sink: O,
         ) -> HtmlRewriter<'static, O> {
-            HtmlRewriter::try_from(Settings {
-                element_content_handlers: vec![(
-                    &"*".parse().unwrap(),
-                    ElementContentHandlers::default().element(|_| Ok(())),
-                )],
-                document_content_handlers: vec![],
-                encoding: "utf-8",
-                memory_settings: MemorySettings {
-                    max_allowed_memory_usage,
-                    preallocated_parsing_buffer_size: 0,
+            HtmlRewriter::try_new(
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: MemorySettings {
+                        max_allowed_memory_usage,
+                        preallocated_parsing_buffer_size: 0,
+                    },
+                    ..Settings::default()
                 },
                 output_sink,
-                strict: true,
-            })
+            )
             .unwrap()
         }
 
@@ -509,14 +469,14 @@ mod tests {
                 document_handlers: DocumentContentHandlers,
                 expected_err: &'static str,
             ) {
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![(&"*".parse().unwrap(), element_handlers)],
-                    document_content_handlers: vec![document_handlers],
-                    encoding: "utf-8",
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |_: &[u8]| {},
-                    strict: true,
-                })
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        element_content_handlers: vec![(&"*".parse().unwrap(), element_handlers)],
+                        document_content_handlers: vec![document_handlers],
+                        ..Settings::default()
+                    },
+                    |_: &[u8]| {},
+                )
                 .unwrap();
 
                 let chunks = [
@@ -547,24 +507,22 @@ mod tests {
 
                 assert_eq!(err, expected_err);
             }
+
             assert_err(
                 ElementContentHandlers::default(),
-                DocumentContentHandlers::default()
-                    .comments(|_| Err(format_err!("Error in doc comment handler"))),
+                doc_comments!(|_| Err(format_err!("Error in doc comment handler"))),
                 "Error in doc comment handler",
             );
 
             assert_err(
                 ElementContentHandlers::default(),
-                DocumentContentHandlers::default()
-                    .text(|_| Err(format_err!("Error in doc text handler"))),
+                doc_text!(|_| Err(format_err!("Error in doc text handler"))),
                 "Error in doc text handler",
             );
 
             assert_err(
                 ElementContentHandlers::default(),
-                DocumentContentHandlers::default()
-                    .text(|_| Err(format_err!("Error in doctype handler"))),
+                doc_text!(|_| Err(format_err!("Error in doctype handler"))),
                 "Error in doctype handler",
             );
 

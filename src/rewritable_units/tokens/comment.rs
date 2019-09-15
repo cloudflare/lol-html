@@ -111,7 +111,7 @@ mod tests {
             html,
             encoding,
             vec![],
-            vec![DocumentContentHandlers::default().comments(|c| {
+            vec![doc_comments!(|c| {
                 handler_called = true;
                 handler(c);
                 Ok(())

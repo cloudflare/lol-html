@@ -1,4 +1,4 @@
-use super::content_handlers::*;
+use super::settings::*;
 use super::ElementDescriptor;
 use crate::rewritable_units::{Element, StartTag, Token, TokenCaptureFlags};
 use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};

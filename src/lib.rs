@@ -7,15 +7,19 @@ mod base;
 #[macro_use]
 mod html;
 
+#[macro_use]
+mod rewriter;
+
 mod memory;
 mod parser;
 mod rewritable_units;
-mod rewriter;
 mod transform_stream;
 
 use cfg_if::cfg_if;
 
-pub use self::rewriter::{DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, Settings, MemorySettings};
+pub use self::rewriter::{
+    DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, MemorySettings, Settings,
+};
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
 

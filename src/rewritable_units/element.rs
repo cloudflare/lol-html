@@ -325,25 +325,18 @@ mod tests {
             html,
             encoding,
             vec![
-                (
-                    &selector.parse().unwrap(),
-                    ElementContentHandlers::default().element(|el| {
-                        handler_called = true;
-                        handler(el);
-                        Ok(())
-                    }),
-                ),
-                (
-                    // NOTE: used to test inner content removal
-                    &"inner-remove-me".parse().unwrap(),
-                    ElementContentHandlers::default().element(|el| {
-                        el.before("[before: should be removed]", ContentType::Text);
-                        el.after("[after: should be removed]", ContentType::Text);
-                        el.append("[append: should be removed]", ContentType::Text);
-                        el.before("[before: should be removed]", ContentType::Text);
-                        Ok(())
-                    }),
-                ),
+                element!(selector, |el| {
+                    handler_called = true;
+                    handler(el);
+                    Ok(())
+                }),
+                element!("inner-remove-me", |el| {
+                    el.before("[before: should be removed]", ContentType::Text);
+                    el.after("[after: should be removed]", ContentType::Text);
+                    el.append("[append: should be removed]", ContentType::Text);
+                    el.before("[before: should be removed]", ContentType::Text);
+                    Ok(())
+                }),
             ],
             vec![],
         );
@@ -752,27 +745,18 @@ mod tests {
             b"<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
             UTF_8,
             vec![
-                (
-                    &"div".parse().unwrap(),
-                    ElementContentHandlers::default().element(|el| {
-                        el.replace("hey & ya", ContentType::Html);
-                        Ok(())
-                    }),
-                ),
-                (
-                    &"h1".parse().unwrap(),
-                    ElementContentHandlers::default().element(|el| {
-                        el.remove();
-                        Ok(())
-                    }),
-                ),
-                (
-                    &"h2".parse().unwrap(),
-                    ElementContentHandlers::default().element(|el| {
-                        el.remove_and_keep_content();
-                        Ok(())
-                    }),
-                ),
+                element!("div", |el| {
+                    el.replace("hey & ya", ContentType::Html);
+                    Ok(())
+                }),
+                element!("h1", |el| {
+                    el.remove();
+                    Ok(())
+                }),
+                element!("h2", |el| {
+                    el.remove_and_keep_content();
+                    Ok(())
+                }),
             ],
             vec![],
         );

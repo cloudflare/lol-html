@@ -12,12 +12,11 @@ use libc::{c_char, c_void, size_t};
 use rand::Rng;
 use std::ffi::{CStr, CString};
 
+use cool_thing::html_content::ContentType;
 use cool_thing::{
-    ContentType, DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, MemorySettings,
-    Settings,
+    comments, doc_comments, doc_text, element, text, HtmlRewriter, MemorySettings, Settings,
 };
 use encoding_rs::*;
-use std::convert::TryFrom;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -104,95 +103,85 @@ fn get_random_selector() -> &'static str {
 }
 
 fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &str) -> () {
-    let mut rewriter = HtmlRewriter::try_from(Settings {
-        element_content_handlers: vec![
-            (
-                &selector.parse().expect("Unsupported selector"),
-                ElementContentHandlers::default()
-                    .element(|el| {
-                        el.before(
-                            &format!("<!--[ELEMENT('{}')]-->", selector),
-                            ContentType::Html,
-                        );
-                        el.after(
-                            &format!("<!--[/ELEMENT('{}')]-->", selector),
-                            ContentType::Html,
-                        );
-                        el.set_inner_content(
-                            &format!("<!--Replaced ({}) -->", selector),
-                            ContentType::Html,
-                        );
+    let mut rewriter = HtmlRewriter::try_new(
+        Settings {
+            element_content_handlers: vec![
+                element!(selector, |el| {
+                    el.before(
+                        &format!("<!--[ELEMENT('{}')]-->", selector),
+                        ContentType::Html,
+                    );
+                    el.after(
+                        &format!("<!--[/ELEMENT('{}')]-->", selector),
+                        ContentType::Html,
+                    );
+                    el.set_inner_content(
+                        &format!("<!--Replaced ({}) -->", selector),
+                        ContentType::Html,
+                    );
 
-                        Ok(())
-                    })
-                    .comments(|c| {
-                        c.before(
-                            &format!("<!--[COMMENT('{}')]-->", selector),
+                    Ok(())
+                }),
+                comments!(selector, |c| {
+                    c.before(
+                        &format!("<!--[COMMENT('{}')]-->", selector),
+                        ContentType::Html,
+                    );
+                    c.after(
+                        &format!("<!--[/COMMENT('{}')]-->", selector),
+                        ContentType::Html,
+                    );
+
+                    Ok(())
+                }),
+                text!(selector, |t| {
+                    t.before(&format!("<!--[TEXT('{}')]-->", selector), ContentType::Html);
+
+                    if t.last_in_text_node() {
+                        t.after(
+                            &format!("<!--[/TEXT('{}')]-->", selector),
                             ContentType::Html,
                         );
-                        c.after(
-                            &format!("<!--[/COMMENT('{}')]-->", selector),
-                            ContentType::Html,
-                        );
+                    }
 
-                        Ok(())
-                    })
-                    .text(|t| {
-                        t.before(&format!("<!--[TEXT('{}')]-->", selector), ContentType::Html);
-
-                        if t.last_in_text_node() {
-                            t.after(
-                                &format!("<!--[/TEXT('{}')]-->", selector),
-                                ContentType::Html,
-                            );
-                        }
-
-                        Ok(())
-                    }),
-            ),
-            (
-                &selector.parse().expect("Unsupported selector"),
-                ElementContentHandlers::default().element(|el| {
+                    Ok(())
+                }),
+                element!(selector, |el| {
                     el.replace("hey & ya", ContentType::Html);
 
                     Ok(())
                 }),
-            ),
-            (
-                &selector.parse().expect("Unsupported selector"),
-                ElementContentHandlers::default().element(|el| {
+                element!(selector, |el| {
                     el.remove();
 
                     Ok(())
                 }),
-            ),
-            (
-                &selector.parse().expect("Unsupported selector"),
-                ElementContentHandlers::default().element(|el| {
+                element!(selector, |el| {
                     el.remove_and_keep_content();
 
                     Ok(())
                 }),
-            ),
-        ],
-        document_content_handlers: vec![DocumentContentHandlers::default()
-            .comments(|c| {
-                c.set_text(&"123456").unwrap();
+            ],
+            document_content_handlers: vec![
+                doc_comments!(|c| {
+                    c.set_text(&"123456").unwrap();
 
-                Ok(())
-            })
-            .text(|c| {
-                if c.last_in_text_node() {
-                    c.after("BAZ", ContentType::Text);
-                }
+                    Ok(())
+                }),
+                doc_text!(|t| {
+                    if t.last_in_text_node() {
+                        t.after("BAZ", ContentType::Text);
+                    }
 
-                Ok(())
-            })],
-        encoding,
-        memory_settings: MemorySettings::default(),
-        output_sink: |_: &[u8]| {},
-        strict: false,
-    })
+                    Ok(())
+                }),
+            ],
+            encoding,
+            memory_settings: MemorySettings::default(),
+            strict: false,
+        },
+        |_: &[u8]| {},
+    )
     .unwrap();
 
     rewriter.write(data).unwrap();

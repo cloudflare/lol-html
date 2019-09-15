@@ -105,7 +105,7 @@ mod tests {
             html,
             encoding,
             vec![],
-            vec![DocumentContentHandlers::default().doctype(|c| {
+            vec![doctype!(|c| {
                 handler_called = true;
                 handler(c);
                 Ok(())
