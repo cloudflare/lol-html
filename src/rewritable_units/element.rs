@@ -161,6 +161,31 @@ impl<'r, 't> Element<'r, 't> {
     /// Inserts `content` before the element.
     ///
     /// Consequent calls to the method append `content` to the previously inserted content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div id="foo"></div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("#foo", |el| {
+    ///                 el.before("<bar>", ContentType::Html);
+    ///                 el.before("<qux>", ContentType::Html);
+    ///                 el.before("<quz>", ContentType::Text);
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<bar><qux>&lt;quz&gt;<div id="foo"></div>"#);
+    /// ```
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.start_tag.mutations.before(content, content_type);
@@ -169,6 +194,31 @@ impl<'r, 't> Element<'r, 't> {
     /// Inserts `content` after the element.
     ///
     /// Consequent calls to the method prepend `content` to the previously inserted content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div id="foo"></div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("#foo", |el| {
+    ///                 el.after("<bar>", ContentType::Html);
+    ///                 el.after("<qux>", ContentType::Html);
+    ///                 el.after("<quz>", ContentType::Text);
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div id="foo"></div>&lt;quz&gt;<qux><bar>"#);
+    /// ```
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
@@ -185,6 +235,34 @@ impl<'r, 't> Element<'r, 't> {
     /// A call to the method doesn't make any effect if the element is an [empty element].
     ///
     /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    /// use cool_thing::html_content::{ContentType, Element};
+    ///
+    /// let handler = |el: &mut Element| {
+    ///     el.prepend("<bar>", ContentType::Html);
+    ///     el.prepend("<qux>", ContentType::Html);
+    ///     el.prepend("<quz>", ContentType::Text);
+    ///
+    ///     Ok(())
+    /// };
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div id="foo"><!-- content --></div><img>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("#foo", handler),
+    ///             element!("img", handler),
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div id="foo">&lt;quz&gt;<qux><bar><!-- content --></div><img>"#);
+    /// ```
     #[inline]
     pub fn prepend(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
@@ -199,6 +277,34 @@ impl<'r, 't> Element<'r, 't> {
     /// A call to the method doesn't make any effect if the element is an [empty element].
     ///
     /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    /// use cool_thing::html_content::{ContentType, Element};
+    ///
+    /// let handler = |el: &mut Element| {
+    ///     el.append("<bar>", ContentType::Html);
+    ///     el.append("<qux>", ContentType::Html);
+    ///     el.append("<quz>", ContentType::Text);
+    ///
+    ///     Ok(())
+    /// };
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div id="foo"><!-- content --></div><img>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("#foo", handler),
+    ///             element!("img", handler),
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div id="foo"><!-- content --><bar><qux>&lt;quz&gt;</div><img>"#);
+    /// ```
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
@@ -208,10 +314,38 @@ impl<'r, 't> Element<'r, 't> {
 
     /// Replaces inner content of the element with `content`.
     ///
-    /// Consequent calls to the method append `content` to the previously inserted content.
+    /// Consequent calls to the method overwrite previously inserted content.
     /// A call to the method doesn't make any effect if the element is an [empty element].
     ///
     /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    /// use cool_thing::html_content::{ContentType, Element};
+    ///
+    /// let handler = |el: &mut Element| {
+    ///     el.append("<!-- only one -->", ContentType::Html);
+    ///     el.set_inner_content("<!-- will -->", ContentType::Html);
+    ///     el.set_inner_content("<!-- survive -->", ContentType::Html);
+    ///
+    ///     Ok(())
+    /// };
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div id="foo"><!-- content --></div><img>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("#foo", handler),
+    ///             element!("img", handler),
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div id="foo"><!-- survive --></div><img>"#);
+    /// ```
     #[inline]
     pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
         if self.can_have_content {
@@ -223,6 +357,30 @@ impl<'r, 't> Element<'r, 't> {
     /// Replaces the element and its inner content with `content`.
     ///
     /// Consequent calls to the method overwrite previously inserted content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div id="foo"></div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("#foo", |el| {
+    ///                 el.replace("<span></span>", ContentType::Html);
+    ///                 el.replace("Hello", ContentType::Text);
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"Hello"#);
+    /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
         self.start_tag.mutations.replace(content, content_type);
@@ -245,6 +403,28 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     /// Removes the element, but keeps its content. I.e. remove start and end tags of the element.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div><span><!-- 42 --></span></div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("div", |el| {
+    ///                 el.remove_and_keep_content();
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<span><!-- 42 --></span>"#);
+    /// ```
     #[inline]
     pub fn remove_and_keep_content(&mut self) {
         self.start_tag.mutations.remove();

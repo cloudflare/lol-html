@@ -9,6 +9,27 @@ use std::fmt::{self, Debug};
 /// Note that unlike other HTML content, `Doctype` can't be modified and should be used only for
 /// the examination purposes.
 ///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, doctype, RewriteStrSettings};
+///
+/// rewrite_str(
+///     r#"<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd""#,
+///     RewriteStrSettings {
+///         document_content_handlers: vec![
+///             doctype!(|d| {
+///                 assert_eq!(d.name(), Some("html".into()));
+///                 assert_eq!(d.public_id(), Some("-//W3C//DTD XHTML 1.0 Transitional//EN".into()));
+///                 assert_eq!(d.system_id(), Some("DTD/xhtml1-transitional.dtd".into()));
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+/// ```
+///
 /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
 pub struct Doctype<'i> {
     name: Option<Bytes<'i>>,

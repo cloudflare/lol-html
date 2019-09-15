@@ -4,10 +4,55 @@ pub use self::element::*;
 pub use self::mutations::{ContentType, Mutations};
 pub use self::tokens::*;
 
-/// TODO docs with examples
+/// Data that can be attached to a rewritable unit by a user and shared between content handler
+/// invocations.
+///
+/// Same rewritable units can be passed to different content handlers if all of them capture the
+/// unit. `UserData` trait provides capability to attach arbitrary data to a rewritable unit, so
+/// handlers can make decision on how to process the unit based on the information provided by
+/// previous handlers.
+///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+/// use cool_thing::html_content::UserData;
+///
+/// rewrite_str(
+///     r#"<div id="foo"></div>"#,
+///     RewriteStrSettings {
+///         element_content_handlers: vec![
+///             element!("*", |el| {
+///                 el.set_user_data("Captured by `*`");
+///
+///                 Ok(())
+///             }),
+///             element!("#foo", |el| {
+///                 let user_data = el.user_data_mut().downcast_mut::<&'static str>().unwrap();
+///
+///                 assert_eq!(*user_data, "Captured by `*`");
+///
+///                 *user_data = "Captured by `#foo`";
+///
+///                 Ok(())
+///             }),
+///             element!("div", |el| {
+///                 let user_data = el.user_data().downcast_ref::<&'static str>().unwrap();
+///
+///                 assert_eq!(*user_data, "Captured by `#foo`");
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+/// ```
 pub trait UserData {
+    /// Returns a reference to the attached user data.
     fn user_data(&self) -> &dyn Any;
+    /// Returns a mutable reference to the attached user data.
     fn user_data_mut(&mut self) -> &mut dyn Any;
+    /// Attaches user data to a rewritable unit.
     fn set_user_data(&mut self, data: impl Any);
 }
 

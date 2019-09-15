@@ -18,6 +18,40 @@ use std::fmt::{self, Debug};
 ///
 /// Note that the last chunk in a text node can have empty textual content.
 ///
+/// # Example
+/// ```
+/// use cool_thing::{HtmlRewriter, Settings, text};
+///
+/// let mut greeting = String::new();
+///
+/// {
+///     let mut rewriter = HtmlRewriter::try_new(
+///         Settings {
+///            element_content_handlers: vec![
+///                text!("div", |t| {
+///                  greeting += t.as_str();
+///
+///                  if t.last_in_text_node() {
+///                         greeting += "!";
+///                     }
+///
+///                     Ok(())
+///                 })
+///             ],
+///             ..Settings::default()
+///         },
+///         |_:&[u8]| {}
+///     ).unwrap();
+///
+///     rewriter.write(b"<div>He").unwrap();
+///     rewriter.write(b"llo w").unwrap();
+///     rewriter.write(b"orld</div>").unwrap();
+///     rewriter.end().unwrap();
+/// }
+///
+/// assert_eq!(greeting, "Hello world!");
+/// ```
+///
 /// [`last_in_text_node`]: #method.last_in_text_node
 pub struct TextChunk<'i> {
     text: Cow<'i, str>,
@@ -58,6 +92,32 @@ impl<'i> TextChunk<'i> {
     /// for more information about possible text types.
     ///
     /// [`TextType`]: enum.TextType.html
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
+    /// use cool_thing::html_content::TextType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div>Hello</div><script>"use strict";</script>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             text!("div", |t| {
+    ///                 assert_eq!(t.text_type(), TextType::Data);
+    ///
+    ///                 Ok(())
+    ///             }),
+    ///             text!("script", |t| {
+    ///                 assert_eq!(t.text_type(), TextType::ScriptData);
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    /// ```
     #[inline]
     pub fn text_type(&self) -> TextType {
         self.text_type
@@ -69,6 +129,120 @@ impl<'i> TextChunk<'i> {
     #[inline]
     pub fn last_in_text_node(&self) -> bool {
         self.last_in_text_node
+    }
+
+    /// Inserts `content` before the text chunk.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div>world</div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             text!("div", |t| {
+    ///                 if !t.last_in_text_node(){
+    ///                     t.before("<!-- 42 -->", ContentType::Html);
+    ///                     t.before("Hello ", ContentType::Text);
+    ///                 }
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div><!-- 42 -->Hello world</div>"#);
+    /// ```
+    #[inline]
+    pub fn before(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
+        self.mutations.before(content, content_type);
+    }
+
+    /// Inserts `content` after the text chunk.
+    ///
+    /// Consequent calls to the method prepend `content` to the previously inserted content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div>Foo</div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             text!("div", |t| {
+    ///                 if t.last_in_text_node(){
+    ///                     t.after("Bar", ContentType::Text);
+    ///                     t.after("Qux", ContentType::Text);
+    ///                 }
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div>FooQuxBar</div>"#);
+    /// ```
+    #[inline]
+    pub fn after(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
+        self.mutations.after(content, content_type);
+    }
+
+    /// Replaces the text chunk with the `content`.
+    ///
+    /// Consequent calls to the method overwrite previous replacement content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div>Foo</div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             text!("div", |t| {
+    ///                 if !t.last_in_text_node(){
+    ///                     t.replace("Bar", ContentType::Text);
+    ///                     t.replace("Qux", ContentType::Text);
+    ///                 }
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div>Qux</div>"#);
+    /// ```
+    #[inline]
+    pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
+        self.mutations.replace(content, content_type);
+    }
+
+    /// Removes the text chunk.
+    #[inline]
+    pub fn remove(&mut self) {
+        self.mutations.remove();
+    }
+
+    /// Returns `true` if the text chunk has been replaced or removed.
+    #[inline]
+    pub fn removed(&self) -> bool {
+        self.mutations.removed()
     }
 
     #[inline]
@@ -84,7 +258,6 @@ impl<'i> TextChunk<'i> {
     }
 }
 
-inject_mutation_api!(TextChunk, "text chunk");
 impl_serialize!(TextChunk);
 impl_user_data!(TextChunk<'_>);
 
