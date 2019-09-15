@@ -60,19 +60,19 @@ macro_rules! err_msg_tmpl {
     };
 }
 
-#[derive(Fail, Debug)]
-pub enum AmbiguityGuardError {
+#[derive(Fail, Debug, PartialEq)]
+pub enum ParsingAmbiguityError {
     TextParsingAmbiguity { on_tag_name: String },
     MaxTemplateNestingReached { depth_limit: usize },
 }
 
-impl Display for AmbiguityGuardError {
+impl Display for ParsingAmbiguityError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AmbiguityGuardError::TextParsingAmbiguity { on_tag_name } => {
+            ParsingAmbiguityError::TextParsingAmbiguity { on_tag_name } => {
                 write!(f, err_msg_tmpl!(text_parsing_ambiguity), on_tag_name)
             }
-            AmbiguityGuardError::MaxTemplateNestingReached { depth_limit } => {
+            ParsingAmbiguityError::MaxTemplateNestingReached { depth_limit } => {
                 write!(f, err_msg_tmpl!(max_template_nesting_reached), depth_limit)
             }
         }
@@ -97,9 +97,9 @@ macro_rules! create_assert_for_tags {
         #[inline]
         fn assert_not_ambigious_text_type_switch(
             tag_name: LocalNameHash,
-        ) -> Result<(), AmbiguityGuardError> {
+        ) -> Result<(), ParsingAmbiguityError> {
             if tag_is_one_of!(tag_name, [ $($tag),+ ]) {
-                Err(AmbiguityGuardError::TextParsingAmbiguity {
+                Err(ParsingAmbiguityError::TextParsingAmbiguity {
                     on_tag_name: tag_hash_to_string(tag_name)
                 })
             } else {
@@ -134,7 +134,10 @@ impl Default for AmbiguityGuard {
 }
 
 impl AmbiguityGuard {
-    pub fn track_start_tag(&mut self, tag_name: LocalNameHash) -> Result<(), AmbiguityGuardError> {
+    pub fn track_start_tag(
+        &mut self,
+        tag_name: LocalNameHash,
+    ) -> Result<(), ParsingAmbiguityError> {
         match self.state {
             State::Default => {
                 if tag_name == Tag::Select {
@@ -160,7 +163,7 @@ impl AmbiguityGuard {
                 if tag_name == Tag::Template {
                     // TODO: make depth limit adjustable
                     if depth == u8::max_value() {
-                        return Err(AmbiguityGuardError::MaxTemplateNestingReached {
+                        return Err(ParsingAmbiguityError::MaxTemplateNestingReached {
                             depth_limit: u8::max_value() as usize,
                         });
                     }

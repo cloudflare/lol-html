@@ -6,7 +6,9 @@ mod settings;
 
 use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::*;
+use crate::memory::MemoryLimitExceededError;
 use crate::memory::MemoryLimiter;
+use crate::parser::ParsingAmbiguityError;
 use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
@@ -33,6 +35,16 @@ pub enum EncodingError {
     UnknownEncoding,
     #[fail(display = "Expected ASCII-compatible encoding.")]
     NonAsciiCompatibleEncoding,
+}
+
+#[derive(Fail, Debug)]
+pub enum RewritingError {
+    #[fail(display = "{}", _0)]
+    MemoryLimitExceeded(MemoryLimitExceededError),
+    #[fail(display = "{}", _0)]
+    ParsingAmbiguity(ParsingAmbiguityError),
+    #[fail(display = "{}", _0)]
+    ContentHandlerError(Error),
 }
 
 pub struct HtmlRewriter<'h, O: OutputSink> {
@@ -101,7 +113,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     }
 
     #[inline]
-    pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
+    pub fn write(&mut self, data: &[u8]) -> Result<(), RewritingError> {
         assert!(
             !self.finished,
             "Data was written into the stream after it has ended."
@@ -111,7 +123,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     }
 
     #[inline]
-    pub fn end(&mut self) -> Result<(), Error> {
+    pub fn end(&mut self) -> Result<(), RewritingError> {
         assert!(!self.finished, "Stream was ended twice.");
         self.finished = true;
 
@@ -131,7 +143,7 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
 pub fn rewrite_str<'h, 's>(
     html: &str,
     settings: RewriteStrSettings<'h, 's>,
-) -> Result<String, Error> {
+) -> Result<String, RewritingError> {
     let mut output = vec![];
 
     // NOTE: never panics because encoding is always "utf-8".
@@ -457,18 +469,16 @@ mod tests {
 
             let write_err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
 
-            let buffer_capacity_err = write_err
-                .find_root_cause()
-                .downcast_ref::<MemoryLimitExceededError>()
-                .unwrap();
-
-            assert_eq!(
-                *buffer_capacity_err,
-                MemoryLimitExceededError {
-                    current_usage: mem_used,
-                    max: MAX
-                }
-            );
+            match write_err {
+                RewritingError::MemoryLimitExceeded(e) => assert_eq!(
+                    e,
+                    MemoryLimitExceededError {
+                        current_usage: mem_used,
+                        max: MAX
+                    }
+                ),
+                _ => panic!(write_err),
+            }
         }
 
         #[test]

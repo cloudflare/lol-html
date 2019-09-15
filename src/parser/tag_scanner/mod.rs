@@ -6,9 +6,9 @@ use crate::base::{Align, Chunk, Cursor, Range};
 use crate::html::{LocalName, LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{FeedbackDirective, StateMachine, StateResult};
 use crate::parser::{
-    AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
+    ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback, TreeBuilderSimulator,
 };
-use failure::Error;
+use crate::rewriter::RewritingError;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::rc::Rc;
@@ -18,8 +18,8 @@ pub trait TagHintSink {
         &mut self,
         name: LocalName,
         ns: Namespace,
-    ) -> Result<ParserDirective, Error>;
-    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, Error>;
+    ) -> Result<ParserDirective, RewritingError>;
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, RewritingError>;
 }
 
 pub type State<S> = fn(&mut TagScanner<S>, &Chunk) -> StateResult;
@@ -77,7 +77,7 @@ impl<S: TagHintSink> TagScanner<S> {
         }
     }
 
-    fn emit_tag_hint(&mut self, input: &Chunk) -> Result<ParserDirective, Error> {
+    fn emit_tag_hint(&mut self, input: &Chunk) -> Result<ParserDirective, RewritingError> {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.input_cursor.pos(),
@@ -102,7 +102,7 @@ impl<S: TagHintSink> TagScanner<S> {
     #[inline]
     fn try_apply_tree_builder_feedback(
         &mut self,
-    ) -> Result<Option<TreeBuilderFeedback>, AmbiguityGuardError> {
+    ) -> Result<Option<TreeBuilderFeedback>, ParsingAmbiguityError> {
         let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
 
         let feedback = if self.is_in_end_tag {

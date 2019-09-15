@@ -9,10 +9,9 @@ mod stack;
 use self::program::AddressRange;
 use self::stack::StackDirective;
 use crate::html::{LocalName, Namespace};
-use crate::memory::SharedMemoryLimiter;
+use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
-use failure::Error;
 
 pub use self::ast::*;
 pub use self::attribute_matcher::AttributeMatcher;
@@ -32,12 +31,12 @@ pub type AuxStartTagInfoRequest<E, P> = Box<
         &mut SelectorMatchingVm<E>,
         AuxStartTagInfo,
         &mut dyn FnMut(MatchInfo<P>),
-    ) -> Result<(), Error>,
+    ) -> Result<(), MemoryLimitExceededError>,
 >;
 
 pub enum VmError<E: ElementData, MatchPayload> {
     InfoRequest(AuxStartTagInfoRequest<E, MatchPayload>),
-    Fatal(Error),
+    MemoryLimitExceeded(MemoryLimitExceededError),
 }
 
 type RecoveryPointHandler<T, E, P> = fn(
@@ -165,8 +164,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
 
             return aux_info_request!(move |this: &mut SelectorMatchingVm<E>,
                                            aux_info: AuxStartTagInfo,
-                                           match_handler|
-                  -> Result<(), Error> {
+                                           match_handler| {
                 let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ns);
 
                 ctx.with_content = !aux_info.self_closing;
@@ -226,7 +224,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
     ) -> Result<(), VmError<E, E::MatchPayload>> {
         let mut ctx = ctx.into_owned();
 
-        aux_info_request!(move |this, aux_info, match_handler| -> Result<(), Error> {
+        aux_info_request!(move |this, aux_info, match_handler| {
             let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ctx.ns);
 
             this.complete_instr_execution_with_attrs(
@@ -328,7 +326,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         if ctx.with_content {
             self.stack
                 .push_item(ctx.stack_item.into_owned())
-                .map_err(|e| VmError::Fatal(e.into()))
+                .map_err(VmError::MemoryLimitExceeded)
         } else {
             Ok(())
         }
@@ -522,6 +520,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errors::RewritingError;
     use crate::html::Namespace;
     use crate::memory::MemoryLimiter;
     use crate::rewritable_units::{Token, TokenCaptureFlags};
@@ -529,7 +528,6 @@ mod tests {
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
     };
     use encoding_rs::UTF_8;
-    use failure::Error;
     use std::collections::{HashMap, HashSet};
 
     struct Expectation {
@@ -586,7 +584,7 @@ mod tests {
                 TokenCaptureFlags::all()
             }
 
-            fn handle_token(&mut self, token: &mut Token) -> Result<(), Error> {
+            fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
                 (self.0)(token);
                 Ok(())
             }
@@ -675,7 +673,7 @@ mod tests {
                                         &mut match_handler,
                                     )
                                     .unwrap(),
-                                    VmError::Fatal(e) => panic!(e),
+                                    VmError::MemoryLimitExceeded(e) => panic!(e),
                                 }
                             } else {
                                 // NOTE: can't use unwrap() or expect() here, because

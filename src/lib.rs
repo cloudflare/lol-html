@@ -27,8 +27,9 @@ pub use self::transform_stream::OutputSink;
 /// The errors that can be produced by the crate's API.
 pub mod errors {
     pub use super::memory::MemoryLimitExceededError;
+    pub use super::parser::ParsingAmbiguityError;
     pub use super::rewritable_units::{AttributeNameError, CommentTextError, TagNameError};
-    pub use super::rewriter::EncodingError;
+    pub use super::rewriter::{EncodingError, RewritingError};
     pub use super::selectors_vm::SelectorError;
 }
 

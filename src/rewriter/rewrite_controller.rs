@@ -1,9 +1,9 @@
 use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
+use super::RewritingError;
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
 use crate::selectors_vm::{ElementData, MatchInfo, SelectorMatchingVm, VmError};
 use crate::transform_stream::*;
-use failure::Error;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -74,12 +74,15 @@ impl TransformController for HtmlRewriteController<'_> {
                 move |this, aux_info| {
                     let mut match_handler = this.create_match_handler();
 
-                    aux_info_req(&mut this.selector_matching_vm, aux_info, &mut match_handler)?;
+                    aux_info_req(&mut this.selector_matching_vm, aux_info, &mut match_handler)
+                        .map_err(RewritingError::MemoryLimitExceeded)?;
 
                     Ok(this.handlers_dispatcher.borrow().get_token_capture_flags())
                 },
             ))),
-            Err(VmError::Fatal(e)) => Err(DispatcherError::Fatal(e)),
+            Err(VmError::MemoryLimitExceeded(e)) => Err(DispatcherError::RewritingError(
+                RewritingError::MemoryLimitExceeded(e),
+            )),
         }
     }
 
@@ -95,10 +98,11 @@ impl TransformController for HtmlRewriteController<'_> {
     }
 
     #[inline]
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), Error> {
+    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
         self.handlers_dispatcher
             .borrow_mut()
             .handle_token(token, &mut self.selector_matching_vm)
+            .map_err(RewritingError::ContentHandlerError)
     }
 
     #[inline]

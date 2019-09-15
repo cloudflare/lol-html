@@ -42,7 +42,9 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
             .take()
             .expect("Tag start should be set at this point");
 
-        let unhandled_feedback = self.try_apply_tree_builder_feedback()?;
+        let unhandled_feedback = self
+            .try_apply_tree_builder_feedback()
+            .map_err(RewritingError::ParsingAmbiguity)?;
 
         Ok(match unhandled_feedback {
             Some(unhandled_feedback) => self.change_parser_directive(

@@ -6,9 +6,9 @@ use cool_thing::{
     LocalNameHash, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController,
     TransformStream, Namespace, TransformStreamSettings, MemoryLimiter
 };
+use cool_thing::errors::RewritingError;
 use cool_thing::html_content::TextType;
 use cool_thing::test_utils::Output;
-use failure::Error;
 
 macro_rules! expect_eql {
     ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {
@@ -70,7 +70,7 @@ impl TransformController for TestTransformController<'_> {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), Error> {
+    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
         (self.token_handler)(token);
 
         Ok(())
@@ -87,7 +87,7 @@ pub fn parse(
     initial_text_type: TextType,
     last_start_tag_name_hash: LocalNameHash,
     token_handler: TokenHandler,
-) -> Result<String, Error> {
+) -> Result<String, RewritingError> {
     let encoding = input
         .encoding()
         .expect("Input should be initialized before parsing");

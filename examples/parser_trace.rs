@@ -4,8 +4,8 @@ cfg_if! {
     if #[cfg(feature="integration_test")] {
         use cool_thing::*;
         use cool_thing::html_content::*;
+        use cool_thing::errors::*;
         use encoding_rs::UTF_8;
-        use failure::Error;
         use getopts::{Matches, Options};
         use std::env::args;
 
@@ -77,7 +77,7 @@ cfg_if! {
                 self.capture_flags
             }
 
-            fn handle_token(&mut self, _: &mut Token) -> Result<(), Error> {
+            fn handle_token(&mut self, _: &mut Token) -> Result<(), RewritingError> {
                 Ok(())
             }
 

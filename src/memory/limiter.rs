@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
 
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Fail, Debug, PartialEq, Copy, Clone)]
 #[fail(
     display = "Memory limit of {} bytes has been exceeded: {} bytes were used.",
     max, current_usage

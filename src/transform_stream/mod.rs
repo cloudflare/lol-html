@@ -3,21 +3,15 @@ mod dispatcher;
 use self::dispatcher::Dispatcher;
 use crate::base::Chunk;
 use crate::memory::{Arena, SharedMemoryLimiter};
-
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
+use crate::rewriter::RewritingError;
 use encoding_rs::Encoding;
-use failure::{Error, ResultExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use self::dispatcher::{
     AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
 };
-
-const BUFFER_ERROR_CONTEXT: &str = concat!(
-    "This is caused by the parser encountering an extremely long ",
-    "tag or a comment that is captured by the specified selector."
-);
 
 pub struct TransformStreamSettings<C, O>
 where
@@ -84,7 +78,7 @@ where
         &mut self,
         data: &[u8],
         blocked_byte_count: usize,
-    ) -> Result<(), Error> {
+    ) -> Result<(), RewritingError> {
         if self.has_buffered_data {
             self.buffer.shrink_to_last(blocked_byte_count);
         } else {
@@ -92,7 +86,7 @@ where
 
             self.buffer
                 .init_with(blocked_bytes)
-                .context(BUFFER_ERROR_CONTEXT)?;
+                .map_err(RewritingError::MemoryLimitExceeded)?;
 
             self.has_buffered_data = true;
         }
@@ -102,11 +96,13 @@ where
         Ok(())
     }
 
-    pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
+    pub fn write(&mut self, data: &[u8]) -> Result<(), RewritingError> {
         trace!(@write data);
 
         let chunk = if self.has_buffered_data {
-            self.buffer.append(data).context(BUFFER_ERROR_CONTEXT)?;
+            self.buffer
+                .append(data)
+                .map_err(RewritingError::MemoryLimitExceeded)?;
             self.buffer.bytes()
         } else {
             data
@@ -130,7 +126,7 @@ where
         Ok(())
     }
 
-    pub fn end(&mut self) -> Result<(), Error> {
+    pub fn end(&mut self) -> Result<(), RewritingError> {
         trace!(@end);
 
         let chunk = if self.has_buffered_data {
