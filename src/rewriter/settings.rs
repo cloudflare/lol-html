@@ -166,3 +166,32 @@ impl Default for Settings<'_, '_> {
         }
     }
 }
+
+impl<'h, 's> From<RewriteStrSettings<'h, 's>> for Settings<'h, 's> {
+    #[inline]
+    fn from(settings: RewriteStrSettings<'h, 's>) -> Self {
+        Settings {
+            element_content_handlers: settings.element_content_handlers,
+            document_content_handlers: settings.document_content_handlers,
+            strict: settings.strict,
+            ..Settings::default()
+        }
+    }
+}
+
+pub struct RewriteStrSettings<'h, 's> {
+    pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
+    pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
+    pub strict: bool,
+}
+
+impl Default for RewriteStrSettings<'_, '_> {
+    #[inline]
+    fn default() -> Self {
+        RewriteStrSettings {
+            element_content_handlers: vec![],
+            document_content_handlers: vec![],
+            strict: true,
+        }
+    }
+}

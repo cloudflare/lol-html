@@ -128,6 +128,25 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
     }
 }
 
+pub fn rewrite_str<'h, 's>(
+    html: &str,
+    settings: RewriteStrSettings<'h, 's>,
+) -> Result<String, Error> {
+    let mut output = vec![];
+
+    // NOTE: never panics because encoding is always "utf-8".
+    let mut rewriter = HtmlRewriter::try_new(settings.into(), |c: &[u8]| {
+        output.extend_from_slice(c);
+    })
+    .unwrap();
+
+    rewriter.write(html.as_bytes())?;
+    rewriter.end()?;
+
+    // NOTE: it's ok to unwrap here as we guarantee encoding validity of the output
+    Ok(String::from_utf8(output).unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,6 +167,29 @@ mod tests {
         }
 
         rewriter.end().unwrap();
+    }
+
+    #[test]
+    fn rewrite_html_str() {
+        let res = rewrite_str(
+            "<!-- 42 --><div><!--hi--></div>",
+            RewriteStrSettings {
+                element_content_handlers: vec![
+                    element!("div", |el| {
+                        el.set_tag_name("span").unwrap();
+                        Ok(())
+                    }),
+                    comments!("div", |c| {
+                        c.set_text("hello").unwrap();
+                        Ok(())
+                    }),
+                ],
+                ..RewriteStrSettings::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(res, "<!-- 42 --><span><!--hello--></span>");
     }
 
     #[test]
@@ -359,8 +401,9 @@ mod tests {
             };
         }
 
-        let mut rewriter = HtmlRewriter::try_new(
-            Settings {
+        let _res = rewrite_str(
+            "<div><span foo></span></div>",
+            RewriteStrSettings {
                 element_content_handlers: vec![
                     create_handlers!("div span", 0),
                     create_handlers!("div > span", 1),
@@ -368,14 +411,10 @@ mod tests {
                     create_handlers!("[foo]", 3),
                     create_handlers!("div span[foo]", 4),
                 ],
-                ..Settings::default()
+                ..RewriteStrSettings::default()
             },
-            |_: &[u8]| {},
         )
         .unwrap();
-
-        rewriter.write(b"<div><span foo></span></div>").unwrap();
-        rewriter.end().unwrap();
 
         assert_eq!(*handlers_executed.borrow(), vec![0, 1, 2, 3, 4]);
     }

@@ -18,7 +18,8 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, MemorySettings, Settings,
+    rewrite_str, DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, MemorySettings,
+    RewriteStrSettings, Settings,
 };
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
