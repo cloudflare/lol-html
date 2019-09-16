@@ -8,6 +8,7 @@ pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> Result<(), Error> + 
 pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> Result<(), Error> + 'h>;
 pub type EndTagHandler<'h> = Box<dyn FnMut(&mut EndTag) -> Result<(), Error> + 'h>;
 
+/// Specifies element content handlers associated with a selector.
 #[derive(Default)]
 pub struct ElementContentHandlers<'h> {
     pub(super) element: Option<ElementHandler<'h>>,
@@ -16,6 +17,7 @@ pub struct ElementContentHandlers<'h> {
 }
 
 impl<'h> ElementContentHandlers<'h> {
+    /// Sets a handler for elements matched by a selector.
     #[inline]
     pub fn element(mut self, handler: impl FnMut(&mut Element) -> Result<(), Error> + 'h) -> Self {
         self.element = Some(Box::new(handler));
@@ -23,6 +25,7 @@ impl<'h> ElementContentHandlers<'h> {
         self
     }
 
+    /// Sets a handler for HTML comments in the inner content of elements matched by a selector.
     #[inline]
     pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> Result<(), Error> + 'h) -> Self {
         self.comments = Some(Box::new(handler));
@@ -30,6 +33,7 @@ impl<'h> ElementContentHandlers<'h> {
         self
     }
 
+    /// Sets a handler for text chunks in the inner content of elements matched by a selector.
     #[inline]
     pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> Result<(), Error> + 'h) -> Self {
         self.text = Some(Box::new(handler));
@@ -99,6 +103,21 @@ macro_rules! doc_comments {
     };
 }
 
+/// Specifies document-level content handlers.
+///
+/// Some content can't be captured by CSS selectors as it lays outside of content of any
+/// of the HTML elements. Document-level handlers allow capture such a content:
+///
+/// ```html
+/// <!doctype html>
+/// <!--
+///     I can't be captured with a selector, but I can be
+///     captured with a document-level comment handler
+/// -->
+/// <html>
+/// <!-- I can be captured with a selector -->
+/// </html>
+/// ```
 #[derive(Default)]
 pub struct DocumentContentHandlers<'h> {
     pub(super) doctype: Option<DoctypeHandler<'h>>,
@@ -107,6 +126,9 @@ pub struct DocumentContentHandlers<'h> {
 }
 
 impl<'h> DocumentContentHandlers<'h> {
+    /// Sets a handler for the [document type declaration].
+    ///
+    /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
     #[inline]
     pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> Result<(), Error> + 'h) -> Self {
         self.doctype = Some(Box::new(handler));
@@ -114,6 +136,7 @@ impl<'h> DocumentContentHandlers<'h> {
         self
     }
 
+    /// Sets a handler for all HTML comments present in the input HTML markup.
     #[inline]
     pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> Result<(), Error> + 'h) -> Self {
         self.comments = Some(Box::new(handler));
@@ -121,6 +144,7 @@ impl<'h> DocumentContentHandlers<'h> {
         self
     }
 
+    /// Sets a handler for all text chunks present in the input HTML markup.
     #[inline]
     pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> Result<(), Error> + 'h) -> Self {
         self.text = Some(Box::new(handler));
@@ -129,10 +153,44 @@ impl<'h> DocumentContentHandlers<'h> {
     }
 }
 
+/// Specifies memory consumptions settings for the [`HtmlRewriter`].
+///
+/// [`HtmlRewriter`]: struct.HtmlRewriter.html
 // NOTE: exposed in C API as well, thus repr(C).
 #[repr(C)]
 pub struct MemorySettings {
+    /// Specifies the number of bytes that should be preallocated on [`HtmlRewriter`] instantiation
+    /// for the internal parsing buffer.
+    ///
+    /// Set to `1024` bytes when constructed with `MemorySettings::default()`.
+    ///
+    /// In some cases (e.g. when rewriter encounters a start tag represented by two or more input
+    /// chunks) the rewriter needs to buffer input content.
+    ///
+    /// Internal parsing buffer is used in such cases. Reallocations and, thus, performance
+    /// degradation can be avoided by preallocating the buffer ahead of time. As a drawback of
+    /// this approach, every instance of the rewriter will consume the preallocated amount of
+    /// memory.
+    ///
+    /// It's up to the user to adjust the limit according to their environment limitations.
+    ///
+    ///  [`HtmlRewriter`]: struct.HtmlRewriter.html
     pub preallocated_parsing_buffer_size: usize,
+    /// Sets a hard limit in bytes on memory consumption of a [`HtmlRewriter`] instance.
+    ///
+    /// Set to [`std::usize::MAX`] when constructed with `MemorySettings::default()`.
+    ///
+    /// Rewriter's [`write`] and [`end`] methods will error if this limit is exceeded.
+    ///
+    /// Note, that value doesn't reflect the exact threshold after which the rewriter will bailout.
+    /// It is impossible to account for all the memory consumed without a significant performance
+    /// penalty. So, instead, we try to provide the best approximation by measuring the memory
+    /// consumed by internal buffers that grow depending on the input.
+    ///
+    /// [`HtmlRewriter`]: struct.HtmlRewriter.html
+    /// [`std::usize::MAX`]: https://doc.rust-lang.org/std/usize/constant.MAX.html
+    /// [`write`]: struct.HtmlRewriter.html#method.write
+    /// [`end`]: struct.HtmlRewriter.html#method.end
     pub max_allowed_memory_usage: usize,
 }
 
