@@ -148,6 +148,26 @@ impl<'i> Parser<'i> for SelectorsParser {
     type Error = SelectorParseErrorKind<'i>;
 }
 
+/// Parsed CSS selector.
+///
+/// Parsed selector can be used for different [element content handlers] without a necessity
+/// to re-parse CSS selector string for each of them.
+///
+/// # Example
+///
+/// The structure implements the [`FromStr`] trait, so it can be constructed through
+/// [`str`]'s [`parse`] method.
+///
+/// ```
+/// use cool_thing::Selector;
+///
+/// let selector: Selector = "#foo".parse().unwrap();
+/// ```
+///
+/// [`str`]: https://doc.rust-lang.org/std/primitive.str.html
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [element content handlers]: struct.Settings.html#structfield.element_content_handlers
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
 #[derive(Debug)]
 pub struct Selector(pub(crate) SelectorList<SelectorImplDescriptor>);
 
