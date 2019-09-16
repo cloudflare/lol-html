@@ -53,6 +53,30 @@ macro_rules! __element_content_handler {
     };
 }
 
+/// A convenience macro to construct a rewriting handler for elements that can be matched by the
+/// specified CSS selector.
+///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+/// use cool_thing::html_content::ContentType;
+///
+/// let html = rewrite_str(
+///     r#"<span id="foo"></span>"#,
+///     RewriteStrSettings {
+///         element_content_handlers: vec![
+///             element!("#foo", |el| {
+///                 el.set_inner_content("Hello!", ContentType::Text);
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(html, r#"<span id="foo">Hello!</span>"#);
+/// ```
 #[macro_export(local_inner_macros)]
 macro_rules! element {
     ($selector:expr, $handler:expr) => {
@@ -60,6 +84,32 @@ macro_rules! element {
     };
 }
 
+/// A convenience macro to construct a rewriting handler for text chunks in the inner content of an
+/// element that can be matched by the specified CSS selector.
+///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, text, RewriteStrSettings};
+/// use cool_thing::html_content::ContentType;
+///
+/// let html = rewrite_str(
+///     r#"<span>Hello</span>"#,
+///     RewriteStrSettings {
+///         element_content_handlers: vec![
+///             text!("span", |t| {
+///                 if t.last_in_text_node() {
+///                     t.after(" world", ContentType::Text);
+///                 }
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(html, r#"<span>Hello world</span>"#);
+/// ```
 #[macro_export(local_inner_macros)]
 macro_rules! text {
     ($selector:expr, $handler:expr) => {
@@ -67,6 +117,30 @@ macro_rules! text {
     };
 }
 
+/// A convenience macro to construct a rewriting handler for HTML comments in the inner content of
+/// an element that can be matched by the specified CSS selector.
+///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
+/// use cool_thing::html_content::ContentType;
+///
+/// let html = rewrite_str(
+///     r#"<span><!-- 42 --></span>"#,
+///     RewriteStrSettings {
+///         element_content_handlers: vec![
+///             comments!("span", |c| {
+///                 c.set_text("Hello!").unwrap();
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(html, r#"<span><!--Hello!--></span>"#);
+/// ```
 #[macro_export(local_inner_macros)]
 macro_rules! comments {
     ($selector:expr, $handler:expr) => {
