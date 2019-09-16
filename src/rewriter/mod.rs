@@ -29,10 +29,19 @@ fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingEr
     }
 }
 
+/// An error that occurs if incorrect [`encoding`] label was provided in [`Settings`].
+///
+/// [`encoding`]: ../struct.Settings.html#structfield.encoding
+/// [`Settings`]: ../struct.Settings.html
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum EncodingError {
+    /// The provided value doesn't match any of the [labels specified in the standard].
+    ///
+    /// [labels specified in the standard]: https://encoding.spec.whatwg.org/#names-and-labels
     #[fail(display = "Unknown character encoding has been provided.")]
     UnknownEncoding,
+    /// The provided label is for one of the non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`,
+    /// `ISO-2022-JP` and `replacement`). These encodings are not supported.
     #[fail(display = "Expected ASCII-compatible encoding.")]
     NonAsciiCompatibleEncoding,
 }

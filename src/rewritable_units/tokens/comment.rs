@@ -4,10 +4,15 @@ use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
 
+/// An error that occurs when invalid value is provided for the HTML comment text.
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum CommentTextError {
+    /// The provided value contains the `-->` character sequence that preemptively closes the comment.
     #[fail(display = "Comment text shouldn't contain comment closing sequence (`-->`).")]
     CommentClosingSequence,
+    /// The provided value contains a character that can't be represented in the document's [`encoding`].
+    ///
+    /// [`encoding`]: ../struct.Settings.html#structfield.encoding
     #[fail(display = "Comment text contains a character that can't \
                       be represented in the document's character encoding.")]
     UnencodableCharacter,
