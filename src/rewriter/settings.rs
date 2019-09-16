@@ -153,7 +153,7 @@ impl<'h> DocumentContentHandlers<'h> {
     }
 }
 
-/// Specifies memory consumptions settings for the [`HtmlRewriter`].
+/// Specifies the memory settings for [`HtmlRewriter`].
 ///
 /// [`HtmlRewriter`]: struct.HtmlRewriter.html
 // NOTE: exposed in C API as well, thus repr(C).
@@ -161,8 +161,6 @@ impl<'h> DocumentContentHandlers<'h> {
 pub struct MemorySettings {
     /// Specifies the number of bytes that should be preallocated on [`HtmlRewriter`] instantiation
     /// for the internal parsing buffer.
-    ///
-    /// Set to `1024` bytes when constructed with `MemorySettings::default()`.
     ///
     /// In some cases (e.g. when rewriter encounters a start tag represented by two or more input
     /// chunks) the rewriter needs to buffer input content.
@@ -174,11 +172,14 @@ pub struct MemorySettings {
     ///
     /// It's up to the user to adjust the limit according to their environment limitations.
     ///
-    ///  [`HtmlRewriter`]: struct.HtmlRewriter.html
-    pub preallocated_parsing_buffer_size: usize,
-    /// Sets a hard limit in bytes on memory consumption of a [`HtmlRewriter`] instance.
+    /// ### Default
     ///
-    /// Set to [`std::usize::MAX`] when constructed with `MemorySettings::default()`.
+    /// `1024` bytes when constructed with `MemorySettings::default()`.
+    ///
+    /// [`HtmlRewriter`]: struct.HtmlRewriter.html
+    pub preallocated_parsing_buffer_size: usize,
+
+    /// Sets a hard limit in bytes on memory consumption of a [`HtmlRewriter`] instance.
     ///
     /// Rewriter's [`write`] and [`end`] methods will error if this limit is exceeded.
     ///
@@ -186,6 +187,10 @@ pub struct MemorySettings {
     /// It is impossible to account for all the memory consumed without a significant performance
     /// penalty. So, instead, we try to provide the best approximation by measuring the memory
     /// consumed by internal buffers that grow depending on the input.
+    ///
+    /// ### Default
+    ///
+    /// [`std::usize::MAX`] when constructed with `MemorySettings::default()`.
     ///
     /// [`HtmlRewriter`]: struct.HtmlRewriter.html
     /// [`std::usize::MAX`]: https://doc.rust-lang.org/std/usize/constant.MAX.html
@@ -204,11 +209,115 @@ impl Default for MemorySettings {
     }
 }
 
+/// Specifies settings for [`HtmlRewriter`].
+///
+/// [`HtmlRewriter`]: struct.HtmlRewriter.html
 pub struct Settings<'h, 's> {
+    /// Specifies CSS selectors and rewriting handlers for elements and their inner content.
+    ///
+    /// ### Hint
+    ///
+    /// [`element`], [`comments`] and [`text`] convenience macros can be used to construct a
+    /// `(Selector, ElementContentHandlers)` tuple.
+    ///
+    /// ### Example
+    /// ```
+    /// use cool_thing::{ElementContentHandlers, Settings};
+    ///
+    /// let settings = Settings {
+    ///     element_content_handlers: vec! [
+    ///         (
+    ///             &"div[foo]".parse().unwrap(),
+    ///             ElementContentHandlers::default().element(|el| {
+    ///                 // ...
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ),
+    ///         (
+    ///             &"body".parse().unwrap(),
+    ///             ElementContentHandlers::default().comments(|c| {
+    ///                 // ...
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         )
+    ///     ],
+    ///     ..Settings::default()
+    /// };
+    /// ```
+    ///
+    /// [`element`]: macro.element.html
+    /// [`comments`]: macro.comments.html
+    /// [`text`]: macro.text.html
     pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
+
+    /// Specifies rewriting handlers for the content without associating it to a particular
+    /// CSS selector.
+    ///
+    /// Refer to [`DocumentContentHandlers`] documentation for more information.
+    ///
+    /// ### Hint
+    /// [`doctype`], [`doc_comments`] and [`doc_text`] convenience macros can be used to construct
+    /// items of this vector.
+    ///
+    /// [`DocumentContentHandlers`]: struct.DocumentContentHandlers.html
+    /// [`doctype`]: macro.doctype.html
+    /// [`doc_comments`]: macro.doc_comments.html
+    /// [`doc_text`]: macro.doc_text.html
     pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
+
+    /// Specifies the [character encoding] for the input and the output of the rewriter.
+    ///
+    /// Can be a [label] for any of the web-compatible encodings with an exception for `UTF-16LE`,
+    /// `UTF-16BE`, `ISO-2022-JP` and `replacement` (these non-ASCII-compatible encodings
+    /// are not supported).
+    ///
+    /// [character encoding]: https://developer.mozilla.org/en-US/docs/Glossary/character_encoding
+    /// [label]: https://encoding.spec.whatwg.org/#names-and-labels
+    ///
+    /// ### Default
+    ///
+    /// `"utf-8"` when constructed with `Settings::default()`.
     pub encoding: &'s str,
+
+    /// Specifies the memory settings.
     pub memory_settings: MemorySettings,
+
+    /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
+    /// into ambigious state.
+    ///
+    /// Since the rewriter operates on a token stream and doesn't have access to a full
+    /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
+    /// guaranteed to be parsed correctly without an ability to backtrace the tree.
+    ///
+    /// Therefore, due to security considerations, sometimes it's preferable to abort the
+    /// rewriting process in case of such uncertainty.
+    ///
+    /// ### Default
+    ///
+    /// `true` when constructed with `Settings::default()`.
+    ///
+    /// ### Example
+    ///
+    /// One of the simplest examples of such markup is the following:
+    ///
+    /// ```html
+    /// ...
+    /// <select><xmp><script>"use strict";</script></select>
+    /// ...
+    /// ```
+    ///
+    /// The `<xmp>` element is not allowed inside the `<select>` element, so in a browser the start
+    /// tag for `<xmp>` will be ignored and following `<script>` element will be parsed and executed.
+    ///
+    /// On the other hand, the `<select>` element itself can be also ignored depending on the
+    /// context in which it was parsed. In this case, the `<xmp>` element will not be ignored
+    /// and the `<script>` element along with its content will be parsed as a simple text inside
+    /// it.
+    ///
+    /// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
+    /// correct parsing context.
     pub strict: bool,
 }
 
@@ -237,9 +346,98 @@ impl<'h, 's> From<RewriteStrSettings<'h, 's>> for Settings<'h, 's> {
     }
 }
 
+/// Specifies settings for the [`rewrite_str`] function.
+///
+/// [`rewrite_str`]: fn.rewrite_str.html
 pub struct RewriteStrSettings<'h, 's> {
+    /// Specifies CSS selectors and rewriting handlers for elements and their inner content.
+    ///
+    /// ### Hint
+    ///
+    /// [`element`], [`comments`] and [`text`] convenience macros can be used to construct a
+    /// `(Selector, ElementContentHandlers)` tuple.
+    ///
+    /// ### Example
+    /// ```
+    /// use cool_thing::{ElementContentHandlers, RewriteStrSettings};
+    ///
+    /// let settings = RewriteStrSettings {
+    ///     element_content_handlers: vec! [
+    ///         (
+    ///             &"div[foo]".parse().unwrap(),
+    ///             ElementContentHandlers::default().element(|el| {
+    ///                 // ...
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ),
+    ///         (
+    ///             &"body".parse().unwrap(),
+    ///             ElementContentHandlers::default().comments(|c| {
+    ///                 // ...
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         )
+    ///     ],
+    ///     ..RewriteStrSettings::default()
+    /// };
+    /// ```
+    ///
+    /// [`element`]: macro.element.html
+    /// [`comments`]: macro.comments.html
+    /// [`text`]: macro.text.html
     pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
+
+    /// Specifies rewriting handlers for the content without associating it to a particular
+    /// CSS selector.
+    ///
+    /// Refer to [`DocumentContentHandlers`] documentation for more information.
+    ///
+    /// ### Hint
+    /// [`doctype`], [`doc_comments`] and [`doc_text`] convenience macros can be used to construct
+    /// items of this vector.
+    ///
+    /// [`DocumentContentHandlers`]: struct.DocumentContentHandlers.html
+    /// [`doctype`]: macro.doctype.html
+    /// [`doc_comments`]: macro.doc_comments.html
+    /// [`doc_text`]: macro.doc_text.html
     pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
+
+    /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
+    /// into ambigious state.
+    ///
+    /// Since the rewriter operates on a token stream and doesn't have access to a full
+    /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
+    /// guaranteed to be parsed correctly without an ability to backtrace the tree.
+    ///
+    /// Therefore, due to security considerations, sometimes it's preferable to abort the
+    /// rewriting process in case of such uncertainty.
+    ///
+    /// ### Default
+    ///
+    /// `true` when constructed with `Settings::default()`.
+    ///
+    /// ### Example
+    ///
+    /// One of the simplest examples of such markup is the following:
+    ///
+    /// ```html
+    /// ...
+    /// <select><xmp><script>"use strict";</script></select>
+    /// ...
+    /// ```
+    ///
+    /// The `<xmp>` element is not allowed inside the `<select>` element, so in a browser the start
+    /// tag for `<xmp>` will be ignored and following `<script>` element will be parsed and executed.
+    ///
+    /// On the other hand, the `<select>` element itself can be also ignored depending on the
+    /// context in which it was parsed. In this case, the `<xmp>` element will not be ignored
+    /// and the `<script>` element along with its content will be parsed as a simple text inside
+    /// it.
+    ///
+    /// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
+    /// correct parsing context.
     pub strict: bool,
 }
 
