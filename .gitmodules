@@ -1,6 +1,6 @@
 [submodule "tests/data/html5lib-tests"]
 	path = tests/data/html5lib-tests
-	url = ssh://git@stash.cfops.it:7999/mirrors/html5lib-tests.git
+	url = https://github.com/html5lib/html5lib-tests.git
 [submodule "benches/deps/lazyhtml"]
 	path = benches/deps/lazyhtml
-	url = ssh://git@stash.cfops.it:7999/eco/lazyhtml.git
+	url = https://github.com/cloudflare/lazyhtml.git
