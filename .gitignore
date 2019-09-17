@@ -1,7 +1,5 @@
 .DS_Store
 /.vscode/
-/target/
+target
 **/*.rs.bk
-c-api/target
-
 Cargo.lock
