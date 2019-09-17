@@ -40,18 +40,36 @@ pub enum EncodingError {
     /// [labels specified in the standard]: https://encoding.spec.whatwg.org/#names-and-labels
     #[fail(display = "Unknown character encoding has been provided.")]
     UnknownEncoding,
+
     /// The provided label is for one of the non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`,
     /// `ISO-2022-JP` and `replacement`). These encodings are not supported.
     #[fail(display = "Expected ASCII-compatible encoding.")]
     NonAsciiCompatibleEncoding,
 }
 
+/// A compound error type that can be returned by [`write`] and [`end`] methods of the rewriter.
+///
+/// # Note
+/// This error is unrecoverable. The rewriter instance will panic on attempt to use it after such an
+/// error.
+///
+/// [`write`]: ../struct.HtmlRewriter.html#method.write
+/// [`end`]: ../struct.HtmlRewriter.html#method.end
 #[derive(Fail, Debug)]
 pub enum RewritingError {
     #[fail(display = "{}", _0)]
+    /// See [`MemoryLimitExceededError`].
+    ///
+    /// [`MemoryLimitExceededError`]: struct.MemoryLimitExceededError.html
     MemoryLimitExceeded(MemoryLimitExceededError),
+
+    /// See [`ParsingAmbiguityError`].
+    ///
+    /// [`ParsingAmbiguityError`]: struct.ParsingAmbiguityError.html
     #[fail(display = "{}", _0)]
     ParsingAmbiguity(ParsingAmbiguityError),
+
+    /// An error that was propagated from one of the content handlers.
     #[fail(display = "{}", _0)]
     ContentHandlerError(Error),
 }

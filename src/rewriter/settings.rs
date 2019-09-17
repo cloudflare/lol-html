@@ -368,12 +368,6 @@ pub struct Settings<'h, 's> {
     /// Therefore, due to security considerations, sometimes it's preferable to abort the
     /// rewriting process in case of such uncertainty.
     ///
-    /// ### Default
-    ///
-    /// `true` when constructed with `Settings::default()`.
-    ///
-    /// ### Example
-    ///
     /// One of the simplest examples of such markup is the following:
     ///
     /// ```html
@@ -392,6 +386,10 @@ pub struct Settings<'h, 's> {
     ///
     /// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
     /// correct parsing context.
+    ///
+    /// ### Default
+    ///
+    /// `true` when constructed with `Settings::default()`.
     pub strict: bool,
 }
 
@@ -488,12 +486,6 @@ pub struct RewriteStrSettings<'h, 's> {
     /// Therefore, due to security considerations, sometimes it's preferable to abort the
     /// rewriting process in case of such uncertainty.
     ///
-    /// ### Default
-    ///
-    /// `true` when constructed with `Settings::default()`.
-    ///
-    /// ### Example
-    ///
     /// One of the simplest examples of such markup is the following:
     ///
     /// ```html
@@ -512,6 +504,10 @@ pub struct RewriteStrSettings<'h, 's> {
     ///
     /// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
     /// correct parsing context.
+    ///
+    /// ### Default
+    ///
+    /// `true` when constructed with `Settings::default()`.
     pub strict: bool,
 }
 

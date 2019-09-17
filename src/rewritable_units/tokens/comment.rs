@@ -10,6 +10,7 @@ pub enum CommentTextError {
     /// The provided value contains the `-->` character sequence that preemptively closes the comment.
     #[fail(display = "Comment text shouldn't contain comment closing sequence (`-->`).")]
     CommentClosingSequence,
+
     /// The provided value contains a character that can't be represented in the document's [`encoding`].
     ///
     /// [`encoding`]: ../struct.Settings.html#structfield.encoding

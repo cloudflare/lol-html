@@ -164,6 +164,29 @@ impl<'i> Parser<'i> for SelectorsParser {
 /// let selector: Selector = "#foo".parse().unwrap();
 /// ```
 ///
+/// # Supported selector
+///
+/// Currently the rewriter supports the following CSS selectors:
+///
+/// Pattern                        | Represents                                                                                                            |
+/// ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+/// `*`                            | any element                                                                                                           |
+/// `E`                            | any element of type `E`                                                                                                 |
+/// `E:not(s)`                     | an `E` element that does not match either compound selector `s`                                                           |
+/// `E.warning`                    | an `E` element belonging to the class `warning`                                                                           |
+/// `E#myid`                       | an `E` element with `ID` equal to `"myid"`.                                                                                   |
+/// `E[foo]`                       | an `E` element with a `foo` attribute                                                                                     |
+/// `E[foo="bar"]`                 | an `E` element whose foo attribute value is exactly equal to `"bar"`                                                        |
+/// `E[foo="bar" i]`               | an `E` element whose foo attribute value is exactly equal to any (ASCII-range) case-permutation of `"bar"`                  |
+/// `E[foo="bar" s]`               | an `E` element whose foo attribute value is exactly and case-sensitively equal to `"bar"`                                   |
+/// `E[foo~="bar"]`                | an `E` element whose foo attribute value is a list of whitespace-separated values, one of which is exactly equal to `"bar"` |
+/// `E[foo^="bar"]`                | an `E` element whose foo attribute value begins exactly with the string `"bar"`                                             |
+/// `E[foo$="bar"]`                | an `E` element whose foo attribute value ends exactly with the string `"bar"`                                               |
+/// `E[foo*="bar"]`                | an `E` element whose foo attribute value contains the substring `"bar"`                                                     |
+/// <code>E[foo&#124;="en"]</code> | an `E` element whose foo attribute value is a hyphen-separated list of values beginning with `"en"`                         |
+/// `E F`                          | an `F` element descendant of an `E` element                                                                               |
+/// `E > F`                        | an `F` element child of an `E` element                                                                                    |
+///
 /// [`str`]: https://doc.rust-lang.org/std/primitive.str.html
 /// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [element content handlers]: struct.Settings.html#structfield.element_content_handlers

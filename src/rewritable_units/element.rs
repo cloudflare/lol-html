@@ -5,14 +5,28 @@ use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
 
+/// An error that occurs when invalid value is provided for the tag name.
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum TagNameError {
+    /// The provided value is empty.
     #[fail(display = "Tag name can't be empty.")]
     Empty,
-    #[fail(display = "First character of the tag name should be an ASCII alphabetical character.")]
+
+    /// The first character of the provided value is not an ASCII alphabetical character.
+    #[fail(
+        display = "The first character of the tag name should be an ASCII alphabetical character."
+    )]
     InvalidFirstCharacter,
+
+    /// The provided value contains a character that is forbidden by the HTML grammar in tag names
+    /// (e.g. `'>'`).
     #[fail(display = "{:?} character is forbidden in the tag name", _0)]
     ForbiddenCharacter(char),
+
+    /// The provided value contains a character that can't be represented in the document's
+    /// [`encoding`].
+    ///
+    /// [`encoding`]: ../struct.Settings.html#structfield.encoding
     #[fail(display = "The tag name contains a character that can't \
                       be represented in the document's character encoding.")]
     UnencodableCharacter,

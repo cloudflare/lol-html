@@ -12,9 +12,12 @@ pub enum AttributeNameError {
     /// The provided value is empty.
     #[fail(display = "Attribute name can't be empty.")]
     Empty,
-    /// The provided value contains a character that is forbidden by the HTML grammar (e.g. `'='`).
+
+    /// The provided value contains a character that is forbidden by the HTML grammar in attribute
+    /// names (e.g. `'='`).
     #[fail(display = "{:?} character is forbidden in the attribute name", _0)]
     ForbiddenCharacter(char),
+
     /// The provided value contains a character that can't be represented in the document's
     /// [`encoding`].
     ///

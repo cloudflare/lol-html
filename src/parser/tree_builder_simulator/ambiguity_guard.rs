@@ -38,19 +38,12 @@ use std::fmt::{self, Display};
 
 /// An error that occurs when HTML parser runs into an ambigious state in the [`strict`] mode.
 ///
-///
 /// Since the rewriter operates on a token stream and doesn't have access to a full
 /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
 /// guaranteed to be parsed correctly without an ability to backtrace the tree.
 ///
 /// Therefore, due to security considerations, sometimes it's preferable to abort the
 /// rewriting process in case of such uncertainty.
-///
-/// ### Default
-///
-/// `true` when constructed with `Settings::default()`.
-///
-/// ### Example
 ///
 /// One of the simplest examples of such markup is the following:
 ///
@@ -70,6 +63,7 @@ use std::fmt::{self, Display};
 ///
 /// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
 /// correct parsing context.
+///
 /// [`strict`]: ../struct.Settings.html#structfield.strict
 #[derive(Fail, Debug, PartialEq)]
 pub struct ParsingAmbiguityError {
