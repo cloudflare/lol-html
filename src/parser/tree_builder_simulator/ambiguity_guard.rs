@@ -36,9 +36,51 @@
 use crate::html::{LocalNameHash, Tag};
 use std::fmt::{self, Display};
 
-macro_rules! err_msg_tmpl {
-    (text_parsing_ambiguity) => {
-        concat!(
+/// An error that occurs when HTML parser runs into an ambigious state in the [`strict`] mode.
+///
+///
+/// Since the rewriter operates on a token stream and doesn't have access to a full
+/// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
+/// guaranteed to be parsed correctly without an ability to backtrace the tree.
+///
+/// Therefore, due to security considerations, sometimes it's preferable to abort the
+/// rewriting process in case of such uncertainty.
+///
+/// ### Default
+///
+/// `true` when constructed with `Settings::default()`.
+///
+/// ### Example
+///
+/// One of the simplest examples of such markup is the following:
+///
+/// ```html
+/// ...
+/// <select><xmp><script>"use strict";</script></select>
+/// ...
+/// ```
+///
+/// The `<xmp>` element is not allowed inside the `<select>` element, so in a browser the start
+/// tag for `<xmp>` will be ignored and following `<script>` element will be parsed and executed.
+///
+/// On the other hand, the `<select>` element itself can be also ignored depending on the
+/// context in which it was parsed. In this case, the `<xmp>` element will not be ignored
+/// and the `<script>` element along with its content will be parsed as a simple text inside
+/// it.
+///
+/// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
+/// correct parsing context.
+/// [`strict`]: ../struct.Settings.html#structfield.strict
+#[derive(Fail, Debug, PartialEq)]
+pub struct ParsingAmbiguityError {
+    on_tag_name: String,
+}
+
+impl Display for ParsingAmbiguityError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            concat!(
             "The parser has encountered a text content tag (`<{}>`) in the context where it is ",
             "ambiguous whether this tag should be ignored or not. And, thus, is is unclear is ",
             "consequent content should be parsed as raw text or HTML markup.",
@@ -46,36 +88,9 @@ macro_rules! err_msg_tmpl {
             "This error occurs due to the limited capabilities of the streaming parsing. However, ",
             "almost all of the cases of this error are caused by a non-conforming markup (e.g. a ",
             "`<script>` element in `<select>` element)."
+        ),
+            self.on_tag_name
         )
-    };
-
-    (max_template_nesting_reached) => {
-        concat!(
-            "The parser has encountered {} nested `<template>` tags which exceed supported depth",
-            "limits.",
-            "\n\n",
-            "Even if `<template>` elements are not captured by the provided selectors the parser",
-            "tracks them to maintain correct inner state."
-        )
-    };
-}
-
-#[derive(Fail, Debug, PartialEq)]
-pub enum ParsingAmbiguityError {
-    TextParsingAmbiguity { on_tag_name: String },
-    MaxTemplateNestingReached { depth_limit: usize },
-}
-
-impl Display for ParsingAmbiguityError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ParsingAmbiguityError::TextParsingAmbiguity { on_tag_name } => {
-                write!(f, err_msg_tmpl!(text_parsing_ambiguity), on_tag_name)
-            }
-            ParsingAmbiguityError::MaxTemplateNestingReached { depth_limit } => {
-                write!(f, err_msg_tmpl!(max_template_nesting_reached), depth_limit)
-            }
-        }
     }
 }
 
@@ -99,7 +114,7 @@ macro_rules! create_assert_for_tags {
             tag_name: LocalNameHash,
         ) -> Result<(), ParsingAmbiguityError> {
             if tag_is_one_of!(tag_name, [ $($tag),+ ]) {
-                Err(ParsingAmbiguityError::TextParsingAmbiguity {
+                Err(ParsingAmbiguityError {
                     on_tag_name: tag_hash_to_string(tag_name)
                 })
             } else {
@@ -117,7 +132,7 @@ create_assert_for_tags!(
 enum State {
     Default,
     InSelect,
-    InTemplateInSelect(u8),
+    InTemplateInSelect(u64),
     InOrAfterFrameset,
 }
 
@@ -161,13 +176,6 @@ impl AmbiguityGuard {
             }
             State::InTemplateInSelect(depth) => {
                 if tag_name == Tag::Template {
-                    // TODO: make depth limit adjustable
-                    if depth == u8::max_value() {
-                        return Err(ParsingAmbiguityError::MaxTemplateNestingReached {
-                            depth_limit: u8::max_value() as usize,
-                        });
-                    }
-
                     self.state = State::InTemplateInSelect(depth + 1);
                 } else {
                     assert_not_ambigious_text_type_switch(tag_name)?;
