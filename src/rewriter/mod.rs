@@ -74,6 +74,46 @@ pub enum RewritingError {
     ContentHandlerError(Error),
 }
 
+/// A streaming HTML rewriter.
+///
+/// # Example
+/// ```
+/// use cool_thing::{element, HtmlRewriter, Settings};
+///
+/// let mut output = vec![];
+///
+/// {
+///     let mut rewriter = HtmlRewriter::try_new(
+///         Settings {
+///             element_content_handlers: vec![
+///                 // Rewrite insecure hyperlinks
+///                 element!("a[href]", |el| {
+///                     let href = el
+///                         .get_attribute("href")
+///                         .unwrap()
+///                         .replace("http:", "https:");
+///
+///                     el.set_attribute("href", &href).unwrap();
+///
+///                     Ok(())
+///                 })
+///             ],
+///             ..Settings::default()
+///         },
+///         |c: &[u8]| output.extend_from_slice(c)
+///     ).unwrap();
+///
+///     rewriter.write(b"<div><a href=").unwrap();
+///     rewriter.write(b"http://example.com>").unwrap();
+///     rewriter.write(b"</a></div>").unwrap();
+///     rewriter.end().unwrap();
+/// }
+///
+/// assert_eq!(
+///     String::from_utf8(output).unwrap(),
+///     r#"<div><a href="https://example.com"></a></div>"#
+/// );
+/// ```
 pub struct HtmlRewriter<'h, O: OutputSink> {
     stream: TransformStream<HtmlRewriteController<'h>, O>,
     finished: bool,
@@ -98,6 +138,14 @@ macro_rules! guarded {
 }
 
 impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
+    /// Constructs a new rewriter with the provided `settings` that writes
+    /// the output to the `output_sink`.
+    ///
+    /// # Note
+    ///
+    /// For the convenience the [`OutputSink`] trait is implemented for closures.
+    ///
+    /// [`OutputSink`]: trait.OutputSink.html
     pub fn try_new<'s>(settings: Settings<'h, 's>, output_sink: O) -> Result<Self, EncodingError> {
         let encoding = try_encoding_from_str(settings.encoding)?;
         let mut selectors_ast = selectors_vm::Ast::default();
@@ -139,6 +187,15 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         })
     }
 
+    /// Writes a chunk of input data to the rewriter.
+    ///
+    /// # Panics
+    ///  * If previous invocation of the method returned a [`RewritingError`]
+    ///    (these errors are unrecovarable).
+    ///  * If called after [`end`].
+    ///
+    /// [`RewritingError`]: errors/enum.RewritingError.html
+    /// [`end`]: struct.HtmlRewriter.html#method.end
     #[inline]
     pub fn write(&mut self, data: &[u8]) -> Result<(), RewritingError> {
         assert!(
@@ -149,6 +206,17 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         guarded!(self, self.stream.write(data))
     }
 
+    /// Finalizes the rewriting process.
+    ///
+    /// Should be called once the last chunk of the input is written.
+    ///
+    /// # Panics
+    ///  * If previous invocation of [`write`] returned a [`RewritingError`] (these errors
+    ///    are unrecovarable).
+    ///  * If called twice.
+    ///
+    /// [`RewritingError`]: errors/enum.RewritingError.html
+    /// [`write`]: struct.HtmlRewriter.html#method.write
     #[inline]
     pub fn end(&mut self) -> Result<(), RewritingError> {
         assert!(!self.finished, "Stream was ended twice.");
@@ -167,6 +235,35 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
     }
 }
 
+/// Rewrites given `html` string with the provided `settings`.
+///
+/// # Example
+///
+/// ```
+/// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+///
+/// let output = rewrite_str(
+///     r#"<div><a href="http://example.com"></a></div>"#,
+///     RewriteStrSettings {
+///         element_content_handlers: vec![
+///             // Rewrite insecure hyperlinks
+///             element!("a[href]", |el| {
+///                 let href = el
+///                     .get_attribute("href")
+///                     .unwrap()
+///                     .replace("http:", "https:");
+///
+///                  el.set_attribute("href", &href).unwrap();
+///
+///                  Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(output, r#"<div><a href="https://example.com"></a></div>"#);
+/// ```
 pub fn rewrite_str<'h, 's>(
     html: &str,
     settings: RewriteStrSettings<'h, 's>,

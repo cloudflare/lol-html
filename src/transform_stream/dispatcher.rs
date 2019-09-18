@@ -38,7 +38,18 @@ pub trait TransformController: Sized {
     fn should_emit_content(&self) -> bool;
 }
 
+/// Defines an interface for the [`HtmlRewriter`]'s output.
+///
+/// Implemented for [`Fn`] and [`FnMut`].
+///
+/// [`HtmlRewriter`]: struct.HtmlRewriter.html
+/// [`Fn`]: https://doc.rust-lang.org/std/ops/trait.Fn.html
+/// [`FnMut`]: https://doc.rust-lang.org/std/ops/trait.FnMut.html
 pub trait OutputSink {
+    /// Handles rewriter's output chunk.
+    ///
+    /// # Note
+    /// The last chunk of the output has zero length.
     fn handle_chunk(&mut self, chunk: &[u8]);
 }
 
