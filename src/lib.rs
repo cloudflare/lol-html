@@ -1,3 +1,21 @@
+//! Cool Thing is an HTML rewriter/parser with CSS-selector based API.
+//!
+//! It is designed to provide a low output latency, quickly handle big amounts of data and operate
+//! in environments with the limited memory resources.
+//!
+//! The crate serves as a back-end for the HTML rewriting functionality of [Cloudflare Workers],
+//! but can be used as a standalone library with the convenient API for a wide variety of HTML
+//! rewriting/analyzis tasks.
+//!
+//! The crate provides two main API entry points:
+//!
+//! * [`HtmlRewriter`] - a streaming HTML rewriter;
+//! * [`rewrite_str`] - one-off HTML string rewriting function.
+//!
+//! [Cloudflare Workers]: https://www.cloudflare.com/en-gb/products/cloudflare-workers/
+//! [`HtmlRewriter`]: struct.HtmlRewriter.html
+//! [`rewrite_str`]: fn.rewrite_str.html
+
 #[macro_use]
 extern crate failure;
 
