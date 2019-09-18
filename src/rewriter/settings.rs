@@ -42,6 +42,56 @@ impl<'h> ElementContentHandlers<'h> {
     }
 }
 
+/// Specifies document-level content handlers.
+///
+/// Some content can't be captured by CSS selectors as it lays outside of content of any
+/// of the HTML elements. Document-level handlers allow capture such a content:
+///
+/// ```html
+/// <!doctype html>
+/// <!--
+///     I can't be captured with a selector, but I can be
+///     captured with a document-level comment handler
+/// -->
+/// <html>
+/// <!-- I can be captured with a selector -->
+/// </html>
+/// ```
+#[derive(Default)]
+pub struct DocumentContentHandlers<'h> {
+    pub(super) doctype: Option<DoctypeHandler<'h>>,
+    pub(super) comments: Option<CommentHandler<'h>>,
+    pub(super) text: Option<TextHandler<'h>>,
+}
+
+impl<'h> DocumentContentHandlers<'h> {
+    /// Sets a handler for the [document type declaration].
+    ///
+    /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
+    #[inline]
+    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> Result<(), Error> + 'h) -> Self {
+        self.doctype = Some(Box::new(handler));
+
+        self
+    }
+
+    /// Sets a handler for all HTML comments present in the input HTML markup.
+    #[inline]
+    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> Result<(), Error> + 'h) -> Self {
+        self.comments = Some(Box::new(handler));
+
+        self
+    }
+
+    /// Sets a handler for all text chunks present in the input HTML markup.
+    #[inline]
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> Result<(), Error> + 'h) -> Self {
+        self.text = Some(Box::new(handler));
+
+        self
+    }
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __element_content_handler {
@@ -156,6 +206,29 @@ macro_rules! __document_content_handler {
     };
 }
 
+/// A convenience macro to construct a handler for [document type declarations] in the HTML document.
+///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, doctype, RewriteStrSettings};
+/// use cool_thing::html_content::ContentType;
+///
+/// rewrite_str(
+///     r#"<!doctype html>"#,
+///     RewriteStrSettings {
+///         document_content_handlers: vec![
+///             doctype!(|d| {
+///                 assert_eq!(d.name().unwrap(), "html");
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+/// ```
+///
+/// [document type declarations]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
 #[macro_export(local_inner_macros)]
 macro_rules! doctype {
     ($handler:expr) => {
@@ -163,6 +236,31 @@ macro_rules! doctype {
     };
 }
 
+/// A convenience macro to construct a rewriting handler for all text chunks in the HTML document.
+///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, doc_text, RewriteStrSettings};
+/// use cool_thing::html_content::ContentType;
+///
+/// let html = rewrite_str(
+///     r#"Hello<span>Hello</span>Hello"#,
+///     RewriteStrSettings {
+///         document_content_handlers: vec![
+///             doc_text!(|t| {
+///                 if t.last_in_text_node() {
+///                     t.after(" world", ContentType::Text);
+///                 }
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(html, r#"Hello world<span>Hello world</span>Hello world"#);
+/// ```
 #[macro_export(local_inner_macros)]
 macro_rules! doc_text {
     ($handler:expr) => {
@@ -170,61 +268,34 @@ macro_rules! doc_text {
     };
 }
 
+/// A convenience macro to construct a rewriting handler for all HTML comments in the HTML document.
+///
+/// # Example
+/// ```
+/// use cool_thing::{rewrite_str, doc_comments, RewriteStrSettings};
+/// use cool_thing::html_content::ContentType;
+///
+/// let html = rewrite_str(
+///     r#"<!-- 42 --><span><!-- 42 --></span><!-- 42 -->"#,
+///     RewriteStrSettings {
+///         document_content_handlers: vec![
+///             doc_comments!(|c| {
+///                 c.set_text("Hello!").unwrap();
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(html, r#"<!--Hello!--><span><!--Hello!--></span><!--Hello!-->"#);
+/// ```
 #[macro_export(local_inner_macros)]
 macro_rules! doc_comments {
     ($handler:expr) => {
         __document_content_handler!(comments, $handler);
     };
-}
-
-/// Specifies document-level content handlers.
-///
-/// Some content can't be captured by CSS selectors as it lays outside of content of any
-/// of the HTML elements. Document-level handlers allow capture such a content:
-///
-/// ```html
-/// <!doctype html>
-/// <!--
-///     I can't be captured with a selector, but I can be
-///     captured with a document-level comment handler
-/// -->
-/// <html>
-/// <!-- I can be captured with a selector -->
-/// </html>
-/// ```
-#[derive(Default)]
-pub struct DocumentContentHandlers<'h> {
-    pub(super) doctype: Option<DoctypeHandler<'h>>,
-    pub(super) comments: Option<CommentHandler<'h>>,
-    pub(super) text: Option<TextHandler<'h>>,
-}
-
-impl<'h> DocumentContentHandlers<'h> {
-    /// Sets a handler for the [document type declaration].
-    ///
-    /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
-    #[inline]
-    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> Result<(), Error> + 'h) -> Self {
-        self.doctype = Some(Box::new(handler));
-
-        self
-    }
-
-    /// Sets a handler for all HTML comments present in the input HTML markup.
-    #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> Result<(), Error> + 'h) -> Self {
-        self.comments = Some(Box::new(handler));
-
-        self
-    }
-
-    /// Sets a handler for all text chunks present in the input HTML markup.
-    #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> Result<(), Error> + 'h) -> Self {
-        self.text = Some(Box::new(handler));
-
-        self
-    }
 }
 
 /// Specifies the memory settings for [`HtmlRewriter`].
