@@ -2,7 +2,7 @@
 name = "cool_thing"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
-license = "BSD-2-Clause"
+license = "BSD-3-Clause"
 description = "HTML rewriter/parser with CSS-selector based API"
 repository = "https://github.com/cloudflare/cool-thing"
 documentation = "https://docs.rs/cool-thing"
