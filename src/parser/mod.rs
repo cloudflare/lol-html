@@ -11,8 +11,8 @@ use self::tag_scanner::TagScanner;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
 use crate::base::Chunk;
 use crate::html::{LocalName, Namespace};
+use crate::rewriter::RewritingError;
 use cfg_if::cfg_if;
-use failure::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -21,7 +21,7 @@ pub use self::lexer::{
     SharedAttributeBuffer, TagLexeme, TagTokenOutline,
 };
 pub use self::tag_scanner::TagHintSink;
-pub use self::tree_builder_simulator::AmbiguityGuardError;
+pub use self::tree_builder_simulator::ParsingAmbiguityError;
 
 // NOTE: tag scanner can implicitly force parser to switch to
 // the lexer mode if it fails to get tree builder feedback. It's up
@@ -35,12 +35,15 @@ pub enum ParserDirective {
 
 impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
     #[inline]
-    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, Error> {
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError> {
         self.borrow_mut().handle_tag(lexeme)
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), Error> {
+    fn handle_non_tag_content(
+        &mut self,
+        lexeme: &NonTagContentLexeme,
+    ) -> Result<(), RewritingError> {
         self.borrow_mut().handle_non_tag_content(lexeme)
     }
 }
@@ -51,12 +54,12 @@ impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
         &mut self,
         name: LocalName,
         ns: Namespace,
-    ) -> Result<ParserDirective, Error> {
+    ) -> Result<ParserDirective, RewritingError> {
         self.borrow_mut().handle_start_tag_hint(name, ns)
     }
 
     #[inline]
-    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, Error> {
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, RewritingError> {
         self.borrow_mut().handle_end_tag_hint(name)
     }
 }
@@ -99,7 +102,7 @@ impl<S: ParserOutputSink> Parser<S> {
         }
     }
 
-    pub fn parse(&mut self, input: &Chunk) -> Result<usize, Error> {
+    pub fn parse(&mut self, input: &Chunk) -> Result<usize, RewritingError> {
         use ParsingLoopTerminationReason::*;
 
         let mut loop_termination_reason = with_current_sm!(self, sm.run_parsing_loop(input))?;

@@ -1,7 +1,6 @@
 use super::rewriter_builder::HtmlRewriterBuilder;
 use super::*;
 use libc::c_void;
-use std::convert::TryFrom;
 
 // NOTE: we use `ExternOutputSink` proxy type, because we need an
 // existential type parameter for the `HtmlRewriter` and FnMut can't
@@ -49,11 +48,11 @@ pub extern "C" fn cool_thing_rewriter_build(
         document_content_handlers: handlers.document,
         encoding: unwrap_or_ret_null! { to_str!(encoding, encoding_len) },
         memory_settings,
-        output_sink: ExternOutputSink::new(output_sink, output_sink_user_data),
         strict,
     };
 
-    let rewriter = unwrap_or_ret_null! { HtmlRewriter::try_from(settings) };
+    let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);
+    let rewriter = unwrap_or_ret_null! { HtmlRewriter::try_new(settings, output_sink) };
 
     to_ptr_mut(rewriter)
 }

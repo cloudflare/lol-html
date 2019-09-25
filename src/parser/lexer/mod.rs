@@ -10,9 +10,9 @@ use crate::parser::state_machine::{
     FeedbackDirective, ParsingLoopDirective, StateMachine, StateResult,
 };
 use crate::parser::{
-    AmbiguityGuardError, ParserDirective, TreeBuilderFeedback, TreeBuilderSimulator,
+    ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback, TreeBuilderSimulator,
 };
-use failure::Error;
+use crate::rewriter::RewritingError;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -21,8 +21,11 @@ pub use self::lexeme::*;
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 pub trait LexemeSink {
-    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, Error>;
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), Error>;
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError>;
+    fn handle_non_tag_content(
+        &mut self,
+        lexeme: &NonTagContentLexeme,
+    ) -> Result<(), RewritingError>;
 }
 
 pub type State<S> = fn(&mut Lexer<S>, &Chunk) -> StateResult;
@@ -74,7 +77,7 @@ impl<S: LexemeSink> Lexer<S> {
     fn get_feedback_for_tag(
         &mut self,
         tag: &TagTokenOutline,
-    ) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
+    ) -> Result<TreeBuilderFeedback, ParsingAmbiguityError> {
         match *tag {
             TagTokenOutline::StartTag { name_hash, .. } => self
                 .tree_builder_simulator
@@ -111,7 +114,7 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), Error> {
+    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), RewritingError> {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;
@@ -119,7 +122,7 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, Error> {
+    fn emit_tag_lexeme(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError> {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;

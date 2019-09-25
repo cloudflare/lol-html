@@ -8,8 +8,8 @@ use crate::parser::{
 use crate::rewritable_units::{
     Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
+use crate::rewriter::RewritingError;
 use encoding_rs::Encoding;
-use failure::Error;
 use std::rc::Rc;
 
 use TagTokenOutline::*;
@@ -21,11 +21,11 @@ pub struct AuxStartTagInfo<'i> {
 }
 
 type AuxStartTagInfoRequest<C> =
-    Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, Error>>;
+    Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError>>;
 
 pub enum DispatcherError<C> {
     InfoRequest(AuxStartTagInfoRequest<C>),
-    Fatal(Error),
+    RewritingError(RewritingError),
 }
 
 pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherError<C>>;
@@ -34,11 +34,22 @@ pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
     fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
     fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), Error>;
+    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError>;
     fn should_emit_content(&self) -> bool;
 }
 
+/// Defines an interface for the [`HtmlRewriter`]'s output.
+///
+/// Implemented for [`Fn`] and [`FnMut`].
+///
+/// [`HtmlRewriter`]: struct.HtmlRewriter.html
+/// [`Fn`]: https://doc.rust-lang.org/std/ops/trait.Fn.html
+/// [`FnMut`]: https://doc.rust-lang.org/std/ops/trait.FnMut.html
 pub trait OutputSink {
+    /// Handles rewriter's output chunk.
+    ///
+    /// # Note
+    /// The last chunk of the output has zero length.
     fn handle_chunk(&mut self, chunk: &[u8]);
 }
 
@@ -101,7 +112,10 @@ where
         self.output_sink.handle_chunk(&[]);
     }
 
-    fn try_produce_token_from_lexeme<'i, T>(&mut self, lexeme: &Lexeme<'i, T>) -> Result<(), Error>
+    fn try_produce_token_from_lexeme<'i, T>(
+        &mut self,
+        lexeme: &Lexeme<'i, T>,
+    ) -> Result<(), RewritingError>
     where
         Lexeme<'i, T>: ToToken,
     {
@@ -155,7 +169,10 @@ where
         }
     }
 
-    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme) -> Result<(), Error> {
+    fn adjust_capture_flags_for_tag_lexeme(
+        &mut self,
+        lexeme: &TagLexeme,
+    ) -> Result<(), RewritingError> {
         let input = lexeme.input();
 
         macro_rules! get_flags_from_aux_info_res {
@@ -200,7 +217,7 @@ where
                         Err(DispatcherError::InfoRequest(aux_info_req)) => {
                             get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing)
                         }
-                        Err(DispatcherError::Fatal(e)) => Err(e),
+                        Err(DispatcherError::RewritingError(e)) => Err(e),
                     }
                 }
 
@@ -231,7 +248,7 @@ where
     }
 
     #[inline]
-    fn flush_pending_captured_text(&mut self) -> Result<(), Error> {
+    fn flush_pending_captured_text(&mut self) -> Result<(), RewritingError> {
         let transform_controller = &mut self.transform_controller;
         let output_sink = &mut self.output_sink;
         let emission_enabled = self.emission_enabled;
@@ -264,7 +281,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, Error> {
+    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError> {
         // NOTE: flush pending text before reporting tag to the transform controller.
         // Otherwise, transform controller can enable or disable text handlers too early.
         // In case of start tag, newly matched element text handlers
@@ -292,7 +309,10 @@ where
     }
 
     #[inline]
-    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), Error> {
+    fn handle_non_tag_content(
+        &mut self,
+        lexeme: &NonTagContentLexeme,
+    ) -> Result<(), RewritingError> {
         self.try_produce_token_from_lexeme(lexeme)
     }
 }
@@ -306,7 +326,7 @@ where
         &mut self,
         name: LocalName,
         ns: Namespace,
-    ) -> Result<ParserDirective, Error> {
+    ) -> Result<ParserDirective, RewritingError> {
         match self.transform_controller.handle_start_tag(name, ns) {
             Ok(flags) => {
                 Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags))
@@ -317,11 +337,11 @@ where
 
                 Ok(ParserDirective::Lex)
             }
-            Err(DispatcherError::Fatal(e)) => Err(e),
+            Err(DispatcherError::RewritingError(e)) => Err(e),
         }
     }
 
-    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, Error> {
+    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, RewritingError> {
         self.flush_pending_captured_text()?;
 
         let mut flags = self.transform_controller.handle_end_tag(name);

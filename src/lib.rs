@@ -1,3 +1,21 @@
+//! Cool Thing is an HTML rewriter/parser with CSS-selector based API.
+//!
+//! It is designed to provide a low output latency, quickly handle big amounts of data and operate
+//! in environments with the limited memory resources.
+//!
+//! The crate serves as a back-end for the HTML rewriting functionality of [Cloudflare Workers],
+//! but can be used as a standalone library with the convenient API for a wide variety of HTML
+//! rewriting/analyzis tasks.
+//!
+//! The crate provides two main API entry points:
+//!
+//! * [`HtmlRewriter`] - a streaming HTML rewriter;
+//! * [`rewrite_str`] - one-off HTML string rewriting function.
+//!
+//! [Cloudflare Workers]: https://www.cloudflare.com/en-gb/products/cloudflare-workers/
+//! [`HtmlRewriter`]: struct.HtmlRewriter.html
+//! [`rewrite_str`]: fn.rewrite_str.html
+
 #[macro_use]
 extern crate failure;
 
@@ -7,28 +25,40 @@ mod base;
 #[macro_use]
 mod html;
 
+#[macro_use]
+mod rewriter;
+
 mod memory;
 mod parser;
 mod rewritable_units;
-mod rewriter;
 mod transform_stream;
 
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    DocumentContentHandlers, ElementContentHandlers, EncodingError, HtmlRewriter, MemorySettings,
-    Settings,
+    rewrite_str, DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, MemorySettings,
+    RewriteStrSettings, Settings,
 };
-
-pub use self::rewritable_units::{
-    Attribute, AttributeNameError, Comment, CommentTextError, ContentType, Doctype, Element,
-    TagNameError, TextChunk, UserData,
-};
-
-pub use self::html::TextType;
-pub use self::memory::MemoryLimitExceededError;
-pub use self::selectors_vm::{Selector, SelectorError};
+pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
+
+/// The errors that can be produced by the crate's API.
+pub mod errors {
+    pub use super::memory::MemoryLimitExceededError;
+    pub use super::parser::ParsingAmbiguityError;
+    pub use super::rewritable_units::{AttributeNameError, CommentTextError, TagNameError};
+    pub use super::rewriter::{EncodingError, RewritingError};
+    pub use super::selectors_vm::SelectorError;
+}
+
+/// HTML content descriptors that can be produced and modified by a rewriter.
+pub mod html_content {
+    pub use super::rewritable_units::{
+        Attribute, Comment, ContentType, Doctype, Element, TextChunk, UserData,
+    };
+
+    pub use super::html::TextType;
+}
 
 #[cfg(any(test, feature = "integration_test"))]
 pub mod test_utils {

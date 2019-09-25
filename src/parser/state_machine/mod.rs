@@ -7,7 +7,7 @@ mod syntax;
 use crate::base::{Chunk, Cursor};
 use crate::html::{LocalNameHash, TextType};
 use crate::parser::{ParserDirective, TreeBuilderFeedback};
-use failure::Error;
+use crate::rewriter::RewritingError;
 use std::fmt::{self, Debug};
 use std::mem;
 
@@ -59,8 +59,8 @@ pub enum ParsingLoopDirective {
     None,
 }
 
-pub type StateResult = Result<ParsingLoopDirective, Error>;
-pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, Error>;
+pub type StateResult = Result<ParsingLoopDirective, RewritingError>;
+pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, RewritingError>;
 
 pub trait StateMachineActions {
     fn emit_eof(&mut self, input: &Chunk, ch: Option<u8>) -> StateResult;

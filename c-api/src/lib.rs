@@ -1,3 +1,4 @@
+use cool_thing::html_content::*;
 use cool_thing::*;
 use failure::Error;
 use libc::{c_char, c_int, c_void, size_t};

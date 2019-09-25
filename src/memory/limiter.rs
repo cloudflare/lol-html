@@ -3,13 +3,20 @@ use std::rc::Rc;
 
 pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
 
-#[derive(Fail, Debug, PartialEq)]
+/// An error that occures when rewriter exceedes the memory limit specified in the
+/// [`MemorySettings`].
+///
+/// [`MemorySettings`]: ../struct.MemorySettings.html
+#[derive(Fail, Debug, PartialEq, Copy, Clone)]
 #[fail(
     display = "Memory limit of {} bytes has been exceeded: {} bytes were used.",
     max, current_usage
 )]
 pub struct MemoryLimitExceededError {
+    /// The amount of memory requested by the rewriter that exceeded the limit.
     pub current_usage: usize,
+
+    /// Current memory limit.
     pub max: usize,
 }
 

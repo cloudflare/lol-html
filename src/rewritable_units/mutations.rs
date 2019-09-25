@@ -1,8 +1,14 @@
 use crate::base::Bytes;
 use encoding_rs::Encoding;
 
+/// The type of inserted content.
 pub enum ContentType {
+    /// HTML content type. The rewriter will insert the content as is.
     Html,
+    /// Text content type. The rewriter will HTML-escape the content before insertion:
+    ///     - `<` will be replaced with `&lt;`
+    ///     - `>` will be replaced with `&gt;`
+    ///     - `&` will be replaced with `&amp;`
     Text,
 }
 
@@ -85,47 +91,4 @@ impl Mutations {
     pub fn removed(&self) -> bool {
         self.removed
     }
-}
-
-macro_rules! inject_mutation_api {
-    ($Token:ident) => {
-        impl<'i> $Token<'i> {
-            #[inline]
-            pub fn before(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                self.mutations.before(content, content_type);
-            }
-
-            #[inline]
-            pub fn after(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                self.mutations.after(content, content_type);
-            }
-
-            #[inline]
-            pub fn replace(
-                &mut self,
-                content: &str,
-                content_type: crate::rewritable_units::ContentType,
-            ) {
-                self.mutations.replace(content, content_type);
-            }
-
-            #[inline]
-            pub fn remove(&mut self) {
-                self.mutations.remove();
-            }
-
-            #[inline]
-            pub fn removed(&self) -> bool {
-                self.mutations.removed()
-            }
-        }
-    };
 }

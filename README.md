@@ -1,88 +1,57 @@
-# This is the Cool Thing
+# Cool Thing
 
-~~An annual Clodflare excercise in HTML parser writing~~
+*Cool Thing is an HTML rewriter/parser with CSS-selector based API.*
 
-_The backend for Cloudflare Workers' HTMLRewriter_
+It is designed to provide low output latency, quickly handle big amounts of data and operate in
+environments with limited memory resources.
 
-## Testing
+The crate serves as a back-end for the HTML rewriting functionality of
+[Cloudflare Workers](https://www.cloudflare.com/en-gb/products/cloudflare-workers/), but can be used
+as a standalone library with the convenient API for a wide variety of HTML rewriting/analyzis tasks.
 
-To run unit tests only (tests defined in `/src`):
+# Documentation
 
-```
-cargo test
-```
+https://docs.rs/cool-thing
 
-To run all the available tests including integration tests, C API tests and linting:
+# Example
 
-```
-./scripts/test.sh
-```
+Rewrite insecure hyperlinks:
 
-To run only those tests that contain a `{substring}` in their name:
+```rust
+use cool_thing::{element, HtmlRewriter, Settings};
 
-```
-./scripts/test.sh {substring}
-```
+fn main() {
+    let mut output = vec![];
 
-## Running benchmarks
+    {
+        let mut rewriter = HtmlRewriter::try_new(
+            Settings {
+                element_content_handlers: vec![
+                    element!("a[href]", |el| {
+                        let href = el
+                            .get_attribute("href")
+                            .unwrap()
+                            .replace("http:", "https:");
 
-```
-./scripts/bench.sh
-```
+                        el.set_attribute("href", &href).unwrap();
 
-To run benchmark for Cool Thing only and skip comparison with other parsers:
+                        Ok(())
+                    })
+                ],
+                ..Settings::default()
+            },
+            |c: &[u8]| output.extend_from_slice(c)
+        ).unwrap();
 
-```
-./scripts/bench.sh cool_thing
-```
+        rewriter.write(b"<div><a href=").unwrap();
+        rewriter.write(b"http://example.com>").unwrap();
+        rewriter.write(b"</a></div>").unwrap();
+        rewriter.end().unwrap();
+    }
 
-## Useful debugging tools
-
-### HTML parser tracer
-
-The tool provides comprehensive trace information about parsing process of the given HTML input. For usage information run:
-
-```
-./scripts/parser_trace.sh -- -h
-```
-
-### CSS selector VM's AST printer
-
-The tool prints selector VM's program AST for the given list of CSS selectors. CSS selector list should be specified in the JSON format:
-
-```
-./scripts/selectors_ast.sh '["selector1", "selector2", ...]'
-```
-
-## Fuzzing
-
-### Fuzzing with cargo-fuzz
-https://rust-fuzz.github.io/book/cargo-fuzz.html
-cargo-fuzz requires Rust nightly.
-
-Run fuzzing of `c-api`
-
-```
-./scripts/fuzz_c_api_with_libfuzzer.sh
-```
-
-Run fuzzing of rust library
-
-```
-./scripts/fuzz_with_libfuzzer.sh
-```
-
-### Fuzzing with afl
-https://rust-fuzz.github.io/book/afl.html
-
-
-```
-./scripts/fuzz_with_afl.sh
-```
-
-### Fuzzing with honggfuzz
-https://github.com/rust-fuzz/honggfuzz-rs
-
-```
-./scripts/fuzz_with_hongg.sh
+    assert_eq!(
+        String::from_utf8(output).unwrap(),
+        r#"<div><a href="https://example.com"></a></div>"#
+    );
+}
 ```

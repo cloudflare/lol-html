@@ -1,19 +1,22 @@
-mod content_handlers;
 mod handlers_dispatcher;
 mod rewrite_controller;
 
+#[macro_use]
+mod settings;
+
 use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::*;
+use crate::memory::MemoryLimitExceededError;
 use crate::memory::MemoryLimiter;
-use crate::selectors_vm::{self, Selector, SelectorMatchingVm};
+use crate::parser::ParsingAmbiguityError;
+use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use failure::Error;
-use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
-pub use self::content_handlers::*;
+pub use self::settings::*;
 
 fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingError> {
     let encoding = Encoding::for_label_no_replacement(encoding.as_bytes())
@@ -26,88 +29,95 @@ fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingEr
     }
 }
 
+/// An error that occurs if incorrect [`encoding`] label was provided in [`Settings`].
+///
+/// [`encoding`]: ../struct.Settings.html#structfield.encoding
+/// [`Settings`]: ../struct.Settings.html
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum EncodingError {
+    /// The provided value doesn't match any of the [labels specified in the standard].
+    ///
+    /// [labels specified in the standard]: https://encoding.spec.whatwg.org/#names-and-labels
     #[fail(display = "Unknown character encoding has been provided.")]
     UnknownEncoding,
+
+    /// The provided label is for one of the non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`,
+    /// `ISO-2022-JP` and `replacement`). These encodings are not supported.
     #[fail(display = "Expected ASCII-compatible encoding.")]
     NonAsciiCompatibleEncoding,
 }
 
-// NOTE: exposed in C API as well, thus repr(C).
-#[repr(C)]
-pub struct MemorySettings {
-    preallocated_parsing_buffer_size: usize,
-    max_allowed_memory_usage: usize,
+/// A compound error type that can be returned by [`write`] and [`end`] methods of the rewriter.
+///
+/// # Note
+/// This error is unrecoverable. The rewriter instance will panic on attempt to use it after such an
+/// error.
+///
+/// [`write`]: ../struct.HtmlRewriter.html#method.write
+/// [`end`]: ../struct.HtmlRewriter.html#method.end
+#[derive(Fail, Debug)]
+pub enum RewritingError {
+    #[fail(display = "{}", _0)]
+    /// See [`MemoryLimitExceededError`].
+    ///
+    /// [`MemoryLimitExceededError`]: struct.MemoryLimitExceededError.html
+    MemoryLimitExceeded(MemoryLimitExceededError),
+
+    /// See [`ParsingAmbiguityError`].
+    ///
+    /// [`ParsingAmbiguityError`]: struct.ParsingAmbiguityError.html
+    #[fail(display = "{}", _0)]
+    ParsingAmbiguity(ParsingAmbiguityError),
+
+    /// An error that was propagated from one of the content handlers.
+    #[fail(display = "{}", _0)]
+    ContentHandlerError(Error),
 }
 
-impl Default for MemorySettings {
-    #[inline]
-    fn default() -> Self {
-        MemorySettings {
-            preallocated_parsing_buffer_size: 1024,
-            max_allowed_memory_usage: std::usize::MAX,
-        }
-    }
-}
-
-pub struct Settings<'h, 's, O: OutputSink> {
-    pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
-    pub document_content_handlers: Vec<DocumentContentHandlers<'h>>,
-    pub encoding: &'s str,
-    pub memory_settings: MemorySettings,
-    pub output_sink: O,
-    pub strict: bool,
-}
-
+/// A streaming HTML rewriter.
+///
+/// # Example
+/// ```
+/// use cool_thing::{element, HtmlRewriter, Settings};
+///
+/// let mut output = vec![];
+///
+/// {
+///     let mut rewriter = HtmlRewriter::try_new(
+///         Settings {
+///             element_content_handlers: vec![
+///                 // Rewrite insecure hyperlinks
+///                 element!("a[href]", |el| {
+///                     let href = el
+///                         .get_attribute("href")
+///                         .unwrap()
+///                         .replace("http:", "https:");
+///
+///                     el.set_attribute("href", &href).unwrap();
+///
+///                     Ok(())
+///                 })
+///             ],
+///             ..Settings::default()
+///         },
+///         |c: &[u8]| output.extend_from_slice(c)
+///     ).unwrap();
+///
+///     rewriter.write(b"<div><a href=").unwrap();
+///     rewriter.write(b"http://example.com>").unwrap();
+///     rewriter.write(b"</a></div>").unwrap();
+///     rewriter.end().unwrap();
+/// }
+///
+/// assert_eq!(
+///     String::from_utf8(output).unwrap(),
+///     r#"<div><a href="https://example.com"></a></div>"#
+/// );
+/// ```
 pub struct HtmlRewriter<'h, O: OutputSink> {
     stream: TransformStream<HtmlRewriteController<'h>, O>,
     finished: bool,
     poisoned: bool,
-}
-
-impl<'h, 's, O: OutputSink> TryFrom<Settings<'h, 's, O>> for HtmlRewriter<'h, O> {
-    type Error = EncodingError;
-
-    fn try_from(settings: Settings<'h, 's, O>) -> Result<Self, Self::Error> {
-        let encoding = try_encoding_from_str(settings.encoding)?;
-        let mut selectors_ast = selectors_vm::Ast::default();
-        let mut dispatcher = ContentHandlersDispatcher::default();
-
-        for (selector, handlers) in settings.element_content_handlers {
-            let locator = dispatcher.add_selector_associated_handlers(handlers);
-
-            selectors_ast.add_selector(selector, locator);
-        }
-
-        for handlers in settings.document_content_handlers {
-            dispatcher.add_document_content_handlers(handlers);
-        }
-
-        let memory_limiter =
-            MemoryLimiter::new_shared(settings.memory_settings.max_allowed_memory_usage);
-
-        let selector_matching_vm =
-            SelectorMatchingVm::new(selectors_ast, encoding, Rc::clone(&memory_limiter));
-        let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
-
-        let stream = TransformStream::new(TransformStreamSettings {
-            transform_controller: controller,
-            output_sink: settings.output_sink,
-            preallocated_parsing_buffer_size: settings
-                .memory_settings
-                .preallocated_parsing_buffer_size,
-            memory_limiter,
-            encoding,
-            strict: settings.strict,
-        });
-
-        Ok(HtmlRewriter {
-            stream,
-            finished: false,
-            poisoned: false,
-        })
-    }
 }
 
 macro_rules! guarded {
@@ -128,8 +138,66 @@ macro_rules! guarded {
 }
 
 impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
+    /// Constructs a new rewriter with the provided `settings` that writes
+    /// the output to the `output_sink`.
+    ///
+    /// # Note
+    ///
+    /// For the convenience the [`OutputSink`] trait is implemented for closures.
+    ///
+    /// [`OutputSink`]: trait.OutputSink.html
+    pub fn try_new<'s>(settings: Settings<'h, 's>, output_sink: O) -> Result<Self, EncodingError> {
+        let encoding = try_encoding_from_str(settings.encoding)?;
+        let mut selectors_ast = selectors_vm::Ast::default();
+        let mut dispatcher = ContentHandlersDispatcher::default();
+
+        for (selector, handlers) in settings.element_content_handlers {
+            let locator = dispatcher.add_selector_associated_handlers(handlers);
+
+            selectors_ast.add_selector(selector, locator);
+        }
+
+        for handlers in settings.document_content_handlers {
+            dispatcher.add_document_content_handlers(handlers);
+        }
+
+        let memory_limiter =
+            MemoryLimiter::new_shared(settings.memory_settings.max_allowed_memory_usage);
+
+        let selector_matching_vm =
+            SelectorMatchingVm::new(selectors_ast, encoding, Rc::clone(&memory_limiter));
+
+        let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
+
+        let stream = TransformStream::new(TransformStreamSettings {
+            transform_controller: controller,
+            output_sink,
+            preallocated_parsing_buffer_size: settings
+                .memory_settings
+                .preallocated_parsing_buffer_size,
+            memory_limiter,
+            encoding,
+            strict: settings.strict,
+        });
+
+        Ok(HtmlRewriter {
+            stream,
+            finished: false,
+            poisoned: false,
+        })
+    }
+
+    /// Writes a chunk of input data to the rewriter.
+    ///
+    /// # Panics
+    ///  * If previous invocation of the method returned a [`RewritingError`]
+    ///    (these errors are unrecovarable).
+    ///  * If called after [`end`].
+    ///
+    /// [`RewritingError`]: errors/enum.RewritingError.html
+    /// [`end`]: struct.HtmlRewriter.html#method.end
     #[inline]
-    pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
+    pub fn write(&mut self, data: &[u8]) -> Result<(), RewritingError> {
         assert!(
             !self.finished,
             "Data was written into the stream after it has ended."
@@ -138,8 +206,19 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         guarded!(self, self.stream.write(data))
     }
 
+    /// Finalizes the rewriting process.
+    ///
+    /// Should be called once the last chunk of the input is written.
+    ///
+    /// # Panics
+    ///  * If previous invocation of [`write`] returned a [`RewritingError`] (these errors
+    ///    are unrecovarable).
+    ///  * If called twice.
+    ///
+    /// [`RewritingError`]: errors/enum.RewritingError.html
+    /// [`write`]: struct.HtmlRewriter.html#method.write
     #[inline]
-    pub fn end(&mut self) -> Result<(), Error> {
+    pub fn end(&mut self) -> Result<(), RewritingError> {
         assert!(!self.finished, "Stream was ended twice.");
         self.finished = true;
 
@@ -156,11 +235,59 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
     }
 }
 
+/// Rewrites given `html` string with the provided `settings`.
+///
+/// # Example
+///
+/// ```
+/// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+///
+/// let output = rewrite_str(
+///     r#"<div><a href="http://example.com"></a></div>"#,
+///     RewriteStrSettings {
+///         element_content_handlers: vec![
+///             // Rewrite insecure hyperlinks
+///             element!("a[href]", |el| {
+///                 let href = el
+///                     .get_attribute("href")
+///                     .unwrap()
+///                     .replace("http:", "https:");
+///
+///                  el.set_attribute("href", &href).unwrap();
+///
+///                  Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(output, r#"<div><a href="https://example.com"></a></div>"#);
+/// ```
+pub fn rewrite_str<'h, 's>(
+    html: &str,
+    settings: RewriteStrSettings<'h, 's>,
+) -> Result<String, RewritingError> {
+    let mut output = vec![];
+
+    // NOTE: never panics because encoding is always "utf-8".
+    let mut rewriter = HtmlRewriter::try_new(settings.into(), |c: &[u8]| {
+        output.extend_from_slice(c);
+    })
+    .unwrap();
+
+    rewriter.write(html.as_bytes())?;
+    rewriter.end()?;
+
+    // NOTE: it's ok to unwrap here as we guarantee encoding validity of the output
+    Ok(String::from_utf8(output).unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::html_content::ContentType;
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS};
-    use crate::ContentType;
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -179,15 +306,37 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_html_str() {
+        let res = rewrite_str(
+            "<!-- 42 --><div><!--hi--></div>",
+            RewriteStrSettings {
+                element_content_handlers: vec![
+                    element!("div", |el| {
+                        el.set_tag_name("span").unwrap();
+                        Ok(())
+                    }),
+                    comments!("div", |c| {
+                        c.set_text("hello").unwrap();
+                        Ok(())
+                    }),
+                ],
+                ..RewriteStrSettings::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(res, "<!-- 42 --><span><!--hello--></span>");
+    }
+
+    #[test]
     fn unknown_encoding() {
-        let err = HtmlRewriter::try_from(Settings {
-            element_content_handlers: vec![],
-            document_content_handlers: vec![],
-            encoding: "hey-yo",
-            memory_settings: MemorySettings::default(),
-            output_sink: |_: &[u8]| {},
-            strict: true,
-        })
+        let err = HtmlRewriter::try_new(
+            Settings {
+                encoding: "hey-yo",
+                ..Settings::default()
+            },
+            |_: &[u8]| {},
+        )
         .unwrap_err();
 
         assert_eq!(err, EncodingError::UnknownEncoding);
@@ -195,14 +344,13 @@ mod tests {
 
     #[test]
     fn non_ascii_compatible_encoding() {
-        let err = HtmlRewriter::try_from(Settings {
-            element_content_handlers: vec![],
-            document_content_handlers: vec![],
-            encoding: "utf-16be",
-            memory_settings: MemorySettings::default(),
-            output_sink: |_: &[u8]| {},
-            strict: true,
-        })
+        let err = HtmlRewriter::try_new(
+            Settings {
+                encoding: "utf-16be",
+                ..Settings::default()
+            },
+            |_: &[u8]| {},
+        )
         .unwrap_err();
 
         assert_eq!(err, EncodingError::NonAsciiCompatibleEncoding);
@@ -214,19 +362,17 @@ mod tests {
             let mut doctypes = Vec::default();
 
             {
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![],
-                    document_content_handlers: vec![DocumentContentHandlers::default().doctype(
-                        |d| {
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        document_content_handlers: vec![doctype!(|d| {
                             doctypes.push((d.name(), d.public_id(), d.system_id()));
                             Ok(())
-                        },
-                    )],
-                    encoding: enc.name(),
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |_: &[u8]| {},
-                    strict: true,
-                })
+                        })],
+                        encoding: enc.name(),
+                        ..Settings::default()
+                    },
+                    |_: &[u8]| {},
+                )
                 .unwrap();
 
                 write_chunks(
@@ -263,21 +409,18 @@ mod tests {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![(
-                        &"*".parse().unwrap(),
-                        ElementContentHandlers::default().element(|el| {
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        element_content_handlers: vec![element!("*", |el| {
                             el.set_attribute("foo", "bar").unwrap();
                             el.prepend("<test></test>", ContentType::Html);
                             Ok(())
-                        }),
-                    )],
-                    document_content_handlers: vec![],
-                    encoding: enc.name(),
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |c: &[u8]| output.push(c),
-                    strict: true,
-                })
+                        })],
+                        encoding: enc.name(),
+                        ..Settings::default()
+                    },
+                    |c: &[u8]| output.push(c),
+                )
                 .unwrap();
 
                 write_chunks(
@@ -318,25 +461,27 @@ mod tests {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![],
-                    document_content_handlers: vec![DocumentContentHandlers::default()
-                        .comments(|c| {
-                            c.set_text(&(c.text() + "1337")).unwrap();
-                            Ok(())
-                        })
-                        .text(|c| {
-                            if c.last_in_text_node() {
-                                c.after("BAZ", ContentType::Text);
-                            }
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        element_content_handlers: vec![],
+                        document_content_handlers: vec![
+                            doc_comments!(|c| {
+                                c.set_text(&(c.text() + "1337")).unwrap();
+                                Ok(())
+                            }),
+                            doc_text!(|c| {
+                                if c.last_in_text_node() {
+                                    c.after("BAZ", ContentType::Text);
+                                }
 
-                            Ok(())
-                        })],
-                    encoding: enc.name(),
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |c: &[u8]| output.push(c),
-                    strict: true,
-                })
+                                Ok(())
+                            }),
+                        ],
+                        encoding: enc.name(),
+                        ..Settings::default()
+                    },
+                    |c: &[u8]| output.push(c),
+                )
                 .unwrap();
 
                 write_chunks(
@@ -381,64 +526,54 @@ mod tests {
 
         macro_rules! create_handlers {
             ($sel:expr, $idx:expr) => {
-                (
-                    &$sel.parse().unwrap(),
-                    ElementContentHandlers::default().element({
-                        let handlers_executed = Rc::clone(&handlers_executed);
+                element!($sel, {
+                    let handlers_executed = Rc::clone(&handlers_executed);
 
-                        move |_| {
-                            handlers_executed.borrow_mut().push($idx);
-                            Ok(())
-                        }
-                    }),
-                )
+                    move |_| {
+                        handlers_executed.borrow_mut().push($idx);
+                        Ok(())
+                    }
+                })
             };
         }
 
-        let mut rewriter = HtmlRewriter::try_from(Settings {
-            element_content_handlers: vec![
-                create_handlers!("div span", 0),
-                create_handlers!("div > span", 1),
-                create_handlers!("span", 2),
-                create_handlers!("[foo]", 3),
-                create_handlers!("div span[foo]", 4),
-            ],
-            document_content_handlers: vec![],
-            encoding: "utf-8",
-            memory_settings: MemorySettings::default(),
-            output_sink: |_: &[u8]| {},
-            strict: true,
-        })
+        let _res = rewrite_str(
+            "<div><span foo></span></div>",
+            RewriteStrSettings {
+                element_content_handlers: vec![
+                    create_handlers!("div span", 0),
+                    create_handlers!("div > span", 1),
+                    create_handlers!("span", 2),
+                    create_handlers!("[foo]", 3),
+                    create_handlers!("div span[foo]", 4),
+                ],
+                ..RewriteStrSettings::default()
+            },
+        )
         .unwrap();
-
-        rewriter.write(b"<div><span foo></span></div>").unwrap();
-        rewriter.end().unwrap();
 
         assert_eq!(*handlers_executed.borrow(), vec![0, 1, 2, 3, 4]);
     }
 
     mod fatal_errors {
         use super::*;
-        use crate::MemoryLimitExceededError;
+        use crate::errors::MemoryLimitExceededError;
 
         fn create_rewriter<O: OutputSink>(
             max_allowed_memory_usage: usize,
             output_sink: O,
         ) -> HtmlRewriter<'static, O> {
-            HtmlRewriter::try_from(Settings {
-                element_content_handlers: vec![(
-                    &"*".parse().unwrap(),
-                    ElementContentHandlers::default().element(|_| Ok(())),
-                )],
-                document_content_handlers: vec![],
-                encoding: "utf-8",
-                memory_settings: MemorySettings {
-                    max_allowed_memory_usage,
-                    preallocated_parsing_buffer_size: 0,
+            HtmlRewriter::try_new(
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: MemorySettings {
+                        max_allowed_memory_usage,
+                        preallocated_parsing_buffer_size: 0,
+                    },
+                    ..Settings::default()
                 },
                 output_sink,
-                strict: true,
-            })
+            )
             .unwrap()
         }
 
@@ -458,18 +593,16 @@ mod tests {
 
             let write_err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
 
-            let buffer_capacity_err = write_err
-                .find_root_cause()
-                .downcast_ref::<MemoryLimitExceededError>()
-                .unwrap();
-
-            assert_eq!(
-                *buffer_capacity_err,
-                MemoryLimitExceededError {
-                    current_usage: mem_used,
-                    max: MAX
-                }
-            );
+            match write_err {
+                RewritingError::MemoryLimitExceeded(e) => assert_eq!(
+                    e,
+                    MemoryLimitExceededError {
+                        current_usage: mem_used,
+                        max: MAX
+                    }
+                ),
+                _ => panic!(write_err),
+            }
         }
 
         #[test]
@@ -509,14 +642,14 @@ mod tests {
                 document_handlers: DocumentContentHandlers,
                 expected_err: &'static str,
             ) {
-                let mut rewriter = HtmlRewriter::try_from(Settings {
-                    element_content_handlers: vec![(&"*".parse().unwrap(), element_handlers)],
-                    document_content_handlers: vec![document_handlers],
-                    encoding: "utf-8",
-                    memory_settings: MemorySettings::default(),
-                    output_sink: |_: &[u8]| {},
-                    strict: true,
-                })
+                let mut rewriter = HtmlRewriter::try_new(
+                    Settings {
+                        element_content_handlers: vec![(&"*".parse().unwrap(), element_handlers)],
+                        document_content_handlers: vec![document_handlers],
+                        ..Settings::default()
+                    },
+                    |_: &[u8]| {},
+                )
                 .unwrap();
 
                 let chunks = [
@@ -547,24 +680,22 @@ mod tests {
 
                 assert_eq!(err, expected_err);
             }
+
             assert_err(
                 ElementContentHandlers::default(),
-                DocumentContentHandlers::default()
-                    .comments(|_| Err(format_err!("Error in doc comment handler"))),
+                doc_comments!(|_| Err(format_err!("Error in doc comment handler"))),
                 "Error in doc comment handler",
             );
 
             assert_err(
                 ElementContentHandlers::default(),
-                DocumentContentHandlers::default()
-                    .text(|_| Err(format_err!("Error in doc text handler"))),
+                doc_text!(|_| Err(format_err!("Error in doc text handler"))),
                 "Error in doc text handler",
             );
 
             assert_err(
                 ElementContentHandlers::default(),
-                DocumentContentHandlers::default()
-                    .text(|_| Err(format_err!("Error in doctype handler"))),
+                doc_text!(|_| Err(format_err!("Error in doctype handler"))),
                 "Error in doctype handler",
             );
 

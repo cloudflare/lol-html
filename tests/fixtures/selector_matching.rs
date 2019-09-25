@@ -1,8 +1,8 @@
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
 use cool_thing::test_utils::Output;
-use cool_thing::{ContentType, ElementContentHandlers, HtmlRewriter, Settings, MemorySettings};
-use std::convert::TryFrom;
+use cool_thing::{HtmlRewriter, Settings, element, comments, text};
+use cool_thing::html_content::ContentType;
 
 pub struct SelectorMatchingTests;
 
@@ -17,23 +17,23 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
         let mut first_text_chunk_expected = true;
 
         {
-            let mut rewriter = HtmlRewriter::try_from(Settings {
-                element_content_handlers: vec![(
-                    &test.selector.parse().unwrap(),
-                    ElementContentHandlers::default()
-                        .element(|el| {
+            let mut rewriter = HtmlRewriter::try_new(
+                Settings {
+                    element_content_handlers: vec![
+                        element!(test.selector, |el| {
                             el.before(
                                 &format!("<!--[ELEMENT('{}')]-->", test.selector),
                                 ContentType::Html,
                             );
+
                             el.after(
                                 &format!("<!--[/ELEMENT('{}')]-->", test.selector),
                                 ContentType::Html,
                             );
 
                             Ok(())
-                        })
-                        .comments(|c| {
+                        }),
+                        comments!(test.selector, |c| {
                             c.before(
                                 &format!("<!--[COMMENT('{}')]-->", test.selector),
                                 ContentType::Html,
@@ -44,8 +44,8 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
                             );
 
                             Ok(())
-                        })
-                        .text(|t| {
+                        }),
+                        text!(test.selector, |t| {
                             if first_text_chunk_expected {
                                 t.before(
                                     &format!("<!--[TEXT('{}')]-->", test.selector),
@@ -65,15 +65,13 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
                             }
 
                             Ok(())
-                        }),
-                )],
-                document_content_handlers: vec![],
-                encoding: encoding.name(),
-                memory_settings: MemorySettings::default(),
-                output_sink: |c: &[u8]| output.push(c),
-                strict: true,
-            })
-            .unwrap();
+                        })
+                    ],
+                    encoding: encoding.name(),
+                    ..Settings::default()
+                },
+                |c: &[u8]| output.push(c)
+            ).unwrap();
 
             for chunk in test.input.chunks() {
                 rewriter.write(chunk).unwrap();

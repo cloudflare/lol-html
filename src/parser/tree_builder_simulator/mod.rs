@@ -19,7 +19,7 @@ use crate::html::{LocalNameHash, Namespace, Tag, TextType};
 use crate::parser::{TagLexeme, TagTokenOutline};
 use TagTokenOutline::*;
 
-pub use self::ambiguity_guard::AmbiguityGuardError;
+pub use self::ambiguity_guard::ParsingAmbiguityError;
 
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
@@ -133,7 +133,7 @@ impl TreeBuilderSimulator {
     pub fn get_feedback_for_start_tag(
         &mut self,
         tag_name: LocalNameHash,
-    ) -> Result<TreeBuilderFeedback, AmbiguityGuardError> {
+    ) -> Result<TreeBuilderFeedback, ParsingAmbiguityError> {
         if self.strict {
             self.ambiguity_guard.track_start_tag(tag_name)?;
         }

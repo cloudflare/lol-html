@@ -4,9 +4,9 @@ use crate::html::TextType;
 use crate::parser::{
     Lexeme, NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, TagTokenOutline,
 };
+use crate::rewriter::RewritingError;
 use bitflags::bitflags;
 use encoding_rs::{CoderResult, Decoder, Encoding};
-use failure::Error;
 use std::rc::Rc;
 
 bitflags! {
@@ -153,8 +153,8 @@ impl TokenCapturer {
     #[inline]
     pub fn flush_pending_text(
         &mut self,
-        event_handler: &mut dyn FnMut(TokenCapturerEvent) -> Result<(), Error>,
-    ) -> Result<(), Error> {
+        event_handler: &mut dyn FnMut(TokenCapturerEvent) -> Result<(), RewritingError>,
+    ) -> Result<(), RewritingError> {
         if self.pending_text_decoder.is_some() {
             self.emit_text(&Bytes::empty(), true, event_handler)?;
             self.pending_text_decoder = None;
@@ -167,8 +167,8 @@ impl TokenCapturer {
         &mut self,
         raw: &Bytes,
         last: bool,
-        event_handler: &mut dyn FnMut(TokenCapturerEvent) -> Result<(), Error>,
-    ) -> Result<(), Error> {
+        event_handler: &mut dyn FnMut(TokenCapturerEvent) -> Result<(), RewritingError>,
+    ) -> Result<(), RewritingError> {
         let encoding = self.encoding;
         let buffer = self.text_buffer.as_mut_str();
 
@@ -201,8 +201,8 @@ impl TokenCapturer {
     pub fn feed<'i, T>(
         &mut self,
         lexeme: &Lexeme<'i, T>,
-        mut event_handler: impl FnMut(TokenCapturerEvent) -> Result<(), Error>,
-    ) -> Result<(), Error>
+        mut event_handler: impl FnMut(TokenCapturerEvent) -> Result<(), RewritingError>,
+    ) -> Result<(), RewritingError>
     where
         Lexeme<'i, T>: ToToken,
     {

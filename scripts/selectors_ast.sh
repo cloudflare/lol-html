@@ -1,2 +1,3 @@
 #!/bin/sh
-cargo run --features integration_test --example=selectors_ast "$@"
+
+(cd tools/selectors_ast && cargo run "$@")

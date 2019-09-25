@@ -1,4 +1,4 @@
-use cool_thing::TextType;
+use cool_thing::html_content::TextType;
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
 use std::char;
 use std::iter::Peekable;
@@ -19,7 +19,7 @@ pub fn decode_text(text: &str, text_type: TextType) -> String {
         decoder = decoder.unsafe_null();
     }
 
-    if text_type.allows_text_entitites() {
+    if text_type.allows_html_entities() {
         decoder = decoder.text_entities();
     }
 

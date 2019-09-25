@@ -66,7 +66,10 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         let feedback = match self.feedback_directive.take() {
             FeedbackDirective::ApplyUnhandledFeedback(feedback) => Some(feedback),
             FeedbackDirective::Skip => None,
-            FeedbackDirective::None => Some(self.get_feedback_for_tag(&token)?),
+            FeedbackDirective::None => Some(
+                self.get_feedback_for_tag(&token)
+                    .map_err(RewritingError::ParsingAmbiguity)?,
+            ),
         };
 
         let mut lexeme = self.create_lexeme_with_raw_inclusive(input, token);

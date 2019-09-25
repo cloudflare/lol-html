@@ -4,15 +4,24 @@ use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
 
+/// An error that occurs when invalid value is provided for the HTML comment text.
 #[derive(Fail, Debug, PartialEq, Copy, Clone)]
 pub enum CommentTextError {
+    /// The provided value contains the `-->` character sequence that preemptively closes the comment.
     #[fail(display = "Comment text shouldn't contain comment closing sequence (`-->`).")]
     CommentClosingSequence,
+
+    /// The provided value contains a character that can't be represented in the document's [`encoding`].
+    ///
+    /// [`encoding`]: ../struct.Settings.html#structfield.encoding
     #[fail(display = "Comment text contains a character that can't \
                       be represented in the document's character encoding.")]
     UnencodableCharacter,
 }
 
+/// An HTML comment rewritable unit.
+///
+/// Exposes API for examination and modification of a parsed HTML comment.
 pub struct Comment<'i> {
     text: Bytes<'i>,
     raw: Option<Bytes<'i>>,
@@ -36,11 +45,13 @@ impl<'i> Comment<'i> {
         })
     }
 
+    /// Returns the text of the comment.
     #[inline]
     pub fn text(&self) -> String {
         self.text.as_string(self.encoding)
     }
 
+    /// Sets the text of the comment.
     #[inline]
     pub fn set_text(&mut self, text: &str) -> Result<(), CommentTextError> {
         if text.find("-->").is_some() {
@@ -62,6 +73,114 @@ impl<'i> Comment<'i> {
         }
     }
 
+    /// Inserts `content` before the comment.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div><!-- foo --></div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             comments!("div", |c| {
+    ///                 c.before("<!-- 42 -->", ContentType::Html);
+    ///                 c.before("bar", ContentType::Text);
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div><!-- 42 -->bar<!-- foo --></div>"#);
+    /// ```
+    #[inline]
+    pub fn before(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
+        self.mutations.before(content, content_type);
+    }
+
+    /// Inserts `content` after the comment.
+    ///
+    /// Consequent calls to the method prepend `content` to the previously inserted content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div><!-- foo --></div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             comments!("div", |c| {
+    ///                 c.after("Bar", ContentType::Text);
+    ///                 c.after("Qux", ContentType::Text);
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div><!-- foo -->QuxBar</div>"#);
+    /// ```
+    #[inline]
+    pub fn after(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
+        self.mutations.after(content, content_type);
+    }
+
+    /// Replaces the comment with the `content`.
+    ///
+    /// Consequent calls to the method overwrite previous replacement content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
+    /// use cool_thing::html_content::ContentType;
+    ///
+    /// let html = rewrite_str(
+    ///     r#"<div><!-- foo --></div>"#,
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             comments!("div", |c| {
+    ///                 c.replace("Bar", ContentType::Text);
+    ///                 c.replace("Qux", ContentType::Text);
+    ///
+    ///                 Ok(())
+    ///             })
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     }
+    /// ).unwrap();
+    ///
+    /// assert_eq!(html, r#"<div>Qux</div>"#);
+    /// ```
+    #[inline]
+    pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
+        self.mutations.replace(content, content_type);
+    }
+
+    /// Removes the comment.
+    #[inline]
+    pub fn remove(&mut self) {
+        self.mutations.remove();
+    }
+
+    /// Returns `true` if the comment has been replaced or removed.
+    #[inline]
+    pub fn removed(&self) -> bool {
+        self.mutations.removed()
+    }
+
     #[inline]
     fn raw(&self) -> Option<&Bytes> {
         self.raw.as_ref()
@@ -75,7 +194,6 @@ impl<'i> Comment<'i> {
     }
 }
 
-inject_mutation_api!(Comment);
 impl_serialize!(Comment);
 impl_user_data!(Comment<'_>);
 
@@ -89,6 +207,8 @@ impl Debug for Comment<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::errors::*;
+    use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
     use crate::*;
     use encoding_rs::{Encoding, EUC_JP, UTF_8};
@@ -104,7 +224,7 @@ mod tests {
             html,
             encoding,
             vec![],
-            vec![DocumentContentHandlers::default().comments(|c| {
+            vec![doc_comments!(|c| {
                 handler_called = true;
                 handler(c);
                 Ok(())
