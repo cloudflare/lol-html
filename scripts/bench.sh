@@ -2,5 +2,5 @@
 
 set -e
 
-cargo bench --features=integration_test "$@"
+cargo bench --features "integration_test lhtml" "$@"
 open target/criterion/report/index.html

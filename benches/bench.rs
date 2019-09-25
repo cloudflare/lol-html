@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
+use cfg_if::cfg_if;
 use cool_thing::errors::RewritingError;
 use cool_thing::{MemoryLimiter, TokenCaptureFlags as CoolThingTokenCaptureFlags};
 use criterion::{black_box, Bencher, Criterion, ParameterizedBenchmark, Throughput};
@@ -120,32 +121,41 @@ fn cool_thing_tokenizer_bench(
     }
 }
 
-fn lazyhtml_tokenizer_bench() -> impl FnMut(&mut Bencher, &Input) {
-    |b, i: &Input| {
-        use lazyhtml::*;
-        use std::os::raw::c_void;
-        use std::ptr::null_mut;
+cfg_if! {
+    if #[cfg(feature = "lhtml")] {
+      fn lazyhtml_tokenizer_bench() -> impl FnMut(&mut Bencher, &Input) {
+          |b, i: &Input| {
+              use lazyhtml::*;
+              use std::os::raw::c_void;
+              use std::ptr::null_mut;
 
-        unsafe extern "C" fn handle_token(token: *mut lhtml_token_t, _state: *mut c_void) {
-            black_box(*token);
+              unsafe extern "C" fn handle_token(token: *mut lhtml_token_t, _state: *mut c_void) {
+                  black_box(*token);
+              }
+
+              b.iter(|| {
+                  let mut handler = lhtml_token_handler_t {
+                      callback: Some(handle_token),
+                      next: null_mut(),
+                  };
+
+                  let mut tokenizer = lazyhtml::Tokenizer::new(2048, 256);
+
+                  handler.inject_into(&mut tokenizer);
+
+                  for chunk in &i.chunks {
+                      tokenizer.feed(chunk).unwrap();
+                  }
+
+                  tokenizer.end().unwrap();
+              })
+          }
+      }
+    } else {
+      fn lazyhtml_tokenizer_bench() -> impl FnMut(&mut Bencher, &Input) {
+        |_b, _i: &Input| {
         }
-
-        b.iter(|| {
-            let mut handler = lhtml_token_handler_t {
-                callback: Some(handle_token),
-                next: null_mut(),
-            };
-
-            let mut tokenizer = lazyhtml::Tokenizer::new(2048, 256);
-
-            handler.inject_into(&mut tokenizer);
-
-            for chunk in &i.chunks {
-                tokenizer.feed(chunk).unwrap();
-            }
-
-            tokenizer.end().unwrap();
-        })
+      }
     }
 }
 

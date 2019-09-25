@@ -21,6 +21,7 @@ edition = "2018"
 [features]
 debug_trace = []
 integration_test = []
+lhtml = []
 
 [[test]]
 harness = false
