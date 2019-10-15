@@ -35,6 +35,7 @@
 //! trigger this bailout case should be seen quite rarely in the wild.
 use crate::html::{LocalNameHash, Tag};
 use std::fmt::{self, Display};
+use thiserror::Error;
 
 /// An error that occurs when HTML parser runs into an ambigious state in the [`strict`] mode.
 ///
@@ -65,7 +66,7 @@ use std::fmt::{self, Display};
 /// correct parsing context.
 ///
 /// [`strict`]: ../struct.Settings.html#structfield.strict
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub struct ParsingAmbiguityError {
     on_tag_name: String,
 }

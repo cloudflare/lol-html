@@ -12,9 +12,10 @@ use crate::parser::ParsingAmbiguityError;
 use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
-use failure::Error;
+use std::error::Error as StdError;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
+use thiserror::Error;
 
 pub use self::settings::*;
 
@@ -33,17 +34,17 @@ fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingEr
 ///
 /// [`encoding`]: ../struct.Settings.html#structfield.encoding
 /// [`Settings`]: ../struct.Settings.html
-#[derive(Fail, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, PartialEq, Copy, Clone)]
 pub enum EncodingError {
     /// The provided value doesn't match any of the [labels specified in the standard].
     ///
     /// [labels specified in the standard]: https://encoding.spec.whatwg.org/#names-and-labels
-    #[fail(display = "Unknown character encoding has been provided.")]
+    #[error("Unknown character encoding has been provided.")]
     UnknownEncoding,
 
     /// The provided label is for one of the non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`,
     /// `ISO-2022-JP` and `replacement`). These encodings are not supported.
-    #[fail(display = "Expected ASCII-compatible encoding.")]
+    #[error("Expected ASCII-compatible encoding.")]
     NonAsciiCompatibleEncoding,
 }
 
@@ -55,23 +56,23 @@ pub enum EncodingError {
 ///
 /// [`write`]: ../struct.HtmlRewriter.html#method.write
 /// [`end`]: ../struct.HtmlRewriter.html#method.end
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum RewritingError {
-    #[fail(display = "{}", _0)]
     /// See [`MemoryLimitExceededError`].
     ///
     /// [`MemoryLimitExceededError`]: struct.MemoryLimitExceededError.html
+    #[error("{0}")]
     MemoryLimitExceeded(MemoryLimitExceededError),
 
     /// See [`ParsingAmbiguityError`].
     ///
     /// [`ParsingAmbiguityError`]: struct.ParsingAmbiguityError.html
-    #[fail(display = "{}", _0)]
+    #[error("{0}")]
     ParsingAmbiguity(ParsingAmbiguityError),
 
     /// An error that was propagated from one of the content handlers.
-    #[fail(display = "{}", _0)]
-    ContentHandlerError(Error),
+    #[error("{0}")]
+    ContentHandlerError(Box<dyn StdError>),
 }
 
 /// A streaming HTML rewriter.
@@ -601,7 +602,7 @@ mod tests {
                         max: MAX
                     }
                 ),
-                _ => panic!(write_err),
+                _ => panic!("{}", write_err),
             }
         }
 
@@ -683,39 +684,39 @@ mod tests {
 
             assert_err(
                 ElementContentHandlers::default(),
-                doc_comments!(|_| Err(format_err!("Error in doc comment handler"))),
+                doc_comments!(|_| Err("Error in doc comment handler".into())),
                 "Error in doc comment handler",
             );
 
             assert_err(
                 ElementContentHandlers::default(),
-                doc_text!(|_| Err(format_err!("Error in doc text handler"))),
+                doc_text!(|_| Err("Error in doc text handler".into())),
                 "Error in doc text handler",
             );
 
             assert_err(
                 ElementContentHandlers::default(),
-                doc_text!(|_| Err(format_err!("Error in doctype handler"))),
+                doc_text!(|_| Err("Error in doctype handler".into())),
                 "Error in doctype handler",
             );
 
             assert_err(
                 ElementContentHandlers::default()
-                    .element(|_| Err(format_err!("Error in element handler"))),
+                    .element(|_| Err("Error in element handler".into())),
                 DocumentContentHandlers::default(),
                 "Error in element handler",
             );
 
             assert_err(
                 ElementContentHandlers::default()
-                    .comments(|_| Err(format_err!("Error in element comment handler"))),
+                    .comments(|_| Err("Error in element comment handler".into())),
                 DocumentContentHandlers::default(),
                 "Error in element comment handler",
             );
 
             assert_err(
                 ElementContentHandlers::default()
-                    .text(|_| Err(format_err!("Error in element text handler"))),
+                    .text(|_| Err("Error in element text handler".into())),
                 DocumentContentHandlers::default(),
                 "Error in element text handler",
             );

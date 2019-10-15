@@ -1,59 +1,60 @@
 use cssparser::{BasicParseErrorKind, ParseErrorKind};
 use selectors::parser::{SelectorParseError, SelectorParseErrorKind};
+use thiserror::Error;
 
 /// A CSS selector parsing error.
-#[derive(Fail, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, PartialEq, Copy, Clone)]
 pub enum SelectorError {
     /// Unexpected token in the selector.
-    #[fail(display = "Unexpected token in selector.")]
+    #[error("Unexpected token in selector.")]
     UnexpectedToken,
 
     /// Unexpected end of the selector.
-    #[fail(display = "Unexpected end of selector.")]
+    #[error("Unexpected end of selector.")]
     UnexpectedEnd,
 
     /// Missing attribute name in attribute selector.
-    #[fail(display = "Missing attribute name in attribute selector.")]
+    #[error("Missing attribute name in attribute selector.")]
     MissingAttributeName,
 
     /// The selector is empty.
-    #[fail(display = "The selector is empty.")]
+    #[error("The selector is empty.")]
     EmptySelector,
 
     /// Dangling combinator in selector (e.g. `div >`).
-    #[fail(display = "Dangling combinator in selector.")]
+    #[error("Dangling combinator in selector.")]
     DanglingCombinator,
 
     /// Unexpected token in the attribute selector.
-    #[fail(display = "Unexpected token in the attribute selector.")]
+    #[error("Unexpected token in the attribute selector.")]
     UnexpectedTokenInAttribute,
 
     /// Unsupported pseudo-class or pseudo-element in selector.
-    #[fail(display = "Unsupported pseudo-class or pseudo-element in selector.")]
+    #[error("Unsupported pseudo-class or pseudo-element in selector.")]
     UnsupportedPseudoClassOrElement,
 
     /// Nested negation in selector.
-    #[fail(display = "Nested negation in selector.")]
+    #[error("Nested negation in selector.")]
     NestedNegation,
 
     /// Selectors with explicit namespaces are not supported.
-    #[fail(display = "Selectors with explicit namespaces are not supported.")]
+    #[error("Selectors with explicit namespaces are not supported.")]
     NamespacedSelector,
 
     /// Invalid or unescaped class name in selector.
-    #[fail(display = "Invalid or unescaped class name in selector.")]
+    #[error("Invalid or unescaped class name in selector.")]
     InvalidClassName,
 
     /// An empty negation in the selector.
-    #[fail(display = "Empty negation in selector.")]
+    #[error("Empty negation in selector.")]
     EmptyNegation,
 
     /// Unsupported combinator in the selector.
-    #[fail(display = "Unsupported combinator `{}` in selector.", _0)]
+    #[error("Unsupported combinator `{0}` in selector.")]
     UnsupportedCombinator(char),
 
     /// CSS syntax in the selector which is yet unsupported.
-    #[fail(display = "Unsupported syntax in selector.")]
+    #[error("Unsupported syntax in selector.")]
     UnsupportedSyntax,
 }
 

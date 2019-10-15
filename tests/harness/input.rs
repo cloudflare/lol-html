@@ -1,10 +1,10 @@
 use crate::harness::suites::html5lib_tests::Unescape;
 use encoding_rs::Encoding;
-use failure::{ensure, Error};
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde_json::error::Error as SerdeError;
 use std::env;
+use std::error::Error;
 use std::fmt::{self, Formatter};
 
 #[derive(Debug, Clone)]
@@ -31,22 +31,23 @@ impl Input {
         &mut self,
         encoding: &'static Encoding,
         single_chunk: bool,
-    ) -> Result<usize, Error> {
+    ) -> Result<usize, Box<dyn Error>> {
         let (bytes, _, had_unmappable_chars) = encoding.encode(&self.input);
 
         // NOTE: Input had unmappable characters for this encoding which were
         // converted to HTML entities by the encoder. This basically means
         // that such input is impossible with the given encoding, so we just
         // bail.
-        ensure!(!had_unmappable_chars, "There were unmappable characters");
+        if had_unmappable_chars {
+            return Err("There were unmappable characters".into());
+        }
 
         // NOTE: Some encodings deviate from ASCII, e.g. in ShiftJIS yen sign (U+00A5) is
         // mapped to 0x5C which makes conversion from UTF8 to it non-roundtrippable despite the
         // abscence of HTML entities replacements inserted by the encoder.
-        ensure!(
-            self.input == encoding.decode_without_bom_handling(&bytes).0,
-            "ASCII characters deviation"
-        );
+        if self.input != encoding.decode_without_bom_handling(&bytes).0 {
+            return Err("ASCII characters deviation".into());
+        }
 
         let len = bytes.len();
 
