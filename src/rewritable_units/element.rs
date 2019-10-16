@@ -4,31 +4,29 @@ use crate::rewriter::EndTagHandler;
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
+use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the tag name.
-#[derive(Fail, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, PartialEq, Copy, Clone)]
 pub enum TagNameError {
     /// The provided value is empty.
-    #[fail(display = "Tag name can't be empty.")]
+    #[error("Tag name can't be empty.")]
     Empty,
 
     /// The first character of the provided value is not an ASCII alphabetical character.
-    #[fail(
-        display = "The first character of the tag name should be an ASCII alphabetical character."
-    )]
+    #[error("The first character of the tag name should be an ASCII alphabetical character.")]
     InvalidFirstCharacter,
 
     /// The provided value contains a character that is forbidden by the HTML grammar in tag names
     /// (e.g. `'>'`).
-    #[fail(display = "{:?} character is forbidden in the tag name", _0)]
+    #[error("`{0}` character is forbidden in the tag name")]
     ForbiddenCharacter(char),
 
     /// The provided value contains a character that can't be represented in the document's
     /// [`encoding`].
     ///
     /// [`encoding`]: ../struct.Settings.html#structfield.encoding
-    #[fail(display = "The tag name contains a character that can't \
-                      be represented in the document's character encoding.")]
+    #[error("The tag name contains a character that can't be represented in the document's character encoding.")]
     UnencodableCharacter,
 }
 

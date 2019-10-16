@@ -17,9 +17,6 @@
 //! [`rewrite_str`]: fn.rewrite_str.html
 
 #[macro_use]
-extern crate failure;
-
-#[macro_use]
 mod base;
 
 #[macro_use]

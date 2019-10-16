@@ -5,25 +5,25 @@ use encoding_rs::Encoding;
 use lazycell::LazyCell;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
+use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the attribute name.
-#[derive(Fail, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, PartialEq, Copy, Clone)]
 pub enum AttributeNameError {
     /// The provided value is empty.
-    #[fail(display = "Attribute name can't be empty.")]
+    #[error("Attribute name can't be empty.")]
     Empty,
 
     /// The provided value contains a character that is forbidden by the HTML grammar in attribute
     /// names (e.g. `'='`).
-    #[fail(display = "{:?} character is forbidden in the attribute name", _0)]
+    #[error("`{0}` character is forbidden in the attribute name")]
     ForbiddenCharacter(char),
 
     /// The provided value contains a character that can't be represented in the document's
     /// [`encoding`].
     ///
     /// [`encoding`]: ../struct.Settings.html#structfield.encoding
-    #[fail(display = "The attribute name contains a character that can't \
-                      be represented in the document's character encoding.")]
+    #[error("The attribute name contains a character that can't be represented in the document's character encoding.")]
     UnencodableCharacter,
 }
 

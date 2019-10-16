@@ -1,6 +1,5 @@
 use cool_thing::html_content::*;
 use cool_thing::*;
-use failure::Error;
 use libc::{c_char, c_int, c_void, size_t};
 use std::cell::RefCell;
 use std::{ptr, slice, str};
@@ -54,7 +53,7 @@ macro_rules! to_bytes {
 
 macro_rules! to_str {
     ($data:ident, $len:ident) => {
-        str::from_utf8(to_bytes!($data, $len)).map_err(Error::from)
+        str::from_utf8(to_bytes!($data, $len)).into()
     };
 }
 

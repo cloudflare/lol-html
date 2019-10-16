@@ -1,8 +1,8 @@
 use super::*;
-use failure::Error;
+use std::error::Error;
 
 thread_local! {
-    pub static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
+    pub static LAST_ERROR: RefCell<Option<Box<dyn Error>>> = RefCell::new(None);
 }
 
 #[no_mangle]

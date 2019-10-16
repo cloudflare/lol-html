@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 cool_thing = { path = "../" }
-failure = "0.1.3"
 libc = "0"
 
 [profile.release]

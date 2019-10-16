@@ -1,5 +1,4 @@
 use super::*;
-use failure::err_msg;
 use libc::c_void;
 
 #[repr(C)]
@@ -42,7 +41,7 @@ macro_rules! add_handler {
                 $handlers.$ty(
                     move |arg: &mut _| match unsafe { handler(arg, user_data) } {
                         RewriterDirective::Continue => Ok(()),
-                        RewriterDirective::Stop => Err(err_msg("The rewriter has been stopped.")),
+                        RewriterDirective::Stop => Err("The rewriter has been stopped.".into()),
                     },
                 );
         }
