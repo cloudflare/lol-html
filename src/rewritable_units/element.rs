@@ -462,11 +462,7 @@ impl<'r, 't> Element<'r, 't> {
         let modified_end_tag_name = self.modified_end_tag_name;
 
         if end_tag_mutations.is_some() || modified_end_tag_name.is_some() {
-            // NOTE: Rc<RefCell<FnOnce>> is not callable in Rust, because it will
-            // require consumption of the inner value. To workaround it, we wrap
-            // FnOnce into FnMut and use runtime check to ensure that it has been
-            // called only once.
-            let mut wrap = Some(move |end_tag: &mut EndTag| {
+            Some(Box::new(move |end_tag: &mut EndTag| {
                 if let Some(name) = modified_end_tag_name {
                     end_tag.set_name(name);
                 }
@@ -474,10 +470,7 @@ impl<'r, 't> Element<'r, 't> {
                 if let Some(mutations) = end_tag_mutations {
                     end_tag.mutations = mutations;
                 }
-            });
 
-            Some(Box::new(move |end_tag: &mut EndTag| {
-                (wrap.take().expect("FnOnce called more than once"))(end_tag);
                 Ok(())
             }))
         } else {

@@ -96,16 +96,15 @@ impl<H> HandlerVec<H> {
     #[inline]
     pub fn do_for_each_active_and_remove(
         &mut self,
-        mut cb: impl FnMut(&mut H) -> HandlerResult,
+        mut cb: impl FnMut(H) ->HandlerResult,
     ) -> HandlerResult {
         for i in (0..self.items.len()).rev() {
-            let item = &mut self.items[i];
-
-            if item.user_count > 0 {
-                cb(&mut item.handler)?;
+            if self.items[i].user_count > 0 {
+                let item = self.items.remove(i);
 
                 self.user_count -= item.user_count;
-                self.items.remove(i);
+
+                cb(item.handler)?;
             }
         }
 

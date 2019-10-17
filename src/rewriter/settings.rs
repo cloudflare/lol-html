@@ -7,7 +7,7 @@ pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + 'h>
 pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>;
 pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;
 pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + 'h>;
-pub type EndTagHandler<'h> = Box<dyn FnMut(&mut EndTag) -> HandlerResult + 'h>;
+pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + 'h>;
 
 /// Specifies element content handlers associated with a selector.
 #[derive(Default)]
