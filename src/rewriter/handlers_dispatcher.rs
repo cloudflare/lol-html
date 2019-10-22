@@ -96,7 +96,7 @@ impl<H> HandlerVec<H> {
     #[inline]
     pub fn do_for_each_active_and_remove(
         &mut self,
-        mut cb: impl FnMut(H) ->HandlerResult,
+        mut cb: impl FnMut(H) -> HandlerResult,
     ) -> HandlerResult {
         for i in (0..self.items.len()).rev() {
             if self.items[i].user_count > 0 {
