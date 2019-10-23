@@ -1369,7 +1369,7 @@ static void test_memory_limiting() {
     max_memory);
 }
 
-int main() {
+int run_tests() {
     subtest("Unsupported selector", test_unsupported_selector);
     subtest("Non-ASCII encoding", test_non_ascii_encoding);
     subtest("Doctype API", test_doctype_api);
@@ -1377,6 +1377,5 @@ int main() {
     subtest("Text chunk API", test_text_chunk_api);
     subtest("Element API", element_api_test);
     subtest("Memory limiting", test_memory_limiting);
-
     return done_testing();
 }
