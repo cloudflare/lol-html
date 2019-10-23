@@ -229,9 +229,11 @@ impl TreeBuilderSimulator {
         tag_name: LocalNameHash,
     ) -> TreeBuilderFeedback {
         if causes_foreign_content_exit(tag_name) {
-            self.leave_ns()
-        } else if self.is_integration_point_enter(tag_name) {
-            request_lexeme(|this, lexeme| {
+            return self.leave_ns();
+        }
+
+        if self.is_integration_point_enter(tag_name) {
+            return request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag { self_closing, .. } => {
                     if self_closing {
                         TreeBuilderFeedback::None
@@ -239,11 +241,13 @@ impl TreeBuilderSimulator {
                         this.enter_ns(Namespace::Html)
                     }
                 })
-            })
-        } else if tag_name == Tag::Font {
+            });
+        }
+
+        if tag_name == Tag::Font {
             // NOTE: <font> tag special case requires attributes
             // to decide on foreign context exit
-            request_lexeme(|this, lexeme| {
+            return request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag { ref attributes, .. } => {
                     for attr in attributes.borrow().iter() {
                         let name = lexeme.part(attr.name);
@@ -258,11 +262,13 @@ impl TreeBuilderSimulator {
                 });
 
                 TreeBuilderFeedback::None
-            })
-        } else if tag_name.is_empty() && self.current_ns == Namespace::MathML {
+            });
+        }
+
+        if tag_name.is_empty() && self.current_ns == Namespace::MathML {
             // NOTE: tag name hash is empty - we need integration point check
             // for the possible <annotation-xml> case
-            request_lexeme(|this, lexeme| {
+            return request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag {
                     name,
                     ref attributes,
@@ -287,9 +293,9 @@ impl TreeBuilderSimulator {
                 });
 
                 TreeBuilderFeedback::None
-            })
-        } else {
-            TreeBuilderFeedback::None
+            });
         }
+
+        TreeBuilderFeedback::None
     }
 }
