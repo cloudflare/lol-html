@@ -154,52 +154,23 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         ns: Namespace,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), VmError<E, E::MatchPayload>> {
+        use StackDirective::*;
+
         let mut ctx = ExecutionCtx::new(local_name, ns);
-        let stack_directive = self.stack.get_stack_directive(&ctx.stack_item, ns);
 
-        if let StackDirective::PopImmediately = stack_directive {
-            ctx.with_content = false;
-        } else if let StackDirective::PushIfNotSelfClosing = stack_directive {
-            let mut ctx = ctx.into_owned();
+        match self.stack.get_stack_directive(&ctx.stack_item, ns) {
+            PopImmediately => {
+                ctx.with_content = false;
+                self.exec_without_attrs(ctx, match_handler)
+            }
+            PushIfNotSelfClosing => {
+                let ctx = ctx.into_owned();
 
-            return aux_info_request!(move |this: &mut SelectorMatchingVm<E>,
-                                           aux_info: AuxStartTagInfo,
-                                           match_handler| {
-                let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ns);
-
-                ctx.with_content = !aux_info.self_closing;
-
-                this.exec_instr_set_with_attrs(
-                    &this.program.entry_points,
-                    &attr_matcher,
-                    &mut ctx,
-                    0,
-                    match_handler,
-                );
-
-                this.exec_jumps_with_attrs(
-                    &attr_matcher,
-                    &mut ctx,
-                    JumpPtr::default(),
-                    match_handler,
-                );
-
-                this.exec_hereditary_jumps_with_attrs(
-                    &attr_matcher,
-                    &mut ctx,
-                    HereditaryJumpPtr::default(),
-                    match_handler,
-                );
-
-                if ctx.with_content {
-                    this.stack.push_item(ctx.stack_item)?;
-                }
-
-                Ok(())
-            });
+                aux_info_request!(move |this, aux_info, match_handler| this
+                    .exec_after_immediate_aux_info_request(ctx, ns, aux_info, match_handler))
+            }
+            Push => self.exec_without_attrs(ctx, match_handler),
         }
-
-        self.exec_without_attrs(ctx, match_handler)
     }
 
     #[inline]
@@ -215,6 +186,41 @@ impl<E: ElementData> SelectorMatchingVm<E> {
     #[inline]
     pub fn current_element_data_mut(&mut self) -> Option<&mut E> {
         self.stack.current_element_data_mut()
+    }
+
+    fn exec_after_immediate_aux_info_request(
+        &mut self,
+        mut ctx: ExecutionCtx<'static, E>,
+        ns: Namespace,
+        aux_info: AuxStartTagInfo,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
+    ) -> Result<(), MemoryLimitExceededError> {
+        let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ns);
+
+        ctx.with_content = !aux_info.self_closing;
+
+        self.exec_instr_set_with_attrs(
+            &self.program.entry_points,
+            &attr_matcher,
+            &mut ctx,
+            0,
+            match_handler,
+        );
+
+        self.exec_jumps_with_attrs(&attr_matcher, &mut ctx, JumpPtr::default(), match_handler);
+
+        self.exec_hereditary_jumps_with_attrs(
+            &attr_matcher,
+            &mut ctx,
+            HereditaryJumpPtr::default(),
+            match_handler,
+        );
+
+        if ctx.with_content {
+            self.stack.push_item(ctx.stack_item)?;
+        }
+
+        Ok(())
     }
 
     fn bailout<T: 'static>(
@@ -292,6 +298,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         );
     }
 
+    #[inline]
     fn recover_after_bailout_in_hereditary_jumps(
         &mut self,
         ctx: &mut ExecutionCtx<'static, E>,
