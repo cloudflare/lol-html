@@ -1,4 +1,4 @@
-use cc::Build;
+use cc;
 
 const CFLAGS: &'static [&str] = &[
     "-std=c99",
@@ -15,26 +15,21 @@ const CFLAGS: &'static [&str] = &[
     "-Wno-address",
 ];
 
-fn build_with_flags() -> Build {
-    let mut test_build = Build::new();
+fn main() {
+    let mut build = cc::Build::new();
     for cflag in CFLAGS {
-        test_build.flag(cflag);
+        build.flag(cflag);
     }
-    test_build
+    build
         .debug(true)
         .opt_level(0)
         .flag_if_supported("-Wl,no-as-needed")
         .warnings(true)
         .extra_warnings(true)
-        .warnings_into_errors(true);
-    test_build
-}
-
-fn main() {
-    build_with_flags()
+        .warnings_into_errors(true)
         .include("include")
-        .include("tests/deps/picotest")
-        .files(&["tests/deps/picotest/picotest.c", "tests/test.c"])
+        .include("src/deps/picotest")
+        .files(&["src/deps/picotest/picotest.c", "src/test.c"])
         .compile("cool_thing_ctests");
     println!("cargo:rustc-link-lib=dylib=cool_thing_c");
 }

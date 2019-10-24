@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "deps/picotest/picotest.h"
-#include "../include/cool_thing.h"
+#include "../../include/cool_thing.h"
 
 #define EXPECT_OUTPUT(sink_name, expected) \
     static void sink_name(const char *chunk, size_t chunk_len, void *user_data) { \

@@ -1,16 +1,16 @@
 [package]
-name = "c-api"
+name = "ctests"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 edition = "2018"
 build = "build.rs"
 
 [dependencies]
-cool_thing = { path = "../" }
+cool_thing = { path = "../.." }
 libc = "0"
 
 [build-dependencies]
-cool_thing_c = { path = "./cool-thing-c" }
+cool_thing_c = { path = "../cool-thing-c" }
 cc = "1.0.46"
 
 [profile.release]
