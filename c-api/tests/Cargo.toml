@@ -6,12 +6,13 @@ edition = "2018"
 build = "build.rs"
 
 [dependencies]
-cool_thing = { path = "../.." }
+cool_thing = { path = "../../" }
+coolthing = { path = "../" }
 libc = "0"
 
 [build-dependencies]
-cool_thing_c = { path = "../cool-thing-c" }
 cc = "1.0.46"
+glob = "0.3.0"
 
 [profile.release]
 panic = "abort"
