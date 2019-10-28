@@ -78,6 +78,8 @@
 
 #define c_str_eq(actual, expected) ok(!strcmp(actual, expected))
 
+#define UNUSED (void)
+
 void output_sink_stub(const char *chunk, size_t chunk_len, void *user_data);
 
 cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(

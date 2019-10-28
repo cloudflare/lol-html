@@ -3,8 +3,6 @@
 #include "tests.h"
 #include "test_util.h"
 
-// Element
-//---------------------------------------------------------------------
 static cool_thing_rewriter_directive_t modify_element_tag_name(
     cool_thing_element_t *element,
     void *user_data
