@@ -265,30 +265,265 @@ EXPECT_OUTPUT(
     "Hi <span>"
 );
 
+void test_output1(cool_thing_selector_t *selector, void *user_data) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &modify_element_tag_name,
+        user_data,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &user_data_get,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "Hi <div>", test_element_api_output1);
+}
+
 EXPECT_OUTPUT(
     test_element_api_output2,
     "<span bar=\"hey\">"
 );
+
+void test_output2(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &get_and_modify_element_attributes,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<span foo=42>", test_element_api_output2);
+}
 
 EXPECT_OUTPUT(
     test_element_api_output3,
     "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after"
 );
 
+void test_output3(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &element_surrounding_content_insertion,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<div>Hi</div>", test_element_api_output3);
+}
+
 EXPECT_OUTPUT(
     test_element_api_output4,
     "<div>hey &amp; ya</div>"
 );
+
+void test_output4(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &set_element_inner_content,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<div><span>42</span></div>", test_element_api_output4);
+}
 
 EXPECT_OUTPUT(
     test_element_api_output5,
     "hey & yaHello2"
 );
 
+void test_output5(cool_thing_selector_t *selector1,
+    cool_thing_selector_t *selector2,
+    cool_thing_selector_t *selector3
+) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector1,
+        &replace_element,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector2,
+        &remove_element,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector3,
+        &remove_element_and_keep_content,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder,
+        "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
+        test_element_api_output5
+    );
+}
+
 EXPECT_OUTPUT(
     test_element_api_output6,
     "<span foo>"
 );
+
+void test_output6(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &get_and_free_empty_element_attribute,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<span foo>", test_element_api_output6);
+}
+
+void test_output_sink_stub1(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &iterate_element_attributes,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<div foo=42 bar='1337'>", output_sink_stub);
+}
+
+void test_output_sink_stub2(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &assert_element_ns_is_html,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<script></script>", output_sink_stub);
+}
+
+void test_output_sink_stub3(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &assert_element_ns_is_svg,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<svg><script></script></svg>", output_sink_stub);
+}
+
+void test_expect_stop(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &stop_rewriting,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    expect_stop(builder, "<span foo>");
+
+    ok(!err);
+}
 
 void element_api_test() {
     int user_data = 42;
@@ -301,94 +536,10 @@ void element_api_test() {
             strlen(selector_str)
         );
 
-        REWRITE(
-            "Hi <div>",
-            test_element_api_output1,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &modify_element_tag_name,
-                    &user_data,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-
-                err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &user_data_get,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
-
-        REWRITE(
-            "<div foo=42 bar='1337'>",
-            output_sink_stub,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &iterate_element_attributes,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
-
-        REWRITE(
-            "<span foo=42>",
-            test_element_api_output2,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &get_and_modify_element_attributes,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
-
-        REWRITE(
-            "<div>Hi</div>",
-            test_element_api_output3,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &element_surrounding_content_insertion,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
+        test_output1(selector, &user_data);
+        test_output_sink_stub1(selector);
+        test_output2(selector);
+        test_output3(selector);
 
         cool_thing_selector_free(selector);
     }
@@ -401,24 +552,7 @@ void element_api_test() {
             strlen(selector_str)
         );
 
-        REWRITE(
-            "<div><span>42</span></div>",
-            test_element_api_output4,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &set_element_inner_content,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
+        test_output4(selector);
 
         cool_thing_selector_free(selector);
     }
@@ -445,50 +579,7 @@ void element_api_test() {
             strlen(selector3_str)
         );
 
-        REWRITE(
-            "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
-            test_element_api_output5,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector1,
-                    &replace_element,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-
-                err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector2,
-                    &remove_element,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-
-                err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector3,
-                    &remove_element_and_keep_content,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
+        test_output5(selector1, selector2, selector3);
 
         cool_thing_selector_free(selector1);
         cool_thing_selector_free(selector2);
@@ -503,48 +594,13 @@ void element_api_test() {
             strlen(selector_str)
         );
 
-        REWRITE(
-            "<span foo>",
-            test_element_api_output6,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &get_and_free_empty_element_attribute,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
-
-        EXPECT_STOP(
-            "<span foo>",
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &stop_rewriting,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
+        test_output6(selector);
+        test_expect_stop(selector);
 
         cool_thing_selector_free(selector);
     }
 
     {
-
         note("NamespaceURI");
 
         const char *selector_str = "script";
@@ -554,42 +610,7 @@ void element_api_test() {
             strlen(selector_str)
         );
 
-        REWRITE(
-            "<script></script>",
-            output_sink_stub,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &assert_element_ns_is_html,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
-
-        REWRITE(
-            "<svg><script></script></svg>",
-            output_sink_stub,
-            {
-                int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                    builder,
-                    selector,
-                    &assert_element_ns_is_svg,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                );
-
-                ok(!err);
-            }
-        );
+        test_output_sink_stub2(selector);
+        test_output_sink_stub3(selector);
     }
 }

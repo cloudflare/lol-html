@@ -6,6 +6,8 @@
 
 #include "../../include/cool_thing.h"
 
+#define MAX_MEMORY 2048
+
 #define EXPECT_OUTPUT(sink_name, expected) \
     static void sink_name(const char *chunk, size_t chunk_len, void *user_data) { \
         static char *out = NULL; \
@@ -22,6 +24,20 @@
             ok(!memcmp(out, expected, out_len)); \
         } \
     }
+
+typedef void (*output_sink_t)(const char *, size_t, void *);
+
+cool_thing_rewriter_t* create_rewriter(cool_thing_rewriter_builder_t *builder,
+    output_sink_t output_sink,
+    size_t max_memory
+);
+
+void run_rewriter(cool_thing_rewriter_builder_t *builder,
+    const char *html,
+    output_sink_t output_sink
+);
+
+void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html);
 
 #define RUN_REWRITER_WITH_MAX_MEMORY(html, output_sink, assign_handlers, actions, max_memory) \
     do { \
