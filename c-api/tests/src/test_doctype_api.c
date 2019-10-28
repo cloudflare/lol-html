@@ -3,7 +3,7 @@
 #include "tests.h"
 #include "test_util.h"
 
-cool_thing_rewriter_directive_t test_doctype_api_doctype_handler(
+static cool_thing_rewriter_directive_t doctype_handler(
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
@@ -29,7 +29,7 @@ cool_thing_rewriter_directive_t test_doctype_api_doctype_handler(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_doctype_api_user_data_get(
+static cool_thing_rewriter_directive_t user_data_get(
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
@@ -44,7 +44,7 @@ cool_thing_rewriter_directive_t test_doctype_api_user_data_get(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_doctype_api_stop_rewriting (
+static cool_thing_rewriter_directive_t stop_rewriting(
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
@@ -70,7 +70,7 @@ void test_doctype_api() {
         {
             cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
-                &test_doctype_api_doctype_handler,
+                &doctype_handler,
                 &user_data,
                 NULL,
                 NULL,
@@ -80,7 +80,7 @@ void test_doctype_api() {
 
             cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
-                &test_doctype_api_user_data_get,
+                &user_data_get,
                 NULL,
                 NULL,
                 NULL,
@@ -95,7 +95,7 @@ void test_doctype_api() {
         {
             cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
-                &test_doctype_api_stop_rewriting ,
+                &stop_rewriting,
                 NULL,
                 NULL,
                 NULL,

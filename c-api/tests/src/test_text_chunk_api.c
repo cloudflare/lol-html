@@ -3,7 +3,7 @@
 #include "tests.h"
 #include "test_util.h"
 
-cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler1(
+static cool_thing_rewriter_directive_t text_chunk_handler1(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -36,7 +36,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler1(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_text_chunk_api_user_data_get(
+static cool_thing_rewriter_directive_t user_data_get(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -51,7 +51,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_user_data_get(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_el(
+static cool_thing_rewriter_directive_t text_chunk_handler2_el(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -67,7 +67,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_el(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_doc(
+static cool_thing_rewriter_directive_t text_chunk_handler2_doc(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -82,7 +82,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_doc(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler3(
+static cool_thing_rewriter_directive_t text_chunk_handler3(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -97,7 +97,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler3(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_text_chunk_api_stop_rewriting(
+static cool_thing_rewriter_directive_t stop_rewriting(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -144,7 +144,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_text_chunk_handler1,
+                &text_chunk_handler1,
                 &user_data
             );
 
@@ -154,7 +154,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_user_data_get,
+                &user_data_get,
                 NULL
             );
         }
@@ -171,7 +171,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_text_chunk_handler2_el,
+                &text_chunk_handler2_el,
                 NULL
             );
 
@@ -183,7 +183,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_text_chunk_handler2_doc,
+                &text_chunk_handler2_doc,
                 NULL
             );
         }
@@ -199,7 +199,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_text_chunk_handler3,
+                &text_chunk_handler3,
                 NULL
             );
         }
@@ -215,7 +215,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_stop_rewriting,
+                &stop_rewriting,
                 NULL
             );
 
@@ -232,7 +232,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &test_text_chunk_api_stop_rewriting,
+                &stop_rewriting,
                 NULL
             );
         }

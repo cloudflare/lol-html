@@ -37,7 +37,7 @@ static cool_thing_rewriter_directive_t modify_element_tag_name(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t test_element_api_user_data_get(
+static cool_thing_rewriter_directive_t user_data_get(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -222,7 +222,7 @@ static cool_thing_rewriter_directive_t remove_element_and_keep_content(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t test_element_api_stop_rewriting(
+static cool_thing_rewriter_directive_t stop_rewriting(
     cool_thing_element_t *element,
     void *user_data
 ) {
@@ -321,7 +321,7 @@ void element_api_test() {
                 err = cool_thing_rewriter_builder_add_element_content_handlers(
                     builder,
                     selector,
-                    &test_element_api_user_data_get,
+                    &user_data_get,
                     NULL,
                     NULL,
                     NULL,
@@ -528,7 +528,7 @@ void element_api_test() {
                 int err = cool_thing_rewriter_builder_add_element_content_handlers(
                     builder,
                     selector,
-                    &test_element_api_stop_rewriting,
+                    &stop_rewriting,
                     NULL,
                     NULL,
                     NULL,

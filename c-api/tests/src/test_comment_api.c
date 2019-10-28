@@ -3,7 +3,7 @@
 #include "tests.h"
 #include "test_util.h"
 
-cool_thing_rewriter_directive_t test_comment_api_comment_handler1(
+static cool_thing_rewriter_directive_t comment_handler1(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -36,22 +36,7 @@ cool_thing_rewriter_directive_t test_comment_api_comment_handler1(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_comment_api_user_data_get(
-    cool_thing_comment_t *comment,
-    void *user_data
-) {
-    UNUSED(user_data);
-
-    note("Get comment user data");
-
-    int comment_user_data = *(int*)cool_thing_comment_user_data_get(comment);
-
-    ok(comment_user_data == 42);
-
-    return COOL_THING_CONTINUE;
-}
-
-cool_thing_rewriter_directive_t test_comment_api_comment_handler2_el(
+static cool_thing_rewriter_directive_t comment_handler2_el(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -66,7 +51,7 @@ cool_thing_rewriter_directive_t test_comment_api_comment_handler2_el(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_comment_api_comment_handler2_doc(
+static cool_thing_rewriter_directive_t comment_handler2_doc(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -80,7 +65,7 @@ cool_thing_rewriter_directive_t test_comment_api_comment_handler2_doc(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_comment_api_comment_handler3(
+static cool_thing_rewriter_directive_t comment_handler3(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -93,7 +78,23 @@ cool_thing_rewriter_directive_t test_comment_api_comment_handler3(
     return COOL_THING_CONTINUE;
 }
 
-cool_thing_rewriter_directive_t test_comment_api_stop_rewriting(
+
+static cool_thing_rewriter_directive_t user_data_get(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    note("Get comment user data");
+
+    int comment_user_data = *(int*)cool_thing_comment_user_data_get(comment);
+
+    ok(comment_user_data == 42);
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t stop_rewriting(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -138,7 +139,7 @@ void test_comment_api() {
                 builder,
                 NULL,
                 NULL,
-                &test_comment_api_comment_handler1,
+                &comment_handler1,
                 &user_data,
                 NULL,
                 NULL
@@ -148,7 +149,7 @@ void test_comment_api() {
                 builder,
                 NULL,
                 NULL,
-                &test_comment_api_user_data_get,
+                &user_data_get,
                 NULL,
                 NULL,
                 NULL
@@ -165,7 +166,7 @@ void test_comment_api() {
                 selector,
                 NULL,
                 NULL,
-                &test_comment_api_comment_handler2_el,
+                &comment_handler2_el,
                 NULL,
                 NULL,
                 NULL
@@ -177,7 +178,7 @@ void test_comment_api() {
                 builder,
                 NULL,
                 NULL,
-                &test_comment_api_comment_handler2_doc,
+                &comment_handler2_doc,
                 NULL,
                 NULL,
                 NULL
@@ -193,7 +194,7 @@ void test_comment_api() {
                 builder,
                 NULL,
                 NULL,
-                &test_comment_api_comment_handler3,
+                &comment_handler3,
                 NULL,
                 NULL,
                 NULL
@@ -208,7 +209,7 @@ void test_comment_api() {
                 builder,
                 NULL,
                 NULL,
-                &test_comment_api_stop_rewriting,
+                &stop_rewriting,
                 NULL,
                 NULL,
                 NULL
@@ -224,7 +225,7 @@ void test_comment_api() {
                 selector,
                 NULL,
                 NULL,
-                &test_comment_api_stop_rewriting,
+                &stop_rewriting,
                 NULL,
                 NULL,
                 NULL
