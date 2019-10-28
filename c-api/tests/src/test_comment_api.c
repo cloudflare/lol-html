@@ -3,8 +3,6 @@
 #include "tests.h"
 #include "test_util.h"
 
-// Comment API
-//---------------------------------------------------------------------
 cool_thing_rewriter_directive_t test_comment_api_comment_handler1(
     cool_thing_comment_t *comment,
     void *user_data

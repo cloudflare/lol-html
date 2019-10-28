@@ -5,8 +5,6 @@
 #include "tests.h"
 #include "test_util.h"
 
-// Unsupported selector
-//---------------------------------------------------------------------
 void test_unsupported_selector() {
     const char *selector_str = "p:last-child";
     cool_thing_selector_t *selector = cool_thing_selector_parse(selector_str, strlen(selector_str));

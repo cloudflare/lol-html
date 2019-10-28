@@ -3,8 +3,6 @@
 #include "tests.h"
 #include "test_util.h"
 
-// Text chunk API
-//---------------------------------------------------------------------
 cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler1(
     cool_thing_text_chunk_t *chunk,
     void *user_data

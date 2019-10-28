@@ -3,8 +3,6 @@
 #include "tests.h"
 #include "test_util.h"
 
-// Memory limiting
-//---------------------------------------------------------------------
 void test_memory_limiting() {
     const char *chunk1 = "<span alt='aaaaa";
     const int max_memory = 5;

@@ -3,8 +3,6 @@
 #include "tests.h"
 #include "test_util.h"
 
-// Doctype API
-//---------------------------------------------------------------------
 cool_thing_rewriter_directive_t test_doctype_api_doctype_handler(
     cool_thing_doctype_t *doctype,
     void *user_data

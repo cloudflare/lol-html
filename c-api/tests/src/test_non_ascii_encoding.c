@@ -5,8 +5,6 @@
 #include "tests.h"
 #include "test_util.h"
 
-// Non-ASCII encoding
-//---------------------------------------------------------------------
 void test_non_ascii_encoding() {
     const char *encoding = "UTF-16";
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
