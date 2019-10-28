@@ -40,7 +40,7 @@ cool_thing_rewriter_directive_t test_comment_api_user_data_get(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Get comment user data");
 
@@ -55,7 +55,7 @@ cool_thing_rewriter_directive_t test_comment_api_comment_handler2_el(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *replacement = "<repl>";
 
@@ -70,7 +70,7 @@ cool_thing_rewriter_directive_t test_comment_api_comment_handler2_doc(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *after = "<after>";
 
@@ -84,7 +84,7 @@ cool_thing_rewriter_directive_t test_comment_api_comment_handler3(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Remove");
     cool_thing_comment_remove(comment);
@@ -97,8 +97,8 @@ cool_thing_rewriter_directive_t test_comment_api_stop_rewriting(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
-    (void)(comment);
-    (void)(user_data);
+    UNUSED(comment);
+    UNUSED(user_data);
 
     note("Stop rewriting");
 

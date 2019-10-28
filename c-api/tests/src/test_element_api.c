@@ -41,7 +41,7 @@ static cool_thing_rewriter_directive_t test_element_api_user_data_get(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Get element user data");
 
@@ -56,7 +56,7 @@ static cool_thing_rewriter_directive_t iterate_element_attributes(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Attributes iterator");
     cool_thing_attributes_iterator_t *iter = cool_thing_attributes_iterator_get(element);
@@ -100,7 +100,7 @@ static cool_thing_rewriter_directive_t get_and_modify_element_attributes(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *attr1 = "foo";
     const char *attr2 = "Bar";
@@ -148,7 +148,7 @@ static cool_thing_rewriter_directive_t element_surrounding_content_insertion(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *before = "&before";
     const char *prepend = "<!--prepend-->";
@@ -170,7 +170,7 @@ static cool_thing_rewriter_directive_t set_element_inner_content(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *content = "hey & ya";
 
@@ -184,7 +184,7 @@ static cool_thing_rewriter_directive_t replace_element(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *content = "hey & ya";
 
@@ -198,7 +198,7 @@ static cool_thing_rewriter_directive_t remove_element(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Remove");
     ok(!cool_thing_element_is_removed(element));
@@ -212,7 +212,7 @@ static cool_thing_rewriter_directive_t remove_element_and_keep_content(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Remove and keep content");
     ok(!cool_thing_element_is_removed(element));
@@ -226,8 +226,8 @@ static cool_thing_rewriter_directive_t test_element_api_stop_rewriting(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(element);
-    (void)(user_data);
+    UNUSED(element);
+    UNUSED(user_data);
 
     note("Stop rewriting");
 
@@ -238,7 +238,7 @@ static cool_thing_rewriter_directive_t assert_element_ns_is_html(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *ns = cool_thing_element_namespace_uri_get(element);
 
@@ -251,7 +251,7 @@ static cool_thing_rewriter_directive_t assert_element_ns_is_svg(
     cool_thing_element_t *element,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     const char *ns = cool_thing_element_namespace_uri_get(element);
 

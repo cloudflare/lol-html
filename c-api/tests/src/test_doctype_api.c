@@ -33,7 +33,7 @@ cool_thing_rewriter_directive_t test_doctype_api_user_data_get(
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Get doctype user data");
 
@@ -48,8 +48,8 @@ cool_thing_rewriter_directive_t test_doctype_api_stop_rewriting (
     cool_thing_doctype_t *doctype,
     void *user_data
 ) {
-    (void)(doctype);
-    (void)(user_data);
+    UNUSED(doctype);
+    UNUSED(user_data);
 
     note("Stop rewriting");
 

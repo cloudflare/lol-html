@@ -40,7 +40,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_user_data_get(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     note("Get text chunk user data");
 
@@ -55,7 +55,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_el(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
     const char *replacement = "<repl>";
 
     if (cool_thing_text_chunk_content_get(chunk).len > 0) {
@@ -71,7 +71,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler2_doc(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
     const char *after = "<after>";
 
     if (cool_thing_text_chunk_content_get(chunk).len > 0) {
@@ -86,7 +86,7 @@ cool_thing_rewriter_directive_t test_text_chunk_api_text_chunk_handler3(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
-    (void)(user_data);
+    UNUSED(user_data);
 
     if (cool_thing_text_chunk_content_get(chunk).len > 0) {
         note("Remove");
@@ -101,8 +101,8 @@ cool_thing_rewriter_directive_t test_text_chunk_api_stop_rewriting(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
-    (void)(chunk);
-    (void)(user_data);
+    UNUSED(chunk);
+    UNUSED(user_data);
 
     note("Stop rewriting");
 
