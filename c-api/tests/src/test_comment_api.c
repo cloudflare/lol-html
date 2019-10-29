@@ -3,7 +3,7 @@
 #include "tests.h"
 #include "test_util.h"
 
-static cool_thing_rewriter_directive_t comment_handler1(
+static cool_thing_rewriter_directive_t handle_comment(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -36,7 +36,7 @@ static cool_thing_rewriter_directive_t comment_handler1(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t comment_handler2_el(
+static cool_thing_rewriter_directive_t handle_el(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -51,7 +51,7 @@ static cool_thing_rewriter_directive_t comment_handler2_el(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t comment_handler2_doc(
+static cool_thing_rewriter_directive_t handle_doc(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -65,7 +65,7 @@ static cool_thing_rewriter_directive_t comment_handler2_doc(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t comment_handler3(
+static cool_thing_rewriter_directive_t handle_remove(
     cool_thing_comment_t *comment,
     void *user_data
 ) {
@@ -107,17 +107,17 @@ static cool_thing_rewriter_directive_t stop_rewriting(
 }
 
 EXPECT_OUTPUT(
-    test_comment_api_output1,
+    output_sink1,
     "<div><!--Yo-->&lt;/div&gt;"
 );
 
 EXPECT_OUTPUT(
-    test_comment_api_output2,
+    output_sink2,
     "<div><repl><after></div>"
 );
 
 EXPECT_OUTPUT(
-    test_comment_api_output3,
+    output_sink3,
     "<>"
 );
 
@@ -133,13 +133,13 @@ void test_comment_api() {
 
     REWRITE(
         "<!--Hey 42-->",
-        test_comment_api_output1,
+        output_sink1,
         {
              cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
                 NULL,
                 NULL,
-                &comment_handler1,
+                &handle_comment,
                 &user_data,
                 NULL,
                 NULL
@@ -159,14 +159,14 @@ void test_comment_api() {
 
     REWRITE(
         "<div><!--Hello--></div>",
-        test_comment_api_output2,
+        output_sink2,
         {
             int err = cool_thing_rewriter_builder_add_element_content_handlers(
                 builder,
                 selector,
                 NULL,
                 NULL,
-                &comment_handler2_el,
+                &handle_el,
                 NULL,
                 NULL,
                 NULL
@@ -178,7 +178,7 @@ void test_comment_api() {
                 builder,
                 NULL,
                 NULL,
-                &comment_handler2_doc,
+                &handle_doc,
                 NULL,
                 NULL,
                 NULL
@@ -188,13 +188,13 @@ void test_comment_api() {
 
     REWRITE(
         "<<!--0_0-->>",
-        test_comment_api_output3,
+        output_sink3,
         {
              cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
                 NULL,
                 NULL,
-                &comment_handler3,
+                &handle_remove,
                 NULL,
                 NULL,
                 NULL

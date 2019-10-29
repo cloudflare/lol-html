@@ -261,7 +261,7 @@ static cool_thing_rewriter_directive_t assert_element_ns_is_svg(
 }
 
 EXPECT_OUTPUT(
-    test_element_api_output1,
+    output_sink1,
     "Hi <span>"
 );
 
@@ -294,11 +294,11 @@ void test_output1(cool_thing_selector_t *selector, void *user_data) {
 
     ok(!err);
 
-    run_rewriter(builder, "Hi <div>", test_element_api_output1);
+    run_rewriter(builder, "Hi <div>", output_sink1);
 }
 
 EXPECT_OUTPUT(
-    test_element_api_output2,
+    output_sink2,
     "<span bar=\"hey\">"
 );
 
@@ -318,11 +318,11 @@ void test_output2(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<span foo=42>", test_element_api_output2);
+    run_rewriter(builder, "<span foo=42>", output_sink2);
 }
 
 EXPECT_OUTPUT(
-    test_element_api_output3,
+    output_sink3,
     "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after"
 );
 
@@ -342,11 +342,11 @@ void test_output3(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<div>Hi</div>", test_element_api_output3);
+    run_rewriter(builder, "<div>Hi</div>", output_sink3);
 }
 
 EXPECT_OUTPUT(
-    test_element_api_output4,
+    output_sink4,
     "<div>hey &amp; ya</div>"
 );
 
@@ -366,11 +366,11 @@ void test_output4(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<div><span>42</span></div>", test_element_api_output4);
+    run_rewriter(builder, "<div><span>42</span></div>", output_sink4);
 }
 
 EXPECT_OUTPUT(
-    test_element_api_output5,
+    output_sink5,
     "hey & yaHello2"
 );
 
@@ -421,12 +421,12 @@ void test_output5(cool_thing_selector_t *selector1,
 
     run_rewriter(builder,
         "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
-        test_element_api_output5
+        output_sink5
     );
 }
 
 EXPECT_OUTPUT(
-    test_element_api_output6,
+    output_sink6,
     "<span foo>"
 );
 
@@ -446,7 +446,7 @@ void test_output6(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<span foo>", test_element_api_output6);
+    run_rewriter(builder, "<span foo>", output_sink6);
 }
 
 void test_output_sink_stub1(cool_thing_selector_t *selector) {

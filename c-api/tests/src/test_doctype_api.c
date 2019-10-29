@@ -57,7 +57,7 @@ static cool_thing_rewriter_directive_t stop_rewriting(
 }
 
 EXPECT_OUTPUT(
-    test_doctype_api_output,
+    output_sink,
     "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">"
 )
 
@@ -66,7 +66,7 @@ void test_doctype_api() {
 
     REWRITE(
         "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">",
-        test_doctype_api_output,
+        output_sink,
         {
             cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,

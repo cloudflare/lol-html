@@ -3,7 +3,7 @@
 #include "tests.h"
 #include "test_util.h"
 
-static cool_thing_rewriter_directive_t text_chunk_handler1(
+static cool_thing_rewriter_directive_t handle_chunk1(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -51,7 +51,7 @@ static cool_thing_rewriter_directive_t user_data_get(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t text_chunk_handler2_el(
+static cool_thing_rewriter_directive_t handle_el(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -67,7 +67,7 @@ static cool_thing_rewriter_directive_t text_chunk_handler2_el(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t text_chunk_handler2_doc(
+static cool_thing_rewriter_directive_t handle_doc(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -82,7 +82,7 @@ static cool_thing_rewriter_directive_t text_chunk_handler2_doc(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t text_chunk_handler3(
+static cool_thing_rewriter_directive_t handle_chunk2(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -110,17 +110,17 @@ static cool_thing_rewriter_directive_t stop_rewriting(
 }
 
 EXPECT_OUTPUT(
-    test_text_chunk_api_output1,
+    output_sink1,
     "<div>Hey 42&lt;/div&gt;"
 );
 
 EXPECT_OUTPUT(
-    test_text_chunk_api_output2,
+    output_sink2,
     "<div><repl><after></div>"
 );
 
 EXPECT_OUTPUT(
-    test_text_chunk_api_output3,
+    output_sink3,
     "<span></span>"
 );
 
@@ -136,7 +136,7 @@ void test_text_chunk_api() {
 
     REWRITE(
         "Hey 42",
-        test_text_chunk_api_output1,
+        output_sink1,
         {
              cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
@@ -144,7 +144,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &text_chunk_handler1,
+                &handle_chunk1,
                 &user_data
             );
 
@@ -162,7 +162,7 @@ void test_text_chunk_api() {
 
     REWRITE(
         "<div>Hello</div>",
-        test_text_chunk_api_output2,
+        output_sink2,
         {
             int err = cool_thing_rewriter_builder_add_element_content_handlers(
                 builder,
@@ -171,7 +171,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &text_chunk_handler2_el,
+                &handle_el,
                 NULL
             );
 
@@ -183,7 +183,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &text_chunk_handler2_doc,
+                &handle_doc,
                 NULL
             );
         }
@@ -191,7 +191,7 @@ void test_text_chunk_api() {
 
     REWRITE(
         "<span>0_0</span>",
-        test_text_chunk_api_output3,
+        output_sink3,
         {
             cool_thing_rewriter_builder_add_document_content_handlers(
                 builder,
@@ -199,7 +199,7 @@ void test_text_chunk_api() {
                 NULL,
                 NULL,
                 NULL,
-                &text_chunk_handler3,
+                &handle_chunk2,
                 NULL
             );
         }
