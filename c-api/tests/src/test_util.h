@@ -8,12 +8,20 @@
 
 #define MAX_MEMORY 2048
 
+void check_output(char **out,
+    size_t *out_len,
+    const char *chunk,
+    size_t chunk_len,
+    const char *expected,
+    void *user_data
+);
+
 #define EXPECT_OUTPUT(sink_name, expected) \
     static void sink_name(const char *chunk, size_t chunk_len, void *user_data) { \
-        static size_t start_idx = 0; \
+        static char *out = NULL; \
+        static size_t out_len = 0; \
     \
-        check_output(chunk, expected, start_idx, chunk_len, user_data); \
-        start_idx += chunk_len; \
+        check_output(&out, &out_len, chunk, chunk_len, expected, user_data); \
     }
 
 typedef void (*output_sink_t)(const char *, size_t, void *);
@@ -86,13 +94,6 @@ void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html);
 #define c_str_eq(actual, expected) ok(!strcmp(actual, expected))
 
 #define UNUSED (void)
-
-void check_output(const char *chunk,
-    const char *expected,
-    size_t start_idx,
-    size_t bytes,
-    void *user_data
-);
 
 void output_sink_stub(const char *chunk, size_t chunk_len, void *user_data);
 

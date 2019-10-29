@@ -82,18 +82,21 @@ void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html) {
     cool_thing_str_free(*msg);
 }
 
-void check_output(const char *chunk,
+void check_output(char **out,
+    size_t *out_len,
+    const char *chunk,
+    size_t chunk_len,
     const char *expected,
-    size_t start_idx,
-    size_t bytes,
     void *user_data
 ) {
     ok(*(int*)user_data == 42);
 
-    if (bytes > 0) {
-        ok(!memcmp(chunk, expected + start_idx, bytes));
+    if (chunk_len > 0) {
+        *out = (char *) (out == NULL ? malloc(chunk_len) : realloc(*out, *out_len + chunk_len));
+        memcpy(*out + *out_len, chunk, chunk_len);
+        *out_len += chunk_len;
     } else {
-        // The last chunk
-        ok(start_idx == strlen(expected));
+        ok(*out_len == strlen(expected));
+        ok(!memcmp(*out, expected, *out_len));
     }
 }
