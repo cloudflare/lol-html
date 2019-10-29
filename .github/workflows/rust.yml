@@ -4,14 +4,11 @@ on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v1
     - name: Fetch submodules
       run: git submodule update --init --recursive
-    - name: Install Ragel
-      run: sudo apt-get update && sudo apt-get install ragel
     - name: Run tests
       run: ./scripts/test.sh

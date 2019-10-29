@@ -22,8 +22,6 @@ To run only those tests that contain a `{substring}` in their name:
 
 ## Running benchmarks
 
-First, you need to uncomment `lazyhtml` dependency in `Cargo.toml`, then:
-
 ```
 ./scripts/bench.sh
 ```
