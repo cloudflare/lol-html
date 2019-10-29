@@ -114,15 +114,120 @@ EXPECT_OUTPUT(
     "<div>Hey 42&lt;/div&gt;"
 );
 
+static void test_output1(void *user_data) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+     cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &handle_chunk1,
+        user_data
+    );
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &user_data_get,
+        NULL
+    );
+
+    run_rewriter(builder, "Hey 42", output_sink1);
+}
+
 EXPECT_OUTPUT(
     output_sink2,
     "<div><repl><after></div>"
 );
 
+static void test_output2(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &handle_el,
+        NULL
+    );
+
+    ok(!err);
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &handle_doc,
+        NULL
+    );
+
+    run_rewriter(builder, "<div>Hello</div>", output_sink2);
+}
+
 EXPECT_OUTPUT(
     output_sink3,
     "<span></span>"
 );
+
+static void test_output3() {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &handle_chunk2,
+        NULL
+    );
+
+    run_rewriter(builder, "<span>0_0</span>", output_sink3);
+}
+
+static void test_stop1(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &stop_rewriting,
+        NULL
+    );
+
+    ok(!err);
+    expect_stop(builder, "<div>42</div>");
+}
+
+static void test_stop2() {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+     cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &stop_rewriting,
+        NULL
+    );
+
+     expect_stop(builder, "42");
+}
 
 void test_text_chunk_api() {
     int user_data = 42;
@@ -134,109 +239,12 @@ void test_text_chunk_api() {
         strlen(selector_str)
     );
 
-    REWRITE(
-        "Hey 42",
-        output_sink1,
-        {
-             cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                &handle_chunk1,
-                &user_data
-            );
+    test_output1(&user_data);
+    test_output2(selector);
+    test_output3();
 
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                &user_data_get,
-                NULL
-            );
-        }
-    );
-
-    REWRITE(
-        "<div>Hello</div>",
-        output_sink2,
-        {
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                &handle_el,
-                NULL
-            );
-
-            ok(!err);
-
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                &handle_doc,
-                NULL
-            );
-        }
-    );
-
-    REWRITE(
-        "<span>0_0</span>",
-        output_sink3,
-        {
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                &handle_chunk2,
-                NULL
-            );
-        }
-    );
-
-    EXPECT_STOP(
-        "<div>42</div>",
-        {
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                &stop_rewriting,
-                NULL
-            );
-
-            ok(!err);
-        }
-    );
-
-    EXPECT_STOP(
-        "42",
-        {
-             cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                &stop_rewriting,
-                NULL
-            );
-        }
-    );
+    test_stop1(selector);
+    test_stop2();
 
     cool_thing_selector_free(selector);
 }

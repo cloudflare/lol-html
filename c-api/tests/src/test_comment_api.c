@@ -111,15 +111,121 @@ EXPECT_OUTPUT(
     "<div><!--Yo-->&lt;/div&gt;"
 );
 
+static void test_output1(void *user_data) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        &handle_comment,
+        user_data,
+        NULL,
+        NULL
+    );
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        &user_data_get,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    run_rewriter(builder, "<!--Hey 42-->", output_sink1);
+}
+
 EXPECT_OUTPUT(
     output_sink2,
     "<div><repl><after></div>"
 );
 
+static void test_output2(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        NULL,
+        NULL,
+        &handle_el,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        &handle_doc,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    run_rewriter(builder, "<div><!--hello--></div>", output_sink2);
+}
+
 EXPECT_OUTPUT(
     output_sink3,
     "<>"
 );
+
+static void test_output3() {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+     cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        &handle_remove,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    run_rewriter(builder, "<<!--0_0-->>", output_sink3);
+}
+
+static void test_stop1() {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        &stop_rewriting,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    expect_stop(builder, "<!-- hey -->");
+}
+
+static void test_stop2(cool_thing_selector_t *selector) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        NULL,
+        NULL,
+        &stop_rewriting,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    expect_stop(builder, "<div><!-- foo --></div>");
+}
 
 void test_comment_api() {
     int user_data = 42;
@@ -131,109 +237,12 @@ void test_comment_api() {
         strlen(selector_str)
     );
 
-    REWRITE(
-        "<!--Hey 42-->",
-        output_sink1,
-        {
-             cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                &handle_comment,
-                &user_data,
-                NULL,
-                NULL
-            );
+    test_output1(&user_data);
+    test_output2(selector);
+    test_output3();
 
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                &user_data_get,
-                NULL,
-                NULL,
-                NULL
-            );
-        }
-    );
-
-    REWRITE(
-        "<div><!--Hello--></div>",
-        output_sink2,
-        {
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                NULL,
-                NULL,
-                &handle_el,
-                NULL,
-                NULL,
-                NULL
-            );
-
-            ok(!err);
-
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                &handle_doc,
-                NULL,
-                NULL,
-                NULL
-            );
-        }
-    );
-
-    REWRITE(
-        "<<!--0_0-->>",
-        output_sink3,
-        {
-             cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                &handle_remove,
-                NULL,
-                NULL,
-                NULL
-            );
-        }
-    );
-
-    EXPECT_STOP(
-        "<!-- hey -->",
-        {
-             cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                NULL,
-                NULL,
-                &stop_rewriting,
-                NULL,
-                NULL,
-                NULL
-            );
-        }
-    );
-
-    EXPECT_STOP(
-        "<div><!-- foo --></div>",
-        {
-            int err = cool_thing_rewriter_builder_add_element_content_handlers(
-                builder,
-                selector,
-                NULL,
-                NULL,
-                &stop_rewriting,
-                NULL,
-                NULL,
-                NULL
-            );
-
-            ok(!err);
-        }
-    );
+    test_stop1();
+    test_stop2(selector);
 
     cool_thing_selector_free(selector);
 }

@@ -265,7 +265,7 @@ EXPECT_OUTPUT(
     "Hi <span>"
 );
 
-void test_output1(cool_thing_selector_t *selector, void *user_data) {
+static void test_output1(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -302,7 +302,7 @@ EXPECT_OUTPUT(
     "<span bar=\"hey\">"
 );
 
-void test_output2(cool_thing_selector_t *selector) {
+static void test_output2(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -326,7 +326,7 @@ EXPECT_OUTPUT(
     "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after"
 );
 
-void test_output3(cool_thing_selector_t *selector) {
+static void test_output3(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -350,7 +350,7 @@ EXPECT_OUTPUT(
     "<div>hey &amp; ya</div>"
 );
 
-void test_output4(cool_thing_selector_t *selector) {
+static void test_output4(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -374,7 +374,7 @@ EXPECT_OUTPUT(
     "hey & yaHello2"
 );
 
-void test_output5(cool_thing_selector_t *selector1,
+static void test_output5(cool_thing_selector_t *selector1,
     cool_thing_selector_t *selector2,
     cool_thing_selector_t *selector3
 ) {
@@ -430,7 +430,7 @@ EXPECT_OUTPUT(
     "<span foo>"
 );
 
-void test_output6(cool_thing_selector_t *selector) {
+static void test_output6(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -449,7 +449,7 @@ void test_output6(cool_thing_selector_t *selector) {
     run_rewriter(builder, "<span foo>", output_sink6);
 }
 
-void test_output_sink_stub1(cool_thing_selector_t *selector) {
+static void test_output_sink_stub1(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -468,7 +468,7 @@ void test_output_sink_stub1(cool_thing_selector_t *selector) {
     run_rewriter(builder, "<div foo=42 bar='1337'>", output_sink_stub);
 }
 
-void test_output_sink_stub2(cool_thing_selector_t *selector) {
+static void test_output_sink_stub2(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -487,7 +487,7 @@ void test_output_sink_stub2(cool_thing_selector_t *selector) {
     run_rewriter(builder, "<script></script>", output_sink_stub);
 }
 
-void test_output_sink_stub3(cool_thing_selector_t *selector) {
+static void test_output_sink_stub3(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -506,7 +506,7 @@ void test_output_sink_stub3(cool_thing_selector_t *selector) {
     run_rewriter(builder, "<svg><script></script></svg>", output_sink_stub);
 }
 
-void test_expect_stop(cool_thing_selector_t *selector) {
+static void test_stop(cool_thing_selector_t *selector) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -595,7 +595,7 @@ void element_api_test() {
         );
 
         test_output6(selector);
-        test_expect_stop(selector);
+        test_stop(selector);
 
         cool_thing_selector_free(selector);
     }

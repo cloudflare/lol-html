@@ -61,48 +61,56 @@ EXPECT_OUTPUT(
     "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">"
 )
 
+static void test_rewrite(void *user_data) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        &doctype_handler,
+        user_data,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        &user_data_get,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    run_rewriter(
+        builder,
+        "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">",
+        output_sink
+    );
+}
+
+static void test_stop() {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        &stop_rewriting,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    expect_stop(builder, "<!doctype>");
+}
+
 void test_doctype_api() {
     int user_data = 42;
 
-    REWRITE(
-        "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">",
-        output_sink,
-        {
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                &doctype_handler,
-                &user_data,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
-
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                &user_data_get,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
-        }
-    );
-
-    EXPECT_STOP(
-        "<!doctype>",
-        {
-            cool_thing_rewriter_builder_add_document_content_handlers(
-                builder,
-                &stop_rewriting,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-            );
-        }
-    );
+    test_rewrite(&user_data);
+    test_stop();
 }
 
