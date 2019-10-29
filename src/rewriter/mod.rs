@@ -588,20 +588,13 @@ mod tests {
             // make sure to overflow it.
             let chunk_1 = format!("<img alt=\"{}", "l".repeat(MAX / 2));
             let chunk_2 = format!("{}\" />", "r".repeat(MAX / 2));
-            let mem_used = chunk_1.len() + chunk_2.len();
 
             rewriter.write(chunk_1.as_bytes()).unwrap();
 
             let write_err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
 
             match write_err {
-                RewritingError::MemoryLimitExceeded(e) => assert_eq!(
-                    e,
-                    MemoryLimitExceededError {
-                        current_usage: mem_used,
-                        max: MAX
-                    }
-                ),
+                RewritingError::MemoryLimitExceeded(e) => assert_eq!(e, MemoryLimitExceededError),
                 _ => panic!("{}", write_err),
             }
         }

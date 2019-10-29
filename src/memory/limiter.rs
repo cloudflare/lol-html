@@ -9,14 +9,8 @@ pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
 ///
 /// [`MemorySettings`]: ../struct.MemorySettings.html
 #[derive(Error, Debug, PartialEq, Copy, Clone)]
-#[error("Memory limit of {max} bytes has been exceeded: {current_usage} bytes were used.")]
-pub struct MemoryLimitExceededError {
-    /// The amount of memory requested by the rewriter that exceeded the limit.
-    pub current_usage: usize,
-
-    /// Current memory limit.
-    pub max: usize,
-}
+#[error("The memory limit has been exceeded.")]
+pub struct MemoryLimitExceededError;
 
 #[derive(Debug)]
 pub struct MemoryLimiter {
@@ -42,10 +36,7 @@ impl MemoryLimiter {
         self.current_usage += byte_count;
 
         if self.current_usage > self.max {
-            Err(MemoryLimitExceededError {
-                current_usage: self.current_usage,
-                max: self.max,
-            })
+            Err(MemoryLimitExceededError)
         } else {
             Ok(())
         }
@@ -86,13 +77,7 @@ mod tests {
 
         let err = limiter.increase_usage(15).unwrap_err();
 
-        assert_eq!(
-            err,
-            MemoryLimitExceededError {
-                current_usage: 19,
-                max: 10
-            }
-        );
+        assert_eq!(err, MemoryLimitExceededError);
     }
 
     #[test]

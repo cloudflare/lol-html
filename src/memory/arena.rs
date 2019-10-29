@@ -84,13 +84,7 @@ mod tests {
 
         let err = arena.append(&[11]).unwrap_err();
 
-        assert_eq!(
-            err,
-            MemoryLimitExceededError {
-                current_usage: 11,
-                max: 10
-            }
-        );
+        assert_eq!(err, MemoryLimitExceededError);
     }
 
     #[test]
@@ -116,13 +110,7 @@ mod tests {
 
         let err = arena.init_with(&[1, 2, 3, 4, 5, 6, 7]).unwrap_err();
 
-        assert_eq!(
-            err,
-            MemoryLimitExceededError {
-                current_usage: 7,
-                max: 5
-            }
-        );
+        assert_eq!(err, MemoryLimitExceededError);
     }
 
     #[test]
