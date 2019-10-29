@@ -10,19 +10,10 @@
 
 #define EXPECT_OUTPUT(sink_name, expected) \
     static void sink_name(const char *chunk, size_t chunk_len, void *user_data) { \
-        static char *out = NULL; \
-        static size_t out_len = 0; \
+        static size_t start_idx = 0; \
     \
-        ok(*(int*)user_data == 42); \
-    \
-        if (chunk_len > 0) { \
-            out = (char *) (out == NULL ? malloc(chunk_len) : realloc(out, out_len + chunk_len)); \
-            memcpy(out + out_len, chunk, chunk_len); \
-            out_len += chunk_len; \
-        } else { \
-            ok(out_len == strlen(expected)); \
-            ok(!memcmp(out, expected, out_len)); \
-        } \
+        check_output(chunk, expected, start_idx, chunk_len, user_data); \
+        start_idx += chunk_len; \
     }
 
 typedef void (*output_sink_t)(const char *, size_t, void *);
@@ -95,6 +86,13 @@ void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html);
 #define c_str_eq(actual, expected) ok(!strcmp(actual, expected))
 
 #define UNUSED (void)
+
+void check_output(const char *chunk,
+    const char *expected,
+    size_t start_idx,
+    size_t bytes,
+    void *user_data
+);
 
 void output_sink_stub(const char *chunk, size_t chunk_len, void *user_data);
 

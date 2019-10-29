@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include "deps/picotest/picotest.h"
 #include "test_util.h"
 
@@ -79,4 +80,20 @@ void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html) {
     cool_thing_str_t *msg = cool_thing_take_last_error();
     str_eq(msg, "The rewriter has been stopped.");
     cool_thing_str_free(*msg);
+}
+
+void check_output(const char *chunk,
+    const char *expected,
+    size_t start_idx,
+    size_t bytes,
+    void *user_data
+) {
+    ok(*(int*)user_data == 42);
+
+    if (bytes > 0) {
+        ok(!memcmp(chunk, expected + start_idx, bytes));
+    } else {
+        // The last chunk
+        ok(start_idx == strlen(expected));
+    }
 }
