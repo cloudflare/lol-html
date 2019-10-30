@@ -5,6 +5,13 @@
 
 static int EXPECTED_USER_DATA = 42;
 
+EXPECT_OUTPUT(
+    output_sink1,
+    "<div>Hey 42&lt;/div&gt;",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
 static cool_thing_rewriter_directive_t handle_chunk1(
     cool_thing_text_chunk_t *chunk,
     void *user_data
@@ -53,71 +60,6 @@ static cool_thing_rewriter_directive_t user_data_get(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t handle_el(
-    cool_thing_text_chunk_t *chunk,
-    void *user_data
-) {
-    UNUSED(user_data);
-    const char *replacement = "<repl>";
-
-    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
-        note("Replace");
-        ok(!cool_thing_text_chunk_replace(chunk, replacement, strlen(replacement), true));
-        ok(cool_thing_text_chunk_is_removed(chunk));
-    }
-
-    return COOL_THING_CONTINUE;
-}
-
-static cool_thing_rewriter_directive_t handle_doc(
-    cool_thing_text_chunk_t *chunk,
-    void *user_data
-) {
-    UNUSED(user_data);
-    const char *after = "<after>";
-
-    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
-        note("Insert after replaced");
-        ok(!cool_thing_text_chunk_after(chunk, after, strlen(after), true));
-    }
-
-    return COOL_THING_CONTINUE;
-}
-
-static cool_thing_rewriter_directive_t handle_chunk2(
-    cool_thing_text_chunk_t *chunk,
-    void *user_data
-) {
-    UNUSED(user_data);
-
-    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
-        note("Remove");
-        cool_thing_text_chunk_remove(chunk);
-        ok(cool_thing_text_chunk_is_removed(chunk));
-    }
-
-    return COOL_THING_CONTINUE;
-}
-
-static cool_thing_rewriter_directive_t stop_rewriting(
-    cool_thing_text_chunk_t *chunk,
-    void *user_data
-) {
-    UNUSED(chunk);
-    UNUSED(user_data);
-
-    note("Stop rewriting");
-
-    return COOL_THING_STOP;
-}
-
-EXPECT_OUTPUT(
-    output_sink1,
-    "<div>Hey 42&lt;/div&gt;",
-    &EXPECTED_USER_DATA,
-    sizeof(EXPECTED_USER_DATA)
-);
-
 static void test_output1(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
@@ -150,6 +92,37 @@ EXPECT_OUTPUT(
     &EXPECTED_USER_DATA,
     sizeof(EXPECTED_USER_DATA)
 );
+
+static cool_thing_rewriter_directive_t handle_el(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+) {
+    UNUSED(user_data);
+    const char *replacement = "<repl>";
+
+    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
+        note("Replace");
+        ok(!cool_thing_text_chunk_replace(chunk, replacement, strlen(replacement), true));
+        ok(cool_thing_text_chunk_is_removed(chunk));
+    }
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t handle_doc(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+) {
+    UNUSED(user_data);
+    const char *after = "<after>";
+
+    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
+        note("Insert after replaced");
+        ok(!cool_thing_text_chunk_after(chunk, after, strlen(after), true));
+    }
+
+    return COOL_THING_CONTINUE;
+}
 
 static void test_output2(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
@@ -187,6 +160,21 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
+static cool_thing_rewriter_directive_t handle_chunk2(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
+        note("Remove");
+        cool_thing_text_chunk_remove(chunk);
+        ok(cool_thing_text_chunk_is_removed(chunk));
+    }
+
+    return COOL_THING_CONTINUE;
+}
+
 static void test_output3(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
@@ -201,6 +189,18 @@ static void test_output3(void *user_data) {
     );
 
     run_rewriter(builder, "<span>0_0</span>", output_sink3, user_data);
+}
+
+static cool_thing_rewriter_directive_t stop_rewriting(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+) {
+    UNUSED(chunk);
+    UNUSED(user_data);
+
+    note("Stop rewriting");
+
+    return COOL_THING_STOP;
 }
 
 static void test_stop1(cool_thing_selector_t *selector, void *user_data) {

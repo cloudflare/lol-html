@@ -5,6 +5,13 @@
 
 static int EXPECTED_USER_DATA = 42;
 
+EXPECT_OUTPUT(
+    output_sink1,
+    "<div><!--Yo-->&lt;/div&gt;",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
 static cool_thing_rewriter_directive_t handle_comment(
     cool_thing_comment_t *comment,
     void *user_data
@@ -38,49 +45,6 @@ static cool_thing_rewriter_directive_t handle_comment(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t handle_el(
-    cool_thing_comment_t *comment,
-    void *user_data
-) {
-    UNUSED(user_data);
-
-    const char *replacement = "<repl>";
-
-    note("Replace");
-    ok(!cool_thing_comment_replace(comment, replacement, strlen(replacement), true));
-    ok(cool_thing_comment_is_removed(comment));
-
-    return COOL_THING_CONTINUE;
-}
-
-static cool_thing_rewriter_directive_t handle_doc(
-    cool_thing_comment_t *comment,
-    void *user_data
-) {
-    UNUSED(user_data);
-
-    const char *after = "<after>";
-
-    note("Insert after replaced");
-    ok(!cool_thing_comment_after(comment, after, strlen(after), true));
-
-    return COOL_THING_CONTINUE;
-}
-
-static cool_thing_rewriter_directive_t handle_remove(
-    cool_thing_comment_t *comment,
-    void *user_data
-) {
-    UNUSED(user_data);
-
-    note("Remove");
-    cool_thing_comment_remove(comment);
-    ok(cool_thing_comment_is_removed(comment));
-
-    return COOL_THING_CONTINUE;
-}
-
-
 static cool_thing_rewriter_directive_t user_data_get(
     cool_thing_comment_t *comment,
     void *user_data
@@ -95,25 +59,6 @@ static cool_thing_rewriter_directive_t user_data_get(
 
     return COOL_THING_CONTINUE;
 }
-
-static cool_thing_rewriter_directive_t stop_rewriting(
-    cool_thing_comment_t *comment,
-    void *user_data
-) {
-    UNUSED(comment);
-    UNUSED(user_data);
-
-    note("Stop rewriting");
-
-    return COOL_THING_STOP;
-}
-
-EXPECT_OUTPUT(
-    output_sink1,
-    "<div><!--Yo-->&lt;/div&gt;",
-    &EXPECTED_USER_DATA,
-    sizeof(EXPECTED_USER_DATA)
-);
 
 static void test_output1(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
@@ -147,6 +92,35 @@ EXPECT_OUTPUT(
     &EXPECTED_USER_DATA,
     sizeof(EXPECTED_USER_DATA)
 );
+
+static cool_thing_rewriter_directive_t handle_el(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    const char *replacement = "<repl>";
+
+    note("Replace");
+    ok(!cool_thing_comment_replace(comment, replacement, strlen(replacement), true));
+    ok(cool_thing_comment_is_removed(comment));
+
+    return COOL_THING_CONTINUE;
+}
+
+static cool_thing_rewriter_directive_t handle_doc(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    const char *after = "<after>";
+
+    note("Insert after replaced");
+    ok(!cool_thing_comment_after(comment, after, strlen(after), true));
+
+    return COOL_THING_CONTINUE;
+}
 
 static void test_output2(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
@@ -184,6 +158,19 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
+static cool_thing_rewriter_directive_t handle_remove(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    note("Remove");
+    cool_thing_comment_remove(comment);
+    ok(cool_thing_comment_is_removed(comment));
+
+    return COOL_THING_CONTINUE;
+}
+
 static void test_output3(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
@@ -198,6 +185,18 @@ static void test_output3(void *user_data) {
     );
 
     run_rewriter(builder, "<<!--0_0-->>", output_sink3, user_data);
+}
+
+static cool_thing_rewriter_directive_t stop_rewriting(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    UNUSED(comment);
+    UNUSED(user_data);
+
+    note("Stop rewriting");
+
+    return COOL_THING_STOP;
 }
 
 static void test_stop1(void *user_data) {

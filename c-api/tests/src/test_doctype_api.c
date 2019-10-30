@@ -5,6 +5,13 @@
 
 static int EXPECTED_USER_DATA = 42;
 
+EXPECT_OUTPUT(
+    output_sink,
+    "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+)
+
 static cool_thing_rewriter_directive_t doctype_handler(
     cool_thing_doctype_t *doctype,
     void *user_data
@@ -46,25 +53,6 @@ static cool_thing_rewriter_directive_t user_data_get(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t stop_rewriting(
-    cool_thing_doctype_t *doctype,
-    void *user_data
-) {
-    UNUSED(doctype);
-    UNUSED(user_data);
-
-    note("Stop rewriting");
-
-    return COOL_THING_STOP;
-}
-
-EXPECT_OUTPUT(
-    output_sink,
-    "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">",
-    &EXPECTED_USER_DATA,
-    sizeof(EXPECTED_USER_DATA)
-)
-
 static void test_rewrite(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
@@ -96,6 +84,18 @@ static void test_rewrite(void *user_data) {
     );
 }
 
+static cool_thing_rewriter_directive_t stop_rewriting(
+    cool_thing_doctype_t *doctype,
+    void *user_data
+) {
+    UNUSED(doctype);
+    UNUSED(user_data);
+
+    note("Stop rewriting");
+
+    return COOL_THING_STOP;
+}
+
 static void test_stop(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
@@ -118,4 +118,3 @@ void test_doctype_api() {
     test_rewrite(&user_data);
     test_stop(&user_data);
 }
-
