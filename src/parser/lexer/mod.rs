@@ -99,8 +99,8 @@ impl<S: LexemeSink> Lexer<S> {
     ) -> ParsingLoopDirective {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
-                self.switch_text_type(text_type);
-                ParsingLoopDirective::Continue
+                self.set_last_text_type(text_type);
+                ParsingLoopDirective::None
             }
             TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
                 self.cdata_allowed = cdata_allowed;

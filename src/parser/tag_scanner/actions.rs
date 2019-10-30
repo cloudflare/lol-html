@@ -75,9 +75,8 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     fn emit_tag(&mut self, _input: &[u8]) -> StateResult {
         Ok(
             if let Some(text_type) = self.pending_text_type_change.take() {
-                self.switch_text_type(text_type);
-
-                ParsingLoopDirective::Continue
+                self.set_last_text_type(text_type);
+                ParsingLoopDirective::None
             } else {
                 // NOTE: exit from any non-initial text parsing mode always happens on tag emission
                 // (except for CDATA, but there is a special action to take care of it).

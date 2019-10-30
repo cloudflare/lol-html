@@ -22,6 +22,15 @@ macro_rules! action {
     ( @state_transition | $self:tt, $input:ident | > - -> $state:ident) => {
         $self.switch_state(Self::$state);
 
-        return Ok(ParsingLoopDirective::Continue);
+        return Ok(ParsingLoopDirective::None);
+    };
+
+    ( @state_transition | $self:tt, $input:ident | > - -> dyn $state_getter:ident) => {
+        {
+            let state = $self.$state_getter();
+            $self.switch_state(state);
+        }
+
+        return Ok(ParsingLoopDirective::None);
     };
 }

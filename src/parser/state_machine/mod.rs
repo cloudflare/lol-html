@@ -54,12 +54,8 @@ pub enum ParsingLoopTerminationReason {
 
 pub enum ParsingLoopDirective {
     Break(ParsingLoopTerminationReason),
-    Continue,
     None,
 }
-
-// Move Break to error
-// Directive SwitchState(bool)
 
 pub type StateResult = Result<ParsingLoopDirective, RewritingError>;
 pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, RewritingError>;
@@ -227,15 +223,19 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     #[inline]
     fn switch_text_type(&mut self, text_type: TextType) {
         self.set_last_text_type(text_type);
+        self.switch_state(self.next_text_parsing_state());
+    }
 
-        self.switch_state(match text_type {
+    #[inline]
+    fn next_text_parsing_state(&self) -> fn(&mut Self, &[u8]) -> StateResult {
+        match self.last_text_type() {
             TextType::Data => Self::data_state,
             TextType::PlainText => Self::plaintext_state,
             TextType::RCData => Self::rcdata_state,
             TextType::RawText => Self::rawtext_state,
             TextType::ScriptData => Self::script_data_state,
             TextType::CDataSection => Self::cdata_section_state,
-        });
+        }
     }
 }
 
