@@ -134,13 +134,7 @@ mod tests {
 
         let err = vector.push(3).unwrap_err();
 
-        assert_eq!(
-            err,
-            MemoryLimitExceededError {
-                current_usage: 3,
-                max: 2
-            }
-        );
+        assert_eq!(err, MemoryLimitExceededError);
     }
 
     #[test]

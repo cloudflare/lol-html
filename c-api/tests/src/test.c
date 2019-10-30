@@ -1363,7 +1363,7 @@ static void test_memory_limiting() {
 
             cool_thing_str_t *msg = cool_thing_take_last_error();
 
-            str_eq(msg, "Memory limit of 5 bytes has been exceeded: 176 bytes were used.");
+            str_eq(msg, "The memory limit has been exceeded.");
             cool_thing_str_free(*msg);
         },
     max_memory);
