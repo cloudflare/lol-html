@@ -99,11 +99,8 @@ void check_output(
     size_t *out_len,
     const char *chunk,
     size_t chunk_len,
-    const char *expected,
-    void *user_data
+    const char *expected
 ) {
-    UNUSED(user_data);
-
     if (chunk_len > 0) {
         *out = (char *) (out == NULL ? malloc(chunk_len) : realloc(*out, *out_len + chunk_len));
         memcpy(*out + *out_len, chunk, chunk_len);
@@ -112,4 +109,8 @@ void check_output(
         ok(*out_len == strlen(expected));
         ok(!memcmp(*out, expected, *out_len));
     }
+}
+
+void check_user_data(void *user_data, void *user_data_expected, size_t user_data_len) {
+    ok(!memcmp(user_data, user_data_expected, user_data_len));
 }

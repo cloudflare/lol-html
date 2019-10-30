@@ -3,6 +3,8 @@
 #include "tests.h"
 #include "test_util.h"
 
+static int EXPECTED_USER_DATA = 42;
+
 static cool_thing_rewriter_directive_t handle_chunk1(
     cool_thing_text_chunk_t *chunk,
     void *user_data
@@ -111,7 +113,9 @@ static cool_thing_rewriter_directive_t stop_rewriting(
 
 EXPECT_OUTPUT(
     output_sink1,
-    "<div>Hey 42&lt;/div&gt;"
+    "<div>Hey 42&lt;/div&gt;",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output1(void *user_data) {
@@ -142,7 +146,9 @@ static void test_output1(void *user_data) {
 
 EXPECT_OUTPUT(
     output_sink2,
-    "<div><repl><after></div>"
+    "<div><repl><after></div>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output2(cool_thing_selector_t *selector, void *user_data) {
@@ -176,7 +182,9 @@ static void test_output2(cool_thing_selector_t *selector, void *user_data) {
 
 EXPECT_OUTPUT(
     output_sink3,
-    "<span></span>"
+    "<span></span>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output3(void *user_data) {

@@ -18,12 +18,13 @@
 
 #define UNUSED (void)
 
-#define EXPECT_OUTPUT(sink_name, expected) \
+#define EXPECT_OUTPUT(sink_name, out_expected, user_data_expected, user_data_len) \
     static void sink_name(const char *chunk, size_t chunk_len, void *user_data) { \
         static char *out = NULL; \
         static size_t out_len = 0; \
     \
-        check_output(&out, &out_len, chunk, chunk_len, expected, user_data); \
+        check_output(&out, &out_len, chunk, chunk_len, out_expected); \
+        check_user_data(user_data, user_data_expected, user_data_len); \
     }
 
 typedef void (*output_sink_t)(const char *, size_t, void *);
@@ -59,8 +60,15 @@ void check_output(
     size_t *out_len,
     const char *chunk,
     size_t chunk_len,
-    const char *expected,
-    void *user_data
+    const char *expected
 );
+
+// Check if the first `user_data_len` bytes pointed to by `user_data` are the same as those
+// `user_data_expected` points to.
+//
+// NOTE: Only the first `user_data_len` bytes are compared. If `user_data points` to a
+// sequence of bytes which is longer than `user_data_len` bytes, this check
+// will succeed even if the remaining bytes are not the same.
+void check_user_data(void *user_data, void *user_data_expected, size_t user_data_len);
 
 #endif // TEST_UTIL_H

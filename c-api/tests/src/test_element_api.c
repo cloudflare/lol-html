@@ -3,6 +3,8 @@
 #include "tests.h"
 #include "test_util.h"
 
+static int EXPECTED_USER_DATA = 43;
+
 static cool_thing_rewriter_directive_t modify_element_tag_name(
     cool_thing_element_t *element,
     void *user_data
@@ -29,7 +31,7 @@ static cool_thing_rewriter_directive_t modify_element_tag_name(
     ok(!cool_thing_element_tag_name_set(element, new_name, strlen(new_name)));
 
     note("User data");
-    ok(*(int*)user_data == 42);
+    ok(*(int*)user_data == EXPECTED_USER_DATA);
 
     note("Set element user data");
     cool_thing_element_user_data_set(element, user_data);
@@ -47,7 +49,7 @@ static cool_thing_rewriter_directive_t user_data_get(
 
     int element_user_data = *(int*)cool_thing_element_user_data_get(element);
 
-    ok(element_user_data == 42);
+    ok(element_user_data == EXPECTED_USER_DATA);
 
     return COOL_THING_CONTINUE;
 }
@@ -262,7 +264,9 @@ static cool_thing_rewriter_directive_t assert_element_ns_is_svg(
 
 EXPECT_OUTPUT(
     output_sink1,
-    "Hi <span>"
+    "Hi <span>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output1(cool_thing_selector_t *selector, void *user_data) {
@@ -299,7 +303,9 @@ static void test_output1(cool_thing_selector_t *selector, void *user_data) {
 
 EXPECT_OUTPUT(
     output_sink2,
-    "<span bar=\"hey\">"
+    "<span bar=\"hey\">",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output2(cool_thing_selector_t *selector, void *user_data) {
@@ -323,7 +329,9 @@ static void test_output2(cool_thing_selector_t *selector, void *user_data) {
 
 EXPECT_OUTPUT(
     output_sink3,
-    "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after"
+    "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output3(cool_thing_selector_t *selector, void *user_data) {
@@ -347,7 +355,9 @@ static void test_output3(cool_thing_selector_t *selector, void *user_data) {
 
 EXPECT_OUTPUT(
     output_sink4,
-    "<div>hey &amp; ya</div>"
+    "<div>hey &amp; ya</div>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output4(cool_thing_selector_t *selector, void *user_data) {
@@ -371,7 +381,9 @@ static void test_output4(cool_thing_selector_t *selector, void *user_data) {
 
 EXPECT_OUTPUT(
     output_sink5,
-    "hey & yaHello2"
+    "hey & yaHello2",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output5(cool_thing_selector_t *selector1,
@@ -420,7 +432,8 @@ static void test_output5(cool_thing_selector_t *selector1,
 
     ok(!err);
 
-    run_rewriter(builder,
+    run_rewriter(
+        builder,
         "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
         output_sink5,
         user_data
@@ -429,7 +442,9 @@ static void test_output5(cool_thing_selector_t *selector1,
 
 EXPECT_OUTPUT(
     output_sink6,
-    "<span foo>"
+    "<span foo>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 );
 
 static void test_output6(cool_thing_selector_t *selector, void *user_data) {
@@ -528,7 +543,7 @@ static void test_stop(cool_thing_selector_t *selector, void *user_data) {
 }
 
 void element_api_test() {
-    int user_data = 42;
+    int user_data = 43;
 
     {
         const char *selector_str = "*";

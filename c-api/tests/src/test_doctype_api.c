@@ -3,6 +3,8 @@
 #include "tests.h"
 #include "test_util.h"
 
+static int EXPECTED_USER_DATA = 42;
+
 static cool_thing_rewriter_directive_t doctype_handler(
     cool_thing_doctype_t *doctype,
     void *user_data
@@ -21,7 +23,7 @@ static cool_thing_rewriter_directive_t doctype_handler(
     cool_thing_str_free(*system_id);
 
     note("User data");
-    ok(*(int*)user_data == 42);
+    ok(*(int*)user_data == EXPECTED_USER_DATA);
 
     note("Set doctype user data");
     cool_thing_doctype_user_data_set(doctype, user_data);
@@ -39,7 +41,7 @@ static cool_thing_rewriter_directive_t user_data_get(
 
     int doctype_user_data = *(int*)cool_thing_doctype_user_data_get(doctype);
 
-    ok(doctype_user_data == 42);
+    ok(doctype_user_data == EXPECTED_USER_DATA);
 
     return COOL_THING_CONTINUE;
 }
@@ -58,7 +60,9 @@ static cool_thing_rewriter_directive_t stop_rewriting(
 
 EXPECT_OUTPUT(
     output_sink,
-    "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">"
+    "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
 )
 
 static void test_rewrite(void *user_data) {
