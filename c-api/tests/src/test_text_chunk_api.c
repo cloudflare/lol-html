@@ -5,17 +5,20 @@
 
 static int EXPECTED_USER_DATA = 42;
 
+//-------------------------------------------------------------------------
 EXPECT_OUTPUT(
-    output_sink1,
+    insert_after_text_chunk_output_sink,
     "<div>Hey 42&lt;/div&gt;",
     &EXPECTED_USER_DATA,
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t handle_chunk1(
+static cool_thing_rewriter_directive_t insert_before_and_after_text_chunk(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
+    UNUSED(user_data);
+
     const char *before = "<div>";
     const char *after = "</div>";
     cool_thing_text_chunk_content_t content = cool_thing_text_chunk_content_get(chunk);
@@ -36,31 +39,10 @@ static cool_thing_rewriter_directive_t handle_chunk1(
         ok(cool_thing_text_chunk_is_last_in_text_node(chunk));
     }
 
-    note("User data");
-    ok(*(int*)user_data == 42);
-
-    note("Set text chunk user data");
-    cool_thing_text_chunk_user_data_set(chunk, user_data);
-
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t user_data_get(
-    cool_thing_text_chunk_t *chunk,
-    void *user_data
-) {
-    UNUSED(user_data);
-
-    note("Get text chunk user data");
-
-    int chunk_user_data = *(int*)cool_thing_text_chunk_user_data_get(chunk);
-
-    ok(chunk_user_data == 42);
-
-    return COOL_THING_CONTINUE;
-}
-
-static void test_output1(void *user_data) {
+static void test_insert_before_and_after_text_chunk(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
      cool_thing_rewriter_builder_add_document_content_handlers(
@@ -69,9 +51,42 @@ static void test_output1(void *user_data) {
         NULL,
         NULL,
         NULL,
-        &handle_chunk1,
-        user_data
+        &insert_before_and_after_text_chunk,
+        NULL
     );
+
+    run_rewriter(builder, "Hey 42", insert_after_text_chunk_output_sink, user_data);
+}
+
+//-------------------------------------------------------------------------
+EXPECT_OUTPUT(
+    modify_user_data_output_sink,
+    "Hey 42",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
+static cool_thing_rewriter_directive_t modify_user_data(
+    cool_thing_text_chunk_t *chunk,
+    void *user_data
+) {
+    note("User data");
+    ok(*(int*)user_data == EXPECTED_USER_DATA);
+
+    note("Set text chunk user data");
+    cool_thing_text_chunk_user_data_set(chunk, user_data);
+
+    note("Get text chunk user data");
+
+    int chunk_user_data = *(int*)cool_thing_text_chunk_user_data_get(chunk);
+
+    ok(chunk_user_data == EXPECTED_USER_DATA);
+
+    return COOL_THING_CONTINUE;
+}
+
+static void test_modify_user_data(void *user_data) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     cool_thing_rewriter_builder_add_document_content_handlers(
         builder,
@@ -79,21 +94,22 @@ static void test_output1(void *user_data) {
         NULL,
         NULL,
         NULL,
-        &user_data_get,
-        NULL
+        &modify_user_data,
+        user_data
     );
 
-    run_rewriter(builder, "Hey 42", output_sink1, user_data);
+    run_rewriter(builder, "Hey 42", modify_user_data_output_sink, user_data);
 }
 
+//-------------------------------------------------------------------------
 EXPECT_OUTPUT(
-    output_sink2,
-    "<div><repl><after></div>",
+    replace_chunk_output_sink,
+    "<div><repl></div>",
     &EXPECTED_USER_DATA,
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t handle_el(
+static cool_thing_rewriter_directive_t replace_chunk(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -109,7 +125,34 @@ static cool_thing_rewriter_directive_t handle_el(
     return COOL_THING_CONTINUE;
 }
 
-static cool_thing_rewriter_directive_t handle_doc(
+static void test_replace_chunk(cool_thing_selector_t *selector, void *user_data) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &replace_chunk,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(builder, "<div>Hello</div>", replace_chunk_output_sink, user_data);
+}
+
+//-------------------------------------------------------------------------
+EXPECT_OUTPUT(
+    insert_after_chunk_output_sink,
+    "<div>Hello<after></div>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
+static cool_thing_rewriter_directive_t insert_after_chunk(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -124,21 +167,8 @@ static cool_thing_rewriter_directive_t handle_doc(
     return COOL_THING_CONTINUE;
 }
 
-static void test_output2(cool_thing_selector_t *selector, void *user_data) {
+static void test_insert_after_chunk(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
-
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
-        builder,
-        selector,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        &handle_el,
-        NULL
-    );
-
-    ok(!err);
 
     cool_thing_rewriter_builder_add_document_content_handlers(
         builder,
@@ -146,21 +176,22 @@ static void test_output2(cool_thing_selector_t *selector, void *user_data) {
         NULL,
         NULL,
         NULL,
-        &handle_doc,
+        &insert_after_chunk,
         NULL
     );
 
-    run_rewriter(builder, "<div>Hello</div>", output_sink2, user_data);
+    run_rewriter(builder, "<div>Hello</div>", insert_after_chunk_output_sink, user_data);
 }
 
+//-------------------------------------------------------------------------
 EXPECT_OUTPUT(
-    output_sink3,
+    remove_chunk_output_sink,
     "<span></span>",
     &EXPECTED_USER_DATA,
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t handle_chunk2(
+static cool_thing_rewriter_directive_t remove_chunk(
     cool_thing_text_chunk_t *chunk,
     void *user_data
 ) {
@@ -175,7 +206,7 @@ static cool_thing_rewriter_directive_t handle_chunk2(
     return COOL_THING_CONTINUE;
 }
 
-static void test_output3(void *user_data) {
+static void test_remove_chunk(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     cool_thing_rewriter_builder_add_document_content_handlers(
@@ -184,13 +215,14 @@ static void test_output3(void *user_data) {
         NULL,
         NULL,
         NULL,
-        &handle_chunk2,
+        &remove_chunk,
         NULL
     );
 
-    run_rewriter(builder, "<span>0_0</span>", output_sink3, user_data);
+    run_rewriter(builder, "<span>0_0</span>", remove_chunk_output_sink, user_data);
 }
 
+//-------------------------------------------------------------------------
 static cool_thing_rewriter_directive_t stop_rewriting(
     cool_thing_text_chunk_t *chunk,
     void *user_data
@@ -203,7 +235,7 @@ static cool_thing_rewriter_directive_t stop_rewriting(
     return COOL_THING_STOP;
 }
 
-static void test_stop1(cool_thing_selector_t *selector, void *user_data) {
+static void test_stop_with_selector(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -221,7 +253,7 @@ static void test_stop1(cool_thing_selector_t *selector, void *user_data) {
     expect_stop(builder, "<div>42</div>", user_data);
 }
 
-static void test_stop2(void *user_data) {
+static void test_stop(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
      cool_thing_rewriter_builder_add_document_content_handlers(
@@ -247,12 +279,14 @@ void test_text_chunk_api() {
         strlen(selector_str)
     );
 
-    test_output1(&user_data);
-    test_output2(selector, &user_data);
-    test_output3(&user_data);
+    test_insert_before_and_after_text_chunk(&user_data);
+    test_modify_user_data(&user_data);
+    test_replace_chunk(selector, &user_data);
+    test_insert_after_chunk(&user_data);
+    test_remove_chunk(&user_data);
 
-    test_stop1(selector, &user_data);
-    test_stop2(&user_data);
+    test_stop_with_selector(selector, &user_data);
+    test_stop(&user_data);
 
     cool_thing_selector_free(selector);
 }
