@@ -33,8 +33,8 @@ cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(
     return COOL_THING_CONTINUE;
 }
 
-
-cool_thing_rewriter_t* create_rewriter(cool_thing_rewriter_builder_t *builder,
+cool_thing_rewriter_t* create_rewriter(
+    cool_thing_rewriter_builder_t *builder,
     output_sink_t output_sink,
     size_t max_memory
 ) {
@@ -59,7 +59,8 @@ cool_thing_rewriter_t* create_rewriter(cool_thing_rewriter_builder_t *builder,
     return rewriter;
 }
 
-void run_rewriter(cool_thing_rewriter_builder_t *builder,
+void run_rewriter(
+    cool_thing_rewriter_builder_t *builder,
     const char *html,
     output_sink_t output_sink
 ) {
@@ -82,7 +83,8 @@ void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html) {
     cool_thing_str_free(*msg);
 }
 
-void check_output(char **out,
+void check_output(
+    char **out,
     size_t *out_len,
     const char *chunk,
     size_t chunk_len,
