@@ -55,3 +55,7 @@ fn main() {
     );
 }
 ```
+
+# License
+
+BSD licensed. See the [LICENSE](LICENSE) file for details.
