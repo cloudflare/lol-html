@@ -47,11 +47,11 @@ impl Arena {
         self.append(slice)
     }
 
-    pub fn shrink_to_last(&mut self, byte_count: usize) {
-        let from = self.data.len() - byte_count;
+    pub fn shift(&mut self, byte_count: usize) {
+        let remainder_len = self.data.len() - byte_count;
 
-        copy_over(&mut self.data, from, 0, byte_count);
-        self.data.truncate(byte_count);
+        copy_over(&mut self.data, byte_count, 0, remainder_len);
+        self.data.truncate(remainder_len);
     }
 
     pub fn bytes(&self) -> &[u8] {
@@ -114,12 +114,12 @@ mod tests {
     }
 
     #[test]
-    fn shrink_to_last() {
+    fn shift() {
         let limiter = MemoryLimiter::new_shared(10);
         let mut arena = Arena::new(Rc::clone(&limiter), 0);
 
         arena.append(&[0, 1, 2, 3]).unwrap();
-        arena.shrink_to_last(2);
+        arena.shift(2);
         assert_eq!(arena.bytes(), &[2, 3]);
         assert_eq!(limiter.borrow().current_usage(), 4);
 
@@ -127,12 +127,12 @@ mod tests {
         assert_eq!(arena.bytes(), &[2, 3, 0, 1]);
         assert_eq!(limiter.borrow().current_usage(), 4);
 
-        arena.shrink_to_last(1);
+        arena.shift(3);
         assert_eq!(arena.bytes(), &[1]);
         assert_eq!(limiter.borrow().current_usage(), 4);
 
         arena.append(&[2, 3, 4, 5]).unwrap();
-        arena.shrink_to_last(4);
+        arena.shift(1);
         assert_eq!(arena.bytes(), &[2, 3, 4, 5]);
         assert_eq!(limiter.borrow().current_usage(), 5);
     }

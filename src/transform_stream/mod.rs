@@ -1,13 +1,7 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
-<<<<<<< HEAD
-use crate::base::Chunk;
 use crate::memory::{Arena, SharedMemoryLimiter};
-=======
-use crate::base::Buffer;
-
->>>>>>> Get rid of Chunk
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use crate::rewriter::RewritingError;
 use encoding_rs::Encoding;
@@ -102,7 +96,7 @@ where
     pub fn write(&mut self, data: &[u8]) -> Result<(), RewritingError> {
         trace!(@write data);
 
-        let mut chunk = if self.has_buffered_data {
+        let chunk = if self.has_buffered_data {
             self.buffer
                 .append(data)
                 .map_err(RewritingError::MemoryLimitExceeded)?;
