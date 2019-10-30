@@ -294,7 +294,7 @@ static void test_output1(cool_thing_selector_t *selector, void *user_data) {
 
     ok(!err);
 
-    run_rewriter(builder, "Hi <div>", output_sink1);
+    run_rewriter(builder, "Hi <div>", output_sink1, user_data);
 }
 
 EXPECT_OUTPUT(
@@ -302,7 +302,7 @@ EXPECT_OUTPUT(
     "<span bar=\"hey\">"
 );
 
-static void test_output2(cool_thing_selector_t *selector) {
+static void test_output2(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -318,7 +318,7 @@ static void test_output2(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<span foo=42>", output_sink2);
+    run_rewriter(builder, "<span foo=42>", output_sink2, user_data);
 }
 
 EXPECT_OUTPUT(
@@ -326,7 +326,7 @@ EXPECT_OUTPUT(
     "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after"
 );
 
-static void test_output3(cool_thing_selector_t *selector) {
+static void test_output3(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -342,7 +342,7 @@ static void test_output3(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<div>Hi</div>", output_sink3);
+    run_rewriter(builder, "<div>Hi</div>", output_sink3, user_data);
 }
 
 EXPECT_OUTPUT(
@@ -350,7 +350,7 @@ EXPECT_OUTPUT(
     "<div>hey &amp; ya</div>"
 );
 
-static void test_output4(cool_thing_selector_t *selector) {
+static void test_output4(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -366,7 +366,7 @@ static void test_output4(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<div><span>42</span></div>", output_sink4);
+    run_rewriter(builder, "<div><span>42</span></div>", output_sink4, user_data);
 }
 
 EXPECT_OUTPUT(
@@ -376,7 +376,8 @@ EXPECT_OUTPUT(
 
 static void test_output5(cool_thing_selector_t *selector1,
     cool_thing_selector_t *selector2,
-    cool_thing_selector_t *selector3
+    cool_thing_selector_t *selector3,
+    void *user_data
 ) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
@@ -421,7 +422,8 @@ static void test_output5(cool_thing_selector_t *selector1,
 
     run_rewriter(builder,
         "<div><span>42</span></div><h1>Hello</h1><h2>Hello2</h2>",
-        output_sink5
+        output_sink5,
+        user_data
     );
 }
 
@@ -430,7 +432,7 @@ EXPECT_OUTPUT(
     "<span foo>"
 );
 
-static void test_output6(cool_thing_selector_t *selector) {
+static void test_output6(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -446,10 +448,10 @@ static void test_output6(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<span foo>", output_sink6);
+    run_rewriter(builder, "<span foo>", output_sink6, user_data);
 }
 
-static void test_output_sink_stub1(cool_thing_selector_t *selector) {
+static void test_output_sink_stub1(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -465,10 +467,10 @@ static void test_output_sink_stub1(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<div foo=42 bar='1337'>", output_sink_stub);
+    run_rewriter(builder, "<div foo=42 bar='1337'>", output_sink_stub, user_data);
 }
 
-static void test_output_sink_stub2(cool_thing_selector_t *selector) {
+static void test_output_sink_stub2(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -484,10 +486,10 @@ static void test_output_sink_stub2(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<script></script>", output_sink_stub);
+    run_rewriter(builder, "<script></script>", output_sink_stub, user_data);
 }
 
-static void test_output_sink_stub3(cool_thing_selector_t *selector) {
+static void test_output_sink_stub3(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -503,10 +505,10 @@ static void test_output_sink_stub3(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    run_rewriter(builder, "<svg><script></script></svg>", output_sink_stub);
+    run_rewriter(builder, "<svg><script></script></svg>", output_sink_stub, user_data);
 }
 
-static void test_stop(cool_thing_selector_t *selector) {
+static void test_stop(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -520,7 +522,7 @@ static void test_stop(cool_thing_selector_t *selector) {
         NULL
     );
 
-    expect_stop(builder, "<span foo>");
+    expect_stop(builder, "<span foo>", user_data);
 
     ok(!err);
 }
@@ -537,9 +539,9 @@ void element_api_test() {
         );
 
         test_output1(selector, &user_data);
-        test_output_sink_stub1(selector);
-        test_output2(selector);
-        test_output3(selector);
+        test_output_sink_stub1(selector, &user_data);
+        test_output2(selector, &user_data);
+        test_output3(selector, &user_data);
 
         cool_thing_selector_free(selector);
     }
@@ -552,7 +554,7 @@ void element_api_test() {
             strlen(selector_str)
         );
 
-        test_output4(selector);
+        test_output4(selector, &user_data);
 
         cool_thing_selector_free(selector);
     }
@@ -579,7 +581,7 @@ void element_api_test() {
             strlen(selector3_str)
         );
 
-        test_output5(selector1, selector2, selector3);
+        test_output5(selector1, selector2, selector3, &user_data);
 
         cool_thing_selector_free(selector1);
         cool_thing_selector_free(selector2);
@@ -594,8 +596,8 @@ void element_api_test() {
             strlen(selector_str)
         );
 
-        test_output6(selector);
-        test_stop(selector);
+        test_output6(selector, &user_data);
+        test_stop(selector, &user_data);
 
         cool_thing_selector_free(selector);
     }
@@ -610,7 +612,7 @@ void element_api_test() {
             strlen(selector_str)
         );
 
-        test_output_sink_stub2(selector);
-        test_output_sink_stub3(selector);
+        test_output_sink_stub2(selector, &user_data);
+        test_output_sink_stub3(selector, &user_data);
     }
 }

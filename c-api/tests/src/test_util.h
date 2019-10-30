@@ -38,16 +38,18 @@ cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(
 cool_thing_rewriter_t* create_rewriter(
     cool_thing_rewriter_builder_t *builder,
     output_sink_t output_sink,
+    void *output_sink_user_data,
     size_t max_memory
 );
 
 void run_rewriter(
     cool_thing_rewriter_builder_t *builder,
     const char *html,
-    output_sink_t output_sink
+    output_sink_t output_sink,
+    void *output_sink_user_data
 );
 
-void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html);
+void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html, void *user_data);
 
 // If `chunk_len` is greater than 0, this concatenates `chunk_len` bytes from
 // `chunk` to the string pointed to by `out`. Otherwise, it checks if the string

@@ -6,6 +6,7 @@
 void test_memory_limiting() {
     const char *chunk1 = "<span alt='aaaaa";
     const int max_memory = 5;
+    int user_data = 42;
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
     cool_thing_rewriter_t *rewriter = NULL;
 
@@ -26,7 +27,7 @@ void test_memory_limiting() {
         NULL
     );
 
-    rewriter = create_rewriter(builder, output_sink_stub, max_memory);
+    rewriter = create_rewriter(builder, output_sink_stub, &user_data, max_memory);
 
     ok(cool_thing_rewriter_write(rewriter, chunk1, strlen(chunk1)) == -1);
 

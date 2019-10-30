@@ -36,10 +36,10 @@ cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(
 cool_thing_rewriter_t* create_rewriter(
     cool_thing_rewriter_builder_t *builder,
     output_sink_t output_sink,
+    void *output_sink_user_data,
     size_t max_memory
 ) {
     const char *encoding = "UTF-8";
-    int output_sink_user_data = 42;
 
     cool_thing_rewriter_t *rewriter = cool_thing_rewriter_build(
         builder,
@@ -50,7 +50,7 @@ cool_thing_rewriter_t* create_rewriter(
             .max_allowed_memory_usage = max_memory
         },
         output_sink,
-        &output_sink_user_data,
+        output_sink_user_data,
         true
     );
 
@@ -62,10 +62,16 @@ cool_thing_rewriter_t* create_rewriter(
 void run_rewriter(
     cool_thing_rewriter_builder_t *builder,
     const char *html,
-    output_sink_t output_sink
+    output_sink_t output_sink,
+    void *output_sink_user_data
 ) {
     const char *in = html;
-    cool_thing_rewriter_t *rewriter = create_rewriter(builder, output_sink, MAX_MEMORY);
+    cool_thing_rewriter_t *rewriter = create_rewriter(
+        builder,
+        output_sink,
+        output_sink_user_data,
+        MAX_MEMORY
+    );
 
     ok(!cool_thing_rewriter_write(rewriter, in, strlen(in)));
     ok(!cool_thing_rewriter_end(rewriter));
@@ -73,9 +79,14 @@ void run_rewriter(
     cool_thing_rewriter_free(rewriter);
 }
 
-void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html) {
+void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html, void *user_data) {
     const char *in = html;
-    cool_thing_rewriter_t *rewriter = create_rewriter(builder, output_sink_stub, MAX_MEMORY);
+    cool_thing_rewriter_t *rewriter = create_rewriter(
+        builder,
+        output_sink_stub,
+        user_data,
+        MAX_MEMORY
+    );
 
     ok(cool_thing_rewriter_write(rewriter, in, strlen(in)));
     cool_thing_str_t *msg = cool_thing_take_last_error();
@@ -91,7 +102,7 @@ void check_output(
     const char *expected,
     void *user_data
 ) {
-    ok(*(int*)user_data == 42);
+    UNUSED(user_data);
 
     if (chunk_len > 0) {
         *out = (char *) (out == NULL ? malloc(chunk_len) : realloc(*out, *out_len + chunk_len));

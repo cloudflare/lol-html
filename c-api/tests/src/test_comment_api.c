@@ -134,7 +134,7 @@ static void test_output1(void *user_data) {
         NULL
     );
 
-    run_rewriter(builder, "<!--Hey 42-->", output_sink1);
+    run_rewriter(builder, "<!--Hey 42-->", output_sink1, user_data);
 }
 
 EXPECT_OUTPUT(
@@ -142,7 +142,7 @@ EXPECT_OUTPUT(
     "<div><repl><after></div>"
 );
 
-static void test_output2(cool_thing_selector_t *selector) {
+static void test_output2(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -168,7 +168,7 @@ static void test_output2(cool_thing_selector_t *selector) {
         NULL
     );
 
-    run_rewriter(builder, "<div><!--hello--></div>", output_sink2);
+    run_rewriter(builder, "<div><!--hello--></div>", output_sink2, user_data);
 }
 
 EXPECT_OUTPUT(
@@ -176,7 +176,7 @@ EXPECT_OUTPUT(
     "<>"
 );
 
-static void test_output3() {
+static void test_output3(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
      cool_thing_rewriter_builder_add_document_content_handlers(
@@ -189,10 +189,10 @@ static void test_output3() {
         NULL
     );
 
-    run_rewriter(builder, "<<!--0_0-->>", output_sink3);
+    run_rewriter(builder, "<<!--0_0-->>", output_sink3, user_data);
 }
 
-static void test_stop1() {
+static void test_stop1(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     cool_thing_rewriter_builder_add_document_content_handlers(
@@ -205,10 +205,10 @@ static void test_stop1() {
         NULL
     );
 
-    expect_stop(builder, "<!-- hey -->");
+    expect_stop(builder, "<!-- hey -->", user_data);
 }
 
-static void test_stop2(cool_thing_selector_t *selector) {
+static void test_stop2(cool_thing_selector_t *selector, void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     int err = cool_thing_rewriter_builder_add_element_content_handlers(
@@ -224,7 +224,7 @@ static void test_stop2(cool_thing_selector_t *selector) {
 
     ok(!err);
 
-    expect_stop(builder, "<div><!-- foo --></div>");
+    expect_stop(builder, "<div><!-- foo --></div>", user_data);
 }
 
 void test_comment_api() {
@@ -238,11 +238,11 @@ void test_comment_api() {
     );
 
     test_output1(&user_data);
-    test_output2(selector);
-    test_output3();
+    test_output2(selector, &user_data);
+    test_output3(&user_data);
 
-    test_stop1();
-    test_stop2(selector);
+    test_stop1(&user_data);
+    test_stop2(selector, &user_data);
 
     cool_thing_selector_free(selector);
 }

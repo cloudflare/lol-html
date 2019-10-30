@@ -87,11 +87,12 @@ static void test_rewrite(void *user_data) {
     run_rewriter(
         builder,
         "<!DOCTYPE math SYSTEM \"http://www.w3.org/Math/DTD/mathml1/mathml.dtd\">",
-        output_sink
+        output_sink,
+        user_data
     );
 }
 
-static void test_stop() {
+static void test_stop(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
 
     cool_thing_rewriter_builder_add_document_content_handlers(
@@ -104,13 +105,13 @@ static void test_stop() {
         NULL
     );
 
-    expect_stop(builder, "<!doctype>");
+    expect_stop(builder, "<!doctype>", user_data);
 }
 
 void test_doctype_api() {
     int user_data = 42;
 
     test_rewrite(&user_data);
-    test_stop();
+    test_stop(&user_data);
 }
 
