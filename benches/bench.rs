@@ -44,8 +44,36 @@ lazy_static! {
     };
 }
 
+macro_rules! create_runner {
+    ($settings:expr) => {
+        move |b, i: &Vec<Vec<u8>>| {
+            b.iter(|| {
+                let mut rewriter = cool_thing::HtmlRewriter::try_new($settings, |c: &[u8]| {
+                    black_box(c);
+                })
+                .unwrap();
+
+                for chunk in i {
+                    rewriter.write(chunk).unwrap();
+                }
+
+                rewriter.end().unwrap();
+            })
+        }
+    };
+}
+
+macro_rules! noop_handler {
+    () => {
+        |arg| {
+            black_box(arg);
+            Ok(())
+        }
+    };
+}
+
 macro_rules! define_group {
-    ($group_name:expr, [ $(($name:expr, $def:expr)),+ ]) => {
+    ($group_name:expr, [ $(($name:expr, $settings:expr)),+ ]) => {
         use criterion::*;
 
         pub fn group(c: &mut Criterion) {
@@ -58,7 +86,7 @@ macro_rules! define_group {
                     g.bench_with_input(
                         BenchmarkId::new($name, &input.name),
                         &input.chunks,
-                        $def,
+                        create_runner!($settings),
                     );
                 )+
             }

@@ -23,13 +23,13 @@ To run only those tests that contain a `{substring}` in their name:
 ## Running benchmarks
 
 ```
-./scripts/bench.sh
+cargo bench
 ```
 
-To run benchmark for Cool Thing only and skip comparison with other parsers:
+To run only those benchmarks that contain a `{substring}` in their name:
 
 ```
-./scripts/bench.sh cool_thing
+cargo bench {substring}
 ```
 
 ## Useful debugging tools
