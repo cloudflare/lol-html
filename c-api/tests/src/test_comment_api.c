@@ -8,7 +8,7 @@ static int EXPECTED_USER_DATA = 42;
 //-------------------------------------------------------------------------
 EXPECT_OUTPUT(
     get_set_comment_text_output_sink,
-    "<div><!--Yo-->&lt;/div&gt;",
+    "<!--Yo-->",
     &EXPECTED_USER_DATA,
     sizeof(EXPECTED_USER_DATA)
 );
@@ -19,8 +19,6 @@ static cool_thing_rewriter_directive_t get_set_comment_text(
 ) {
     UNUSED(user_data);
 
-    const char *before = "<div>";
-    const char *after = "</div>";
     const char *new_text = "Yo";
 
     note("Get/set text");
@@ -32,15 +30,9 @@ static cool_thing_rewriter_directive_t get_set_comment_text(
 
     ok(!cool_thing_comment_text_set(comment, new_text, strlen(new_text)));
 
-    note("Removed flag");
-    ok(!cool_thing_comment_is_removed(comment));
-
-    note("Insert before/after");
-    ok(!cool_thing_comment_before(comment, before, strlen(before), true));
-    ok(!cool_thing_comment_after(comment, after, strlen(after), false));
-
     return COOL_THING_CONTINUE;
 }
+
 
 static void test_get_set_comment_text(void *user_data) {
     cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
@@ -57,6 +49,52 @@ static void test_get_set_comment_text(void *user_data) {
 
     run_rewriter(builder, "<!--Hey 42-->", get_set_comment_text_output_sink, user_data);
 }
+
+//-------------------------------------------------------------------------
+EXPECT_OUTPUT(
+    insert_before_and_after_comment_output_sink,
+    "<div><!--Hey 42-->&lt;/div&gt;",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
+static cool_thing_rewriter_directive_t insert_before_and_after_comment(
+    cool_thing_comment_t *comment,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    const char *before = "<div>";
+    const char *after = "</div>";
+
+    note("Insert before/after");
+    ok(!cool_thing_comment_before(comment, before, strlen(before), true));
+    ok(!cool_thing_comment_after(comment, after, strlen(after), false));
+
+    return COOL_THING_CONTINUE;
+}
+
+static void test_insert_before_and_after_comment(void *user_data) {
+    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+
+    cool_thing_rewriter_builder_add_document_content_handlers(
+        builder,
+        NULL,
+        NULL,
+        &insert_before_and_after_comment,
+        user_data,
+        NULL,
+        NULL
+    );
+
+    run_rewriter(
+        builder,
+        "<!--Hey 42-->",
+        insert_before_and_after_comment_output_sink,
+        user_data
+    );
+}
+
 
 //-------------------------------------------------------------------------
 EXPECT_OUTPUT(
@@ -200,6 +238,9 @@ static cool_thing_rewriter_directive_t remove_comment(
 ) {
     UNUSED(user_data);
 
+    note("Removed flag");
+    ok(!cool_thing_comment_is_removed(comment));
+
     note("Remove");
     cool_thing_comment_remove(comment);
     ok(cool_thing_comment_is_removed(comment));
@@ -287,6 +328,7 @@ void test_comment_api() {
     test_replace_comment(selector, &user_data);
     test_insert_after_comment(selector, &user_data);
     test_remove_comment(&user_data);
+    test_insert_before_and_after_comment(&user_data);
 
     test_stop(&user_data);
     test_stop_with_selector(selector, &user_data);
