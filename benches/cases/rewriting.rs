@@ -26,21 +26,6 @@ define_group!(
                 })],
                 ..Settings::default()
             }
-        ),
-        (
-            "Selector matching",
-            Settings {
-                element_content_handlers: vec![
-                    element!("ul", noop_handler!()),
-                    element!("ul > li", noop_handler!()),
-                    element!("table > tbody td dfn", noop_handler!()),
-                    element!("body table > tbody tr", noop_handler!()),
-                    element!("body [href]", noop_handler!()),
-                    element!("div img", noop_handler!()),
-                    element!("div.note span", noop_handler!())
-                ],
-                ..Settings::default()
-            }
         )
     ]
 );

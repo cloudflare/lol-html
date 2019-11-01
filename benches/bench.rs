@@ -98,5 +98,11 @@ macro_rules! define_group {
 
 mod cases;
 
-criterion_group!(benches, cases::parsing::group, cases::rewriting::group);
+criterion_group!(
+    benches,
+    cases::parsing::group,
+    cases::rewriting::group,
+    cases::selector_matching::group
+);
+
 criterion_main!(benches);

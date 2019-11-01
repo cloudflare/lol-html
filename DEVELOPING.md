@@ -32,6 +32,8 @@ To run only those benchmarks that contain a `{substring}` in their name:
 cargo bench {substring}
 ```
 
+Test report can be found in the `target/criterion/report/index.html` file.
+
 ## Useful debugging tools
 
 ### HTML parser tracer
