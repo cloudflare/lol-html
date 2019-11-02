@@ -6,7 +6,7 @@ mod tag_scanner;
 mod tree_builder_simulator;
 
 use self::lexer::Lexer;
-use self::state_machine::{ParsingLoopTerminationReason, StateMachine};
+use self::state_machine::{ActionError, ParsingTermination, StateMachine};
 use self::tag_scanner::TagScanner;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
 use crate::html::{LocalName, Namespace};
@@ -102,28 +102,30 @@ impl<S: ParserOutputSink> Parser<S> {
     }
 
     pub fn parse(&mut self, input: &[u8], last: bool) -> Result<usize, RewritingError> {
-        use ParsingLoopTerminationReason::*;
+        use ActionError::*;
 
-        let mut loop_termination_reason = with_current_sm!(self, sm.run_parsing_loop(input, last))?;
+        let mut parse_result = with_current_sm!(self, sm.run_parsing_loop(input, last));
 
         loop {
-            match loop_termination_reason {
-                ParserDirectiveChange(new_directive, sm_bookmark) => {
+            match parse_result {
+                Err(ParsingTermination::EndOfInput {
+                    consumed_byte_count,
+                }) => {
+                    return Ok(consumed_byte_count);
+                }
+                Err(ParsingTermination::ActionError(ParserDirectiveChangeRequired(
+                    new_directive,
+                    sm_bookmark,
+                ))) => {
                     self.current_directive = new_directive;
 
                     trace!(@continue_from_bookmark sm_bookmark, self.current_directive, input);
 
-                    loop_termination_reason = with_current_sm!(
-                        self,
-                        sm.continue_from_bookmark(input, last, sm_bookmark)
-                    )?;
+                    parse_result =
+                        with_current_sm!(self, sm.continue_from_bookmark(input, last, sm_bookmark));
                 }
-
-                EndOfInput {
-                    consumed_byte_count,
-                } => {
-                    return Ok(consumed_byte_count);
-                }
+                Err(ParsingTermination::ActionError(RewritingError(err))) => return Err(err),
+                Ok(unreachable) => match unreachable {},
             }
         }
     }

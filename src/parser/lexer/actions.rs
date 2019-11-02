@@ -20,16 +20,14 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     impl_common_sm_actions!();
 
     #[inline]
-    fn emit_eof(&mut self, input: &[u8]) -> StateResult {
+    fn emit_eof(&mut self, input: &[u8]) -> ActionResult {
         let lexeme = self.create_lexeme_with_raw_exclusive(input, Some(Eof));
 
-        self.emit_lexeme(&lexeme)?;
-
-        Ok(ParsingLoopDirective::None)
+        self.emit_lexeme(&lexeme)
     }
 
     #[inline]
-    fn emit_text(&mut self, input: &[u8]) -> StateResult {
+    fn emit_text(&mut self, input: &[u8]) -> ActionResult {
         if self.pos() > self.lexeme_start {
             // NOTE: unlike any other tokens (except EOF), text tokens don't have
             // any lexical symbols that determine their bounds. Therefore,
@@ -42,34 +40,27 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             self.emit_lexeme(&lexeme)?;
         }
 
-        Ok(ParsingLoopDirective::None)
+        Ok(())
     }
 
     #[inline]
-    fn emit_current_token(&mut self, input: &[u8]) -> StateResult {
+    fn emit_current_token(&mut self, input: &[u8]) -> ActionResult {
         let token = self.current_non_tag_content_token.take();
         let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
 
-        self.emit_lexeme(&lexeme)?;
-
-        Ok(ParsingLoopDirective::None)
+        self.emit_lexeme(&lexeme)
     }
 
     #[inline]
-    fn emit_tag(&mut self, input: &[u8]) -> StateResult {
+    fn emit_tag(&mut self, input: &[u8]) -> ActionResult {
         let token = self
             .current_tag_token
             .take()
             .expect("Tag token should exist at this point");
 
-        let feedback = match self.feedback_directive.take() {
-            FeedbackDirective::ApplyUnhandledFeedback(feedback) => Some(feedback),
-            FeedbackDirective::Skip => None,
-            FeedbackDirective::None => Some(
-                self.get_feedback_for_tag(&token)
-                    .map_err(RewritingError::ParsingAmbiguity)?,
-            ),
-        };
+        let feedback = self
+            .try_get_tree_builder_feedback(&token)
+            .map_err(ActionError::from)?;
 
         let mut lexeme = self.create_lexeme_with_raw_inclusive(input, token);
 
@@ -77,9 +68,9 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         // (except for CDATA, but there is a special action to take care of it).
         self.set_last_text_type(TextType::Data);
 
-        let loop_directive_from_feedback = feedback
-            .map(|f| self.handle_tree_builder_feedback(f, &lexeme))
-            .unwrap_or(ParsingLoopDirective::None);
+        if let Some(feedback) = feedback {
+            self.handle_tree_builder_feedback(feedback, &lexeme);
+        }
 
         if let StartTag {
             ref mut ns,
@@ -91,42 +82,41 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             *ns = self.tree_builder_simulator.borrow().current_ns();
         }
 
-        Ok(match self.emit_tag_lexeme(&lexeme)? {
-            ParserDirective::Lex => loop_directive_from_feedback,
+        match self
+            .emit_tag_lexeme(&lexeme)
+            .map_err(ActionError::RewritingError)?
+        {
+            ParserDirective::Lex => Ok(()),
             ParserDirective::WherePossibleScanForTagsOnly => self.change_parser_directive(
                 self.lexeme_start,
                 ParserDirective::WherePossibleScanForTagsOnly,
                 FeedbackDirective::None,
             ),
-        })
+        }
     }
 
     #[inline]
-    fn emit_current_token_and_eof(&mut self, input: &[u8]) -> StateResult {
+    fn emit_current_token_and_eof(&mut self, input: &[u8]) -> ActionResult {
         let token = self.current_non_tag_content_token.take();
         let lexeme = self.create_lexeme_with_raw_exclusive(input, token);
 
         self.emit_lexeme(&lexeme)?;
-
         self.emit_eof(input)
     }
 
     #[inline]
-    fn emit_raw_without_token(&mut self, input: &[u8]) -> StateResult {
+    fn emit_raw_without_token(&mut self, input: &[u8]) -> ActionResult {
         let lexeme = self.create_lexeme_with_raw_inclusive(input, None);
 
-        self.emit_lexeme(&lexeme)?;
-
-        Ok(ParsingLoopDirective::None)
+        self.emit_lexeme(&lexeme)
     }
 
     #[inline]
-    fn emit_raw_without_token_and_eof(&mut self, input: &[u8]) -> StateResult {
+    fn emit_raw_without_token_and_eof(&mut self, input: &[u8]) -> ActionResult {
         // NOTE: since we are at EOF we use exclusive range for token's raw.
         let lexeme = self.create_lexeme_with_raw_exclusive(input, None);
 
         self.emit_lexeme(&lexeme)?;
-
         self.emit_eof(input)
     }
 
@@ -224,7 +214,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, _input: &[u8]) -> StateResult {
+    fn finish_tag_name(&mut self, _input: &[u8]) -> ActionResult {
         match self.current_tag_token {
             Some(StartTag { ref mut name, .. }) | Some(EndTag { ref mut name, .. }) => {
                 *name = get_token_part_range!(self)
@@ -232,7 +222,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             _ => unreachable!("Tag should exist at this point"),
         }
 
-        Ok(ParsingLoopDirective::None)
+        Ok(())
     }
 
     #[inline]

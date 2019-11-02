@@ -7,7 +7,7 @@ mod lexeme;
 use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
-    FeedbackDirective, ParsingLoopDirective, StateMachine, StateResult,
+    ActionError, ActionResult, FeedbackDirective, StateMachine, StateResult,
 };
 use crate::parser::{
     ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback, TreeBuilderSimulator,
@@ -76,51 +76,50 @@ impl<S: LexemeSink> Lexer<S> {
         }
     }
 
-    fn get_feedback_for_tag(
+    fn try_get_tree_builder_feedback(
         &mut self,
-        tag: &TagTokenOutline,
-    ) -> Result<TreeBuilderFeedback, ParsingAmbiguityError> {
-        match *tag {
-            TagTokenOutline::StartTag { name_hash, .. } => self
-                .tree_builder_simulator
-                .borrow_mut()
-                .get_feedback_for_start_tag(name_hash),
-            TagTokenOutline::EndTag { name_hash, .. } => Ok(self
-                .tree_builder_simulator
-                .borrow_mut()
-                .get_feedback_for_end_tag(name_hash)),
-        }
+        token: &TagTokenOutline,
+    ) -> Result<Option<TreeBuilderFeedback>, ParsingAmbiguityError> {
+        Ok(match self.feedback_directive.take() {
+            FeedbackDirective::ApplyUnhandledFeedback(feedback) => Some(feedback),
+            FeedbackDirective::Skip => None,
+            FeedbackDirective::None => Some({
+                let mut simulator = self.tree_builder_simulator.borrow_mut();
+
+                match *token {
+                    TagTokenOutline::StartTag { name_hash, .. } => {
+                        simulator.get_feedback_for_start_tag(name_hash)?
+                    }
+                    TagTokenOutline::EndTag { name_hash, .. } => {
+                        simulator.get_feedback_for_end_tag(name_hash)
+                    }
+                }
+            }),
+        })
     }
 
-    fn handle_tree_builder_feedback(
-        &mut self,
-        feedback: TreeBuilderFeedback,
-        lexeme: &TagLexeme,
-    ) -> ParsingLoopDirective {
+    fn handle_tree_builder_feedback(&mut self, feedback: TreeBuilderFeedback, lexeme: &TagLexeme) {
         match feedback {
-            TreeBuilderFeedback::SwitchTextType(text_type) => {
-                self.set_last_text_type(text_type);
-                ParsingLoopDirective::None
-            }
-            TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
-                self.cdata_allowed = cdata_allowed;
-                ParsingLoopDirective::None
-            }
+            TreeBuilderFeedback::SwitchTextType(text_type) => self.set_last_text_type(text_type),
+            TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => self.cdata_allowed = cdata_allowed,
             TreeBuilderFeedback::RequestLexeme(mut callback) => {
                 let feedback = callback(&mut self.tree_builder_simulator.borrow_mut(), lexeme);
 
-                self.handle_tree_builder_feedback(feedback, lexeme)
+                self.handle_tree_builder_feedback(feedback, lexeme);
             }
-            TreeBuilderFeedback::None => ParsingLoopDirective::None,
+            TreeBuilderFeedback::None => (),
         }
     }
 
     #[inline]
-    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme) -> Result<(), RewritingError> {
+    fn emit_lexeme(&mut self, lexeme: &NonTagContentLexeme) -> ActionResult {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;
-        self.lexeme_sink.handle_non_tag_content(lexeme)
+
+        self.lexeme_sink
+            .handle_non_tag_content(lexeme)
+            .map_err(ActionError::RewritingError)
     }
 
     #[inline]

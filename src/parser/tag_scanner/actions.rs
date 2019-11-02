@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
+use crate::parser::state_machine::{ActionError, ActionResult, StateMachineActions};
 
 impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     impl_common_sm_actions!();
@@ -35,7 +35,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, input: &[u8]) -> StateResult {
+    fn finish_tag_name(&mut self, input: &[u8]) -> ActionResult {
         let tag_start = self
             .tag_start
             .take()
@@ -43,48 +43,41 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
 
         let unhandled_feedback = self
             .try_apply_tree_builder_feedback()
-            .map_err(RewritingError::ParsingAmbiguity)?;
+            .map_err(ActionError::from)?;
 
-        Ok(match unhandled_feedback {
-            Some(unhandled_feedback) => self.change_parser_directive(
+        if let Some(unhandled_feedback) = unhandled_feedback {
+            return self.change_parser_directive(
                 tag_start,
                 ParserDirective::Lex,
                 FeedbackDirective::ApplyUnhandledFeedback(unhandled_feedback),
-            ),
-            None => match self.emit_tag_hint(input)? {
-                ParserDirective::WherePossibleScanForTagsOnly => ParsingLoopDirective::None,
-                ParserDirective::Lex => {
-                    let feedback_directive = match self.pending_text_type_change.take() {
-                        Some(text_type) => FeedbackDirective::ApplyUnhandledFeedback(
-                            TreeBuilderFeedback::SwitchTextType(text_type),
-                        ),
-                        None => FeedbackDirective::Skip,
-                    };
+            );
+        }
 
-                    self.change_parser_directive(
-                        tag_start,
-                        ParserDirective::Lex,
-                        feedback_directive,
-                    )
-                }
-            },
-        })
+        match self
+            .emit_tag_hint(input)
+            .map_err(ActionError::RewritingError)?
+        {
+            ParserDirective::WherePossibleScanForTagsOnly => Ok(()),
+            ParserDirective::Lex => {
+                let feedback_directive = self.take_feedback_directive();
+
+                self.change_parser_directive(tag_start, ParserDirective::Lex, feedback_directive)
+            }
+        }
     }
 
     #[inline]
-    fn emit_tag(&mut self, _input: &[u8]) -> StateResult {
-        Ok(
-            if let Some(text_type) = self.pending_text_type_change.take() {
-                self.set_last_text_type(text_type);
-                ParsingLoopDirective::None
-            } else {
-                // NOTE: exit from any non-initial text parsing mode always happens on tag emission
-                // (except for CDATA, but there is a special action to take care of it).
-                self.set_last_text_type(TextType::Data);
+    fn emit_tag(&mut self, _input: &[u8]) -> ActionResult {
+        // NOTE: exit from any non-initial text parsing mode always happens on tag emission
+        // (except for CDATA, but there is a special action to take care of it).
+        let text_type = self
+            .pending_text_type_change
+            .take()
+            .unwrap_or(TextType::Data);
 
-                ParsingLoopDirective::None
-            },
-        )
+        self.set_last_text_type(text_type);
+
+        Ok(())
     }
 
     noop_action_with_result!(

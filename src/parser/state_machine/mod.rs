@@ -5,7 +5,7 @@ mod syntax_dsl;
 mod syntax;
 
 use crate::html::{LocalNameHash, TextType};
-use crate::parser::{ParserDirective, TreeBuilderFeedback};
+use crate::parser::{ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback};
 use crate::rewriter::RewritingError;
 use std::fmt::{self, Debug};
 use std::mem;
@@ -47,27 +47,38 @@ pub struct StateMachineBookmark {
     feedback_directive: FeedbackDirective,
 }
 
-pub enum ParsingLoopTerminationReason {
-    ParserDirectiveChange(ParserDirective, StateMachineBookmark),
+pub enum ActionError {
+    RewritingError(RewritingError),
+    ParserDirectiveChangeRequired(ParserDirective, StateMachineBookmark),
+}
+
+impl From<ParsingAmbiguityError> for ActionError {
+    #[inline]
+    fn from(err: ParsingAmbiguityError) -> Self {
+        ActionError::RewritingError(RewritingError::ParsingAmbiguity(err))
+    }
+}
+
+pub enum ParsingTermination {
+    ActionError(ActionError),
     EndOfInput { consumed_byte_count: usize },
 }
 
-pub enum ParsingLoopDirective {
-    Break(ParsingLoopTerminationReason),
-    None,
-}
+// TODO: use `!` type when it become stable.
+pub enum Never {}
 
-pub type StateResult = Result<ParsingLoopDirective, RewritingError>;
-pub type ParsingLoopResult = Result<ParsingLoopTerminationReason, RewritingError>;
+pub type ActionResult = Result<(), ActionError>;
+pub type StateResult = Result<(), ParsingTermination>;
+pub type ParseResult = Result<Never, ParsingTermination>;
 
 pub trait StateMachineActions {
-    fn emit_eof(&mut self, input: &[u8]) -> StateResult;
-    fn emit_text(&mut self, input: &[u8]) -> StateResult;
-    fn emit_current_token(&mut self, input: &[u8]) -> StateResult;
-    fn emit_tag(&mut self, input: &[u8]) -> StateResult;
-    fn emit_current_token_and_eof(&mut self, input: &[u8]) -> StateResult;
-    fn emit_raw_without_token(&mut self, input: &[u8]) -> StateResult;
-    fn emit_raw_without_token_and_eof(&mut self, input: &[u8]) -> StateResult;
+    fn emit_eof(&mut self, input: &[u8]) -> ActionResult;
+    fn emit_text(&mut self, input: &[u8]) -> ActionResult;
+    fn emit_current_token(&mut self, input: &[u8]) -> ActionResult;
+    fn emit_tag(&mut self, input: &[u8]) -> ActionResult;
+    fn emit_current_token_and_eof(&mut self, input: &[u8]) -> ActionResult;
+    fn emit_raw_without_token(&mut self, input: &[u8]) -> ActionResult;
+    fn emit_raw_without_token_and_eof(&mut self, input: &[u8]) -> ActionResult;
 
     fn create_start_tag(&mut self, input: &[u8]);
     fn create_end_tag(&mut self, input: &[u8]);
@@ -84,7 +95,7 @@ pub trait StateMachineActions {
     fn finish_doctype_public_id(&mut self, input: &[u8]);
     fn finish_doctype_system_id(&mut self, input: &[u8]);
 
-    fn finish_tag_name(&mut self, input: &[u8]) -> StateResult;
+    fn finish_tag_name(&mut self, input: &[u8]) -> ActionResult;
     fn update_tag_name_hash(&mut self, input: &[u8]);
     fn mark_as_self_closing(&mut self, input: &[u8]);
 
@@ -142,15 +153,11 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
     fn is_last_input(&self) -> bool;
     fn set_is_last_input(&mut self, last: bool);
 
-    fn run_parsing_loop(&mut self, input: &[u8], last: bool) -> ParsingLoopResult {
+    fn run_parsing_loop(&mut self, input: &[u8], last: bool) -> ParseResult {
         self.set_is_last_input(last);
 
         loop {
-            let state = self.state();
-
-            if let ParsingLoopDirective::Break(reason) = state(self, input)? {
-                return Ok(reason);
-            }
+            self.state()(self, input)?;
         }
     }
 
@@ -159,7 +166,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         input: &[u8],
         last: bool,
         bookmark: StateMachineBookmark,
-    ) -> ParsingLoopResult {
+    ) -> ParseResult {
         self.set_cdata_allowed(bookmark.cdata_allowed);
         self.switch_text_type(bookmark.text_type);
         self.set_last_start_tag_name_hash(bookmark.last_start_tag_name_hash);
@@ -179,11 +186,9 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
 
         self.set_pos(self.pos() - consumed_byte_count);
 
-        Ok(ParsingLoopDirective::Break(
-            ParsingLoopTerminationReason::EndOfInput {
-                consumed_byte_count,
-            },
-        ))
+        Err(ParsingTermination::EndOfInput {
+            consumed_byte_count,
+        })
     }
 
     #[inline]
@@ -207,8 +212,8 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         pos: usize,
         new_parser_directive: ParserDirective,
         feedback_directive: FeedbackDirective,
-    ) -> ParsingLoopDirective {
-        ParsingLoopDirective::Break(ParsingLoopTerminationReason::ParserDirectiveChange(
+    ) -> ActionResult {
+        Err(ActionError::ParserDirectiveChangeRequired(
             new_parser_directive,
             self.create_bookmark(pos, feedback_directive),
         ))
@@ -382,10 +387,10 @@ macro_rules! noop_action_with_result {
     ($($fn_name:ident),*) => {
         $(
             #[inline]
-            fn $fn_name(&mut self, _input: &[u8]) -> StateResult {
+            fn $fn_name(&mut self, _input: &[u8]) -> ActionResult {
                 trace!(@noop);
 
-                Ok(ParsingLoopDirective::None)
+                Ok(())
             }
         )*
     };

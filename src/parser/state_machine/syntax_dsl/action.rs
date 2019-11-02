@@ -1,13 +1,6 @@
 macro_rules! action {
     (| $self:tt, $input:ident | > $action_fn:ident ? $($args:expr),* ) => {
-        let loop_directive = $self.$action_fn($input $(,$args),*)?;
-
-        match loop_directive {
-            ParsingLoopDirective::None => (),
-            _ => {
-                return Ok(loop_directive);
-            },
-        }
+        $self.$action_fn($input $(,$args),*).map_err(ParsingTermination::ActionError)?;
     };
 
     (| $self:tt, $input:ident | > $action_fn:ident $($args:expr),* ) => {
@@ -21,8 +14,7 @@ macro_rules! action {
 
     ( @state_transition | $self:tt, $input:ident | > - -> $state:ident) => {
         $self.switch_state(Self::$state);
-
-        return Ok(ParsingLoopDirective::None);
+        return Ok(());
     };
 
     ( @state_transition | $self:tt, $input:ident | > - -> dyn $state_getter:ident) => {
@@ -31,6 +23,6 @@ macro_rules! action {
             $self.switch_state(state);
         }
 
-        return Ok(ParsingLoopDirective::None);
+        return Ok(());
     };
 }

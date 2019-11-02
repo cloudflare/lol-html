@@ -129,6 +129,16 @@ impl<S: TagHintSink> TagScanner<S> {
             TreeBuilderFeedback::None => None,
         })
     }
+
+    #[inline]
+    fn take_feedback_directive(&mut self) -> FeedbackDirective {
+        match self.pending_text_type_change.take() {
+            Some(text_type) => FeedbackDirective::ApplyUnhandledFeedback(
+                TreeBuilderFeedback::SwitchTextType(text_type),
+            ),
+            None => FeedbackDirective::Skip,
+        }
+    }
 }
 
 impl<S: TagHintSink> StateMachine for TagScanner<S> {
