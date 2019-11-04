@@ -1,3 +1,4 @@
+use super::Range;
 use encoding_rs::{Encoding, WINDOWS_1252};
 use memchr::{memchr, memchr3};
 use std::borrow::Cow;
@@ -47,6 +48,16 @@ impl<'b> Bytes<'b> {
     #[inline]
     pub fn into_owned(self) -> Bytes<'static> {
         Bytes(Cow::Owned(self.0.into_owned()))
+    }
+
+    #[inline]
+    pub fn slice(&self, range: Range) -> Bytes {
+        self.0[range.start..range.end].into()
+    }
+
+    #[inline]
+    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes> {
+        range.map(|range| self.slice(range))
     }
 
     pub(crate) fn as_debug_string(&self) -> String {

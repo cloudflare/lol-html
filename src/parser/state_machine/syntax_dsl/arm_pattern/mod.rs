@@ -29,8 +29,8 @@ macro_rules! arm_pattern {
         eoc => ( $($actions:tt)* )
     ) => {
         state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
-            None if !$input.is_last() => ({
-                action_list!(|$self, $input, $ch|> $($actions)* );
+            None if !$self.is_last_input() => ({
+                action_list!(|$self, $input|> $($actions)* );
 
                 return $self.break_on_end_of_input($input);
             })
@@ -46,8 +46,8 @@ macro_rules! arm_pattern {
     ) => {
         state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
             None => ({
-                if $input.is_last() {
-                    action_list!(|$self, $input, $ch|> $($actions)* );
+                if $self.is_last_input() {
+                    action_list!(|$self, $input|> $($actions)* );
                 }
 
                 return $self.break_on_end_of_input($input);

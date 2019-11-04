@@ -1,7 +1,6 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
-use crate::base::Chunk;
 use crate::memory::{Arena, SharedMemoryLimiter};
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use crate::rewriter::RewritingError;
@@ -77,15 +76,13 @@ where
     fn buffer_blocked_bytes(
         &mut self,
         data: &[u8],
-        blocked_byte_count: usize,
+        consumed_byte_count: usize,
     ) -> Result<(), RewritingError> {
         if self.has_buffered_data {
-            self.buffer.shrink_to_last(blocked_byte_count);
+            self.buffer.shift(consumed_byte_count);
         } else {
-            let blocked_bytes = &data[data.len() - blocked_byte_count..];
-
             self.buffer
-                .init_with(blocked_bytes)
+                .init_with(&data[consumed_byte_count..])
                 .map_err(RewritingError::MemoryLimitExceeded)?;
 
             self.has_buffered_data = true;
@@ -103,22 +100,22 @@ where
             self.buffer
                 .append(data)
                 .map_err(RewritingError::MemoryLimitExceeded)?;
+
             self.buffer.bytes()
         } else {
             data
-        }
-        .into();
+        };
 
         trace!(@chunk chunk);
 
-        let blocked_byte_count = self.parser.parse(&chunk)?;
+        let consumed_byte_count = self.parser.parse(chunk, false)?;
 
         self.dispatcher
             .borrow_mut()
-            .flush_remaining_input(&chunk, blocked_byte_count);
+            .flush_remaining_input(&chunk, consumed_byte_count);
 
-        if blocked_byte_count > 0 {
-            self.buffer_blocked_bytes(data, blocked_byte_count)?;
+        if consumed_byte_count < chunk.len() {
+            self.buffer_blocked_bytes(data, consumed_byte_count)?;
         } else {
             self.has_buffered_data = false;
         }
@@ -130,15 +127,15 @@ where
         trace!(@end);
 
         let chunk = if self.has_buffered_data {
-            Chunk::last(self.buffer.bytes())
+            self.buffer.bytes()
         } else {
-            Chunk::last_empty()
+            &[]
         };
 
         trace!(@chunk chunk);
 
-        self.parser.parse(&chunk)?;
-        self.dispatcher.borrow_mut().finish(&chunk);
+        self.parser.parse(chunk, true)?;
+        self.dispatcher.borrow_mut().finish(chunk);
 
         Ok(())
     }

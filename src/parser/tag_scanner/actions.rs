@@ -1,42 +1,41 @@
 use super::*;
-use crate::base::Chunk;
-use crate::parser::state_machine::{ParsingLoopDirective, StateMachineActions, StateResult};
+use crate::parser::state_machine::{ActionError, ActionResult, StateMachineActions};
 
 impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     impl_common_sm_actions!();
 
     #[inline]
-    fn create_start_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.tag_name_start = self.input_cursor.pos();
+    fn create_start_tag(&mut self, _input: &[u8]) {
+        self.tag_name_start = self.pos();
         self.tag_name_hash = LocalNameHash::new();
     }
 
     #[inline]
-    fn create_end_tag(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.tag_name_start = self.input_cursor.pos();
+    fn create_end_tag(&mut self, _input: &[u8]) {
+        self.tag_name_start = self.pos();
         self.tag_name_hash = LocalNameHash::new();
         self.is_in_end_tag = true;
     }
 
     #[inline]
-    fn mark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
-        self.tag_start = Some(self.input_cursor.pos());
+    fn mark_tag_start(&mut self, _input: &[u8]) {
+        self.tag_start = Some(self.pos());
     }
 
     #[inline]
-    fn unmark_tag_start(&mut self, _input: &Chunk, _ch: Option<u8>) {
+    fn unmark_tag_start(&mut self, _input: &[u8]) {
         self.tag_start = None;
     }
 
     #[inline]
-    fn update_tag_name_hash(&mut self, _input: &Chunk, ch: Option<u8>) {
-        if let Some(ch) = ch {
+    fn update_tag_name_hash(&mut self, input: &[u8]) {
+        if let Some(ch) = input.get(self.pos()).copied() {
             self.tag_name_hash.update(ch);
         }
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, input: &Chunk, _ch: Option<u8>) -> StateResult {
+    fn finish_tag_name(&mut self, input: &[u8]) -> ActionResult {
         let tag_start = self
             .tag_start
             .take()
@@ -44,49 +43,41 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
 
         let unhandled_feedback = self
             .try_apply_tree_builder_feedback()
-            .map_err(RewritingError::ParsingAmbiguity)?;
+            .map_err(ActionError::from)?;
 
-        Ok(match unhandled_feedback {
-            Some(unhandled_feedback) => self.change_parser_directive(
+        if let Some(unhandled_feedback) = unhandled_feedback {
+            return self.change_parser_directive(
                 tag_start,
                 ParserDirective::Lex,
                 FeedbackDirective::ApplyUnhandledFeedback(unhandled_feedback),
-            ),
-            None => match self.emit_tag_hint(input)? {
-                ParserDirective::WherePossibleScanForTagsOnly => ParsingLoopDirective::None,
-                ParserDirective::Lex => {
-                    let feedback_directive = match self.pending_text_type_change.take() {
-                        Some(text_type) => FeedbackDirective::ApplyUnhandledFeedback(
-                            TreeBuilderFeedback::SwitchTextType(text_type),
-                        ),
-                        None => FeedbackDirective::Skip,
-                    };
+            );
+        }
 
-                    self.change_parser_directive(
-                        tag_start,
-                        ParserDirective::Lex,
-                        feedback_directive,
-                    )
-                }
-            },
-        })
+        match self
+            .emit_tag_hint(input)
+            .map_err(ActionError::RewritingError)?
+        {
+            ParserDirective::WherePossibleScanForTagsOnly => Ok(()),
+            ParserDirective::Lex => {
+                let feedback_directive = self.take_feedback_directive();
+
+                self.change_parser_directive(tag_start, ParserDirective::Lex, feedback_directive)
+            }
+        }
     }
 
     #[inline]
-    fn emit_tag(&mut self, _input: &Chunk, _ch: Option<u8>) -> StateResult {
-        Ok(
-            if let Some(text_type) = self.pending_text_type_change.take() {
-                self.switch_text_type(text_type);
+    fn emit_tag(&mut self, _input: &[u8]) -> ActionResult {
+        // NOTE: exit from any non-initial text parsing mode always happens on tag emission
+        // (except for CDATA, but there is a special action to take care of it).
+        let text_type = self
+            .pending_text_type_change
+            .take()
+            .unwrap_or(TextType::Data);
 
-                ParsingLoopDirective::Continue
-            } else {
-                // NOTE: exit from any non-initial text parsing mode always happens on tag emission
-                // (except for CDATA, but there is a special action to take care of it).
-                self.set_last_text_type(TextType::Data);
+        self.set_last_text_type(text_type);
 
-                ParsingLoopDirective::None
-            },
-        )
+        Ok(())
     }
 
     noop_action_with_result!(
@@ -115,7 +106,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     );
 
     #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &Chunk, _ch: Option<u8>, _offset: usize) {
+    fn shift_comment_text_end_by(&mut self, _input: &[u8], _offset: usize) {
         trace!(@noop);
     }
 }

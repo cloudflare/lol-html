@@ -115,12 +115,7 @@ impl<'i> StartTag<'i> {
     }
 
     #[cfg(test)]
-    pub fn raw_attributes(
-        &self,
-    ) -> (
-        &'i crate::base::Chunk<'i>,
-        crate::parser::SharedAttributeBuffer,
-    ) {
+    pub fn raw_attributes(&self) -> (&'i Bytes<'i>, crate::parser::SharedAttributeBuffer) {
         self.attributes.raw_attributes()
     }
 }

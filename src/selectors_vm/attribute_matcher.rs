@@ -1,5 +1,5 @@
 use super::compiler::CompiledAttributeExprOperand;
-use crate::base::{Bytes, Chunk};
+use crate::base::Bytes;
 use crate::html::Namespace;
 use crate::parser::{AttributeOutline, SharedAttributeBuffer};
 use encoding_rs::UTF_8;
@@ -21,7 +21,7 @@ fn is_attr_whitespace(b: u8) -> bool {
 type MemoizedAttrValue<'i> = LazyCell<Option<Bytes<'i>>>;
 
 pub struct AttributeMatcher<'i> {
-    input: &'i Chunk<'i>,
+    input: &'i Bytes<'i>,
     attributes: SharedAttributeBuffer,
     id: MemoizedAttrValue<'i>,
     class: MemoizedAttrValue<'i>,
@@ -30,7 +30,7 @@ pub struct AttributeMatcher<'i> {
 
 impl<'i> AttributeMatcher<'i> {
     #[inline]
-    pub fn new(input: &'i Chunk<'i>, attributes: SharedAttributeBuffer, ns: Namespace) -> Self {
+    pub fn new(input: &'i Bytes<'i>, attributes: SharedAttributeBuffer, ns: Namespace) -> Self {
         AttributeMatcher {
             input,
             attributes,

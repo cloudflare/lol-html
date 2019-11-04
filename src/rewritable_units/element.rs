@@ -757,12 +757,22 @@ mod tests {
                 el.remove_attribute("Foo1இ");
 
                 assert_eq!(el.attributes().len(), 1, "Encoding: {}", enc.name());
-                assert_eq!(el.get_attribute("foo1இ"), None, "Encoding: {}", enc.name());
+                assert_eq!(
+                    el.get_attribute("foo1இ"),
+                    None,
+                    "Encoding: {}",
+                    enc.name()
+                );
 
                 el.remove_attribute("FoO2இ");
 
                 assert!(el.attributes().is_empty(), "Encoding: {}", enc.name());
-                assert_eq!(el.get_attribute("foo2இ"), None, "Encoding: {}", enc.name());
+                assert_eq!(
+                    el.get_attribute("foo2இ"),
+                    None,
+                    "Encoding: {}",
+                    enc.name()
+                );
             });
         }
     }

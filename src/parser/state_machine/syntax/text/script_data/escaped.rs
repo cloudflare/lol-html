@@ -51,7 +51,7 @@ define_state_group!(script_data_escaped_states_group = {
 
         b'>' => (
             if is_appropriate_end_tag
-                ( finish_tag_name?; emit_tag?; --> data_state )
+                ( finish_tag_name?; emit_tag?; --> dyn next_text_parsing_state )
             else
                 ( unmark_tag_start; emit_text?; reconsume in script_data_escaped_state )
         )

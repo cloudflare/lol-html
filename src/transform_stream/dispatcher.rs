@@ -1,5 +1,5 @@
 use super::*;
-use crate::base::{Chunk, Range};
+use crate::base::{Bytes, Range};
 use crate::html::{LocalName, Namespace};
 use crate::parser::{
     Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHintSink,
@@ -15,7 +15,7 @@ use std::rc::Rc;
 use TagTokenOutline::*;
 
 pub struct AuxStartTagInfo<'i> {
-    pub input: &'i Chunk<'i>,
+    pub input: &'i Bytes<'i>,
     pub attr_buffer: SharedAttributeBuffer,
     pub self_closing: bool,
 }
@@ -92,11 +92,8 @@ where
         }
     }
 
-    pub fn flush_remaining_input(&mut self, input: &Chunk, blocked_byte_count: usize) {
-        let output = input.slice(Range {
-            start: self.remaining_content_start,
-            end: input.len() - blocked_byte_count,
-        });
+    pub fn flush_remaining_input(&mut self, input: &[u8], consumed_byte_count: usize) {
+        let output = &input[self.remaining_content_start..consumed_byte_count];
 
         if self.emission_enabled && !output.is_empty() {
             self.output_sink.handle_chunk(&output);
@@ -105,8 +102,8 @@ where
         self.remaining_content_start = 0;
     }
 
-    pub fn finish(&mut self, input: &Chunk) {
-        self.flush_remaining_input(input, 0);
+    pub fn finish(&mut self, input: &[u8]) {
+        self.flush_remaining_input(input, input.len());
 
         // NOTE: output the finalizing chunk.
         self.output_sink.handle_chunk(&[]);
@@ -328,7 +325,9 @@ where
         ns: Namespace,
     ) -> Result<ParserDirective, RewritingError> {
         match self.transform_controller.handle_start_tag(name, ns) {
-            Ok(flags) => Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)),
+            Ok(flags) => {
+                Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags))
+            }
             Err(DispatcherError::InfoRequest(aux_info_req)) => {
                 self.got_flags_from_hint = false;
                 self.pending_element_aux_info_req = Some(aux_info_req);
