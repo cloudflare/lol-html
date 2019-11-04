@@ -2,7 +2,7 @@ use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLoca
 use super::RewritingError;
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
-use crate::selectors_vm::{ElementData, MatchInfo, SelectorMatchingVm, VmError};
+use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
 use crate::transform_stream::*;
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -26,14 +26,14 @@ impl ElementData for ElementDescriptor {
 
 pub struct HtmlRewriteController<'h> {
     handlers_dispatcher: Rc<RefCell<ContentHandlersDispatcher<'h>>>,
-    selector_matching_vm: SelectorMatchingVm<ElementDescriptor>,
+    selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
 }
 
 impl<'h> HtmlRewriteController<'h> {
     #[inline]
     pub fn new(
         handlers_dispatcher: ContentHandlersDispatcher<'h>,
-        selector_matching_vm: SelectorMatchingVm<ElementDescriptor>,
+        selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
     ) -> Self {
         HtmlRewriteController {
             handlers_dispatcher: Rc::new(RefCell::new(handlers_dispatcher)),
@@ -42,19 +42,45 @@ impl<'h> HtmlRewriteController<'h> {
     }
 }
 
-impl<'h> HtmlRewriteController<'h> {
-    #[inline]
-    fn create_match_handler(&self) -> impl FnMut(MatchInfo<SelectorHandlersLocator>) + 'h {
-        let handlers_dispatcher = Rc::clone(&self.handlers_dispatcher);
+// NOTE: it's a macro instead of an instance method, so it can be executed
+// when we hold a mutable reference for the selector matching VM.
+macro_rules! create_match_handler {
+    ($self:tt) => {{
+        let handlers_dispatcher = Rc::clone(&$self.handlers_dispatcher);
 
         move |m| handlers_dispatcher.borrow_mut().start_matching(m)
+    }};
+}
+
+impl<'h> HtmlRewriteController<'h> {
+    #[inline]
+    fn respond_to_aux_info_request(
+        aux_info_req: AuxStartTagInfoRequest<ElementDescriptor, SelectorHandlersLocator>,
+    ) -> StartTagHandlingResult<Self> {
+        Err(DispatcherError::InfoRequest(Box::new(
+            move |this, aux_info| {
+                let mut match_handler = create_match_handler!(this);
+
+                if let Some(ref mut vm) = this.selector_matching_vm {
+                    aux_info_req(vm, aux_info, &mut match_handler)
+                        .map_err(RewritingError::MemoryLimitExceeded)?;
+                }
+
+                Ok(this.get_capture_flags())
+            },
+        )))
+    }
+
+    #[inline]
+    fn get_capture_flags(&self) -> TokenCaptureFlags {
+        self.handlers_dispatcher.borrow().get_token_capture_flags()
     }
 }
 
 impl TransformController for HtmlRewriteController<'_> {
     #[inline]
     fn initial_capture_flags(&self) -> TokenCaptureFlags {
-        self.handlers_dispatcher.borrow().get_token_capture_flags()
+        self.get_capture_flags()
     }
 
     fn handle_start_tag(
@@ -62,46 +88,46 @@ impl TransformController for HtmlRewriteController<'_> {
         local_name: LocalName,
         ns: Namespace,
     ) -> StartTagHandlingResult<Self> {
-        let mut match_handler = self.create_match_handler();
+        match self.selector_matching_vm {
+            Some(ref mut vm) => {
+                let mut match_handler = create_match_handler!(self);
 
-        let exec_result =
-            self.selector_matching_vm
-                .exec_for_start_tag(local_name, ns, &mut match_handler);
-
-        match exec_result {
-            Ok(_) => Ok(self.handlers_dispatcher.borrow().get_token_capture_flags()),
-            Err(VmError::InfoRequest(aux_info_req)) => Err(DispatcherError::InfoRequest(Box::new(
-                move |this, aux_info| {
-                    let mut match_handler = this.create_match_handler();
-
-                    aux_info_req(&mut this.selector_matching_vm, aux_info, &mut match_handler)
-                        .map_err(RewritingError::MemoryLimitExceeded)?;
-
-                    Ok(this.handlers_dispatcher.borrow().get_token_capture_flags())
-                },
-            ))),
-            Err(VmError::MemoryLimitExceeded(e)) => Err(DispatcherError::RewritingError(
-                RewritingError::MemoryLimitExceeded(e),
-            )),
+                match vm.exec_for_start_tag(local_name, ns, &mut match_handler) {
+                    Ok(_) => Ok(self.get_capture_flags()),
+                    Err(VmError::InfoRequest(req)) => Self::respond_to_aux_info_request(req),
+                    Err(VmError::MemoryLimitExceeded(e)) => Err(DispatcherError::RewritingError(
+                        RewritingError::MemoryLimitExceeded(e),
+                    )),
+                }
+            }
+            // NOTE: fast path - we can skip executing selector matching VM completely
+            // and don't need to maintain open element stack if we don't have any selectors.
+            None => Ok(self.get_capture_flags()),
         }
     }
 
     fn handle_end_tag(&mut self, local_name: LocalName) -> TokenCaptureFlags {
-        let handlers_dispatcher = Rc::clone(&self.handlers_dispatcher);
+        if let Some(ref mut vm) = self.selector_matching_vm {
+            let handlers_dispatcher = Rc::clone(&self.handlers_dispatcher);
 
-        self.selector_matching_vm
-            .exec_for_end_tag(local_name, move |elem_desc| {
+            vm.exec_for_end_tag(local_name, move |elem_desc| {
                 handlers_dispatcher.borrow_mut().stop_matching(elem_desc);
             });
+        }
 
-        self.handlers_dispatcher.borrow().get_token_capture_flags()
+        self.get_capture_flags()
     }
 
     #[inline]
     fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
+        let current_element_data = self
+            .selector_matching_vm
+            .as_mut()
+            .and_then(SelectorMatchingVm::current_element_data_mut);
+
         self.handlers_dispatcher
             .borrow_mut()
-            .handle_token(token, &mut self.selector_matching_vm)
+            .handle_token(token, current_element_data)
             .map_err(RewritingError::ContentHandlerError)
     }
 

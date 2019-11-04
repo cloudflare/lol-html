@@ -151,6 +151,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         let encoding = try_encoding_from_str(settings.encoding)?;
         let mut selectors_ast = selectors_vm::Ast::default();
         let mut dispatcher = ContentHandlersDispatcher::default();
+        let has_selectors = !settings.element_content_handlers.is_empty();
 
         for (selector, handlers) in settings.element_content_handlers {
             let locator = dispatcher.add_selector_associated_handlers(handlers);
@@ -165,8 +166,15 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         let memory_limiter =
             MemoryLimiter::new_shared(settings.memory_settings.max_allowed_memory_usage);
 
-        let selector_matching_vm =
-            SelectorMatchingVm::new(selectors_ast, encoding, Rc::clone(&memory_limiter));
+        let selector_matching_vm = if has_selectors {
+            Some(SelectorMatchingVm::new(
+                selectors_ast,
+                encoding,
+                Rc::clone(&memory_limiter),
+            ))
+        } else {
+            None
+        };
 
         let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
 

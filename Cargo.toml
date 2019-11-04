@@ -21,7 +21,6 @@ edition = "2018"
 [features]
 debug_trace = []
 integration_test = []
-lhtml = []
 
 [[test]]
 harness = false
@@ -44,16 +43,9 @@ selectors = "0.21.0"
 thiserror = "1.0.2"
 
 [dev-dependencies]
-criterion = "0.2"
+criterion = "0.3.0"
 glob = "0.2.11"
 html5ever = "0.21.0"
-# Cargo doesn't allow packages with path dependencies to be published ¯\_(ツ)_/¯:
-# https://github.com/rust-lang/cargo/issues/1565
-#
-# For now the following line needs to be uncommented to run benchmarks. I hope we'll
-# find a better solution soon.
-#
-# lazyhtml = { path = "benches/deps/lazyhtml/rust", version = "0.1.0" }
 serde = "1.0.19"
 serde_derive = "1.0.19"
 serde_json = "1.0.5"

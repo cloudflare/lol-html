@@ -1,7 +1,7 @@
 use super::settings::*;
 use super::ElementDescriptor;
 use crate::rewritable_units::{Element, StartTag, Token, TokenCaptureFlags};
-use crate::selectors_vm::{MatchInfo, SelectorMatchingVm};
+use crate::selectors_vm::MatchInfo;
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct SelectorHandlersLocator {
@@ -210,7 +210,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
     pub fn handle_start_tag(
         &mut self,
         start_tag: &mut StartTag,
-        selector_matching_vm: &mut SelectorMatchingVm<ElementDescriptor>,
+        current_element_data: Option<&mut ElementDescriptor>,
     ) -> HandlerResult {
         if self.matched_elements_with_removed_content > 0 {
             start_tag.mutations.remove();
@@ -222,7 +222,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
             .do_for_each_active_and_deactivate(|h| h(&mut element))?;
 
         if self.next_element_can_have_content {
-            if let Some(elem_desc) = selector_matching_vm.current_element_data_mut() {
+            if let Some(elem_desc) = current_element_data {
                 if element.should_remove_content() {
                     elem_desc.remove_content = true;
                     self.matched_elements_with_removed_content += 1;
@@ -242,11 +242,11 @@ impl<'h> ContentHandlersDispatcher<'h> {
     pub fn handle_token(
         &mut self,
         token: &mut Token,
-        selector_matching_vm: &mut SelectorMatchingVm<ElementDescriptor>,
+        current_element_data: Option<&mut ElementDescriptor>,
     ) -> HandlerResult {
         match token {
             Token::Doctype(doctype) => self.doctype_handlers.for_each_active(|h| h(doctype)),
-            Token::StartTag(start_tag) => self.handle_start_tag(start_tag, selector_matching_vm),
+            Token::StartTag(start_tag) => self.handle_start_tag(start_tag, current_element_data),
             Token::EndTag(end_tag) => self
                 .end_tag_handlers
                 .do_for_each_active_and_remove(|h| h(end_tag)),

@@ -22,17 +22,17 @@ To run only those tests that contain a `{substring}` in their name:
 
 ## Running benchmarks
 
-First, you need to uncomment `lazyhtml` dependency in `Cargo.toml`, then:
-
 ```
-./scripts/bench.sh
+cargo bench
 ```
 
-To run benchmark for Cool Thing only and skip comparison with other parsers:
+To run only those benchmarks that contain a `{substring}` in their name:
 
 ```
-./scripts/bench.sh cool_thing
+cargo bench {substring}
 ```
+
+Test report can be found in the `target/criterion/report/index.html` file.
 
 ## Useful debugging tools
 
