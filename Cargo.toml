@@ -13,7 +13,10 @@ include = [
     "/Cargo.toml",
     "/LICENSE",
     "/README.md",
-    "/src/**",
+    "/src",
+    "/media",
+    "/tests",
+    "/benches"
 ]
 autotests = false
 edition = "2018"

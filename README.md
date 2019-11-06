@@ -1,4 +1,4 @@
-# Cool Thing
+![Banner](media/banner.png)
 
 *Cool Thing is a streaming HTML rewriter/parser with CSS-selector based API.*
 
