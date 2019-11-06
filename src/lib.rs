@@ -1,10 +1,10 @@
-//! Cool Thing is an HTML rewriter/parser with CSS-selector based API.
+//! Cool Thing is a streaming HTML rewriter/parser with CSS-selector based API.
 //!
-//! It is designed to provide a low output latency, quickly handle big amounts of data and operate
-//! in environments with the limited memory resources.
+//! It is designed to provide low output latency, quickly handle big amounts of data and operate in
+//! environments with limited memory resources.
 //!
-//! The crate serves as a back-end for the HTML rewriting functionality of [Cloudflare Workers],
-//! but can be used as a standalone library with the convenient API for a wide variety of HTML
+//! The crate serves as a back-end for the HTML rewriting functionality of [Cloudflare Workers], but
+//! can be used as a standalone library with the convenient API for a wide variety of HTML
 //! rewriting/analyzis tasks.
 //!
 //! The crate provides two main API entry points:
