@@ -1,7 +1,7 @@
 use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
 use super::RewritingError;
 use crate::html::{LocalName, Namespace};
-use crate::rewritable_units::{Token, TokenCaptureFlags};
+use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
 use crate::transform_stream::*;
 use std::cell::RefCell;
@@ -128,6 +128,13 @@ impl TransformController for HtmlRewriteController<'_> {
         self.handlers_dispatcher
             .borrow_mut()
             .handle_token(token, current_element_data)
+            .map_err(RewritingError::ContentHandlerError)
+    }
+
+    fn handle_end(&mut self, document_end: &mut DocumentEnd) -> Result<(), RewritingError> {
+        self.handlers_dispatcher
+            .borrow_mut()
+            .handle_end(document_end)
             .map_err(RewritingError::ContentHandlerError)
     }
 

@@ -1,6 +1,6 @@
 use super::settings::*;
 use super::ElementDescriptor;
-use crate::rewritable_units::{Element, StartTag, Token, TokenCaptureFlags};
+use crate::rewritable_units::{DocumentEnd, Element, StartTag, Token, TokenCaptureFlags};
 use crate::selectors_vm::MatchInfo;
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
@@ -119,6 +119,7 @@ pub struct ContentHandlersDispatcher<'h> {
     text_handlers: HandlerVec<TextHandler<'h>>,
     end_tag_handlers: HandlerVec<EndTagHandler<'h>>,
     element_handlers: HandlerVec<ElementHandler<'h>>,
+    end_handlers: HandlerVec<EndHandler<'h>>,
     next_element_can_have_content: bool,
     matched_elements_with_removed_content: usize,
 }
@@ -136,6 +137,10 @@ impl<'h> ContentHandlersDispatcher<'h> {
 
         if let Some(handler) = handlers.text {
             self.text_handlers.push(handler, true);
+        }
+
+        if let Some(handler) = handlers.end {
+            self.end_handlers.push(handler, true);
         }
     }
 
@@ -253,6 +258,11 @@ impl<'h> ContentHandlersDispatcher<'h> {
             Token::TextChunk(text) => self.text_handlers.for_each_active(|h| h(text)),
             Token::Comment(comment) => self.comment_handlers.for_each_active(|h| h(comment)),
         }
+    }
+
+    pub fn handle_end(&mut self, document_end: &mut DocumentEnd) -> HandlerResult {
+        self.end_handlers
+            .do_for_each_active_and_remove(|h| h(document_end))
     }
 
     #[inline]

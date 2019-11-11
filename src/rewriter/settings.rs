@@ -1,4 +1,4 @@
-use crate::rewritable_units::{Comment, Doctype, Element, EndTag, TextChunk};
+use crate::rewritable_units::{Comment, Doctype, DocumentEnd, Element, EndTag, TextChunk};
 use crate::selectors_vm::Selector;
 use std::error::Error;
 
@@ -8,6 +8,7 @@ pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>
 pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;
 pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + 'h>;
 pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + 'h>;
+pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + 'h>;
 
 /// Specifies element content handlers associated with a selector.
 #[derive(Default)]
@@ -63,6 +64,7 @@ pub struct DocumentContentHandlers<'h> {
     pub(super) doctype: Option<DoctypeHandler<'h>>,
     pub(super) comments: Option<CommentHandler<'h>>,
     pub(super) text: Option<TextHandler<'h>>,
+    pub(super) end: Option<EndHandler<'h>>,
 }
 
 impl<'h> DocumentContentHandlers<'h> {
@@ -88,6 +90,14 @@ impl<'h> DocumentContentHandlers<'h> {
     #[inline]
     pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + 'h) -> Self {
         self.text = Some(Box::new(handler));
+
+        self
+    }
+
+    /// Sets a handler for the document end, which is called after the last chunk is processed.
+    #[inline]
+    pub fn end(mut self, handler: impl FnMut(&mut DocumentEnd) -> HandlerResult + 'h) -> Self {
+        self.end = Some(Box::new(handler));
 
         self
     }
@@ -296,6 +306,45 @@ macro_rules! doc_text {
 macro_rules! doc_comments {
     ($handler:expr) => {
         __document_content_handler!(comments, $handler);
+    };
+}
+
+/// A convenience macro to construct a rewriting handler for the end of the document.
+///
+/// This handler will only be called after the rewriter has finished processing the final chunk.
+///
+/// # Example
+/// ```
+/// use lol_html::{rewrite_str, element, end, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
+///
+/// let html = rewrite_str(
+///     r#"<span>foo</span>"#,
+///     RewriteStrSettings {
+///         element_content_handlers: vec![
+///             element!("span", |el| {
+///                 el.append("bar", ContentType::Text);
+///
+///                 Ok(())
+///             })
+///         ],
+///         document_content_handlers: vec![
+///             end!(|end| {
+///                 end.append("<div>baz</div>", ContentType::Html);
+///
+///                 Ok(())
+///             })
+///         ],
+///         ..RewriteStrSettings::default()
+///     }
+/// ).unwrap();
+///
+/// assert_eq!(html, r#"<span>foobar</span><div>baz</div>"#);
+/// ```
+#[macro_export(local_inner_macros)]
+macro_rules! end {
+    ($handler:expr) => {
+        __document_content_handler!(end, $handler);
     };
 }
 

@@ -80,6 +80,10 @@ impl TransformController for TraceTransformController {
         Ok(())
     }
 
+    fn handle_end(&mut self, _: &mut DocumentEnd) -> Result<(), RewritingError> {
+        Ok(())
+    }
+
     fn should_emit_content(&self) -> bool {
         true
     }

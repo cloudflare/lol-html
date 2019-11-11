@@ -1,5 +1,6 @@
 use std::any::Any;
 
+pub use self::document_end::*;
 pub use self::element::*;
 pub use self::mutations::{ContentType, Mutations};
 pub use self::tokens::*;
@@ -80,6 +81,7 @@ macro_rules! impl_user_data {
 #[macro_use]
 mod mutations;
 
+mod document_end;
 mod element;
 mod tokens;
 
