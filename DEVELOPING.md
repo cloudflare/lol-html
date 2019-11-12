@@ -54,32 +54,28 @@ The tool prints selector VM's program AST for the given list of CSS selectors. C
 
 ## Fuzzing
 
-### Fuzzing with cargo-fuzz
-https://rust-fuzz.github.io/book/cargo-fuzz.html
-cargo-fuzz requires Rust nightly.
+### Fuzzing with [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html)
+**NOTE:** requires Rust nightly.
 
-Run fuzzing of `c-api`
-
-```
-./scripts/fuzz_c_api_with_libfuzzer.sh
-```
-
-Run fuzzing of rust library
+Run fuzzing for the crate:
 
 ```
 ./scripts/fuzz_with_libfuzzer.sh
 ```
 
-### Fuzzing with afl
-https://rust-fuzz.github.io/book/afl.html
+Run fuzzing for C API:
 
+```
+./scripts/fuzz_c_api_with_libfuzzer.sh
+```
+
+### Fuzzing with [afl](https://rust-fuzz.github.io/book/afl.html)
 
 ```
 ./scripts/fuzz_with_afl.sh
 ```
 
-### Fuzzing with honggfuzz
-https://github.com/rust-fuzz/honggfuzz-rs
+### Fuzzing with [honggfuzz](https://github.com/rust-fuzz/honggfuzz-rs)
 
 ```
 ./scripts/fuzz_with_hongg.sh
