@@ -1,10 +1,11 @@
 mod attributes;
 mod capturer;
 
+use super::Mutations;
+
 pub(super) use self::attributes::Attributes;
 pub use self::attributes::{Attribute, AttributeNameError};
 pub use self::capturer::*;
-use super::Mutations;
 
 pub trait Serialize {
     fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8]));
