@@ -12,11 +12,6 @@ pub struct Bytes<'b>(Cow<'b, [u8]>);
 
 impl<'b> Bytes<'b> {
     #[inline]
-    pub fn empty() -> Self {
-        Bytes(Cow::Borrowed(&[]))
-    }
-
-    #[inline]
     pub fn from_str(string: &'b str, encoding: &'static Encoding) -> Self {
         encoding.encode(string).0.into()
     }

@@ -1,10 +1,10 @@
 use super::{for_each_test_file, get_test_file_reader};
 use crate::harness::Input;
+use cool_thing::test_utils::ASCII_COMPATIBLE_ENCODINGS;
 use cool_thing::Selector;
 use serde_json::{self, from_reader};
 use std::collections::HashMap;
 use std::io::prelude::*;
-use cool_thing::test_utils::ASCII_COMPATIBLE_ENCODINGS;
 
 fn read_test_file(suite: &'static str, name: &str) -> String {
     let mut data = String::new();
