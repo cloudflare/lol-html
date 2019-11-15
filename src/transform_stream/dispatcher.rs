@@ -8,7 +8,8 @@ use crate::parser::{
 use crate::rewritable_units::{
     Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
-use crate::rewriter::RewritingError;
+use crate::rewriter::{RewritingError, RewritingResult};
+use async_trait::async_trait;
 use encoding_rs::Encoding;
 use std::rc::Rc;
 
@@ -30,11 +31,12 @@ pub enum DispatcherError<C> {
 
 pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherError<C>>;
 
+#[async_trait(?Send)]
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
     fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
     fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError>;
+    async fn handle_token(&mut self, token: &mut Token<'_>) -> RewritingResult;
     fn should_emit_content(&self) -> bool;
 }
 
@@ -109,10 +111,10 @@ where
         self.output_sink.handle_chunk(&[]);
     }
 
-    fn try_produce_token_from_lexeme<'i, T>(
+    async fn try_produce_token_from_lexeme<'i, T>(
         &mut self,
         lexeme: &Lexeme<'i, T>,
-    ) -> Result<(), RewritingError>
+    ) -> RewritingResult
     where
         Lexeme<'i, T>: ToToken,
     {
@@ -123,32 +125,38 @@ where
         let remaining_content_start = self.remaining_content_start;
         let mut lexeme_consumed = false;
 
-        self.token_capturer.feed(lexeme, |event| {
-            match event {
-                TokenCapturerEvent::LexemeConsumed => {
-                    let chunk = lexeme.input().slice(Range {
-                        start: remaining_content_start,
-                        end: lexeme_range.start,
-                    });
+        self.token_capturer
+            .feed(
+                lexeme,
+                async_closure!(|event| {
+                    match event {
+                        TokenCapturerEvent::LexemeConsumed => {
+                            let chunk = lexeme.input().slice(Range {
+                                start: remaining_content_start,
+                                end: lexeme_range.start,
+                            });
 
-                    lexeme_consumed = true;
+                            lexeme_consumed = true;
 
-                    if emission_enabled && chunk.len() > 0 {
-                        output_sink.handle_chunk(&chunk);
+                            if emission_enabled && chunk.len() > 0 {
+                                output_sink.handle_chunk(&chunk);
+                            }
+                        }
+                        TokenCapturerEvent::TokenProduced(mut token) => {
+                            trace!(@output token);
+
+                            transform_controller.handle_token(&mut token).await?;
+
+                            if emission_enabled {
+                                token.to_bytes(&mut |c| output_sink.handle_chunk(c));
+                            }
+                        }
                     }
-                }
-                TokenCapturerEvent::TokenProduced(mut token) => {
-                    trace!(@output token);
 
-                    transform_controller.handle_token(&mut token)?;
-
-                    if emission_enabled {
-                        token.to_bytes(&mut |c| output_sink.handle_chunk(c));
-                    }
-                }
-            }
-            Ok(())
-        })?;
+                    Ok(())
+                }),
+            )
+            .await?;
 
         if lexeme_consumed {
             self.remaining_content_start = lexeme_range.end;
@@ -325,7 +333,9 @@ where
         ns: Namespace,
     ) -> Result<ParserDirective, RewritingError> {
         match self.transform_controller.handle_start_tag(name, ns) {
-            Ok(flags) => Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)),
+            Ok(flags) => {
+                Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags))
+            }
             Err(DispatcherError::InfoRequest(aux_info_req)) => {
                 self.got_flags_from_hint = false;
                 self.pending_element_aux_info_req = Some(aux_info_req);

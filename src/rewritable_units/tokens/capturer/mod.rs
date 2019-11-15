@@ -4,7 +4,7 @@ mod to_token;
 use self::text_decoder::TextDecoder;
 use super::*;
 use crate::parser::Lexeme;
-use crate::rewriter::RewritingError;
+use crate::rewriter::{AsyncRewritingResult, RewritingResult};
 use bitflags::bitflags;
 use encoding_rs::Encoding;
 
@@ -26,7 +26,8 @@ pub enum TokenCapturerEvent<'i> {
     TokenProduced(Box<Token<'i>>),
 }
 
-type CapturerEventHandler<'h> = &'h mut dyn FnMut(TokenCapturerEvent) -> Result<(), RewritingError>;
+type CapturerEventHandler<'h, 'i> =
+    &'h mut dyn FnMut(TokenCapturerEvent<'i>) -> AsyncRewritingResult;
 
 pub struct TokenCapturer {
     encoding: &'static Encoding,
@@ -54,38 +55,39 @@ impl TokenCapturer {
     }
 
     #[inline]
-    pub fn flush_pending_text(
-        &mut self,
-        event_handler: CapturerEventHandler,
-    ) -> Result<(), RewritingError> {
-        self.text_decoder.flush_pending(event_handler)
+    pub async fn flush_pending_text<'c>(
+        &'c mut self,
+        event_handler: CapturerEventHandler<'_, 'c>,
+    ) -> RewritingResult {
+        self.text_decoder.flush_pending(event_handler).await
     }
 
-    pub fn feed<'i, T>(
-        &mut self,
-        lexeme: &Lexeme<'i, T>,
-        mut event_handler: impl FnMut(TokenCapturerEvent) -> Result<(), RewritingError>,
-    ) -> Result<(), RewritingError>
+    pub async fn feed<'i, 'l, 'c: 'l, T>(
+        &'c mut self,
+        lexeme: &'l Lexeme<'i, T>,
+        mut event_handler: impl FnMut(TokenCapturerEvent<'l>) -> AsyncRewritingResult,
+    ) -> RewritingResult
     where
         Lexeme<'i, T>: ToToken,
     {
         match lexeme.to_token(&mut self.capture_flags, self.encoding) {
             ToTokenResult::Token(token) => {
-                self.flush_pending_text(&mut event_handler)?;
-                event_handler(TokenCapturerEvent::LexemeConsumed)?;
-                event_handler(TokenCapturerEvent::TokenProduced(token))
+                self.flush_pending_text(&mut event_handler).await?;
+                event_handler(TokenCapturerEvent::LexemeConsumed).await?;
+                event_handler(TokenCapturerEvent::TokenProduced(token)).await
             }
             ToTokenResult::Text(text_type) => {
                 if self.capture_flags.contains(TokenCaptureFlags::TEXT) {
-                    event_handler(TokenCapturerEvent::LexemeConsumed)?;
+                    event_handler(TokenCapturerEvent::LexemeConsumed).await?;
 
                     self.text_decoder
-                        .feed_text(&lexeme.raw(), text_type, &mut event_handler)?;
+                        .feed_text(&lexeme.raw(), text_type, &mut event_handler)
+                        .await?;
                 }
 
                 Ok(())
             }
-            ToTokenResult::None => self.flush_pending_text(&mut event_handler),
+            ToTokenResult::None => self.flush_pending_text(&mut event_handler).await,
         }
     }
 }

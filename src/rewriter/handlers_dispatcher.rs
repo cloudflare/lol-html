@@ -64,13 +64,13 @@ impl<H> HandlerVec<H> {
     }
 
     #[inline]
-    pub fn for_each_active(
+    pub async fn for_each_active(
         &mut self,
-        mut cb: impl FnMut(&mut H) -> HandlerResult,
+        mut cb: impl FnMut(&mut H) -> AsyncHandlerResult,
     ) -> HandlerResult {
         for item in self.items.iter_mut() {
             if item.user_count > 0 {
-                cb(&mut item.handler)?;
+                cb(&mut item.handler).await?;
             }
         }
 
@@ -78,13 +78,13 @@ impl<H> HandlerVec<H> {
     }
 
     #[inline]
-    pub fn do_for_each_active_and_deactivate(
+    pub async fn do_for_each_active_and_deactivate(
         &mut self,
-        mut cb: impl FnMut(&mut H) -> HandlerResult,
+        mut cb: impl FnMut(&mut H) -> AsyncHandlerResult,
     ) -> HandlerResult {
         for item in self.items.iter_mut() {
             if item.user_count > 0 {
-                cb(&mut item.handler)?;
+                cb(&mut item.handler).await?;
                 self.user_count -= item.user_count;
                 item.user_count = 0;
             }
@@ -94,9 +94,9 @@ impl<H> HandlerVec<H> {
     }
 
     #[inline]
-    pub fn do_for_each_active_and_remove(
+    pub async fn do_for_each_active_and_remove(
         &mut self,
-        mut cb: impl FnMut(H) -> HandlerResult,
+        mut cb: impl FnMut(H) -> AsyncHandlerResult,
     ) -> HandlerResult {
         for i in (0..self.items.len()).rev() {
             if self.items[i].user_count > 0 {
@@ -104,7 +104,7 @@ impl<H> HandlerVec<H> {
 
                 self.user_count -= item.user_count;
 
-                cb(item.handler)?;
+                cb(item.handler).await?;
             }
         }
 
@@ -207,9 +207,9 @@ impl<'h> ContentHandlersDispatcher<'h> {
         }
     }
 
-    pub fn handle_start_tag(
+    pub async fn handle_start_tag(
         &mut self,
-        start_tag: &mut StartTag,
+        start_tag: &mut StartTag<'_>,
         current_element_data: Option<&mut ElementDescriptor>,
     ) -> HandlerResult {
         if self.matched_elements_with_removed_content > 0 {
@@ -219,7 +219,8 @@ impl<'h> ContentHandlersDispatcher<'h> {
         let mut element = Element::new(start_tag, self.next_element_can_have_content);
 
         self.element_handlers
-            .do_for_each_active_and_deactivate(|h| h(&mut element))?;
+            .do_for_each_active_and_deactivate(|h| h(&mut element))
+            .await?;
 
         if self.next_element_can_have_content {
             if let Some(elem_desc) = current_element_data {
@@ -239,19 +240,23 @@ impl<'h> ContentHandlersDispatcher<'h> {
         Ok(())
     }
 
-    pub fn handle_token(
+    pub async fn handle_token(
         &mut self,
-        token: &mut Token,
+        token: &mut Token<'_>,
         current_element_data: Option<&mut ElementDescriptor>,
     ) -> HandlerResult {
         match token {
-            Token::Doctype(doctype) => self.doctype_handlers.for_each_active(|h| h(doctype)),
-            Token::StartTag(start_tag) => self.handle_start_tag(start_tag, current_element_data),
-            Token::EndTag(end_tag) => self
-                .end_tag_handlers
-                .do_for_each_active_and_remove(|h| h(end_tag)),
-            Token::TextChunk(text) => self.text_handlers.for_each_active(|h| h(text)),
-            Token::Comment(comment) => self.comment_handlers.for_each_active(|h| h(comment)),
+            Token::Doctype(doctype) => self.doctype_handlers.for_each_active(|h| h(doctype)).await,
+            Token::StartTag(start_tag) => {
+                self.handle_start_tag(start_tag, current_element_data).await
+            }
+            Token::EndTag(end_tag) => {
+                self.end_tag_handlers
+                    .do_for_each_active_and_remove(|h| h(end_tag))
+                    .await
+            }
+            Token::TextChunk(text) => self.text_handlers.for_each_active(|h| h(text)).await,
+            Token::Comment(comment) => self.comment_handlers.for_each_active(|h| h(comment)).await,
         }
     }
 

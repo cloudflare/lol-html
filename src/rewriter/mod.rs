@@ -12,6 +12,7 @@ use crate::parser::ParsingAmbiguityError;
 use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
+use futures::future::LocalBoxFuture;
 use std::error::Error as StdError;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
@@ -74,6 +75,9 @@ pub enum RewritingError {
     #[error("{0}")]
     ContentHandlerError(Box<dyn StdError>),
 }
+
+pub type RewritingResult = Result<(), RewritingError>;
+pub type AsyncRewritingResult<'f> = LocalBoxFuture<'f, RewritingResult>;
 
 /// A streaming HTML rewriter.
 ///

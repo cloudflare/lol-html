@@ -1,9 +1,10 @@
 use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
-use super::RewritingError;
+use super::{RewritingError, RewritingResult};
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{Token, TokenCaptureFlags};
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
 use crate::transform_stream::*;
+use async_trait::async_trait;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -77,6 +78,7 @@ impl<'h> HtmlRewriteController<'h> {
     }
 }
 
+#[async_trait(?Send)]
 impl TransformController for HtmlRewriteController<'_> {
     #[inline]
     fn initial_capture_flags(&self) -> TokenCaptureFlags {
@@ -119,7 +121,7 @@ impl TransformController for HtmlRewriteController<'_> {
     }
 
     #[inline]
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
+    async fn handle_token(&mut self, token: &mut Token<'_>) -> RewritingResult {
         let current_element_data = self
             .selector_matching_vm
             .as_mut()
@@ -128,6 +130,7 @@ impl TransformController for HtmlRewriteController<'_> {
         self.handlers_dispatcher
             .borrow_mut()
             .handle_token(token, current_element_data)
+            .await
             .map_err(RewritingError::ContentHandlerError)
     }
 

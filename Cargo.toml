@@ -34,10 +34,12 @@ harness = false
 name = "bench"
 
 [dependencies]
+async-trait = "0.1.17"
 bitflags = "1.0.4"
 cfg-if = "0.1"
 cssparser = "0.25.5"
 encoding_rs = "0.8.13"
+futures = "0.3.1"
 lazycell = "1.2"
 lazy_static = "1.3.0"
 memchr = "2.1.2"

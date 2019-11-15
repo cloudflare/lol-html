@@ -2,6 +2,7 @@ use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, Start
 use crate::base::Bytes;
 use crate::rewriter::EndTagHandler;
 use encoding_rs::Encoding;
+use futures::future;
 use std::any::Any;
 use std::fmt::{self, Debug};
 use thiserror::Error;
@@ -471,7 +472,7 @@ impl<'r, 't> Element<'r, 't> {
                     end_tag.mutations = mutations;
                 }
 
-                Ok(())
+                Box::pin(future::ok(()))
             }))
         } else {
             None

@@ -1,6 +1,6 @@
 use super::*;
 use crate::html::TextType;
-use crate::rewriter::RewritingError;
+use crate::rewriter::RewritingResult;
 use encoding_rs::{CoderResult, Decoder, Encoding};
 
 // NOTE: this can't be refactored into method, because we hold a mutable reference for `self`
@@ -32,23 +32,25 @@ impl TextDecoder {
     }
 
     #[inline]
-    pub fn flush_pending(
-        &mut self,
-        event_handler: CapturerEventHandler,
-    ) -> Result<(), RewritingError> {
+    pub async fn flush_pending<'d>(
+        &'d mut self,
+        event_handler: CapturerEventHandler<'_, 'd>,
+    ) -> RewritingResult {
         if self.pending_text_streaming_decoder.is_some() {
-            self.decode_with_streaming_decoder(&[], true, event_handler)?;
+            self.decode_with_streaming_decoder(&[], true, event_handler)
+                .await?;
             self.pending_text_streaming_decoder = None;
         }
+
         Ok(())
     }
 
-    fn decode_with_streaming_decoder(
-        &mut self,
+    async fn decode_with_streaming_decoder<'d>(
+        &'d mut self,
         raw: &[u8],
         last: bool,
-        event_handler: CapturerEventHandler,
-    ) -> Result<(), RewritingError> {
+        event_handler: CapturerEventHandler<'_, 'd>,
+    ) -> RewritingResult {
         let encoding = self.encoding;
         let buffer = self.text_buffer.as_mut_str();
 
@@ -62,7 +64,7 @@ impl TextDecoder {
             let (status, read, written, ..) = decoder.decode_to_str(&raw[consumed..], buffer, last);
 
             if written > 0 || last {
-                emit!(self, &buffer[..written], last, event_handler)?;
+                emit!(self, &buffer[..written], last, event_handler).await?;
             }
 
             if let CoderResult::InputEmpty = status {
@@ -76,13 +78,15 @@ impl TextDecoder {
     }
 
     #[inline]
-    pub fn feed_text(
-        &mut self,
+    pub async fn feed_text<'d>(
+        &'d mut self,
         raw: &[u8],
         text_type: TextType,
-        event_handler: CapturerEventHandler,
-    ) -> Result<(), RewritingError> {
+        event_handler: CapturerEventHandler<'_, 'd>,
+    ) -> RewritingResult {
         self.last_text_type = text_type;
+
         self.decode_with_streaming_decoder(raw, false, event_handler)
+            .await
     }
 }

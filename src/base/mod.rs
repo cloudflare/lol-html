@@ -1,6 +1,9 @@
 #[macro_use]
 mod debug_trace;
 
+#[macro_use]
+mod async_closure;
+
 mod align;
 mod bytes;
 mod range;

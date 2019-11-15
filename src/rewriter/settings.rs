@@ -1,13 +1,16 @@
 use crate::rewritable_units::{Comment, Doctype, Element, EndTag, TextChunk};
 use crate::selectors_vm::Selector;
+use futures::future::LocalBoxFuture;
 use std::error::Error;
 
 pub(super) type HandlerResult = Result<(), Box<dyn Error>>;
-pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + 'h>;
-pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>;
-pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;
-pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + 'h>;
-pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + 'h>;
+pub(super) type AsyncHandlerResult = LocalBoxFuture<'static, HandlerResult>;
+
+pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> AsyncHandlerResult + 'h>;
+pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> AsyncHandlerResult + 'h>;
+pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> AsyncHandlerResult + 'h>;
+pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> AsyncHandlerResult + 'h>;
+pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> AsyncHandlerResult + 'h>;
 
 /// Specifies element content handlers associated with a selector.
 #[derive(Default)]
@@ -20,7 +23,7 @@ pub struct ElementContentHandlers<'h> {
 impl<'h> ElementContentHandlers<'h> {
     /// Sets a handler for elements matched by a selector.
     #[inline]
-    pub fn element(mut self, handler: impl FnMut(&mut Element) -> HandlerResult + 'h) -> Self {
+    pub fn element(mut self, handler: impl FnMut(&mut Element) -> AsyncHandlerResult + 'h) -> Self {
         self.element = Some(Box::new(handler));
 
         self
@@ -28,7 +31,10 @@ impl<'h> ElementContentHandlers<'h> {
 
     /// Sets a handler for HTML comments in the inner content of elements matched by a selector.
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + 'h) -> Self {
+    pub fn comments(
+        mut self,
+        handler: impl FnMut(&mut Comment) -> AsyncHandlerResult + 'h,
+    ) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
@@ -36,7 +42,7 @@ impl<'h> ElementContentHandlers<'h> {
 
     /// Sets a handler for text chunks in the inner content of elements matched by a selector.
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + 'h) -> Self {
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> AsyncHandlerResult + 'h) -> Self {
         self.text = Some(Box::new(handler));
 
         self
@@ -70,7 +76,7 @@ impl<'h> DocumentContentHandlers<'h> {
     ///
     /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
     #[inline]
-    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> HandlerResult + 'h) -> Self {
+    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> AsyncHandlerResult + 'h) -> Self {
         self.doctype = Some(Box::new(handler));
 
         self
@@ -78,7 +84,10 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for all HTML comments present in the input HTML markup.
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + 'h) -> Self {
+    pub fn comments(
+        mut self,
+        handler: impl FnMut(&mut Comment) -> AsyncHandlerResult + 'h,
+    ) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
@@ -86,7 +95,7 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for all text chunks present in the input HTML markup.
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + 'h) -> Self {
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> AsyncHandlerResult + 'h) -> Self {
         self.text = Some(Box::new(handler));
 
         self
