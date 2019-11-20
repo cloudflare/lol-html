@@ -659,6 +659,12 @@ void lol_html_element_user_data_set(
 // Returns user data attached to the text chunk.
 void *lol_html_element_user_data_get(const lol_html_element_t *element);
 
+// Inserts the content at the end of the document, either as raw text or as HTML.
+//
+// The content should be a valid UTF-8 string.
+//
+// Returns 0 if successful, and -1 otherwise. The actual error message
+// can be obtained using the `lol_html_take_last_error` function.
 int lol_html_doc_end_append(
     lol_html_doc_end_t *doc_end,
     const char *content,
