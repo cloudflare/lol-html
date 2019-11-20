@@ -111,4 +111,17 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn append_content_regression() {
+        // This prevents a regression where the output sink received an empty chunk
+        // before the end of the input stream.
+        for (html, enc) in encoded("") {
+            let output = rewrite_on_end(&html, enc, |end| {
+                end.append("<foo>", ContentType::Text);
+            });
+
+            assert_eq!(output, "&lt;foo&gt;");
+        }
+    }
 }
