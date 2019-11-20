@@ -76,11 +76,10 @@ macro_rules! impl_replace_byte {
             match $impls!(@find tail) {
                 Some(pos) => {
                     let replacement = $impls!(@get_replacement tail, pos);
+                    let chunk = &tail[..pos];
 
-                    // If `pos` is 0, tail[..pos] will be empty, and erroneously interpreted
-                    // as a finalizing chunk.
-                    if pos != 0 {
-                        $output_handler(&tail[..pos]);
+                    if !chunk.is_empty() {
+                        $output_handler(chunk);
                     }
 
                     $output_handler(&replacement);
