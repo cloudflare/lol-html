@@ -795,7 +795,10 @@ mod tests {
                 r#"#foo1.c1.c2[foo3][foo2$="barЫ"]"#,
                 encoding,
                 &[
-                    ("<div id='foo1' class='c4 c2 c3 c1' foo3 foo2=heybarЫ>", true),
+                    (
+                        "<div id='foo1' class='c4 c2 c3 c1' foo3 foo2=heybarЫ>",
+                        true,
+                    ),
                     (
                         "<div ID='foo1' class='c4 c2 c3 c1' foo3=test foo2=barЫ>",
                         true,
@@ -821,7 +824,10 @@ mod tests {
                 r#"div#foo1.c1.c2[foo3੦][foo2$="bar"]"#,
                 encoding,
                 &[
-                    ("<div id='foo1' class='c4 c2 c3 c1' foo3੦ foo2=heybar>", true),
+                    (
+                        "<div id='foo1' class='c4 c2 c3 c1' foo3੦ foo2=heybar>",
+                        true,
+                    ),
                     (
                         "<span id='foo1' class='c4 c2 c3 c1' foo3੦ foo2=heybar>",
                         false,
