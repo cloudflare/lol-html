@@ -14,6 +14,7 @@ int run_tests() {
     subtest("Comment API", test_comment_api);
     subtest("Text chunk API", test_text_chunk_api);
     subtest("Element API", element_api_test);
+    subtest("Document end API", document_end_api_test);
     subtest("Memory limiting", test_memory_limiting);
     return done_testing();
 }

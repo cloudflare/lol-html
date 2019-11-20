@@ -73,14 +73,12 @@ mod tests {
             html,
             encoding,
             vec![],
-            vec![
-                end!(|end| {
-                    handler_called = true;
-                    handler(end);
+            vec![end!(|end| {
+                handler_called = true;
+                handler(end);
 
-                    Ok(())
-                }),
-            ],
+                Ok(())
+            })],
         );
 
         assert!(handler_called, "Handler not called.");
@@ -107,7 +105,10 @@ mod tests {
                 end.append("</span>", ContentType::Html);
             });
 
-            assert_eq!(output, "<div><h1>Hεllo</h1></div><span>world&lt;foo&gt;</span>");
+            assert_eq!(
+                output,
+                "<div><h1>Hεllo</h1></div><span>world&lt;foo&gt;</span>"
+            );
         }
     }
 }

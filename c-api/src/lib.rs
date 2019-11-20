@@ -117,6 +117,7 @@ macro_rules! get_user_data {
 
 mod comment;
 mod doctype;
+mod document_end;
 mod element;
 mod errors;
 mod rewriter;

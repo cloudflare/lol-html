@@ -52,6 +52,7 @@ static void test_insert_before_and_after_text_chunk(void *user_data) {
         NULL,
         NULL,
         &insert_before_and_after_text_chunk,
+        NULL,
         NULL
     );
 
@@ -95,7 +96,8 @@ static void test_modify_user_data(void *user_data) {
         NULL,
         NULL,
         &modify_user_data,
-        user_data
+        user_data,
+        NULL
     );
 
     run_rewriter(builder, "Hey 42", modify_user_data_output_sink, user_data);
@@ -177,6 +179,7 @@ static void test_insert_after_chunk(void *user_data) {
         NULL,
         NULL,
         &insert_after_chunk,
+        NULL,
         NULL
     );
 
@@ -216,6 +219,7 @@ static void test_remove_chunk(void *user_data) {
         NULL,
         NULL,
         &remove_chunk,
+        NULL,
         NULL
     );
 
@@ -263,6 +267,7 @@ static void test_stop(void *user_data) {
         NULL,
         NULL,
         &stop_rewriting,
+        NULL,
         NULL
     );
 

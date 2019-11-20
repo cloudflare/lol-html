@@ -45,6 +45,7 @@ static void test_get_doctype_fields(void *user_data) {
         NULL,
         NULL,
         NULL,
+        NULL,
         NULL
     );
 
@@ -94,6 +95,7 @@ static void test_get_user_data(void *user_data) {
         NULL,
         NULL,
         NULL,
+        NULL,
         NULL
     );
 
@@ -124,6 +126,7 @@ static void test_stop(void *user_data) {
     lol_html_rewriter_builder_add_document_content_handlers(
         builder,
         &stop_rewriting,
+        NULL,
         NULL,
         NULL,
         NULL,

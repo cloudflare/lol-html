@@ -44,6 +44,7 @@ static void test_get_set_comment_text(void *user_data) {
         &get_set_comment_text,
         user_data,
         NULL,
+        NULL,
         NULL
     );
 
@@ -83,6 +84,7 @@ static void test_insert_before_and_after_comment(void *user_data) {
         NULL,
         &insert_before_and_after_comment,
         user_data,
+        NULL,
         NULL,
         NULL
     );
@@ -130,6 +132,7 @@ static void test_get_set_user_data(void *user_data) {
         NULL,
         &get_set_user_data,
         user_data,
+        NULL,
         NULL,
         NULL
     );
@@ -213,6 +216,7 @@ static void test_insert_after_comment(lol_html_selector_t *selector, void *user_
         &insert_after_comment,
         NULL,
         NULL,
+        NULL,
         NULL
     );
 
@@ -258,6 +262,7 @@ static void test_remove_comment(void *user_data) {
         &remove_comment,
         NULL,
         NULL,
+        NULL,
         NULL
     );
 
@@ -285,6 +290,7 @@ static void test_stop(void *user_data) {
         NULL,
         NULL,
         &stop_rewriting,
+        NULL,
         NULL,
         NULL,
         NULL
