@@ -54,3 +54,60 @@ impl<'a> DocumentEnd<'a> {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::html_content::*;
+    use crate::rewritable_units::test_utils::*;
+    use crate::*;
+    use encoding_rs::{Encoding, UTF_8};
+
+    fn rewrite_on_end(
+        html: &[u8],
+        encoding: &'static Encoding,
+        mut handler: impl FnMut(&mut DocumentEnd),
+    ) -> String {
+        let mut handler_called = false;
+
+        let output = rewrite_html(
+            html,
+            encoding,
+            vec![],
+            vec![
+                end!(|end| {
+                    handler_called = true;
+                    handler(end);
+
+                    Ok(())
+                }),
+            ],
+        );
+
+        assert!(handler_called, "Handler not called.");
+
+        output
+    }
+
+    #[test]
+    fn append_to_empty_document() {
+        let output = rewrite_on_end(b"", UTF_8, |end| {
+            end.append("<div></div>", ContentType::Html);
+        });
+
+        assert_eq!(output, "<div></div>")
+    }
+
+    #[test]
+    fn append_content() {
+        for (html, enc) in encoded("<div><h1>Hεllo</h1></div>") {
+            let output = rewrite_on_end(&html, enc, |end| {
+                end.append("<span>", ContentType::Html);
+                end.append("world", ContentType::Text);
+                end.append("<foo>", ContentType::Text);
+                end.append("</span>", ContentType::Html);
+            });
+
+            assert_eq!(output, "<div><h1>Hεllo</h1></div><span>world&lt;foo&gt;</span>");
+        }
+    }
+}

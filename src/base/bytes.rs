@@ -77,7 +77,12 @@ macro_rules! impl_replace_byte {
                 Some(pos) => {
                     let replacement = $impls!(@get_replacement tail, pos);
 
-                    $output_handler(&tail[..pos]);
+                    // If pos is 0, tail[..pos] will be empty, thus erroneously interpreted
+                    // as a finalizing chunk.
+                    if pos != 0 {
+                        $output_handler(&tail[..pos]);
+                    }
+
                     $output_handler(&replacement);
                     tail = &tail[pos + 1..];
                 }
