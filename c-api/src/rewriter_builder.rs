@@ -130,6 +130,7 @@ pub extern "C" fn lol_html_rewriter_builder_add_document_content_handlers(
     text_handler: Option<TextHandler>,
     text_handler_user_data: *mut c_void,
     document_end_handler: Option<DocumentEndHandler>,
+    document_end_handler_user_data: *mut c_void,
 ) {
     let builder = to_ref_mut!(builder);
 
@@ -137,7 +138,7 @@ pub extern "C" fn lol_html_rewriter_builder_add_document_content_handlers(
         doctype: ExternHandler::new(doctype_handler, doctype_handler_user_data),
         comments: ExternHandler::new(comments_handler, comments_handler_user_data),
         text: ExternHandler::new(text_handler, text_handler_user_data),
-        end: ExternHandler::new(document_end_handler, std::ptr::null_mut()),
+        end: ExternHandler::new(document_end_handler, document_end_handler_user_data),
     };
 
     builder.document_content_handlers.push(handlers);

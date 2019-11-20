@@ -104,7 +104,8 @@ typedef lol_html_rewriter_directive_t (*lol_html_element_handler_t)(
 );
 
 typedef lol_html_rewriter_directive_t (*lol_html_doc_end_handler_t)(
-    lol_html_doc_end_t *doc_end
+    lol_html_doc_end_t *doc_end,
+    void *user_data
 );
 
 // Selector
@@ -112,7 +113,7 @@ typedef lol_html_rewriter_directive_t (*lol_html_doc_end_handler_t)(
 
 // Parses given CSS selector string.
 //
-// Returns NULL if parsing error occures. The actual error message
+// Returns NULL if parsing error occurs. The actual error message
 // can be obtained using `lol_html_take_last_error` function.
 //
 // WARNING: Selector SHOULD NOT be deallocated if there are any active rewriter
@@ -156,7 +157,8 @@ void lol_html_rewriter_builder_add_document_content_handlers(
     void *comment_handler_user_data,
     lol_html_text_handler_handler_t text_handler,
     void *text_handler_user_data,
-    lol_html_doc_end_handler_t doc_end_handler
+    lol_html_doc_end_handler_t doc_end_handler,
+    void *doc_end_user_data
 );
 
 // Adds element content handlers to the builder for the
@@ -173,7 +175,7 @@ void lol_html_rewriter_builder_add_document_content_handlers(
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// If any of handlers return LOL_HTML_STOP directive is then rewriting
+// If any of handlers return LOL_HTML_STOP directive then rewriting
 // stops immediately and `write()` or `end()` of the rewriter methods
 // return an error code.
 //
