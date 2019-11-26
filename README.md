@@ -1,4 +1,4 @@
-# LOL HTML
+# LOL HTML 
 
 ***L**ow **o**utput **l**atency streaming **HTML** rewriter/parser with CSS-selector based API.*
 
