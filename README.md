@@ -2,7 +2,7 @@
 
 <p align="center">
     <a href="https://github.com/cloudflare/lol-html">
-        <img src="media/logo.png" alt="parse5" />
+        <img src="media/logo.png" alt="The logo is generated from https://openmoji.org/data/color/svg/1F602.svg by Emily Jäger which is licensed under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)" style="width:472px; height: 375px" />
     </a>
 </p>
 
