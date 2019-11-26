@@ -15,6 +15,7 @@ include = [
     "/README.md",
     "/src",
     "/tests",
+    "/media",
     "/benches"
 ]
 autotests = false
