@@ -1,9 +1,16 @@
 # LOL HTML
 
+<p align="center">
+    <a href="https://github.com/cloudflare/lol-html">
+        <img src="media/logo.png" alt="parse5" />
+    </a>
+</p>
+
+
 ***L**ow **O**utput **L**atency streaming **HTML** rewriter/parser with CSS-selector based API.*
 
-It is designed to modify HTML on the fly with minimum amount buffering. It can quickly handle very large documents, and operate in
-environments with limited memory resources.
+It is designed to modify HTML on the fly with minimal buffering. It can quickly handle very large
+documents, and operate in environments with limited memory resources.
 
 The crate serves as a back-end for the HTML rewriting functionality of
 [Cloudflare Workers](https://www.cloudflare.com/en-gb/products/cloudflare-workers/), but can be used

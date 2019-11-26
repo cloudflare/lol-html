@@ -1,8 +1,8 @@
-//! ***LOL HTML*** is a **l**ow **o**utput **l**atency streaming **HTML** rewriter/parser with
+//! ***LOL HTML*** is a **L**ow **O**utput **L**atency streaming **HTML** rewriter/parser with
 //! CSS-selector based API.
 //!
-//! It is designed to provide low output latency, quickly handle big amounts of data and operate in
-//! environments with limited memory resources.
+//! It is designed to modify HTML on the fly with minimal buffering. It can quickly handle very large
+//! documents, and operate in environments with limited memory resources.
 //!
 //! The crate serves as a back-end for the HTML rewriting functionality of [Cloudflare Workers], but
 //! can be used as a standalone library with the convenient API for a wide variety of HTML
