@@ -40,12 +40,14 @@ cfg_if! {
             ( @noop ) => ( println!("NOOP"); );
 
             ( @continue_from_bookmark $bookmark:expr, $parser_directive:expr, $chunk:expr ) => {
+                use crate::base::Bytes;
+
                 println!();
                 println!("Continue from:");
                 println!("{:#?}", $bookmark);
                 println!("Parser directive: `{:#?}`", $parser_directive);
 
-                let mut chunk_str = $chunk.as_bytes().as_debug_string();
+                let mut chunk_str = Bytes::from($chunk).as_debug_string();
 
                 chunk_str.insert_str($bookmark.pos, "|*|");
 
