@@ -135,9 +135,7 @@ where
         trace!(@chunk chunk);
 
         self.parser.parse(chunk, true)?;
-        self.dispatcher.borrow_mut().finish(chunk);
-
-        Ok(())
+        self.dispatcher.borrow_mut().finish(chunk)
     }
 
     #[cfg(feature = "integration_test")]

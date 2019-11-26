@@ -22,6 +22,7 @@ extern "C" {
 typedef struct lol_html_HtmlRewriterBuilder lol_html_rewriter_builder_t;
 typedef struct lol_html_HtmlRewriter lol_html_rewriter_t;
 typedef struct lol_html_Doctype lol_html_doctype_t;
+typedef struct lol_html_DocumentEnd lol_html_doc_end_t;
 typedef struct lol_html_Comment lol_html_comment_t;
 typedef struct lol_html_TextChunk lol_html_text_chunk_t;
 typedef struct lol_html_Element lol_html_element_t;
@@ -75,7 +76,7 @@ lol_html_rewriter_builder_t *lol_html_rewriter_builder_new();
 // Content handlers
 //---------------------------------------------------------------------
 // Rewriter directive that should be returned from each content handler.
-// If LOL_HTML_STOP directive is returned then rewriting stops immidiately
+// If LOL_HTML_STOP directive is returned then rewriting stops immediately
 // and `write()` or `end()` methods of the rewriter return an error code.
 typedef enum {
     LOL_HTML_CONTINUE,
@@ -102,12 +103,17 @@ typedef lol_html_rewriter_directive_t (*lol_html_element_handler_t)(
     void *user_data
 );
 
+typedef lol_html_rewriter_directive_t (*lol_html_doc_end_handler_t)(
+    lol_html_doc_end_t *doc_end,
+    void *user_data
+);
+
 // Selector
 //---------------------------------------------------------------------
 
 // Parses given CSS selector string.
 //
-// Returns NULL if parsing error occures. The actual error message
+// Returns NULL if parsing error occurs. The actual error message
 // can be obtained using `lol_html_take_last_error` function.
 //
 // WARNING: Selector SHOULD NOT be deallocated if there are any active rewriter
@@ -137,8 +143,8 @@ void lol_html_selector_free(lol_html_selector_t *selector);
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// If any of handlers return LOL_HTML_STOP directive is then rewriting
-// stops immidiately and `write()` or `end()` of the rewriter methods
+// If any of handlers return LOL_HTML_STOP directive then rewriting
+// stops immediately and `write()` or `end()` of the rewriter methods
 // return an error code.
 //
 // WARNING: Pointers passed to handlers are valid only during the
@@ -150,7 +156,9 @@ void lol_html_rewriter_builder_add_document_content_handlers(
     lol_html_comment_handler_t comment_handler,
     void *comment_handler_user_data,
     lol_html_text_handler_handler_t text_handler,
-    void *text_handler_user_data
+    void *text_handler_user_data,
+    lol_html_doc_end_handler_t doc_end_handler,
+    void *doc_end_user_data
 );
 
 // Adds element content handlers to the builder for the
@@ -167,8 +175,8 @@ void lol_html_rewriter_builder_add_document_content_handlers(
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// If any of handlers return LOL_HTML_STOP directive is then rewriting
-// stops immidiately and `write()` or `end()` of the rewriter methods
+// If any of handlers return LOL_HTML_STOP directive then rewriting
+// stops immediately and `write()` or `end()` of the rewriter methods
 // return an error code.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
@@ -650,6 +658,19 @@ void lol_html_element_user_data_set(
 
 // Returns user data attached to the text chunk.
 void *lol_html_element_user_data_get(const lol_html_element_t *element);
+
+// Inserts the content at the end of the document, either as raw text or as HTML.
+//
+// The content should be a valid UTF-8 string.
+//
+// Returns 0 if successful, and -1 otherwise. The actual error message
+// can be obtained using the `lol_html_take_last_error` function.
+int lol_html_doc_end_append(
+    lol_html_doc_end_t *doc_end,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
 
 #if defined(__cplusplus)
 }  // extern C

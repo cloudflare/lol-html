@@ -11,6 +11,7 @@ type ElementHandler = unsafe extern "C" fn(*mut Element, *mut c_void) -> Rewrite
 type DoctypeHandler = unsafe extern "C" fn(*mut Doctype, *mut c_void) -> RewriterDirective;
 type CommentsHandler = unsafe extern "C" fn(*mut Comment, *mut c_void) -> RewriterDirective;
 type TextHandler = unsafe extern "C" fn(*mut TextChunk, *mut c_void) -> RewriterDirective;
+type DocumentEndHandler = unsafe extern "C" fn(*mut DocumentEnd, *mut c_void) -> RewriterDirective;
 
 struct ExternHandler<F> {
     func: Option<F>,
@@ -52,6 +53,7 @@ pub struct ExternDocumentContentHandlers {
     doctype: ExternHandler<DoctypeHandler>,
     comments: ExternHandler<CommentsHandler>,
     text: ExternHandler<TextHandler>,
+    end: ExternHandler<DocumentEndHandler>,
 }
 
 impl ExternDocumentContentHandlers {
@@ -61,6 +63,7 @@ impl ExternDocumentContentHandlers {
         add_handler!(handlers, self.doctype);
         add_handler!(handlers, self.comments);
         add_handler!(handlers, self.text);
+        add_handler!(handlers, self.end);
 
         handlers
     }
@@ -126,6 +129,8 @@ pub extern "C" fn lol_html_rewriter_builder_add_document_content_handlers(
     comments_handler_user_data: *mut c_void,
     text_handler: Option<TextHandler>,
     text_handler_user_data: *mut c_void,
+    document_end_handler: Option<DocumentEndHandler>,
+    document_end_handler_user_data: *mut c_void,
 ) {
     let builder = to_ref_mut!(builder);
 
@@ -133,6 +138,7 @@ pub extern "C" fn lol_html_rewriter_builder_add_document_content_handlers(
         doctype: ExternHandler::new(doctype_handler, doctype_handler_user_data),
         comments: ExternHandler::new(comments_handler, comments_handler_user_data),
         text: ExternHandler::new(text_handler, text_handler_user_data),
+        end: ExternHandler::new(document_end_handler, document_end_handler_user_data),
     };
 
     builder.document_content_handlers.push(handlers);

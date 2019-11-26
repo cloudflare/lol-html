@@ -9,6 +9,7 @@ void test_doctype_api();
 void test_comment_api();
 void test_text_chunk_api();
 void element_api_test();
+void document_end_api_test();
 void test_memory_limiting();
 
 #endif // TESTS_H

@@ -6,7 +6,7 @@ use crate::parser::{
     TagLexeme, TagTokenOutline,
 };
 use crate::rewritable_units::{
-    Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
+    DocumentEnd, Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
 use crate::rewriter::RewritingError;
 use encoding_rs::Encoding;
@@ -35,6 +35,7 @@ pub trait TransformController: Sized {
     fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
     fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
     fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError>;
+    fn handle_end(&mut self, document_end: &mut DocumentEnd) -> Result<(), RewritingError>;
     fn should_emit_content(&self) -> bool;
 }
 
@@ -71,6 +72,7 @@ where
     got_flags_from_hint: bool,
     pending_element_aux_info_req: Option<AuxStartTagInfoRequest<C>>,
     emission_enabled: bool,
+    encoding: &'static Encoding,
 }
 
 impl<C, O> Dispatcher<C, O>
@@ -89,6 +91,7 @@ where
             got_flags_from_hint: false,
             pending_element_aux_info_req: None,
             emission_enabled: true,
+            encoding,
         }
     }
 
@@ -102,11 +105,17 @@ where
         self.remaining_content_start = 0;
     }
 
-    pub fn finish(&mut self, input: &[u8]) {
+    pub fn finish(&mut self, input: &[u8]) -> Result<(), RewritingError> {
         self.flush_remaining_input(input, input.len());
+
+        let mut document_end = DocumentEnd::new(&mut self.output_sink, self.encoding);
+
+        self.transform_controller.handle_end(&mut document_end)?;
 
         // NOTE: output the finalizing chunk.
         self.output_sink.handle_chunk(&[]);
+
+        Ok(())
     }
 
     fn try_produce_token_from_lexeme<'i, T>(
@@ -325,9 +334,7 @@ where
         ns: Namespace,
     ) -> Result<ParserDirective, RewritingError> {
         match self.transform_controller.handle_start_tag(name, ns) {
-            Ok(flags) => {
-                Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags))
-            }
+            Ok(flags) => Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)),
             Err(DispatcherError::InfoRequest(aux_info_req)) => {
                 self.got_flags_from_hint = false;
                 self.pending_element_aux_info_req = Some(aux_info_req);

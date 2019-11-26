@@ -530,7 +530,7 @@ mod tests {
     use crate::errors::RewritingError;
     use crate::html::Namespace;
     use crate::memory::MemoryLimiter;
-    use crate::rewritable_units::{Token, TokenCaptureFlags};
+    use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
     use crate::transform_stream::{
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
     };
@@ -589,6 +589,10 @@ mod tests {
 
             fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
                 TokenCaptureFlags::all()
+            }
+
+            fn handle_end(&mut self, _: &mut DocumentEnd) -> Result<(), RewritingError> {
+                Ok(())
             }
 
             fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {

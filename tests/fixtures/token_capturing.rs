@@ -7,7 +7,7 @@ use lol_html::{
     TransformStream, Namespace, TransformStreamSettings, MemoryLimiter
 };
 use lol_html::errors::RewritingError;
-use lol_html::html_content::TextType;
+use lol_html::html_content::{DocumentEnd, TextType};
 use lol_html::test_utils::Output;
 
 macro_rules! expect_eql {
@@ -73,6 +73,10 @@ impl TransformController for TestTransformController<'_> {
     fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
         (self.token_handler)(token);
 
+        Ok(())
+    }
+
+    fn handle_end(&mut self, _: &mut DocumentEnd) -> Result<(), RewritingError> {
         Ok(())
     }
 
