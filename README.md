@@ -18,7 +18,7 @@ as a standalone library with a convenient API for a wide variety of HTML rewriti
 
 ## Documentation
 
-https://docs.rs/lol-html
+https://docs.rs/lol_html/
 
 ## Example
 
