@@ -80,8 +80,8 @@ impl<'i> Comment<'i> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, comments, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div><!-- foo --></div>"#,
@@ -112,8 +112,8 @@ impl<'i> Comment<'i> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, comments, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div><!-- foo --></div>"#,
@@ -144,8 +144,8 @@ impl<'i> Comment<'i> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, comments, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div><!-- foo --></div>"#,

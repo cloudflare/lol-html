@@ -1,4 +1,4 @@
-#include "../../include/cool_thing.h"
+#include "../../include/lol_html.h"
 #include "deps/picotest/picotest.h"
 #include "tests.h"
 #include "test_util.h"
@@ -13,39 +13,39 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t insert_before_and_after_text_chunk(
-    cool_thing_text_chunk_t *chunk,
+static lol_html_rewriter_directive_t insert_before_and_after_text_chunk(
+    lol_html_text_chunk_t *chunk,
     void *user_data
 ) {
     UNUSED(user_data);
 
     const char *before = "<div>";
     const char *after = "</div>";
-    cool_thing_text_chunk_content_t content = cool_thing_text_chunk_content_get(chunk);
+    lol_html_text_chunk_content_t content = lol_html_text_chunk_content_get(chunk);
 
     if (content.len > 0) {
         note("Content");
         str_eq(&content, "Hey 42");
 
         note("Remove and last in text node flags");
-        ok(!cool_thing_text_chunk_is_last_in_text_node(chunk));
-        ok(!cool_thing_text_chunk_is_removed(chunk));
+        ok(!lol_html_text_chunk_is_last_in_text_node(chunk));
+        ok(!lol_html_text_chunk_is_removed(chunk));
 
         note("Insert before after");
-        ok(!cool_thing_text_chunk_before(chunk, before, strlen(before), true));
-        ok(!cool_thing_text_chunk_after(chunk, after, strlen(after), false));
+        ok(!lol_html_text_chunk_before(chunk, before, strlen(before), true));
+        ok(!lol_html_text_chunk_after(chunk, after, strlen(after), false));
     } else {
         note("Last in text node flag for the last chunk");
-        ok(cool_thing_text_chunk_is_last_in_text_node(chunk));
+        ok(lol_html_text_chunk_is_last_in_text_node(chunk));
     }
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
 static void test_insert_before_and_after_text_chunk(void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-     cool_thing_rewriter_builder_add_document_content_handlers(
+     lol_html_rewriter_builder_add_document_content_handlers(
         builder,
         NULL,
         NULL,
@@ -66,29 +66,29 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t modify_user_data(
-    cool_thing_text_chunk_t *chunk,
+static lol_html_rewriter_directive_t modify_user_data(
+    lol_html_text_chunk_t *chunk,
     void *user_data
 ) {
     note("User data");
     ok(*(int*)user_data == EXPECTED_USER_DATA);
 
     note("Set text chunk user data");
-    cool_thing_text_chunk_user_data_set(chunk, user_data);
+    lol_html_text_chunk_user_data_set(chunk, user_data);
 
     note("Get text chunk user data");
 
-    int chunk_user_data = *(int*)cool_thing_text_chunk_user_data_get(chunk);
+    int chunk_user_data = *(int*)lol_html_text_chunk_user_data_get(chunk);
 
     ok(chunk_user_data == EXPECTED_USER_DATA);
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
 static void test_modify_user_data(void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    cool_thing_rewriter_builder_add_document_content_handlers(
+    lol_html_rewriter_builder_add_document_content_handlers(
         builder,
         NULL,
         NULL,
@@ -109,26 +109,26 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t replace_chunk(
-    cool_thing_text_chunk_t *chunk,
+static lol_html_rewriter_directive_t replace_chunk(
+    lol_html_text_chunk_t *chunk,
     void *user_data
 ) {
     UNUSED(user_data);
     const char *replacement = "<repl>";
 
-    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
+    if (lol_html_text_chunk_content_get(chunk).len > 0) {
         note("Replace");
-        ok(!cool_thing_text_chunk_replace(chunk, replacement, strlen(replacement), true));
-        ok(cool_thing_text_chunk_is_removed(chunk));
+        ok(!lol_html_text_chunk_replace(chunk, replacement, strlen(replacement), true));
+        ok(lol_html_text_chunk_is_removed(chunk));
     }
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_replace_chunk(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_replace_chunk(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         NULL,
@@ -152,25 +152,25 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t insert_after_chunk(
-    cool_thing_text_chunk_t *chunk,
+static lol_html_rewriter_directive_t insert_after_chunk(
+    lol_html_text_chunk_t *chunk,
     void *user_data
 ) {
     UNUSED(user_data);
     const char *after = "<after>";
 
-    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
+    if (lol_html_text_chunk_content_get(chunk).len > 0) {
         note("Insert after replaced");
-        ok(!cool_thing_text_chunk_after(chunk, after, strlen(after), true));
+        ok(!lol_html_text_chunk_after(chunk, after, strlen(after), true));
     }
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
 static void test_insert_after_chunk(void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    cool_thing_rewriter_builder_add_document_content_handlers(
+    lol_html_rewriter_builder_add_document_content_handlers(
         builder,
         NULL,
         NULL,
@@ -191,25 +191,25 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t remove_chunk(
-    cool_thing_text_chunk_t *chunk,
+static lol_html_rewriter_directive_t remove_chunk(
+    lol_html_text_chunk_t *chunk,
     void *user_data
 ) {
     UNUSED(user_data);
 
-    if (cool_thing_text_chunk_content_get(chunk).len > 0) {
+    if (lol_html_text_chunk_content_get(chunk).len > 0) {
         note("Remove");
-        cool_thing_text_chunk_remove(chunk);
-        ok(cool_thing_text_chunk_is_removed(chunk));
+        lol_html_text_chunk_remove(chunk);
+        ok(lol_html_text_chunk_is_removed(chunk));
     }
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
 static void test_remove_chunk(void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    cool_thing_rewriter_builder_add_document_content_handlers(
+    lol_html_rewriter_builder_add_document_content_handlers(
         builder,
         NULL,
         NULL,
@@ -223,8 +223,8 @@ static void test_remove_chunk(void *user_data) {
 }
 
 //-------------------------------------------------------------------------
-static cool_thing_rewriter_directive_t stop_rewriting(
-    cool_thing_text_chunk_t *chunk,
+static lol_html_rewriter_directive_t stop_rewriting(
+    lol_html_text_chunk_t *chunk,
     void *user_data
 ) {
     UNUSED(chunk);
@@ -232,13 +232,13 @@ static cool_thing_rewriter_directive_t stop_rewriting(
 
     note("Stop rewriting");
 
-    return COOL_THING_STOP;
+    return LOL_HTML_STOP;
 }
 
-static void test_stop_with_selector(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_stop_with_selector(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         NULL,
@@ -254,9 +254,9 @@ static void test_stop_with_selector(cool_thing_selector_t *selector, void *user_
 }
 
 static void test_stop(void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-     cool_thing_rewriter_builder_add_document_content_handlers(
+     lol_html_rewriter_builder_add_document_content_handlers(
         builder,
         NULL,
         NULL,
@@ -274,7 +274,7 @@ void test_text_chunk_api() {
 
     const char *selector_str = "*";
 
-    cool_thing_selector_t *selector = cool_thing_selector_parse(
+    lol_html_selector_t *selector = lol_html_selector_parse(
         selector_str,
         strlen(selector_str)
     );
@@ -288,5 +288,5 @@ void test_text_chunk_api() {
     test_stop_with_selector(selector, &user_data);
     test_stop(&user_data);
 
-    cool_thing_selector_free(selector);
+    lol_html_selector_free(selector);
 }

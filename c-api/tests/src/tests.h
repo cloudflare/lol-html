@@ -1,7 +1,7 @@
 #ifndef TESTS_H
 #define TESTS_H
 
-#include "../../include/cool_thing.h"
+#include "../../include/lol_html.h"
 
 void test_unsupported_selector();
 void test_non_ascii_encoding();

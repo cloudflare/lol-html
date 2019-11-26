@@ -11,7 +11,7 @@ use std::fmt::{self, Debug};
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, doctype, RewriteStrSettings};
+/// use lol_html::{rewrite_str, doctype, RewriteStrSettings};
 ///
 /// rewrite_str(
 ///     r#"<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd""#,

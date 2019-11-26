@@ -54,7 +54,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cool_thing"
+name = "lol_html"
 version = "0.1.0"
 dependencies = [
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -413,7 +413,7 @@ dependencies = [
 name = "selectors_ast"
 version = "0.1.0"
 dependencies = [
- "cool_thing 0.1.0",
+ "lol_html 0.1.0",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

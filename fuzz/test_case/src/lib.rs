@@ -2,8 +2,8 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-extern crate cool_thing;
 extern crate encoding_rs;
+extern crate lol_html;
 extern crate rand;
 
 extern crate libc;
@@ -12,11 +12,11 @@ use libc::{c_char, c_void, size_t};
 use rand::Rng;
 use std::ffi::{CStr, CString};
 
-use cool_thing::html_content::ContentType;
-use cool_thing::{
+use encoding_rs::*;
+use lol_html::html_content::ContentType;
+use lol_html::{
     comments, doc_comments, doc_text, element, text, HtmlRewriter, MemorySettings, Settings,
 };
-use encoding_rs::*;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -192,15 +192,15 @@ fn run_c_api_rewriter_iter(data: &[u8], encoding: &str) -> () {
     let c_encoding = CString::new(encoding).expect("CString::new failed.");
 
     unsafe {
-        let builder = cool_thing_rewriter_builder_new();
+        let builder = lol_html_rewriter_builder_new();
         let mut output_data = {};
         let output_data_ptr: *mut c_void = &mut output_data as *mut _ as *mut c_void;
 
-        let rewriter = cool_thing_rewriter_build(
+        let rewriter = lol_html_rewriter_build(
             builder,
             c_encoding.as_ptr(),
             encoding.len(),
-            cool_thing_memory_settings_t {
+            lol_html_memory_settings_t {
                 preallocated_parsing_buffer_size: 0,
                 max_allowed_memory_usage: std::usize::MAX,
             },
@@ -211,8 +211,8 @@ fn run_c_api_rewriter_iter(data: &[u8], encoding: &str) -> () {
 
         let cstr = CStr::from_bytes_with_nul_unchecked(data);
 
-        cool_thing_rewriter_write(rewriter, cstr.as_ptr(), data.len());
-        cool_thing_rewriter_builder_free(builder);
-        cool_thing_rewriter_free(rewriter);
+        lol_html_rewriter_write(rewriter, cstr.as_ptr(), data.len());
+        lol_html_rewriter_builder_free(builder);
+        lol_html_rewriter_free(rewriter);
     }
 }

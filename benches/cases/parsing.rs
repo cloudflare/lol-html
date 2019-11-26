@@ -1,4 +1,4 @@
-use cool_thing::*;
+use lol_html::*;
 
 define_group!(
     "Parsing",

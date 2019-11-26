@@ -20,7 +20,7 @@ use std::fmt::{self, Debug};
 ///
 /// # Example
 /// ```
-/// use cool_thing::{HtmlRewriter, Settings, text};
+/// use lol_html::{HtmlRewriter, Settings, text};
 ///
 /// let mut greeting = String::new();
 ///
@@ -96,8 +96,8 @@ impl<'i> TextChunk<'i> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
-    /// use cool_thing::html_content::TextType;
+    /// use lol_html::{rewrite_str, text, RewriteStrSettings};
+    /// use lol_html::html_content::TextType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div>Hello</div><script>"use strict";</script>"#,
@@ -138,8 +138,8 @@ impl<'i> TextChunk<'i> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, text, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div>world</div>"#,
@@ -172,8 +172,8 @@ impl<'i> TextChunk<'i> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, text, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div>Foo</div>"#,
@@ -206,8 +206,8 @@ impl<'i> TextChunk<'i> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, text, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, text, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div>Foo</div>"#,

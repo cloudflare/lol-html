@@ -14,8 +14,8 @@ pub use self::tokens::*;
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-/// use cool_thing::html_content::UserData;
+/// use lol_html::{rewrite_str, element, RewriteStrSettings};
+/// use lol_html::html_content::UserData;
 ///
 /// rewrite_str(
 ///     r#"<div id="foo"></div>"#,

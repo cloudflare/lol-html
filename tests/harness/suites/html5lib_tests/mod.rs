@@ -6,9 +6,9 @@ mod unescape;
 pub use self::unescape::Unescape;
 use super::for_each_test_file;
 use crate::harness::Input;
+use lol_html::test_utils::ASCII_COMPATIBLE_ENCODINGS;
 use serde_json::{self, from_reader};
 use std::fmt::Write;
-use cool_thing::test_utils::ASCII_COMPATIBLE_ENCODINGS;
 
 pub use self::test_token::{TestToken, TestTokenList};
 

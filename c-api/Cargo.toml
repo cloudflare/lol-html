@@ -1,11 +1,11 @@
 [package]
-name = "coolthing"
+name = "lolhtml"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 edition = "2018"
 
 [dependencies]
-cool_thing = { path = "../" }
+lol_html = { path = "../" }
 libc = "0"
 
 [build-dependencies]

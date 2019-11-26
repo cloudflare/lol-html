@@ -1,5 +1,5 @@
-use cool_thing::html_content::TextType;
 use html5ever::data::{C1_REPLACEMENTS, NAMED_ENTITIES};
+use lol_html::html_content::TextType;
 use std::char;
 use std::iter::Peekable;
 use std::str::Chars;

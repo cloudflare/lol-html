@@ -1,11 +1,11 @@
 [package]
-name = "cool_thing"
+name = "lol_html"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com, ifaaan@gmail.com>"]
 license = "BSD-3-Clause"
 description = "Streaming HTML rewriter/parser with CSS selector-based API"
-repository = "https://github.com/cloudflare/cool-thing"
-documentation = "https://docs.rs/cool-thing"
+repository = "https://github.com/cloudflare/lol-html"
+documentation = "https://docs.rs/lol-html"
 categories = ["parser-implementations", "web-programming"]
 keywords = ["html", "css-selectors", "parser", "rewriter", "streaming"]
 readme = "README.md"
@@ -14,7 +14,6 @@ include = [
     "/LICENSE",
     "/README.md",
     "/src",
-    "/media",
     "/tests",
     "/benches"
 ]

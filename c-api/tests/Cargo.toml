@@ -6,8 +6,8 @@ edition = "2018"
 build = "build.rs"
 
 [dependencies]
-cool_thing = { path = "../../" }
-coolthing = { path = "../" }
+lol_html = { path = "../../" }
+lolhtml = { path = "../" }
 libc = "0"
 
 [build-dependencies]

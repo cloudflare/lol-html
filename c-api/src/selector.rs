@@ -1,7 +1,7 @@
 use super::*;
 
 #[no_mangle]
-pub extern "C" fn cool_thing_selector_parse(
+pub extern "C" fn lol_html_selector_parse(
     selector: *const c_char,
     selector_len: size_t,
 ) -> *mut Selector {
@@ -12,6 +12,6 @@ pub extern "C" fn cool_thing_selector_parse(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_selector_free(selector: *mut Selector) {
+pub extern "C" fn lol_html_selector_free(selector: *mut Selector) {
     drop(to_box!(selector));
 }

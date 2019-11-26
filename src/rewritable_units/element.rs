@@ -177,8 +177,8 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, element, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"></div>"#,
@@ -210,8 +210,8 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, element, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"></div>"#,
@@ -251,8 +251,8 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-    /// use cool_thing::html_content::{ContentType, Element};
+    /// use lol_html::{rewrite_str, element, RewriteStrSettings};
+    /// use lol_html::html_content::{ContentType, Element};
     ///
     /// let handler = |el: &mut Element| {
     ///     el.prepend("<bar>", ContentType::Html);
@@ -293,8 +293,8 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-    /// use cool_thing::html_content::{ContentType, Element};
+    /// use lol_html::{rewrite_str, element, RewriteStrSettings};
+    /// use lol_html::html_content::{ContentType, Element};
     ///
     /// let handler = |el: &mut Element| {
     ///     el.append("<bar>", ContentType::Html);
@@ -334,8 +334,8 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-    /// use cool_thing::html_content::{ContentType, Element};
+    /// use lol_html::{rewrite_str, element, RewriteStrSettings};
+    /// use lol_html::html_content::{ContentType, Element};
     ///
     /// let handler = |el: &mut Element| {
     ///     el.append("<!-- only one -->", ContentType::Html);
@@ -373,8 +373,8 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-    /// use cool_thing::html_content::ContentType;
+    /// use lol_html::{rewrite_str, element, RewriteStrSettings};
+    /// use lol_html::html_content::ContentType;
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"></div>"#,
@@ -419,7 +419,7 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+    /// use lol_html::{rewrite_str, element, RewriteStrSettings};
     ///
     /// let html = rewrite_str(
     ///     r#"<div><span><!-- 42 --></span></div>"#,

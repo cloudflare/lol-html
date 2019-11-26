@@ -1,5 +1,5 @@
-#ifndef COOL_THING_H
-#define COOL_THING_H
+#ifndef LOL_HTML_H
+#define LOL_HTML_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -19,21 +19,21 @@ extern "C" {
 // WARNING: these structures should never be deallocated by the C code.
 // There are appropriate methods exposed that take care of these structures
 // deallocation.
-typedef struct cool_thing_HtmlRewriterBuilder cool_thing_rewriter_builder_t;
-typedef struct cool_thing_HtmlRewriter cool_thing_rewriter_t;
-typedef struct cool_thing_Doctype cool_thing_doctype_t;
-typedef struct cool_thing_Comment cool_thing_comment_t;
-typedef struct cool_thing_TextChunk cool_thing_text_chunk_t;
-typedef struct cool_thing_Element cool_thing_element_t;
-typedef struct cool_thing_AttributesIterator cool_thing_attributes_iterator_t;
-typedef struct cool_thing_Attribute cool_thing_attribute_t;
-typedef struct cool_thing_Selector cool_thing_selector_t;
+typedef struct lol_html_HtmlRewriterBuilder lol_html_rewriter_builder_t;
+typedef struct lol_html_HtmlRewriter lol_html_rewriter_t;
+typedef struct lol_html_Doctype lol_html_doctype_t;
+typedef struct lol_html_Comment lol_html_comment_t;
+typedef struct lol_html_TextChunk lol_html_text_chunk_t;
+typedef struct lol_html_Element lol_html_element_t;
+typedef struct lol_html_AttributesIterator lol_html_attributes_iterator_t;
+typedef struct lol_html_Attribute lol_html_attribute_t;
+typedef struct lol_html_Selector lol_html_selector_t;
 
 // Library-allocated UTF8 string fat pointer.
 //
 // The string is not NULL-terminated.
 //
-// Should NEVER be deallocated in the C code. Use special `cool_thing_str_free`
+// Should NEVER be deallocated in the C code. Use special `lol_html_str_free`
 // function instead.
 typedef struct {
     // String data pointer.
@@ -41,14 +41,14 @@ typedef struct {
 
     // The length of the string in bytes.
     size_t len;
-} cool_thing_str_t;
+} lol_html_str_t;
 
 // A fat pointer to text chunk content.
 //
-// The difference between this struct and `cool_thing_str_t` is
+// The difference between this struct and `lol_html_str_t` is
 // that text chunk content shouldn't be deallocated manually via
-// `cool_thing_str_free` method call. Instead the pointer becomes
-// invalid ones related `cool_thing_text_chunk_t` struct goes out
+// `lol_html_str_free` method call. Instead the pointer becomes
+// invalid ones related `lol_html_text_chunk_t` struct goes out
 // of scope.
 typedef struct {
     // String data pointer.
@@ -56,49 +56,49 @@ typedef struct {
 
     // The length of the string in bytes.
     size_t len;
-} cool_thing_text_chunk_content_t;
+} lol_html_text_chunk_content_t;
 
 // Utilities
 //---------------------------------------------------------------------
 
 // Frees the memory held by the library-allocated string.
-void cool_thing_str_free(cool_thing_str_t str);
+void lol_html_str_free(lol_html_str_t str);
 
 // Returns the last error message and resets last error to NULL.
 //
 // Return NULL if there was no error.
-cool_thing_str_t *cool_thing_take_last_error();
+lol_html_str_t *lol_html_take_last_error();
 
 // Creates new HTML rewriter builder.
-cool_thing_rewriter_builder_t *cool_thing_rewriter_builder_new();
+lol_html_rewriter_builder_t *lol_html_rewriter_builder_new();
 
 // Content handlers
 //---------------------------------------------------------------------
 // Rewriter directive that should be returned from each content handler.
-// If COOL_THING_STOP directive is returned then rewriting stops immidiately
+// If LOL_HTML_STOP directive is returned then rewriting stops immidiately
 // and `write()` or `end()` methods of the rewriter return an error code.
 typedef enum {
-    COOL_THING_CONTINUE,
-    COOL_THING_STOP
-} cool_thing_rewriter_directive_t;
+    LOL_HTML_CONTINUE,
+    LOL_HTML_STOP
+} lol_html_rewriter_directive_t;
 
-typedef cool_thing_rewriter_directive_t (*cool_thing_doctype_handler_t)(
-    cool_thing_doctype_t *doctype,
+typedef lol_html_rewriter_directive_t (*lol_html_doctype_handler_t)(
+    lol_html_doctype_t *doctype,
     void *user_data
 );
 
-typedef cool_thing_rewriter_directive_t (*cool_thing_comment_handler_t)(
-    cool_thing_comment_t *comment,
+typedef lol_html_rewriter_directive_t (*lol_html_comment_handler_t)(
+    lol_html_comment_t *comment,
     void *user_data
 );
 
-typedef cool_thing_rewriter_directive_t (*cool_thing_text_handler_handler_t)(
-    cool_thing_text_chunk_t *chunk,
+typedef lol_html_rewriter_directive_t (*lol_html_text_handler_handler_t)(
+    lol_html_text_chunk_t *chunk,
     void *user_data
 );
 
-typedef cool_thing_rewriter_directive_t (*cool_thing_element_handler_t)(
-    cool_thing_element_t *element,
+typedef lol_html_rewriter_directive_t (*lol_html_element_handler_t)(
+    lol_html_element_t *element,
     void *user_data
 );
 
@@ -108,19 +108,19 @@ typedef cool_thing_rewriter_directive_t (*cool_thing_element_handler_t)(
 // Parses given CSS selector string.
 //
 // Returns NULL if parsing error occures. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
+// can be obtained using `lol_html_take_last_error` function.
 //
 // WARNING: Selector SHOULD NOT be deallocated if there are any active rewriter
-// builders that accepted it as an argument to `cool_thing_rewriter_builder_add_element_content_handlers()`
+// builders that accepted it as an argument to `lol_html_rewriter_builder_add_element_content_handlers()`
 // method. Deallocate all dependant rewriter builders first and then
-// use `cool_thing_selector_free` function to free the selector.
-cool_thing_selector_t *cool_thing_selector_parse(
+// use `lol_html_selector_free` function to free the selector.
+lol_html_selector_t *lol_html_selector_parse(
     const char *selector,
     size_t selector_len
 );
 
 // Frees the memory held by the parsed selector object.
-void cool_thing_selector_free(cool_thing_selector_t *selector);
+void lol_html_selector_free(lol_html_selector_t *selector);
 
 
 // Rewriter builder
@@ -137,19 +137,19 @@ void cool_thing_selector_free(cool_thing_selector_t *selector);
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// If any of handlers return COOL_THING_STOP directive is then rewriting
+// If any of handlers return LOL_HTML_STOP directive is then rewriting
 // stops immidiately and `write()` or `end()` of the rewriter methods
 // return an error code.
 //
 // WARNING: Pointers passed to handlers are valid only during the
 // handler execution. So they should never be leaked outside of handlers.
-void cool_thing_rewriter_builder_add_document_content_handlers(
-    cool_thing_rewriter_builder_t *builder,
-    cool_thing_doctype_handler_t doctype_handler,
+void lol_html_rewriter_builder_add_document_content_handlers(
+    lol_html_rewriter_builder_t *builder,
+    lol_html_doctype_handler_t doctype_handler,
     void *doctype_handler_user_data,
-    cool_thing_comment_handler_t comment_handler,
+    lol_html_comment_handler_t comment_handler,
     void *comment_handler_user_data,
-    cool_thing_text_handler_handler_t text_handler,
+    lol_html_text_handler_handler_t text_handler,
     void *text_handler_user_data
 );
 
@@ -167,23 +167,23 @@ void cool_thing_rewriter_builder_add_document_content_handlers(
 // passed to the handler on each invocation along with the rewritable
 // unit argument.
 //
-// If any of handlers return COOL_THING_STOP directive is then rewriting
+// If any of handlers return LOL_HTML_STOP directive is then rewriting
 // stops immidiately and `write()` or `end()` of the rewriter methods
 // return an error code.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
+// can be obtained using `lol_html_take_last_error` function.
 //
 // WARNING: Pointers passed to handlers are valid only during the
 // handler execution. So they should never be leaked outside of handlers.
-int cool_thing_rewriter_builder_add_element_content_handlers(
-    cool_thing_rewriter_builder_t *builder,
-    const cool_thing_selector_t *selector,
-    cool_thing_element_handler_t element_handler,
+int lol_html_rewriter_builder_add_element_content_handlers(
+    lol_html_rewriter_builder_t *builder,
+    const lol_html_selector_t *selector,
+    lol_html_element_handler_t element_handler,
     void *element_handler_user_data,
-    cool_thing_comment_handler_t comment_handler,
+    lol_html_comment_handler_t comment_handler,
     void *comment_handler_user_data,
-    cool_thing_text_handler_handler_t text_handler,
+    lol_html_text_handler_handler_t text_handler,
     void *text_handler_user_data
 );
 
@@ -191,7 +191,7 @@ int cool_thing_rewriter_builder_add_element_content_handlers(
 //
 // Note that builder can be freed before any rewriters constructed from
 // it if it's not intended to be used anymore.
-void cool_thing_rewriter_builder_free(cool_thing_rewriter_builder_t *builder);
+void lol_html_rewriter_builder_free(lol_html_rewriter_builder_t *builder);
 
 
 // Rewriter
@@ -206,10 +206,10 @@ typedef struct {
     size_t preallocated_parsing_buffer_size;
     // Maximum amount of memory to be used by a rewriter.
     //
-    // `cool_thing_rewriter_write` and `cool_thing_rewriter_end` will return an error
+    // `lol_html_rewriter_write` and `lol_html_rewriter_end` will return an error
     // if this limit is exceeded.
     size_t max_allowed_memory_usage;
-} cool_thing_memory_settings_t;
+} lol_html_memory_settings_t;
 
 // Builds HTML-rewriter out of the provided builder. Can be called
 // multiple times to construct different rewriters from the same
@@ -225,11 +225,11 @@ typedef struct {
 // setting for safety reasons.
 //
 // In case of an error the function returns a NULL pointer.
-cool_thing_rewriter_t *cool_thing_rewriter_build(
-    cool_thing_rewriter_builder_t *builder,
+lol_html_rewriter_t *lol_html_rewriter_build(
+    lol_html_rewriter_builder_t *builder,
     const char *encoding,
     size_t encoding_len,
-    cool_thing_memory_settings_t memory_settings,
+    lol_html_memory_settings_t memory_settings,
     void (*output_sink)(const char *chunk, size_t chunk_len, void *user_data),
     void *output_sink_user_data,
     bool strict
@@ -238,12 +238,12 @@ cool_thing_rewriter_t *cool_thing_rewriter_build(
 // Write HTML chunk to rewriter.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
+// can be obtained using `lol_html_take_last_error` function.
 //
 // WARNING: if this function errors the rewriter gets into the unrecovarable state,
 // so any further attempts to use the rewriter will cause a thread panic.
-int cool_thing_rewriter_write(
-    cool_thing_rewriter_t *rewriter,
+int lol_html_rewriter_write(
+    lol_html_rewriter_t *rewriter,
     const char *chunk,
     size_t chunk_len
 );
@@ -251,14 +251,14 @@ int cool_thing_rewriter_write(
 // Completes rewriting and flushes the remaining output.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
+// can be obtained using `lol_html_take_last_error` function.
 //
 // WARNING: if this function errors the rewriter gets into the unrecovarable state,
 // so any further attempts to use the rewriter will cause a thread panic.
-int cool_thing_rewriter_end(cool_thing_rewriter_t *rewriter);
+int lol_html_rewriter_end(lol_html_rewriter_t *rewriter);
 
 // Frees the memory held by the rewriter.
-void cool_thing_rewriter_free(cool_thing_rewriter_t *rewriter);
+void lol_html_rewriter_free(lol_html_rewriter_t *rewriter);
 
 // Doctype
 //---------------------------------------------------------------------
@@ -266,45 +266,45 @@ void cool_thing_rewriter_free(cool_thing_rewriter_t *rewriter);
 // Returns doctype's name.
 //
 // Returns NULL if the doctype doesn't have a name.
-cool_thing_str_t *cool_thing_doctype_name_get(const cool_thing_doctype_t *doctype);
+lol_html_str_t *lol_html_doctype_name_get(const lol_html_doctype_t *doctype);
 
 // Returns doctype's PUBLIC identifier.
 //
 // Returns NULL if the doctype doesn't have a PUBLIC identifier.
-cool_thing_str_t *cool_thing_doctype_public_id_get(const cool_thing_doctype_t *doctype);
+lol_html_str_t *lol_html_doctype_public_id_get(const lol_html_doctype_t *doctype);
 
 // Returns doctype's SYSTEM identifier.
 //
 // Returns NULL if the doctype doesn't have a SYSTEM identifier.
-cool_thing_str_t *cool_thing_doctype_system_id_get(const cool_thing_doctype_t *doctype);
+lol_html_str_t *lol_html_doctype_system_id_get(const lol_html_doctype_t *doctype);
 
 // Attaches custom user data to the doctype.
 //
 // The same doctype can be passed to multiple handlers if it has been
 // captured by multiple selectors. It might be handy to store some processing
 // state on the doctype, so it can be shared between handlers.
-void cool_thing_doctype_user_data_set(
-    const cool_thing_doctype_t *doctype,
+void lol_html_doctype_user_data_set(
+    const lol_html_doctype_t *doctype,
     void *user_data
 );
 
 // Returns user data attached to the doctype.
-void *cool_thing_doctype_user_data_get(const cool_thing_doctype_t *doctype);
+void *lol_html_doctype_user_data_get(const lol_html_doctype_t *doctype);
 
 // Comment
 //---------------------------------------------------------------------
 
 // Returns comment text.
-cool_thing_str_t cool_thing_comment_text_get(const cool_thing_comment_t *comment);
+lol_html_str_t lol_html_comment_text_get(const lol_html_comment_t *comment);
 
 // Sets comment text.
 //
 // Text should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_comment_text_set(
-    cool_thing_comment_t *comment,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_comment_text_set(
+    lol_html_comment_t *comment,
     const char *text,
     size_t text_len
 );
@@ -314,9 +314,9 @@ int cool_thing_comment_text_set(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_comment_before(
-    cool_thing_comment_t *comment,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_comment_before(
+    lol_html_comment_t *comment,
     const char *content,
     size_t content_len,
     bool is_html
@@ -327,9 +327,9 @@ int cool_thing_comment_before(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_comment_after(
-    cool_thing_comment_t *comment,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_comment_after(
+    lol_html_comment_t *comment,
     const char *content,
     size_t content_len,
     bool is_html
@@ -341,32 +341,32 @@ int cool_thing_comment_after(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_comment_replace(
-    cool_thing_comment_t *comment,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_comment_replace(
+    lol_html_comment_t *comment,
     const char *content,
     size_t content_len,
     bool is_html
 );
 
 // Removes the comment.
-void cool_thing_comment_remove(cool_thing_comment_t *comment);
+void lol_html_comment_remove(lol_html_comment_t *comment);
 
 // Returns `true` if the comment has been removed.
-bool cool_thing_comment_is_removed(const cool_thing_comment_t *comment);
+bool lol_html_comment_is_removed(const lol_html_comment_t *comment);
 
 // Attaches custom user data to the comment.
 //
 // The same comment can be passed to multiple handlers if it has been
 // captured by multiple selectors. It might be handy to store some
 // processing state on the comment, so it can be shared between handlers.
-void cool_thing_comment_user_data_set(
-    const cool_thing_comment_t *comment,
+void lol_html_comment_user_data_set(
+    const lol_html_comment_t *comment,
     void *user_data
 );
 
 // Returns user data attached to the comment.
-void *cool_thing_comment_user_data_get(const cool_thing_comment_t *comment);
+void *lol_html_comment_user_data_get(const lol_html_comment_t *comment);
 
 
 // Text chunk
@@ -378,21 +378,21 @@ void *cool_thing_comment_user_data_get(const cool_thing_comment_t *comment);
 //
 // WARNING: The pointer is valid only during the handler execution and
 // should never be leaked outside of handlers.
-cool_thing_text_chunk_content_t cool_thing_text_chunk_content_get(
-    const cool_thing_text_chunk_t *chunk
+lol_html_text_chunk_content_t lol_html_text_chunk_content_get(
+    const lol_html_text_chunk_t *chunk
 );
 
 // Returns `true` if the chunk is last in the current text node.
-bool cool_thing_text_chunk_is_last_in_text_node(const cool_thing_text_chunk_t *chunk);
+bool lol_html_text_chunk_is_last_in_text_node(const lol_html_text_chunk_t *chunk);
 
 // Inserts the content string before the text chunk either as raw text or as HTML.
 //
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_text_chunk_before(
-    cool_thing_text_chunk_t *chunk,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_before(
+    lol_html_text_chunk_t *chunk,
     const char *content,
     size_t content_len,
     bool is_html
@@ -403,9 +403,9 @@ int cool_thing_text_chunk_before(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_text_chunk_after(
-    cool_thing_text_chunk_t *chunk,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_after(
+    lol_html_text_chunk_t *chunk,
     const char *content,
     size_t content_len,
     bool is_html
@@ -417,48 +417,48 @@ int cool_thing_text_chunk_after(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_text_chunk_replace(
-    cool_thing_text_chunk_t *chunk,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_replace(
+    lol_html_text_chunk_t *chunk,
     const char *content,
     size_t content_len,
     bool is_html
 );
 
 // Removes the text chunk.
-void cool_thing_text_chunk_remove(cool_thing_text_chunk_t *chunk);
+void lol_html_text_chunk_remove(lol_html_text_chunk_t *chunk);
 
 // Returns `true` if the text chunk has been removed.
-bool cool_thing_text_chunk_is_removed(const cool_thing_text_chunk_t *chunk);
+bool lol_html_text_chunk_is_removed(const lol_html_text_chunk_t *chunk);
 
 // Attaches custom user data to the text chunk.
 //
 // The same text chunk can be passed to multiple handlers if it has been
 // captured by multiple selectors. It might be handy to store some processing
 // state on the chunk, so it can be shared between handlers.
-void cool_thing_text_chunk_user_data_set(
-    const cool_thing_text_chunk_t *chunk,
+void lol_html_text_chunk_user_data_set(
+    const lol_html_text_chunk_t *chunk,
     void *user_data
 );
 
 // Returns user data attached to the text chunk.
-void *cool_thing_text_chunk_user_data_get(const cool_thing_text_chunk_t *chunk);
+void *lol_html_text_chunk_user_data_get(const lol_html_text_chunk_t *chunk);
 
 
 // Element
 //---------------------------------------------------------------------
 
 // Returns the tag name of the element.
-cool_thing_str_t cool_thing_element_tag_name_get(const cool_thing_element_t *element);
+lol_html_str_t lol_html_element_tag_name_get(const lol_html_element_t *element);
 
 // Sets the tag name of the element.
 //
 // Name should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_tag_name_set(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_tag_name_set(
+    lol_html_element_t *element,
     const char *name,
     size_t name_len
 );
@@ -467,21 +467,21 @@ int cool_thing_element_tag_name_set(
 //
 // NOTE: This method returns static zero-terminated C string, so it don't
 // need to be freed.
-const char* cool_thing_element_namespace_uri_get(const cool_thing_element_t *element);
+const char* lol_html_element_namespace_uri_get(const lol_html_element_t *element);
 
 // Returns the iterator over the element attributes.
 //
 // WARNING: The iterator is valid only during the handler execution and
 // should never be leaked outside of it.
 //
-// Use `cool_thing_attributes_iterator_free` function to deallocate
+// Use `lol_html_attributes_iterator_free` function to deallocate
 // returned iterator.
-cool_thing_attributes_iterator_t *cool_thing_attributes_iterator_get(
-    const cool_thing_element_t *element
+lol_html_attributes_iterator_t *lol_html_attributes_iterator_get(
+    const lol_html_element_t *element
 );
 
 // Frees the memory held by the attribute iterator.
-void cool_thing_attributes_iterator_free(cool_thing_attributes_iterator_t *iterator);
+void lol_html_attributes_iterator_free(lol_html_attributes_iterator_t *iterator);
 
 // Advances the iterator and returns next attribute.
 //
@@ -489,15 +489,15 @@ void cool_thing_attributes_iterator_free(cool_thing_attributes_iterator_t *itera
 //
 // WARNING: Returned attribute is valid only during the handler
 // execution and should never be leaked outside of it.
-const cool_thing_attribute_t *cool_thing_attributes_iterator_next(
-    cool_thing_attributes_iterator_t *iterator
+const lol_html_attribute_t *lol_html_attributes_iterator_next(
+    lol_html_attributes_iterator_t *iterator
 );
 
 // Returns the attribute name.
-cool_thing_str_t cool_thing_attribute_name_get(const cool_thing_attribute_t *attribute);
+lol_html_str_t lol_html_attribute_name_get(const lol_html_attribute_t *attribute);
 
 // Returns the attribute value.
-cool_thing_str_t cool_thing_attribute_value_get(const cool_thing_attribute_t *attribute);
+lol_html_str_t lol_html_attribute_value_get(const lol_html_attribute_t *attribute);
 
 // Returns the attribute value or NULL if attribute with the given name
 // doesn't exist on the element.
@@ -505,9 +505,9 @@ cool_thing_str_t cool_thing_attribute_value_get(const cool_thing_attribute_t *at
 // Name should be a valid UTF8-string.
 //
 // If the provided name is invalid UTF8-string the function returns NULL as well.
-// Therefore one should always check `cool_thing_take_last_error` result after the call.
-cool_thing_str_t *cool_thing_element_get_attribute(
-    const cool_thing_element_t *element,
+// Therefore one should always check `lol_html_take_last_error` result after the call.
+lol_html_str_t *lol_html_element_get_attribute(
+    const lol_html_element_t *element,
     const char *name,
     size_t name_len
 );
@@ -516,8 +516,8 @@ cool_thing_str_t *cool_thing_element_get_attribute(
 // Returns -1 in case of an error.
 //
 // Name should be a valid UTF8-string.
-int cool_thing_element_has_attribute(
-    const cool_thing_element_t *element,
+int lol_html_element_has_attribute(
+    const lol_html_element_t *element,
     const char *name,
     size_t name_len
 );
@@ -528,9 +528,9 @@ int cool_thing_element_has_attribute(
 // Name and value should be valid UTF8-strings.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_set_attribute(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_set_attribute(
+    lol_html_element_t *element,
     const char *name,
     size_t name_len,
     const char *value,
@@ -542,9 +542,9 @@ int cool_thing_element_set_attribute(
 // Name should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_remove_attribute(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_remove_attribute(
+    lol_html_element_t *element,
     const char *name,
     size_t name_len
 );
@@ -554,9 +554,9 @@ int cool_thing_element_remove_attribute(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_before(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_before(
+    lol_html_element_t *element,
     const char *content,
     size_t content_len,
     bool is_html
@@ -568,9 +568,9 @@ int cool_thing_element_before(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_prepend(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_prepend(
+    lol_html_element_t *element,
     const char *content,
     size_t content_len,
     bool is_html
@@ -582,9 +582,9 @@ int cool_thing_element_prepend(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_append(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_append(
+    lol_html_element_t *element,
     const char *content,
     size_t content_len,
     bool is_html
@@ -595,9 +595,9 @@ int cool_thing_element_append(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_after(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_after(
+    lol_html_element_t *element,
     const char *content,
     size_t content_len,
     bool is_html
@@ -608,9 +608,9 @@ int cool_thing_element_after(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_set_inner_content(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_set_inner_content(
+    lol_html_element_t *element,
     const char *content,
     size_t content_len,
     bool is_html
@@ -621,38 +621,38 @@ int cool_thing_element_set_inner_content(
 // Content should be a valid UTF8-string.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `cool_thing_take_last_error` function.
-int cool_thing_element_replace(
-    cool_thing_element_t *element,
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_element_replace(
+    lol_html_element_t *element,
     const char *content,
     size_t content_len,
     bool is_html
 );
 
 // Removes the element.
-void cool_thing_element_remove(const cool_thing_element_t *element);
+void lol_html_element_remove(const lol_html_element_t *element);
 
 // Removes the element, but leaves its inner content intact.
-void cool_thing_element_remove_and_keep_content(const cool_thing_element_t *element);
+void lol_html_element_remove_and_keep_content(const lol_html_element_t *element);
 
 // Returns `true` if the element has been removed.
-bool cool_thing_element_is_removed(const cool_thing_element_t *element);
+bool lol_html_element_is_removed(const lol_html_element_t *element);
 
 // Attaches custom user data to the element.
 //
 // The same element can be passed to multiple handlers if it has been
 // captured by multiple selectors. It might be handy to store some processing
 // state on the element, so it can be shared between handlers.
-void cool_thing_element_user_data_set(
-    const cool_thing_element_t *element,
+void lol_html_element_user_data_set(
+    const lol_html_element_t *element,
     void *user_data
 );
 
 // Returns user data attached to the text chunk.
-void *cool_thing_element_user_data_get(const cool_thing_element_t *element);
+void *lol_html_element_user_data_get(const lol_html_element_t *element);
 
 #if defined(__cplusplus)
 }  // extern C
 #endif
 
-#endif // COOL_THING_H
+#endif // LOL_HTML_H

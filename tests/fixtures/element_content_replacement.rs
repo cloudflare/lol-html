@@ -1,8 +1,8 @@
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
-use cool_thing::test_utils::Output;
-use cool_thing::{HtmlRewriter, Settings, element};
-use cool_thing::html_content::ContentType;
+use lol_html::test_utils::Output;
+use lol_html::{HtmlRewriter, Settings, element};
+use lol_html::html_content::ContentType;
 
 // NOTE: Inner element content replacement functionality used as a basis for
 // the multiple element methods and it's easy to get it wrong, so we have

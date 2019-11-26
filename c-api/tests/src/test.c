@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "deps/picotest/picotest.h"
-#include "../../include/cool_thing.h"
+#include "../../include/lol_html.h"
 
 #include "tests.h"
 

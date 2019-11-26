@@ -113,12 +113,12 @@ impl HtmlRewriterBuilder {
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_builder_new() -> *mut HtmlRewriterBuilder {
+pub extern "C" fn lol_html_rewriter_builder_new() -> *mut HtmlRewriterBuilder {
     to_ptr_mut(HtmlRewriterBuilder::default())
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_builder_add_document_content_handlers(
+pub extern "C" fn lol_html_rewriter_builder_add_document_content_handlers(
     builder: *mut HtmlRewriterBuilder,
     doctype_handler: Option<DoctypeHandler>,
     doctype_handler_user_data: *mut c_void,
@@ -139,7 +139,7 @@ pub extern "C" fn cool_thing_rewriter_builder_add_document_content_handlers(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
+pub extern "C" fn lol_html_rewriter_builder_add_element_content_handlers(
     builder: *mut HtmlRewriterBuilder,
     selector: *const Selector,
     element_handler: Option<ElementHandler>,
@@ -164,6 +164,6 @@ pub extern "C" fn cool_thing_rewriter_builder_add_element_content_handlers(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_builder_free(builder: *mut HtmlRewriterBuilder) {
+pub extern "C" fn lol_html_rewriter_builder_free(builder: *mut HtmlRewriterBuilder) {
     drop(to_box!(builder));
 }

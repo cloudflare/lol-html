@@ -1,5 +1,5 @@
-use cool_thing::html_content::Element;
-use cool_thing::{element, HtmlRewriter, Settings};
+use lol_html::html_content::Element;
+use lol_html::{element, HtmlRewriter, Settings};
 use std::io;
 use std::io::prelude::*;
 

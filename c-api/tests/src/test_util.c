@@ -9,8 +9,8 @@ void output_sink_stub(const char *chunk, size_t chunk_len, void *user_data) {
     UNUSED(user_data);
 }
 
-cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(
-    cool_thing_element_t *element,
+lol_html_rewriter_directive_t get_and_free_empty_element_attribute(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
@@ -18,34 +18,34 @@ cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(
     const char *attr1 = "foo";
 
     note("Has attribute");
-    ok(cool_thing_element_has_attribute(element, attr1, strlen(attr1)) == 1);
+    ok(lol_html_element_has_attribute(element, attr1, strlen(attr1)) == 1);
 
     note("Get attribute");
-    cool_thing_str_t *value = cool_thing_element_get_attribute(
+    lol_html_str_t *value = lol_html_element_get_attribute(
         element,
         attr1,
         strlen(attr1)
     );
 
     str_eq(value, "");
-    cool_thing_str_free(*value);
+    lol_html_str_free(*value);
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-cool_thing_rewriter_t* create_rewriter(
-    cool_thing_rewriter_builder_t *builder,
+lol_html_rewriter_t* create_rewriter(
+    lol_html_rewriter_builder_t *builder,
     output_sink_t output_sink,
     void *output_sink_user_data,
     size_t max_memory
 ) {
     const char *encoding = "UTF-8";
 
-    cool_thing_rewriter_t *rewriter = cool_thing_rewriter_build(
+    lol_html_rewriter_t *rewriter = lol_html_rewriter_build(
         builder,
         encoding,
         strlen(encoding),
-        (cool_thing_memory_settings_t) {
+        (lol_html_memory_settings_t) {
             .preallocated_parsing_buffer_size = 0,
             .max_allowed_memory_usage = max_memory
         },
@@ -54,44 +54,44 @@ cool_thing_rewriter_t* create_rewriter(
         true
     );
 
-    cool_thing_rewriter_builder_free(builder);
+    lol_html_rewriter_builder_free(builder);
 
     return rewriter;
 }
 
 void run_rewriter(
-    cool_thing_rewriter_builder_t *builder,
+    lol_html_rewriter_builder_t *builder,
     const char *html,
     output_sink_t output_sink,
     void *output_sink_user_data
 ) {
     const char *in = html;
-    cool_thing_rewriter_t *rewriter = create_rewriter(
+    lol_html_rewriter_t *rewriter = create_rewriter(
         builder,
         output_sink,
         output_sink_user_data,
         MAX_MEMORY
     );
 
-    ok(!cool_thing_rewriter_write(rewriter, in, strlen(in)));
-    ok(!cool_thing_rewriter_end(rewriter));
+    ok(!lol_html_rewriter_write(rewriter, in, strlen(in)));
+    ok(!lol_html_rewriter_end(rewriter));
 
-    cool_thing_rewriter_free(rewriter);
+    lol_html_rewriter_free(rewriter);
 }
 
-void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html, void *user_data) {
+void expect_stop(lol_html_rewriter_builder_t *builder, const char *html, void *user_data) {
     const char *in = html;
-    cool_thing_rewriter_t *rewriter = create_rewriter(
+    lol_html_rewriter_t *rewriter = create_rewriter(
         builder,
         output_sink_stub,
         user_data,
         MAX_MEMORY
     );
 
-    ok(cool_thing_rewriter_write(rewriter, in, strlen(in)));
-    cool_thing_str_t *msg = cool_thing_take_last_error();
+    ok(lol_html_rewriter_write(rewriter, in, strlen(in)));
+    lol_html_str_t *msg = lol_html_take_last_error();
     str_eq(msg, "The rewriter has been stopped.");
-    cool_thing_str_free(*msg);
+    lol_html_str_free(*msg);
 }
 
 void check_output(
