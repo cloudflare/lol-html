@@ -2,12 +2,12 @@
 
 ***L**ow **o**utput **l**atency streaming **HTML** rewriter/parser with CSS-selector based API.*
 
-It is designed to provide low output latency, quickly handle big amounts of data and operate in
+It is designed to provide low output latency, quickly handle large amounts of data, and operate in
 environments with limited memory resources.
 
 The crate serves as a back-end for the HTML rewriting functionality of
 [Cloudflare Workers](https://www.cloudflare.com/en-gb/products/cloudflare-workers/), but can be used
-as a standalone library with the convenient API for a wide variety of HTML rewriting/analyzis tasks.
+as a standalone library with a convenient API for a wide variety of HTML rewriting/analysis tasks.
 
 ## Documentation
 
