@@ -1,13 +1,13 @@
 # LOL HTML
 
-***L**ow **o**utput **l**atency streaming **HTML** rewriter/parser with CSS-selector based API.*
+***L**ow **O**utput **L**atency streaming **HTML** rewriter/parser with CSS-selector based API.*
 
-It is designed to provide low output latency, quickly handle big amounts of data and operate in
+It is designed to modify HTML on the fly with minimum amount buffering. It can quickly handle very large documents, and operate in
 environments with limited memory resources.
 
 The crate serves as a back-end for the HTML rewriting functionality of
 [Cloudflare Workers](https://www.cloudflare.com/en-gb/products/cloudflare-workers/), but can be used
-as a standalone library with the convenient API for a wide variety of HTML rewriting/analyzis tasks.
+as a standalone library with a convenient API for a wide variety of HTML rewriting/analysis tasks.
 
 ## Documentation
 
@@ -20,39 +20,38 @@ Rewrite insecure hyperlinks:
 ```rust
 use lol_html::{element, HtmlRewriter, Settings};
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = vec![];
 
-    {
-        let mut rewriter = HtmlRewriter::try_new(
-            Settings {
-                element_content_handlers: vec![
-                    element!("a[href]", |el| {
-                        let href = el
-                            .get_attribute("href")
-                            .unwrap()
-                            .replace("http:", "https:");
+    let mut rewriter = HtmlRewriter::try_new(
+        Settings {
+            element_content_handlers: vec![
+                element!("a[href]", |el| {
+                    let href = el
+                        .get_attribute("href")
+                        .expect("href was required")
+                        .replace("http:", "https:");
 
-                        el.set_attribute("href", &href).unwrap();
+                    el.set_attribute("href", &href)?;
 
-                        Ok(())
-                    })
-                ],
-                ..Settings::default()
-            },
-            |c: &[u8]| output.extend_from_slice(c)
-        ).unwrap();
+                    Ok(())
+                })
+            ],
+            ..Settings::default()
+        },
+        |c: &[u8]| output.extend_from_slice(c)
+    )?;
 
-        rewriter.write(b"<div><a href=").unwrap();
-        rewriter.write(b"http://example.com>").unwrap();
-        rewriter.write(b"</a></div>").unwrap();
-        rewriter.end().unwrap();
-    }
+    rewriter.write(b"<div><a href=")?;
+    rewriter.write(b"http://example.com>")?;
+    rewriter.write(b"</a></div>")?;
+    rewriter.end()?;
 
     assert_eq!(
-        String::from_utf8(output).unwrap(),
+        String::from_utf8(output)?,
         r#"<div><a href="https://example.com"></a></div>"#
     );
+    Ok(())
 }
 ```
 
