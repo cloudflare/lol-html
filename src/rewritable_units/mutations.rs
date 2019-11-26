@@ -13,11 +13,11 @@ pub enum ContentType {
 }
 
 #[inline]
-fn content_to_bytes(
+fn content_to_bytes<O: FnMut(&[u8])>(
     content: &str,
     content_type: ContentType,
     encoding: &'static Encoding,
-    output_handler: &mut dyn FnMut(&[u8]),
+    mut output_handler: O,
 ) {
     let bytes = Bytes::from_str(content, encoding);
 
@@ -27,7 +27,7 @@ fn content_to_bytes(
             (b'<', b"&lt;"),
             (b'>', b"&gt;"),
             (b'&', b"&amp;"),
-            output_handler,
+            &mut output_handler,
         ),
     }
 }
@@ -54,7 +54,7 @@ impl Mutations {
 
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
-        content_to_bytes(content, content_type, self.encoding, &mut |c| {
+        content_to_bytes(content, content_type, self.encoding, |c| {
             self.content_before.extend_from_slice(c);
         });
     }
@@ -63,7 +63,7 @@ impl Mutations {
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         let mut pos = 0;
 
-        content_to_bytes(content, content_type, self.encoding, &mut |c| {
+        content_to_bytes(content, content_type, self.encoding, |c| {
             self.content_after.splice(pos..pos, c.iter().cloned());
 
             pos += c.len();
@@ -74,7 +74,7 @@ impl Mutations {
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
         let mut replacement = Vec::default();
 
-        content_to_bytes(content, content_type, self.encoding, &mut |c| {
+        content_to_bytes(content, content_type, self.encoding, |c| {
             replacement.extend_from_slice(c);
         });
 

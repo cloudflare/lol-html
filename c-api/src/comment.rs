@@ -1,12 +1,12 @@
 use super::*;
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_text_get(comment: *const Comment) -> Str {
+pub extern "C" fn lol_html_comment_text_get(comment: *const Comment) -> Str {
     Str::new(to_ref!(comment).text())
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_text_set(
+pub extern "C" fn lol_html_comment_text_set(
     comment: *mut Comment,
     text: *const c_char,
     text_len: size_t,
@@ -20,7 +20,7 @@ pub extern "C" fn cool_thing_comment_text_set(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_before(
+pub extern "C" fn lol_html_comment_before(
     comment: *mut Comment,
     content: *const c_char,
     content_len: size_t,
@@ -30,7 +30,7 @@ pub extern "C" fn cool_thing_comment_before(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_after(
+pub extern "C" fn lol_html_comment_after(
     comment: *mut Comment,
     content: *const c_char,
     content_len: size_t,
@@ -40,7 +40,7 @@ pub extern "C" fn cool_thing_comment_after(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_replace(
+pub extern "C" fn lol_html_comment_replace(
     comment: *mut Comment,
     content: *const c_char,
     content_len: size_t,
@@ -50,21 +50,21 @@ pub extern "C" fn cool_thing_comment_replace(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_remove(comment: *mut Comment) {
+pub extern "C" fn lol_html_comment_remove(comment: *mut Comment) {
     to_ref_mut!(comment).remove();
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_is_removed(comment: *const Comment) -> bool {
+pub extern "C" fn lol_html_comment_is_removed(comment: *const Comment) -> bool {
     to_ref!(comment).removed()
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_user_data_set(comment: *mut Comment, user_data: *mut c_void) {
+pub extern "C" fn lol_html_comment_user_data_set(comment: *mut Comment, user_data: *mut c_void) {
     to_ref_mut!(comment).set_user_data(user_data);
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_comment_user_data_get(comment: *const Comment) -> *mut c_void {
+pub extern "C" fn lol_html_comment_user_data_get(comment: *const Comment) -> *mut c_void {
     get_user_data!(comment)
 }

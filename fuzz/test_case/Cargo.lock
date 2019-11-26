@@ -142,22 +142,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cool_thing"
-version = "0.1.0"
-dependencies = [
- "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "cssparser 0.25.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "encoding_rs 0.8.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazycell 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "memchr 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "safemem 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "selectors 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "cssparser"
 version = "0.25.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,6 +283,22 @@ version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "lol_html"
+version = "0.1.0"
+dependencies = [
+ "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cssparser 0.25.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "encoding_rs 0.8.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazycell 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "memchr 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "safemem 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "selectors 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -658,9 +658,9 @@ name = "test_case"
 version = "0.1.0"
 dependencies = [
  "bindgen 0.50.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cool_thing 0.1.0",
  "encoding_rs 0.8.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lol_html 0.1.0",
  "rand 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

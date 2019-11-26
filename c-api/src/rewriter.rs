@@ -31,7 +31,7 @@ impl OutputSink for ExternOutputSink {
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_build(
+pub extern "C" fn lol_html_rewriter_build(
     builder: *mut HtmlRewriterBuilder,
     encoding: *const c_char,
     encoding_len: size_t,
@@ -58,7 +58,7 @@ pub extern "C" fn cool_thing_rewriter_build(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_write(
+pub extern "C" fn lol_html_rewriter_write(
     rewriter: *mut HtmlRewriter<'static, ExternOutputSink>,
     chunk: *const c_char,
     chunk_len: size_t,
@@ -72,7 +72,7 @@ pub extern "C" fn cool_thing_rewriter_write(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_end(
+pub extern "C" fn lol_html_rewriter_end(
     rewriter: *mut HtmlRewriter<'static, ExternOutputSink>,
 ) -> c_int {
     let rewriter = to_ref_mut!(rewriter);
@@ -83,6 +83,6 @@ pub extern "C" fn cool_thing_rewriter_end(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_rewriter_free(rewriter: *mut HtmlRewriter<'static, ExternOutputSink>) {
+pub extern "C" fn lol_html_rewriter_free(rewriter: *mut HtmlRewriter<'static, ExternOutputSink>) {
     drop(to_box!(rewriter));
 }

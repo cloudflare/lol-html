@@ -1,5 +1,5 @@
-use cool_thing::html_content::*;
-use cool_thing::*;
+use lol_html::html_content::*;
+use lol_html::*;
 
 define_group!(
     "Rewriting",

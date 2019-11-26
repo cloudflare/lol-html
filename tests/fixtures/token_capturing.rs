@@ -2,13 +2,13 @@ use crate::harness::suites::html5lib_tests::{
     get_test_cases, TestCase, TestToken, TestTokenList,
 };
 use crate::harness::{TestFixture, Input};
-use cool_thing::{
+use lol_html::{
     LocalNameHash, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController,
     TransformStream, Namespace, TransformStreamSettings, MemoryLimiter
 };
-use cool_thing::errors::RewritingError;
-use cool_thing::html_content::TextType;
-use cool_thing::test_utils::Output;
+use lol_html::errors::RewritingError;
+use lol_html::html_content::TextType;
+use lol_html::test_utils::Output;
 
 macro_rules! expect_eql {
     ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {

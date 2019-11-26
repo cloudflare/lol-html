@@ -18,17 +18,17 @@ impl TextChunkContent {
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_content_get(chunk: *mut TextChunk) -> TextChunkContent {
+pub extern "C" fn lol_html_text_chunk_content_get(chunk: *mut TextChunk) -> TextChunkContent {
     TextChunkContent::new(to_ref!(chunk))
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_is_last_in_text_node(chunk: *mut TextChunk) -> bool {
+pub extern "C" fn lol_html_text_chunk_is_last_in_text_node(chunk: *mut TextChunk) -> bool {
     to_ref!(chunk).last_in_text_node()
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_before(
+pub extern "C" fn lol_html_text_chunk_before(
     chunk: *mut TextChunk,
     content: *const c_char,
     content_len: size_t,
@@ -38,7 +38,7 @@ pub extern "C" fn cool_thing_text_chunk_before(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_after(
+pub extern "C" fn lol_html_text_chunk_after(
     chunk: *mut TextChunk,
     content: *const c_char,
     content_len: size_t,
@@ -48,7 +48,7 @@ pub extern "C" fn cool_thing_text_chunk_after(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_replace(
+pub extern "C" fn lol_html_text_chunk_replace(
     chunk: *mut TextChunk,
     content: *const c_char,
     content_len: size_t,
@@ -58,24 +58,21 @@ pub extern "C" fn cool_thing_text_chunk_replace(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_remove(chunk: *mut TextChunk) {
+pub extern "C" fn lol_html_text_chunk_remove(chunk: *mut TextChunk) {
     to_ref_mut!(chunk).remove();
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_is_removed(chunk: *const TextChunk) -> bool {
+pub extern "C" fn lol_html_text_chunk_is_removed(chunk: *const TextChunk) -> bool {
     to_ref!(chunk).removed()
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_user_data_set(
-    chunk: *mut TextChunk,
-    user_data: *mut c_void,
-) {
+pub extern "C" fn lol_html_text_chunk_user_data_set(chunk: *mut TextChunk, user_data: *mut c_void) {
     to_ref_mut!(chunk).set_user_data(user_data);
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_text_chunk_user_data_get(chunk: *const TextChunk) -> *mut c_void {
+pub extern "C" fn lol_html_text_chunk_user_data_get(chunk: *const TextChunk) -> *mut c_void {
     get_user_data!(chunk)
 }

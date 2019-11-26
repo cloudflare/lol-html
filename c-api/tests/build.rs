@@ -58,8 +58,8 @@ fn main() {
         .include(INCLUDE_DIR)
         .include(PICOTEST_DIR)
         .files(c_files)
-        .compile("cool_thing_ctests");
+        .compile("lol_html_ctests");
 
     // Link against the C API.
-    println!("cargo:rustc-link-lib=dylib=coolthing");
+    println!("cargo:rustc-link-lib=dylib=lolhtml");
 }

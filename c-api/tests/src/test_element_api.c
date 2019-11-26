@@ -1,4 +1,4 @@
-#include "../../include/cool_thing.h"
+#include "../../include/lol_html.h"
 #include "deps/picotest/picotest.h"
 #include "tests.h"
 #include "test_util.h"
@@ -13,8 +13,8 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t modify_element_tag_name(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t modify_element_tag_name(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
@@ -22,33 +22,33 @@ static cool_thing_rewriter_directive_t modify_element_tag_name(
     const char *new_name = "span";
 
     note("Get tag name");
-    cool_thing_str_t name = cool_thing_element_tag_name_get(element);
+    lol_html_str_t name = lol_html_element_tag_name_get(element);
 
     str_eq(&name, "div");
 
-    cool_thing_str_free(name);
+    lol_html_str_free(name);
 
     note("Set invalid tag name");
-    ok(cool_thing_element_tag_name_set(element, "", 0) == -1);
+    ok(lol_html_element_tag_name_set(element, "", 0) == -1);
 
-    cool_thing_str_t *msg = cool_thing_take_last_error();
+    lol_html_str_t *msg = lol_html_take_last_error();
 
     str_eq(msg, "Tag name can't be empty.");
 
-    cool_thing_str_free(*msg);
+    lol_html_str_free(*msg);
 
     note("Set tag name");
-    ok(!cool_thing_element_tag_name_set(element, new_name, strlen(new_name)));
+    ok(!lol_html_element_tag_name_set(element, new_name, strlen(new_name)));
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_modify_element_tag_name(cool_thing_selector_t *selector, void *user_data) {
+static void test_modify_element_tag_name(lol_html_selector_t *selector, void *user_data) {
     UNUSED(user_data);
 
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &modify_element_tag_name,
@@ -72,28 +72,28 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t modify_user_data(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t modify_user_data(
+    lol_html_element_t *element,
     void *user_data
 ) {
     note("User data");
     ok(*(int*)user_data == EXPECTED_USER_DATA);
 
     note("Set element user data");
-    cool_thing_element_user_data_set(element, user_data);
+    lol_html_element_user_data_set(element, user_data);
 
     note("Get element user data");
-    int element_user_data = *(int*)cool_thing_element_user_data_get(element);
+    int element_user_data = *(int*)lol_html_element_user_data_get(element);
 
     ok(element_user_data == EXPECTED_USER_DATA);
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_modify_element_user_data(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_modify_element_user_data(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &modify_user_data,
@@ -117,8 +117,8 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t get_and_modify_attributes(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t get_and_modify_attributes(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
@@ -128,11 +128,11 @@ static cool_thing_rewriter_directive_t get_and_modify_attributes(
     const char *attr2_value = "hey";
 
     note("Has attribute");
-    ok(cool_thing_element_has_attribute(element, attr1, strlen(attr1)) == 1);
-    ok(!cool_thing_element_has_attribute(element, attr2, strlen(attr2)));
+    ok(lol_html_element_has_attribute(element, attr1, strlen(attr1)) == 1);
+    ok(!lol_html_element_has_attribute(element, attr2, strlen(attr2)));
 
     note("Get attribute");
-    cool_thing_str_t *value = cool_thing_element_get_attribute(
+    lol_html_str_t *value = lol_html_element_get_attribute(
         element,
         attr1,
         strlen(attr1)
@@ -140,7 +140,7 @@ static cool_thing_rewriter_directive_t get_and_modify_attributes(
 
     str_eq(value, "42");
 
-    value = cool_thing_element_get_attribute(
+    value = lol_html_element_get_attribute(
         element,
         attr2,
         strlen(attr2)
@@ -149,7 +149,7 @@ static cool_thing_rewriter_directive_t get_and_modify_attributes(
     ok(value == NULL);
 
     note("Set attribute");
-    int err = cool_thing_element_set_attribute(
+    int err = lol_html_element_set_attribute(
         element,
         attr2,
         strlen(attr2),
@@ -160,15 +160,15 @@ static cool_thing_rewriter_directive_t get_and_modify_attributes(
     ok(!err);
 
     note("Remove attribute");
-    ok(!cool_thing_element_remove_attribute(element, attr1, strlen(attr1)));
+    ok(!lol_html_element_remove_attribute(element, attr1, strlen(attr1)));
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_get_and_modify_attributes(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_get_and_modify_attributes(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &get_and_modify_attributes,
@@ -192,8 +192,8 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t insert_content_around_element(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t insert_content_around_element(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
@@ -204,20 +204,20 @@ static cool_thing_rewriter_directive_t insert_content_around_element(
     const char *after = "&after";
 
     note("Insert before/prepend");
-    ok(!cool_thing_element_before(element, before, strlen(before), false));
-    ok(!cool_thing_element_prepend(element, prepend, strlen(prepend), true));
+    ok(!lol_html_element_before(element, before, strlen(before), false));
+    ok(!lol_html_element_prepend(element, prepend, strlen(prepend), true));
 
     note("Insert after/append");
-    ok(!cool_thing_element_append(element, append, strlen(append), true));
-    ok(!cool_thing_element_after(element, after, strlen(after), false));
+    ok(!lol_html_element_append(element, append, strlen(append), true));
+    ok(!lol_html_element_after(element, after, strlen(after), false));
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_insert_content_around_element(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_insert_content_around_element(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &insert_content_around_element,
@@ -246,8 +246,8 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t set_element_inner_content(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t set_element_inner_content(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
@@ -255,15 +255,15 @@ static cool_thing_rewriter_directive_t set_element_inner_content(
     const char *content = "hey & ya";
 
     note("Set inner content");
-    ok(!cool_thing_element_set_inner_content(element, content, strlen(content), false));
+    ok(!lol_html_element_set_inner_content(element, content, strlen(content), false));
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_set_element_inner_content(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_set_element_inner_content(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &set_element_inner_content,
@@ -292,8 +292,8 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t replace_element(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t replace_element(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
@@ -301,15 +301,15 @@ static cool_thing_rewriter_directive_t replace_element(
     const char *content = "hey & ya";
 
     note("Replace");
-    ok(!cool_thing_element_replace(element, content, strlen(content), true));
+    ok(!lol_html_element_replace(element, content, strlen(content), true));
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_replace_element(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_replace_element(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &replace_element,
@@ -338,24 +338,24 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t remove_element(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t remove_element(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
 
     note("Remove");
-    ok(!cool_thing_element_is_removed(element));
-    cool_thing_element_remove(element);
-    ok(cool_thing_element_is_removed(element));
+    ok(!lol_html_element_is_removed(element));
+    lol_html_element_remove(element);
+    ok(lol_html_element_is_removed(element));
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_remove_element(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_remove_element(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &remove_element,
@@ -384,27 +384,27 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
-static cool_thing_rewriter_directive_t remove_element_and_keep_content(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t remove_element_and_keep_content(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
 
     note("Remove and keep content");
-    ok(!cool_thing_element_is_removed(element));
-    cool_thing_element_remove_and_keep_content(element);
-    ok(cool_thing_element_is_removed(element));
+    ok(!lol_html_element_is_removed(element));
+    lol_html_element_remove_and_keep_content(element);
+    ok(lol_html_element_is_removed(element));
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
 static void test_remove_element_and_keep_content(
-        cool_thing_selector_t *selector,
+        lol_html_selector_t *selector,
         void *user_data
 ) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &remove_element_and_keep_content,
@@ -434,12 +434,12 @@ EXPECT_OUTPUT(
 );
 
 static void test_get_and_free_empty_element_attribute(
-    cool_thing_selector_t *selector,
+    lol_html_selector_t *selector,
     void *user_data
 ) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &get_and_free_empty_element_attribute,
@@ -456,54 +456,54 @@ static void test_get_and_free_empty_element_attribute(
 }
 
 //-------------------------------------------------------------------------
-static cool_thing_rewriter_directive_t iterate_element_attributes(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t iterate_element_attributes(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
 
     note("Attributes iterator");
-    cool_thing_attributes_iterator_t *iter = cool_thing_attributes_iterator_get(element);
+    lol_html_attributes_iterator_t *iter = lol_html_attributes_iterator_get(element);
 
-    const cool_thing_attribute_t *attr = cool_thing_attributes_iterator_next(iter);
+    const lol_html_attribute_t *attr = lol_html_attributes_iterator_next(iter);
 
     ok(attr != NULL);
 
-    cool_thing_str_t name = cool_thing_attribute_name_get(attr);
-    cool_thing_str_t value = cool_thing_attribute_value_get(attr);
+    lol_html_str_t name = lol_html_attribute_name_get(attr);
+    lol_html_str_t value = lol_html_attribute_value_get(attr);
 
     str_eq(&name, "foo");
     str_eq(&value, "42");
 
-    cool_thing_str_free(name);
-    cool_thing_str_free(value);
+    lol_html_str_free(name);
+    lol_html_str_free(value);
 
-    attr = cool_thing_attributes_iterator_next(iter);
+    attr = lol_html_attributes_iterator_next(iter);
 
     ok(attr != NULL);
 
-    name = cool_thing_attribute_name_get(attr);
-    value = cool_thing_attribute_value_get(attr);
+    name = lol_html_attribute_name_get(attr);
+    value = lol_html_attribute_value_get(attr);
 
     str_eq(&name, "bar");
     str_eq(&value, "1337");
 
-    cool_thing_str_free(name);
-    cool_thing_str_free(value);
+    lol_html_str_free(name);
+    lol_html_str_free(value);
 
-    attr = cool_thing_attributes_iterator_next(iter);
+    attr = lol_html_attributes_iterator_next(iter);
 
     ok(attr == NULL);
 
-    cool_thing_attributes_iterator_free(iter);
+    lol_html_attributes_iterator_free(iter);
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_iterate_attributes(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_iterate_attributes(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &iterate_element_attributes,
@@ -520,23 +520,23 @@ static void test_iterate_attributes(cool_thing_selector_t *selector, void *user_
 }
 
 //-------------------------------------------------------------------------
-static cool_thing_rewriter_directive_t assert_element_ns_is_html(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t assert_element_ns_is_html(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
 
-    const char *ns = cool_thing_element_namespace_uri_get(element);
+    const char *ns = lol_html_element_namespace_uri_get(element);
 
     c_str_eq(ns, "http://www.w3.org/1999/xhtml");
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_element_ns_is_html(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_element_ns_is_html(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &assert_element_ns_is_html,
@@ -553,23 +553,23 @@ static void test_element_ns_is_html(cool_thing_selector_t *selector, void *user_
 }
 
 //-------------------------------------------------------------------------
-static cool_thing_rewriter_directive_t assert_element_ns_is_svg(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t assert_element_ns_is_svg(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(user_data);
 
-    const char *ns = cool_thing_element_namespace_uri_get(element);
+    const char *ns = lol_html_element_namespace_uri_get(element);
 
     c_str_eq(ns, "http://www.w3.org/2000/svg");
 
-    return COOL_THING_CONTINUE;
+    return LOL_HTML_CONTINUE;
 }
 
-static void test_element_ns_is_svg(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_element_ns_is_svg(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &assert_element_ns_is_svg,
@@ -586,8 +586,8 @@ static void test_element_ns_is_svg(cool_thing_selector_t *selector, void *user_d
 }
 
 //-------------------------------------------------------------------------
-static cool_thing_rewriter_directive_t stop_rewriting(
-    cool_thing_element_t *element,
+static lol_html_rewriter_directive_t stop_rewriting(
+    lol_html_element_t *element,
     void *user_data
 ) {
     UNUSED(element);
@@ -595,13 +595,13 @@ static cool_thing_rewriter_directive_t stop_rewriting(
 
     note("Stop rewriting");
 
-    return COOL_THING_STOP;
+    return LOL_HTML_STOP;
 }
 
-static void test_stop(cool_thing_selector_t *selector, void *user_data) {
-    cool_thing_rewriter_builder_t *builder = cool_thing_rewriter_builder_new();
+static void test_stop(lol_html_selector_t *selector, void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
 
-    int err = cool_thing_rewriter_builder_add_element_content_handlers(
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
         builder,
         selector,
         &stop_rewriting,
@@ -623,7 +623,7 @@ void element_api_test() {
     {
         const char *selector_str = "*";
 
-        cool_thing_selector_t *selector = cool_thing_selector_parse(
+        lol_html_selector_t *selector = lol_html_selector_parse(
             selector_str,
             strlen(selector_str)
         );
@@ -634,65 +634,65 @@ void element_api_test() {
         test_get_and_modify_attributes(selector, &user_data);
         test_insert_content_around_element(selector, &user_data);
 
-        cool_thing_selector_free(selector);
+        lol_html_selector_free(selector);
     }
 
     {
         const char *selector_str = "div";
 
-        cool_thing_selector_t *selector = cool_thing_selector_parse(
+        lol_html_selector_t *selector = lol_html_selector_parse(
             selector_str,
             strlen(selector_str)
         );
 
         test_set_element_inner_content(selector, &user_data);
 
-        cool_thing_selector_free(selector);
+        lol_html_selector_free(selector);
     }
 
     {
         const char *selector_str = "div";
 
-        cool_thing_selector_t *selector = cool_thing_selector_parse(
+        lol_html_selector_t *selector = lol_html_selector_parse(
             selector_str,
             strlen(selector_str)
         );
 
         test_replace_element(selector, &user_data);
 
-        cool_thing_selector_free(selector);
+        lol_html_selector_free(selector);
     }
 
     {
         const char *selector_str = "h1";
 
-        cool_thing_selector_t *selector = cool_thing_selector_parse(
+        lol_html_selector_t *selector = lol_html_selector_parse(
             selector_str,
             strlen(selector_str)
         );
 
         test_remove_element(selector, &user_data);
 
-        cool_thing_selector_free(selector);
+        lol_html_selector_free(selector);
     }
 
     {
         const char *selector_str = "h2";
 
-        cool_thing_selector_t *selector = cool_thing_selector_parse(
+        lol_html_selector_t *selector = lol_html_selector_parse(
             selector_str,
             strlen(selector_str)
         );
 
         test_remove_element_and_keep_content(selector, &user_data);
 
-        cool_thing_selector_free(selector);
+        lol_html_selector_free(selector);
     }
 
     {
         const char *selector_str = "span";
 
-        cool_thing_selector_t *selector = cool_thing_selector_parse(
+        lol_html_selector_t *selector = lol_html_selector_parse(
             selector_str,
             strlen(selector_str)
         );
@@ -700,7 +700,7 @@ void element_api_test() {
         test_get_and_free_empty_element_attribute(selector, &user_data);
         test_stop(selector, &user_data);
 
-        cool_thing_selector_free(selector);
+        lol_html_selector_free(selector);
     }
 
     {
@@ -708,7 +708,7 @@ void element_api_test() {
 
         const char *selector_str = "script";
 
-        cool_thing_selector_t *selector = cool_thing_selector_parse(
+        lol_html_selector_t *selector = lol_html_selector_parse(
             selector_str,
             strlen(selector_str)
         );

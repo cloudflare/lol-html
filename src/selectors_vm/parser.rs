@@ -159,7 +159,7 @@ impl<'i> Parser<'i> for SelectorsParser {
 /// [`str`]'s [`parse`] method.
 ///
 /// ```
-/// use cool_thing::Selector;
+/// use lol_html::Selector;
 ///
 /// let selector: Selector = "#foo".parse().unwrap();
 /// ```

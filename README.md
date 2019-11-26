@@ -1,6 +1,6 @@
-![Banner](media/banner.png)
+# LOL HTML
 
-*Cool Thing is a streaming HTML rewriter/parser with CSS-selector based API.*
+***L**ow **o**utput **l**atency streaming **HTML** rewriter/parser with CSS-selector based API.*
 
 It is designed to provide low output latency, quickly handle big amounts of data and operate in
 environments with limited memory resources.
@@ -9,16 +9,16 @@ The crate serves as a back-end for the HTML rewriting functionality of
 [Cloudflare Workers](https://www.cloudflare.com/en-gb/products/cloudflare-workers/), but can be used
 as a standalone library with the convenient API for a wide variety of HTML rewriting/analyzis tasks.
 
-# Documentation
+## Documentation
 
-https://docs.rs/cool-thing
+https://docs.rs/lol-html
 
-# Example
+## Example
 
 Rewrite insecure hyperlinks:
 
 ```rust
-use cool_thing::{element, HtmlRewriter, Settings};
+use lol_html::{element, HtmlRewriter, Settings};
 
 fn main() {
     let mut output = vec![];
@@ -56,6 +56,6 @@ fn main() {
 }
 ```
 
-# License
+## License
 
 BSD licensed. See the [LICENSE](LICENSE) file for details.

@@ -1,4 +1,5 @@
-//! Cool Thing is a streaming HTML rewriter/parser with CSS-selector based API.
+//! ***LOL HTML*** is a **l**ow **o**utput **l**atency streaming **HTML** rewriter/parser with
+//! CSS-selector based API.
 //!
 //! It is designed to provide low output latency, quickly handle big amounts of data and operate in
 //! environments with limited memory resources.

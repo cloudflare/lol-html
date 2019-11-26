@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../include/cool_thing.h"
+#include "../../include/lol_html.h"
 
 #define MAX_MEMORY 2048
 
@@ -31,26 +31,26 @@ typedef void (*output_sink_t)(const char *, size_t, void *);
 
 void output_sink_stub(const char *chunk, size_t chunk_len, void *user_data);
 
-cool_thing_rewriter_directive_t get_and_free_empty_element_attribute(
-    cool_thing_element_t *element,
+lol_html_rewriter_directive_t get_and_free_empty_element_attribute(
+    lol_html_element_t *element,
     void *user_data
 );
 
-cool_thing_rewriter_t* create_rewriter(
-    cool_thing_rewriter_builder_t *builder,
+lol_html_rewriter_t* create_rewriter(
+    lol_html_rewriter_builder_t *builder,
     output_sink_t output_sink,
     void *output_sink_user_data,
     size_t max_memory
 );
 
 void run_rewriter(
-    cool_thing_rewriter_builder_t *builder,
+    lol_html_rewriter_builder_t *builder,
     const char *html,
     output_sink_t output_sink,
     void *output_sink_user_data
 );
 
-void expect_stop(cool_thing_rewriter_builder_t *builder, const char *html, void *user_data);
+void expect_stop(lol_html_rewriter_builder_t *builder, const char *html, void *user_data);
 
 // If `chunk_len` is greater than 0, this concatenates `chunk_len` bytes from
 // `chunk` to the string pointed to by `out`. Otherwise, it checks if the string

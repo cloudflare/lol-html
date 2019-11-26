@@ -1,6 +1,6 @@
-use cool_thing::html_content::*;
-use cool_thing::*;
 use libc::{c_char, c_int, c_void, size_t};
+use lol_html::html_content::*;
+use lol_html::*;
 use std::cell::RefCell;
 use std::{ptr, slice, str};
 

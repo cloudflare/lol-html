@@ -6,7 +6,7 @@ fn main() {
     let out_path = PathBuf::from(&out_dir);
 
     println!("cargo:rustc-link-search=../c-api/target/debug");
-    println!("cargo:rustc-link-lib=coolthing");
+    println!("cargo:rustc-link-lib=lolhtml");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
@@ -14,7 +14,7 @@ fn main() {
     let bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .header("../../c-api/include/cool_thing.h")
+        .header("../../c-api/include/lol_html.h")
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.

@@ -109,8 +109,8 @@ macro_rules! __element_content_handler {
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, element, RewriteStrSettings};
-/// use cool_thing::html_content::ContentType;
+/// use lol_html::{rewrite_str, element, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
 ///
 /// let html = rewrite_str(
 ///     r#"<span id="foo"></span>"#,
@@ -140,8 +140,8 @@ macro_rules! element {
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, text, RewriteStrSettings};
-/// use cool_thing::html_content::ContentType;
+/// use lol_html::{rewrite_str, text, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
 ///
 /// let html = rewrite_str(
 ///     r#"<span>Hello</span>"#,
@@ -173,8 +173,8 @@ macro_rules! text {
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, comments, RewriteStrSettings};
-/// use cool_thing::html_content::ContentType;
+/// use lol_html::{rewrite_str, comments, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
 ///
 /// let html = rewrite_str(
 ///     r#"<span><!-- 42 --></span>"#,
@@ -211,8 +211,8 @@ macro_rules! __document_content_handler {
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, doctype, RewriteStrSettings};
-/// use cool_thing::html_content::ContentType;
+/// use lol_html::{rewrite_str, doctype, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
 ///
 /// rewrite_str(
 ///     r#"<!doctype html>"#,
@@ -241,8 +241,8 @@ macro_rules! doctype {
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, doc_text, RewriteStrSettings};
-/// use cool_thing::html_content::ContentType;
+/// use lol_html::{rewrite_str, doc_text, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
 ///
 /// let html = rewrite_str(
 ///     r#"Hello<span>Hello</span>Hello"#,
@@ -273,8 +273,8 @@ macro_rules! doc_text {
 ///
 /// # Example
 /// ```
-/// use cool_thing::{rewrite_str, doc_comments, RewriteStrSettings};
-/// use cool_thing::html_content::ContentType;
+/// use lol_html::{rewrite_str, doc_comments, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
 ///
 /// let html = rewrite_str(
 ///     r#"<!-- 42 --><span><!-- 42 --></span><!-- 42 -->"#,
@@ -368,7 +368,7 @@ pub struct Settings<'h, 's> {
     ///
     /// ### Example
     /// ```
-    /// use cool_thing::{ElementContentHandlers, Settings};
+    /// use lol_html::{ElementContentHandlers, Settings};
     ///
     /// let settings = Settings {
     ///     element_content_handlers: vec! [
@@ -503,7 +503,7 @@ pub struct RewriteStrSettings<'h, 's> {
     ///
     /// ### Example
     /// ```
-    /// use cool_thing::{ElementContentHandlers, RewriteStrSettings};
+    /// use lol_html::{ElementContentHandlers, RewriteStrSettings};
     ///
     /// let settings = RewriteStrSettings {
     ///     element_content_handlers: vec! [

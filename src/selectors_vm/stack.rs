@@ -1,6 +1,6 @@
 use super::program::AddressRange;
-use crate::memory::{MemoryLimitExceededError, LimitedVec, SharedMemoryLimiter};
 use crate::html::{LocalName, Namespace, Tag};
+use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;

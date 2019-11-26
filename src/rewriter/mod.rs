@@ -79,7 +79,7 @@ pub enum RewritingError {
 ///
 /// # Example
 /// ```
-/// use cool_thing::{element, HtmlRewriter, Settings};
+/// use lol_html::{element, HtmlRewriter, Settings};
 ///
 /// let mut output = vec![];
 ///
@@ -249,7 +249,7 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
 /// # Example
 ///
 /// ```
-/// use cool_thing::{rewrite_str, element, RewriteStrSettings};
+/// use lol_html::{rewrite_str, element, RewriteStrSettings};
 ///
 /// let output = rewrite_str(
 ///     r#"<div><a href="http://example.com"></a></div>"#,

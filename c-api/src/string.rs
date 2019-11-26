@@ -34,6 +34,6 @@ impl Drop for Str {
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_str_free(string: Str) {
+pub extern "C" fn lol_html_str_free(string: Str) {
     drop(string);
 }

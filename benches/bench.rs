@@ -48,7 +48,7 @@ macro_rules! create_runner {
     ($settings:expr) => {
         move |b, i: &Vec<Vec<u8>>| {
             b.iter(|| {
-                let mut rewriter = cool_thing::HtmlRewriter::try_new($settings, |c: &[u8]| {
+                let mut rewriter = lol_html::HtmlRewriter::try_new($settings, |c: &[u8]| {
                     black_box(c);
                 })
                 .unwrap();

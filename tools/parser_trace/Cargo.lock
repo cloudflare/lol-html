@@ -54,7 +54,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cool_thing"
+name = "lol_html"
 version = "0.1.0"
 dependencies = [
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -208,7 +208,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "parser_trace"
 version = "0.1.0"
 dependencies = [
- "cool_thing 0.1.0",
+ "lol_html 0.1.0",
  "encoding_rs 0.8.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "getopts 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

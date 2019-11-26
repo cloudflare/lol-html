@@ -2,14 +2,14 @@ use super::*;
 use std::slice::Iter;
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_tag_name_get(element: *const Element) -> Str {
+pub extern "C" fn lol_html_element_tag_name_get(element: *const Element) -> Str {
     let element = to_ref!(element);
 
     Str::new(element.tag_name())
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_tag_name_set(
+pub extern "C" fn lol_html_element_tag_name_set(
     element: *mut Element,
     name: *const c_char,
     name_len: size_t,
@@ -23,7 +23,7 @@ pub extern "C" fn cool_thing_element_tag_name_set(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_namespace_uri_get(element: *mut Element) -> *const c_char {
+pub extern "C" fn lol_html_element_namespace_uri_get(element: *mut Element) -> *const c_char {
     let element = to_ref!(element);
 
     match element.namespace_uri() {
@@ -35,7 +35,7 @@ pub extern "C" fn cool_thing_element_namespace_uri_get(element: *mut Element) ->
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attributes_iterator_get<'r, 't>(
+pub extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
     element: *const Element<'r, 't>,
 ) -> *mut Iter<'r, Attribute<'t>> {
     let attributes = to_ref!(element).attributes();
@@ -44,7 +44,7 @@ pub extern "C" fn cool_thing_attributes_iterator_get<'r, 't>(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attributes_iterator_next<'r, 't>(
+pub extern "C" fn lol_html_attributes_iterator_next<'r, 't>(
     iterator: *mut Iter<'r, Attribute<'t>>,
 ) -> *const Attribute<'t> {
     let iterator = to_ref_mut!(iterator);
@@ -56,26 +56,26 @@ pub extern "C" fn cool_thing_attributes_iterator_next<'r, 't>(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
+pub extern "C" fn lol_html_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
     drop(to_box!(iterator));
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attribute_name_get(attribute: *const Attribute) -> Str {
+pub extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.name())
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_attribute_value_get(attribute: *const Attribute) -> Str {
+pub extern "C" fn lol_html_attribute_value_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.value())
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_get_attribute(
+pub extern "C" fn lol_html_element_get_attribute(
     element: *const Element,
     name: *const c_char,
     name_len: size_t,
@@ -87,7 +87,7 @@ pub extern "C" fn cool_thing_element_get_attribute(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_has_attribute(
+pub extern "C" fn lol_html_element_has_attribute(
     element: *const Element,
     name: *const c_char,
     name_len: size_t,
@@ -103,7 +103,7 @@ pub extern "C" fn cool_thing_element_has_attribute(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_set_attribute(
+pub extern "C" fn lol_html_element_set_attribute(
     element: *mut Element,
     name: *const c_char,
     name_len: size_t,
@@ -120,7 +120,7 @@ pub extern "C" fn cool_thing_element_set_attribute(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_remove_attribute(
+pub extern "C" fn lol_html_element_remove_attribute(
     element: *mut Element,
     name: *const c_char,
     name_len: size_t,
@@ -134,7 +134,7 @@ pub extern "C" fn cool_thing_element_remove_attribute(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_before(
+pub extern "C" fn lol_html_element_before(
     element: *mut Element,
     content: *const c_char,
     content_len: size_t,
@@ -144,7 +144,7 @@ pub extern "C" fn cool_thing_element_before(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_prepend(
+pub extern "C" fn lol_html_element_prepend(
     element: *mut Element,
     content: *const c_char,
     content_len: size_t,
@@ -154,7 +154,7 @@ pub extern "C" fn cool_thing_element_prepend(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_append(
+pub extern "C" fn lol_html_element_append(
     element: *mut Element,
     content: *const c_char,
     content_len: size_t,
@@ -164,7 +164,7 @@ pub extern "C" fn cool_thing_element_append(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_after(
+pub extern "C" fn lol_html_element_after(
     element: *mut Element,
     content: *const c_char,
     content_len: size_t,
@@ -174,7 +174,7 @@ pub extern "C" fn cool_thing_element_after(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_set_inner_content(
+pub extern "C" fn lol_html_element_set_inner_content(
     element: *mut Element,
     content: *const c_char,
     content_len: size_t,
@@ -184,7 +184,7 @@ pub extern "C" fn cool_thing_element_set_inner_content(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_replace(
+pub extern "C" fn lol_html_element_replace(
     element: *mut Element,
     content: *const c_char,
     content_len: size_t,
@@ -194,26 +194,26 @@ pub extern "C" fn cool_thing_element_replace(
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_remove(element: *mut Element) {
+pub extern "C" fn lol_html_element_remove(element: *mut Element) {
     to_ref_mut!(element).remove();
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_remove_and_keep_content(element: *mut Element) {
+pub extern "C" fn lol_html_element_remove_and_keep_content(element: *mut Element) {
     to_ref_mut!(element).remove_and_keep_content();
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_is_removed(element: *mut Element) -> bool {
+pub extern "C" fn lol_html_element_is_removed(element: *mut Element) -> bool {
     to_ref_mut!(element).removed()
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_user_data_set(element: *mut Element, user_data: *mut c_void) {
+pub extern "C" fn lol_html_element_user_data_set(element: *mut Element, user_data: *mut c_void) {
     to_ref_mut!(element).set_user_data(user_data);
 }
 
 #[no_mangle]
-pub extern "C" fn cool_thing_element_user_data_get(element: *mut Element) -> *mut c_void {
+pub extern "C" fn lol_html_element_user_data_get(element: *mut Element) -> *mut c_void {
     get_user_data!(element)
 }
