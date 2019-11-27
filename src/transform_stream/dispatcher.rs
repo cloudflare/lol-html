@@ -334,7 +334,9 @@ where
         ns: Namespace,
     ) -> Result<ParserDirective, RewritingError> {
         match self.transform_controller.handle_start_tag(name, ns) {
-            Ok(flags) => Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags)),
+            Ok(flags) => {
+                Ok(self.apply_capture_flags_from_hint_and_get_next_parser_directive(flags))
+            }
             Err(DispatcherError::InfoRequest(aux_info_req)) => {
                 self.got_flags_from_hint = false;
                 self.pending_element_aux_info_req = Some(aux_info_req);
