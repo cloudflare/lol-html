@@ -10,7 +10,7 @@
 ***L**ow **O**utput **L**atency streaming **HTML** rewriter/parser with CSS-selector based API.*
 
 It is designed to modify HTML on the fly with minimal buffering. It can quickly handle very large
-documents, and operate in environments with limited memory resources.
+documents, and operate in environments with limited memory resources. More details can be found in the [blog post](https://blog.cloudflare.com/html-parsing-2/).
 
 The crate serves as a back-end for the HTML rewriting functionality of
 [Cloudflare Workers](https://www.cloudflare.com/en-gb/products/cloudflare-workers/), but can be used
