@@ -1,0 +1,14 @@
+[package]
+name = "lol-html-js-api"
+version = "0.1.0"
+authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
+edition = "2018"
+
+[dependencies]
+lol_html = { path = "../" }
+serde = { version="1.0.104", features = ["derive"] }
+serde-wasm-bindgen = "0.1.3"
+wasm-bindgen = "0.2"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
