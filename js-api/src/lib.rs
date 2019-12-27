@@ -173,4 +173,5 @@ mod comment;
 mod doctype;
 mod document_end;
 mod element;
+mod html_rewriter;
 mod text_chunk;
