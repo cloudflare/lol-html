@@ -42,14 +42,12 @@ struct NativeRefWrap<R> {
 
 impl<R> NativeRefWrap<R> {
     pub fn wrap<I>(inner: &mut I) -> (Self, Anchor) {
-        let inner_ptr = unsafe { mem::transmute::<&mut I, *mut R>(inner) };
-        let poisoned = Rc::new(Cell::new(false));
-        let anchor = Anchor::new(Rc::clone(&poisoned));
-
         let wrap = NativeRefWrap {
-            inner_ptr,
-            poisoned,
+            inner_ptr: unsafe { mem::transmute(inner) },
+            poisoned: Rc::new(Cell::new(false)),
         };
+
+        let anchor = Anchor::new(Rc::clone(&wrap.poisoned));
 
         (wrap, anchor)
     }
@@ -160,8 +158,8 @@ macro_rules! impl_mutations {
 macro_rules! impl_from_native {
     ($Ty:ident --> $JsTy:ident) => {
         impl $JsTy {
-            pub(crate) fn from_native<'r>(text_chunk: &'r mut $Ty) -> (Self, Anchor<'r>) {
-                let (ref_wrap, anchor) = NativeRefWrap::wrap(text_chunk);
+            pub(crate) fn from_native<'r>(inner: &'r mut $Ty) -> (Self, Anchor<'r>) {
+                let (ref_wrap, anchor) = NativeRefWrap::wrap(inner);
 
                 ($JsTy(ref_wrap), anchor)
             }
