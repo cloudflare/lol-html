@@ -20,6 +20,10 @@ as a standalone library with a convenient API for a wide variety of HTML rewriti
 
 https://docs.rs/lol_html/
 
+## Bindings for other programming languages
+- [C](https://github.com/cloudflare/lol-html/tree/master/c-api)
+- [Lua](https://github.com/jdesgats/lua-lolhtml)
+
 ## Example
 
 Rewrite insecure hyperlinks:
