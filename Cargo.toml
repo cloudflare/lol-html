@@ -1,6 +1,6 @@
 [package]
 name = "lol_html"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com, ifaaan@gmail.com>"]
 license = "BSD-3-Clause"
 description = "Streaming HTML rewriter/parser with CSS selector-based API"

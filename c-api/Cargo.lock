@@ -127,7 +127,7 @@ dependencies = [
 
 [[package]]
 name = "lol_html"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -147,7 +147,7 @@ version = "0.1.0"
 dependencies = [
  "cc 1.0.46 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.65 (registry+https://github.com/rust-lang/crates.io-index)",
- "lol_html 0.1.0",
+ "lol_html 0.2.0",
 ]
 
 [[package]]

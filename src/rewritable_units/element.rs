@@ -1050,11 +1050,11 @@ mod tests {
         #[test]
         fn add_attr() {
             test!(
-            |el| {
-                el.set_attribute("a5", r#"42'"42"#).unwrap();
-            },
-            r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz" a3=foo/bar a4 a5="42'&quot;42"></a>"#
-        );
+                |el| {
+                    el.set_attribute("a5", r#"42'"42"#).unwrap();
+                },
+                r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz" a3=foo/bar a4 a5="42'&quot;42"></a>"#
+            );
         }
 
         #[test]
