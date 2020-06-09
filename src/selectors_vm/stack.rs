@@ -1,3 +1,4 @@
+use super::SelectorState;
 use super::program::AddressRange;
 use crate::html::{LocalName, Namespace, Tag};
 use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
@@ -33,11 +34,18 @@ pub enum StackDirective {
     PopImmediately,
 }
 
+/// Keeps track of the cumulative and item
+#[derive(Default)]
+pub struct ChildCounter {
+    pub cumulative: i32,
+}
+
 pub struct StackItem<'i, E: ElementData> {
     pub local_name: LocalName<'i>,
     pub element_data: E,
     pub jumps: Vec<AddressRange>,
     pub hereditary_jumps: Vec<AddressRange>,
+    pub counter: ChildCounter,
     pub has_ancestor_with_hereditary_jumps: bool,
     pub stack_directive: StackDirective,
 }
@@ -50,6 +58,7 @@ impl<'i, E: ElementData> StackItem<'i, E> {
             element_data: E::default(),
             jumps: Vec::default(),
             hereditary_jumps: Vec::default(),
+            counter: Default::default(),
             has_ancestor_with_hereditary_jumps: false,
             stack_directive: StackDirective::Push,
         }
@@ -62,21 +71,45 @@ impl<'i, E: ElementData> StackItem<'i, E> {
             element_data: self.element_data,
             jumps: self.jumps,
             hereditary_jumps: self.hereditary_jumps,
+            counter: self.counter,
             has_ancestor_with_hereditary_jumps: self.has_ancestor_with_hereditary_jumps,
             stack_directive: self.stack_directive,
         }
     }
 }
 
-pub struct Stack<E: ElementData>(LimitedVec<StackItem<'static, E>>);
+pub struct Stack<E: ElementData> {
+    // A counter for root elements
+    root_counter: ChildCounter,
+    stack: LimitedVec<StackItem<'static, E>>,
+}
 
 impl<E: ElementData> Stack<E> {
     pub fn new(memory_limiter: SharedMemoryLimiter) -> Self {
-        Stack(LimitedVec::new(memory_limiter))
+        Stack {
+            root_counter: Default::default(),
+            stack: LimitedVec::new(memory_limiter),
+        }
+    }
+
+    pub fn add_child(&mut self) {
+        if let Some(last) = self.stack.last_mut() {
+            last.counter.cumulative += 1;
+        } else {
+            self.root_counter.cumulative += 1;
+        }
+    }
+
+    pub fn build_state(&self) -> SelectorState {
+        if let Some(last) = self.stack.last() {
+            SelectorState { counter: &last.counter }
+        } else {
+            SelectorState { counter: &self.root_counter }
+        }
     }
 
     #[inline]
-    pub fn get_stack_directive(&mut self, item: &StackItem<E>, ns: Namespace) -> StackDirective {
+    pub fn get_stack_directive(item: &StackItem<E>, ns: Namespace) -> StackDirective {
         if ns == Namespace::Html {
             if is_void_element(&item.local_name) {
                 StackDirective::PopImmediately
@@ -93,9 +126,9 @@ impl<E: ElementData> Stack<E> {
         local_name: LocalName,
         mut popped_element_data_handler: impl FnMut(E),
     ) {
-        for i in (0..self.0.len()).rev() {
-            if self.0[i].local_name == local_name {
-                for item in self.0.drain(i..self.0.len()) {
+        for i in (0..self.stack.len()).rev() {
+            if self.stack[i].local_name == local_name {
+                for item in self.stack.drain(i..self.stack.len()) {
                     popped_element_data_handler(item.element_data);
                 }
 
@@ -106,12 +139,12 @@ impl<E: ElementData> Stack<E> {
 
     #[inline]
     pub fn items(&self) -> &[StackItem<E>] {
-        &self.0
+        &self.stack
     }
 
     #[inline]
     pub fn current_element_data_mut(&mut self) -> Option<&mut E> {
-        self.0.last_mut().map(|i| &mut i.element_data)
+        self.stack.last_mut().map(|i| &mut i.element_data)
     }
 
     #[inline]
@@ -119,13 +152,13 @@ impl<E: ElementData> Stack<E> {
         &mut self,
         mut item: StackItem<'static, E>,
     ) -> Result<(), MemoryLimitExceededError> {
-        if let Some(last) = self.0.last() {
+        if let Some(last) = self.stack.last() {
             if last.has_ancestor_with_hereditary_jumps || !last.hereditary_jumps.is_empty() {
                 item.has_ancestor_with_hereditary_jumps = true;
             }
         }
 
-        self.0.push(item)?;
+        self.stack.push(item)?;
         Ok(())
     }
 }

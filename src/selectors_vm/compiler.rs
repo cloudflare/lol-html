@@ -1,20 +1,28 @@
 use super::attribute_matcher::AttributeMatcher;
 use super::program::{
-    AddressRange, AttrExprMatchingInstr, ExecutionBranch, GenericInstr, Instr, InstrStub,
-    NonAttrExprMatchingInstr, Program,
+    AddressRange, ExecutionBranch, Program, Instruction
 };
-use super::{Ast, AstNode, AttributeExpr, AttributeExprOperand, NonAttributeExpr, Predicate};
-use crate::base::Bytes;
+use super::{Ast, AstNode, Expr, AttributeExpr, OnTagNameExpr, OnAttributesExpr, Predicate, SelectorState};
+use crate::base::{Bytes, HasReplacementsError};
 use crate::html::LocalName;
 use encoding_rs::Encoding;
-use selectors::attr::ParsedCaseSensitivity;
+use selectors::attr::{ParsedCaseSensitivity, AttrSelectorOperator};
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::iter;
 
-pub type CompiledNonAttributeExpr = Box<dyn Fn(&LocalName) -> bool>;
-pub type CompiledAttributeExpr = Box<dyn Fn(&AttributeMatcher) -> bool>;
+/// An expression using only the tag name of an element.
+pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState, &LocalName) -> bool>;
+/// An expression using the attributes of an element.
+pub type CompiledAttributeExpr = Box<dyn Fn(&SelectorState, &AttributeMatcher) -> bool>;
 
-pub struct CompiledAttributeExprOperand {
+#[derive(Default)]
+struct ExprSet {
+    pub local_name_exprs: Vec<CompiledLocalNameExpr>,
+    pub attribute_exprs: Vec<CompiledAttributeExpr>,
+}
+
+pub struct AttrExprOperands {
     pub name: Bytes<'static>,
     pub value: Bytes<'static>,
     pub case_sensitivity: ParsedCaseSensitivity,
@@ -23,46 +31,128 @@ pub struct CompiledAttributeExprOperand {
 macro_rules! curry_compile_expr_macro {
     ($negation:ident) => {
         macro_rules! compile_expr {
-            (|$arg:ident| $body:expr) => {
+            (|$state:tt, $arg:tt| $body:expr) => {
                 if $negation {
-                    Box::new(move |$arg| !($body))
+                    Box::new(move |$state, $arg| !($body))
                 } else {
-                    Box::new(move |$arg| $body)
+                    Box::new(move |$state, $arg| $body)
                 }
             };
 
             (@unmatchable) => {
-                compile_expr!(|_arg| false);
+                compile_expr!(|_, _| false)
             };
 
-            (@match_all) => {
-                compile_expr!(|_arg| true);
-            };
+            (@match_any) => {
+                compile_expr!(|_, _| true)
+            }
         }
-    };
+    }
 }
 
-trait CompileOr<T> {
-    fn compile_or(
-        self,
-        negation: bool,
-        compile: impl Fn(T) -> CompiledAttributeExpr,
-    ) -> CompiledAttributeExpr;
+trait Compilable {
+    fn compile(&self, encoding: &'static Encoding, exprs: &mut ExprSet);
 }
 
-impl<T> CompileOr<T> for Result<T, ()> {
-    #[inline]
-    fn compile_or(
-        self,
-        negation: bool,
-        compile: impl Fn(T) -> CompiledAttributeExpr,
-    ) -> CompiledAttributeExpr {
+impl Compilable for Expr<OnTagNameExpr> {
+    fn compile(
+        &self,
+        encoding: &'static Encoding,
+        ExprSet { local_name_exprs, .. }: &mut ExprSet,
+    ) {
+        let &Self { negation, ref simple_expr } = self;
         curry_compile_expr_macro!(negation);
 
-        match self {
-            Ok(v) => compile(v),
-            Err(_) => compile_expr!(@unmatchable),
+        local_name_exprs.push(
+            match simple_expr {
+                OnTagNameExpr::ExplicitAny => compile_expr!(@match_any),
+                OnTagNameExpr::Unmatchable => compile_expr!(@unmatchable),
+                OnTagNameExpr::LocalName(local_name) => {
+                    match LocalName::from_str_without_replacements(&local_name, encoding)
+                        .map(LocalName::into_owned)
+                    {
+                        Ok(local_name) => {
+                            compile_expr!(|_, actual_local_name| *actual_local_name == local_name)
+                        }
+                        // NOTE: selector value can't be converted to the given encoding, so
+                        // it won't ever match.
+                        Err(_) => compile_expr!(@unmatchable),
+                    }
+                }
+                &OnTagNameExpr::NthChild(nth) => {
+                    compile_expr!(|state, _| nth.has_index(state.counter.cumulative))
+                }
+            }
+        );
+    }
+}
+
+impl Compilable for Expr<OnAttributesExpr> {
+    fn compile(
+        &self,
+        encoding: &'static Encoding,
+        ExprSet { attribute_exprs, .. }: &mut ExprSet
+    ) {
+        let &Self { negation, ref simple_expr } = self;
+        curry_compile_expr_macro!(negation);
+
+        #[inline]
+        fn compile_literal(encoding: &'static Encoding, lit: &str) -> Result<Bytes<'static>, HasReplacementsError> {
+            Bytes::from_str_without_replacements(lit, encoding).map(Bytes::into_owned)
         }
+
+        #[inline]
+        fn compile_literal_lowercase(encoding: &'static Encoding, lit: &str) -> Result<Bytes<'static>, HasReplacementsError> {
+            compile_literal(encoding, &lit.to_ascii_lowercase())
+        }
+
+        attribute_exprs.push(
+            match simple_expr {
+                OnAttributesExpr::Id(id) =>
+                    compile_literal(encoding, id)
+                        .map_or_else::<CompiledAttributeExpr, _, _>(
+                            |_| compile_expr!(@unmatchable),
+                            |id| compile_expr!(|_, m| m.has_id(&id))
+                        ),
+
+                OnAttributesExpr::Class(class) =>
+                    compile_literal(encoding, class)
+                        .map_or_else::<CompiledAttributeExpr, _, _>(
+                            |_| compile_expr!(@unmatchable),
+                            |class| compile_expr!(|_, m| m.has_class(&class))
+                        ),
+
+                OnAttributesExpr::AttributeExists(name) =>
+                    compile_literal(encoding, name)
+                        .map_or_else::<CompiledAttributeExpr, _, _>(
+                            |_| compile_expr!(@unmatchable),
+                            |name| compile_expr!(|_, m| m.has_attribute(&name))
+                        ),
+
+                &OnAttributesExpr::AttributeExpr(AttributeExpr { ref name, ref value, case_sensitivity, operator }) => {
+                    #[inline]
+                    fn compile_operands(encoding: &'static Encoding, name: &str, value: &str) -> Result<(Bytes<'static>, Bytes<'static>), HasReplacementsError> {
+                        Ok((compile_literal(encoding, name)?, compile_literal_lowercase(encoding, value)?))
+                    }
+
+                    compile_operands(encoding, name, value)
+                        .map_or_else::<CompiledAttributeExpr, _, _>(
+                            |_| compile_expr!(@unmatchable),
+                            move |(name, value)| {
+                                let operands = AttrExprOperands { name, value, case_sensitivity };
+                                match operator {
+                                    AttrSelectorOperator::Equal => compile_expr!(|_, m| m.attr_eq(&operands)),
+                                    AttrSelectorOperator::Includes => compile_expr!(|_, m| m.matches_splitted_by_whitespace(&operands)),
+                                    AttrSelectorOperator::DashMatch => compile_expr!(|_, m| m.has_dash_matching_attr(&operands)),
+                                    AttrSelectorOperator::Prefix => compile_expr!(|_, m| m.has_attr_with_prefix(&operands)),
+                                    AttrSelectorOperator::Suffix => compile_expr!(|_, m| m.has_attr_with_suffix(&operands)),
+                                    AttrSelectorOperator::Substring => compile_expr!(|_, m| m.has_attr_with_substring(&operands)),
+                                }
+                            }
+                        )
+                }
+            }
+        );
     }
 }
 
@@ -71,8 +161,8 @@ where
     P: PartialEq + Eq + Copy + Debug + Hash,
 {
     encoding: &'static Encoding,
-    instructions: Vec<Box<dyn Instr<P>>>,
-    free_space_ptr: usize,
+    instructions: Box<[Option<Instruction<P>>]>,
+    free_space: usize,
 }
 
 impl<P: 'static> Compiler<P>
@@ -82,146 +172,53 @@ where
     pub fn new(encoding: &'static Encoding) -> Self {
         Compiler {
             encoding,
-            instructions: Vec::default(),
-            free_space_ptr: 0,
-        }
-    }
-
-    fn compile_non_attr_expr(
-        &self,
-        expr: &NonAttributeExpr,
-        negation: bool,
-    ) -> CompiledNonAttributeExpr {
-        curry_compile_expr_macro!(negation);
-
-        match expr {
-            NonAttributeExpr::ExplicitAny => compile_expr!(@match_all),
-            NonAttributeExpr::Unmatchable => compile_expr!(@unmatchable),
-            NonAttributeExpr::LocalName(local_name) => {
-                match LocalName::from_str_without_replacements(&local_name, self.encoding)
-                    .map(LocalName::into_owned)
-                {
-                    Ok(local_name) => {
-                        compile_expr!(|actual_local_name| *actual_local_name == local_name)
-                    }
-                    // NOTE: selector value can't be converted to the given encoding, so
-                    // it won't ever match.
-                    Err(_) => compile_expr!(@unmatchable),
-                }
-            }
-        }
-    }
-
-    #[inline]
-    fn compile_literal(&self, lit: &str) -> Result<Bytes<'static>, ()> {
-        Bytes::from_str_without_replacements(lit, self.encoding).map(Bytes::into_owned)
-    }
-
-    #[inline]
-    fn compile_literal_lowercase(&self, lit: &str) -> Result<Bytes<'static>, ()> {
-        self.compile_literal(&lit.to_ascii_lowercase())
-    }
-
-    #[inline]
-    fn compile_attr_expr_operand(
-        &self,
-        operand: &AttributeExprOperand,
-    ) -> Result<CompiledAttributeExprOperand, ()> {
-        Ok(CompiledAttributeExprOperand {
-            name: self.compile_literal_lowercase(&operand.name)?,
-            value: self.compile_literal(&operand.value)?,
-            case_sensitivity: operand.case_sensitivity,
-        })
-    }
-
-    fn compile_attr_expr(&self, expr: &AttributeExpr, negation: bool) -> CompiledAttributeExpr {
-        curry_compile_expr_macro!(negation);
-
-        match expr {
-            AttributeExpr::Id(id) => self
-                .compile_literal(&id)
-                .compile_or(negation, |id| compile_expr!(|m| m.id_matches(&id))),
-
-            AttributeExpr::Class(class) => self
-                .compile_literal(&class)
-                .compile_or(negation, |class| compile_expr!(|m| m.has_class(&class))),
-
-            AttributeExpr::AttributeExists(name) => self
-                .compile_literal_lowercase(name)
-                .compile_or(negation, |name| compile_expr!(|m| m.has_attribute(&name))),
-
-            AttributeExpr::AttributeEqual(operand) => self
-                .compile_attr_expr_operand(operand)
-                .compile_or(negation, |operand| compile_expr!(|m| m.attr_eq(&operand))),
-
-            AttributeExpr::AttributeIncludes(operand) => self
-                .compile_attr_expr_operand(operand)
-                .compile_or(negation, |operand| {
-                    compile_expr!(|m| m.matches_splitted_by_whitespace(&operand))
-                }),
-
-            AttributeExpr::AttributeDashMatch(operand) => self
-                .compile_attr_expr_operand(operand)
-                .compile_or(negation, |operand| {
-                    compile_expr!(|m| m.has_dash_matching_attr(&operand))
-                }),
-
-            AttributeExpr::AttributePrefix(operand) => self
-                .compile_attr_expr_operand(operand)
-                .compile_or(negation, |operand| {
-                    compile_expr!(|m| m.has_attr_with_prefix(&operand))
-                }),
-
-            AttributeExpr::AttributeSuffix(operand) => self
-                .compile_attr_expr_operand(operand)
-                .compile_or(negation, |operand| {
-                    compile_expr!(|m| m.has_attr_with_suffix(&operand))
-                }),
-
-            AttributeExpr::AttributeSubstring(operand) => self
-                .compile_attr_expr_operand(operand)
-                .compile_or(negation, |operand| {
-                    compile_expr!(|m| m.has_attr_with_substring(&operand))
-                }),
+            instructions: Default::default(),
+            free_space: 0,
         }
     }
 
     fn compile_predicate(
         &self,
-        predicate: &Predicate,
+        Predicate {
+            on_tag_name_exprs,
+            on_attr_exprs,
+        }: &Predicate,
         branch: ExecutionBranch<P>,
-    ) -> Box<dyn Instr<P>> {
-        let non_attr_exprs = predicate.non_attr_exprs.as_ref().map(|e| {
-            e.iter()
-                .map(|expr| self.compile_non_attr_expr(&expr.simple_expr, expr.negation))
-                .collect::<Vec<_>>()
-        });
+    ) -> Instruction<P> {
+        #[inline]
+        fn compile_all<'a, T: Compilable + 'a, I: IntoIterator<Item = &'a T> + 'a>(iter: I, encoding: &'static Encoding, exprs: &mut ExprSet) {
+            iter.into_iter().for_each(|c| c.compile(encoding, exprs))
+        }
 
-        let attr_exprs = predicate.attr_exprs.as_ref().map(|e| {
-            e.iter()
-                .map(|expr| self.compile_attr_expr(&expr.simple_expr, expr.negation))
-                .collect::<Vec<_>>()
-        });
+        let mut exprs = ExprSet::default();
 
-        match (non_attr_exprs, attr_exprs) {
-            (Some(non_attr_exprs), None) => {
-                NonAttrExprMatchingInstr::new_boxed(branch, non_attr_exprs)
-            }
-            (None, Some(attr_exprs)) => AttrExprMatchingInstr::new_boxed(branch, attr_exprs),
-            (Some(non_attr_exprs), Some(attr_exprs)) => {
-                GenericInstr::new_boxed(branch, non_attr_exprs, attr_exprs)
-            }
-            _ => unreachable!("Predicate should contain expressions"),
+        compile_all(on_tag_name_exprs, self.encoding, &mut exprs);
+        compile_all(on_attr_exprs, self.encoding, &mut exprs);
+
+        let ExprSet {
+            local_name_exprs,
+            attribute_exprs,
+        } = exprs;
+
+        if local_name_exprs.is_empty() && attribute_exprs.is_empty() {
+            unreachable!("Predicate should contain expressions");
+        }
+
+        Instruction {
+            associated_branch: branch,
+            local_name_exprs: local_name_exprs.into(),
+            attribute_exprs: attribute_exprs.into(),
         }
     }
 
+    /// Reserves space for a set of nodes, returning the range for the nodes to be placed
     #[inline]
-    fn reserve_space_for_nodes(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
-        let addr_range = self.free_space_ptr..self.free_space_ptr + nodes.len();
+    fn reserve(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
+        let addr_range = self.free_space..self.free_space + nodes.len();
 
-        self.free_space_ptr = addr_range.end;
+        self.free_space = addr_range.end;
 
-        debug_assert!(self.free_space_ptr <= self.instructions.len());
+        debug_assert!(self.free_space <= self.instructions.len());
 
         addr_range
     }
@@ -238,30 +235,28 @@ where
     fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
         // we can reference them by range instead of vector of addresses.
-        let addr_range = self.reserve_space_for_nodes(&nodes);
+        let addr_range = self.reserve(&nodes);
 
-        for (i, node) in nodes.into_iter().enumerate() {
+        for (node, position) in nodes.into_iter().zip(addr_range.clone()) {
             let branch = ExecutionBranch {
                 matched_payload: node.payload,
                 jumps: self.compile_descendants(node.children),
                 hereditary_jumps: self.compile_descendants(node.descendants),
             };
 
-            self.instructions[addr_range.start + i] =
-                self.compile_predicate(&node.predicate, branch);
+            self.instructions[position] = Some(self.compile_predicate(&node.predicate, branch));
         }
 
         addr_range
     }
 
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
-        self.instructions
-            .resize_with(ast.cumulative_node_count, || InstrStub::new_boxed());
+        self.instructions = iter::repeat_with(|| None).take(ast.cumulative_node_count).collect();
 
         let entry_points = self.compile_nodes(ast.root);
 
         Program {
-            instructions: self.instructions,
+            instructions: self.instructions.into_vec().into_iter().map(|o| o.unwrap()).collect(),
             entry_points,
         }
     }
@@ -272,7 +267,7 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::Token;
-    use crate::selectors_vm::tests::test_with_token;
+    use crate::selectors_vm::{TryExecResult, tests::test_with_token};
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
     use std::collections::HashSet;
@@ -359,11 +354,13 @@ mod tests {
     fn for_each_test_case<T>(
         test_cases: &[(&str, T)],
         encoding: &'static Encoding,
-        action: impl Fn(&str, &T, LocalName, AttributeMatcher),
+        action: impl Fn(&str, &T, &SelectorState, LocalName, AttributeMatcher),
     ) {
         for (input, matching_data) in test_cases.iter() {
             with_start_tag(input, encoding, |local_name, attr_matcher| {
-                action(input, matching_data, local_name, attr_matcher);
+                let counter = Default::default();
+                let state = SelectorState { counter: &counter };
+                action(input, matching_data, &state, local_name, attr_matcher);
             });
         }
     }
@@ -374,18 +371,16 @@ mod tests {
         test_cases: &[(&str, bool)],
     ) {
         let program = compile(&[selector], encoding, 1);
-        let instr = &*program.instructions[program.entry_points.start];
+        let instr = &program.instructions[program.entry_points.start];
 
         for_each_test_case(
             test_cases,
             encoding,
-            |input, should_match, local_name, attr_matcher| {
-                instr
-                    .try_exec_without_attrs(&local_name)
-                    .expect_err("Instruction should not execute without attributes");
+            |input, should_match, state, local_name, attr_matcher| {
+                assert!(matches!(instr.try_exec_without_attrs(state, &local_name), TryExecResult::AttributesRequired), "Instruction should not execute without attributes");
 
-                let multi_step_res = instr.complete_execution_with_attrs(&attr_matcher);
-                let res = instr.exec(&local_name, &attr_matcher);
+                let multi_step_res = instr.complete_exec_with_attrs(&*state, &attr_matcher);
+                let res = instr.exec(state, &local_name, &attr_matcher);
 
                 assert_eq!(multi_step_res, res);
                 assert_instr_res!(res, should_match, selector, input, encoding);
@@ -400,21 +395,20 @@ mod tests {
     ) {
         for (selector, test_cases) in with_negated(selector, test_cases) {
             let program = compile(&[&selector], encoding, 1);
-            let instr = &*program.instructions[program.entry_points.start];
+            let instr = &program.instructions[program.entry_points.start];
 
             for_each_test_case(
                 &test_cases,
                 encoding,
-                |input, should_match, local_name, attr_matcher| {
-                    // NOTE: can't use unwrap() or expect() here, because
-                    // Debug is not implemented for the closure in the error type.
+                |input, should_match, state, local_name, attr_matcher| {
                     #[allow(clippy::match_wild_err_arm)]
-                    let multi_step_res = match instr.try_exec_without_attrs(&local_name) {
-                        Ok(res) => res,
-                        Err(_) => panic!("Should match without attribute request"),
+                    let multi_step_res = match instr.try_exec_without_attrs(state, &local_name) {
+                        TryExecResult::Branch(b) => Some(b),
+                        TryExecResult::Fail => None,
+                        TryExecResult::AttributesRequired => panic!("Should match without attribute request"),
                     };
 
-                    let res = instr.exec(&local_name, &attr_matcher);
+                    let res = instr.exec(state, &local_name, &attr_matcher);
 
                     assert_eq!(multi_step_res, res);
 
@@ -435,12 +429,13 @@ mod tests {
     }
 
     macro_rules! exec_generic_instr {
-        ($instr:expr, $local_name:expr, $attr_matcher:expr) => {{
-            let res = $instr.exec(&$local_name, &$attr_matcher);
+        ($instr:expr, $state:expr, $local_name:expr, $attr_matcher:expr) => {{
+            let res = $instr.exec($state, &$local_name, &$attr_matcher);
 
-            let multi_step_res = match $instr.try_exec_without_attrs(&$local_name) {
-                Ok(res) => res,
-                Err(_) => $instr.complete_execution_with_attrs(&$attr_matcher),
+            let multi_step_res = match $instr.try_exec_without_attrs($state, &$local_name) {
+                TryExecResult::Branch(b) => Some(b),
+                TryExecResult::Fail => None,
+                TryExecResult::AttributesRequired => $instr.complete_exec_with_attrs(&*$state, &$attr_matcher),
             };
 
             assert_eq!(res, multi_step_res);
@@ -455,13 +450,13 @@ mod tests {
         test_cases: &[(&str, bool)],
     ) {
         let program = compile(&[selector], encoding, 1);
-        let instr = &*program.instructions[program.entry_points.start];
+        let instr = &program.instructions[program.entry_points.start];
 
         for_each_test_case(
             &test_cases,
             encoding,
-            |input, should_match, local_name, attr_matcher| {
-                let res = exec_generic_instr!(instr, local_name, attr_matcher);
+            |input, should_match, state, local_name, attr_matcher| {
+                let res = exec_generic_instr!(instr, state, local_name, attr_matcher);
 
                 assert_instr_res!(res, should_match, selector, input, encoding);
             },
@@ -469,14 +464,14 @@ mod tests {
     }
 
     macro_rules! exec_instr_range {
-        ($range:expr, $program:expr, $local_name:expr, $attr_matcher:expr) => {{
+        ($range:expr, $program:expr, $state:expr, $local_name:expr, $attr_matcher:expr) => {{
             let mut matched_payload = HashSet::default();
             let mut jumps = Vec::default();
             let mut hereditary_jumps = Vec::default();
 
             for addr in $range.clone() {
                 let res =
-                    exec_generic_instr!($program.instructions[addr], $local_name, $attr_matcher);
+                    exec_generic_instr!($program.instructions[addr], $state, $local_name, $attr_matcher);
 
                 if let Some(res) = res {
                     for &p in res.matched_payload.iter() {
@@ -524,9 +519,9 @@ mod tests {
         for_each_test_case(
             &test_cases,
             UTF_8,
-            |input, expected_payload, local_name, attr_matcher| {
+            |input, expected_payload, state, local_name, attr_matcher| {
                 let (matched_payload, _, _) =
-                    exec_instr_range!(program.entry_points, program, local_name, attr_matcher);
+                    exec_instr_range!(program.entry_points, program, state, local_name, attr_matcher);
 
                 assert_payload!(matched_payload, expected_payload, selectors, input);
             },
@@ -903,9 +898,11 @@ mod tests {
             ($html:expr, $add_range:expr, $expected_payload:expr) => {{
                 let mut jumps = Vec::default();
                 let mut hereditary_jumps = Vec::default();
+                let counter = Default::default();
+                let state = SelectorState { counter: &counter };
 
                 with_start_tag($html, UTF_8, |local_name, attr_matcher| {
-                    let res = exec_instr_range!($add_range, program, local_name, attr_matcher);
+                    let res = exec_instr_range!($add_range, program, &state, local_name, attr_matcher);
 
                     assert_payload!(res.0, $expected_payload, selectors, $html);
 

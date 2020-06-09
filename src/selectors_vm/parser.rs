@@ -88,6 +88,8 @@ impl SelectorsParser {
             | Component::ExplicitNoNamespace
             | Component::ID(_)
             | Component::Class(_)
+            | Component::FirstChild
+            | Component::NthChild(_, _)
             | Component::AttributeInNoNamespaceExists { .. }
             | Component::AttributeInNoNamespace { .. } => Ok(()),
 
@@ -97,12 +99,10 @@ impl SelectorsParser {
 
             // Unsupported
             Component::Empty
-            | Component::FirstChild
             | Component::FirstOfType
             | Component::Host(_)
             | Component::LastChild
             | Component::LastOfType
-            | Component::NthChild(_, _)
             | Component::NthLastChild(_, _)
             | Component::NthLastOfType(_, _)
             | Component::NthOfType(_, _)
@@ -168,14 +168,16 @@ impl<'i> Parser<'i> for SelectorsParser {
 ///
 /// Currently the rewriter supports the following CSS selectors:
 ///
-/// Pattern                        | Represents                                                                                                            |
-/// ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-/// `*`                            | any element                                                                                                           |
-/// `E`                            | any element of type `E`                                                                                                 |
-/// `E:not(s)`                     | an `E` element that does not match either compound selector `s`                                                           |
-/// `E.warning`                    | an `E` element belonging to the class `warning`                                                                           |
-/// `E#myid`                       | an `E` element with `ID` equal to `"myid"`.                                                                                   |
-/// `E[foo]`                       | an `E` element with a `foo` attribute                                                                                     |
+/// Pattern                        | Represents                                                                                                                  |
+/// ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+/// `*`                            | any element                                                                                                                 |
+/// `E`                            | any element of type `E`                                                                                                     |
+/// `E:nth-child(2)`               | an `E` element that is the 2nd child in an element                                                                          |
+/// `E:first-child`                | an `E` element that is the first child of an element. The same as `E:nth-child(1)`                                          |
+/// `E:not(s)`                     | an `E` element that does not match either compound selector `s`                                                             |
+/// `E.warning`                    | an `E` element belonging to the class `warning`                                                                             |
+/// `E#myid`                       | an `E` element with `ID` equal to `"myid"`.                                                                                 |
+/// `E[foo]`                       | an `E` element with a `foo` attribute                                                                                       |
 /// `E[foo="bar"]`                 | an `E` element whose foo attribute value is exactly equal to `"bar"`                                                        |
 /// `E[foo="bar" i]`               | an `E` element whose foo attribute value is exactly equal to any (ASCII-range) case-permutation of `"bar"`                  |
 /// `E[foo="bar" s]`               | an `E` element whose foo attribute value is exactly and case-sensitively equal to `"bar"`                                   |
@@ -184,8 +186,8 @@ impl<'i> Parser<'i> for SelectorsParser {
 /// `E[foo$="bar"]`                | an `E` element whose foo attribute value ends exactly with the string `"bar"`                                               |
 /// `E[foo*="bar"]`                | an `E` element whose foo attribute value contains the substring `"bar"`                                                     |
 /// <code>E[foo&#124;="en"]</code> | an `E` element whose foo attribute value is a hyphen-separated list of values beginning with `"en"`                         |
-/// `E F`                          | an `F` element descendant of an `E` element                                                                               |
-/// `E > F`                        | an `F` element child of an `E` element                                                                                    |
+/// `E F`                          | an `F` element descendant of an `E` element                                                                                 |
+/// `E > F`                        | an `F` element child of an `E` element                                                                                      |
 ///
 /// [`str`]: https://doc.rust-lang.org/std/primitive.str.html
 /// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse

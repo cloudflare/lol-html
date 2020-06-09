@@ -59,13 +59,13 @@ impl<'r, 't> Element<'r, 't> {
     }
 
     fn tag_name_bytes_from_str(&self, name: &str) -> Result<Bytes<'static>, TagNameError> {
-        match name.chars().nth(0) {
+        match name.chars().next() {
             Some(ch) if !ch.is_ascii_alphabetic() => Err(TagNameError::InvalidFirstCharacter),
             Some(_) => {
-                if let Some(ch) = name.chars().find(|&ch| match ch {
-                    ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>' => true,
-                    _ => false,
-                }) {
+                if let Some(ch) = name
+                    .chars()
+                    .find(|&ch| matches!(ch, ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>'))
+                {
                     Err(TagNameError::ForbiddenCharacter(ch))
                 } else {
                     // NOTE: if character can't be represented in the given

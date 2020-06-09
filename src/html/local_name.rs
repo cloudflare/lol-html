@@ -1,5 +1,5 @@
 use super::Tag;
-use crate::base::{Bytes, Range};
+use crate::base::{Bytes, HasReplacementsError, Range};
 use encoding_rs::Encoding;
 
 // NOTE: All standard tag names contain only ASCII alpha characters
@@ -126,7 +126,7 @@ impl<'i> LocalName<'i> {
     pub fn from_str_without_replacements<'s>(
         string: &'s str,
         encoding: &'static Encoding,
-    ) -> Result<LocalName<'s>, ()> {
+    ) -> Result<LocalName<'s>, HasReplacementsError> {
         let hash = LocalNameHash::from(string);
 
         if hash.is_empty() {
