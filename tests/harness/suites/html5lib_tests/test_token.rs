@@ -3,7 +3,7 @@ use super::Unescape;
 use lol_html::Token;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
 

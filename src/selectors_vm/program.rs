@@ -1,8 +1,9 @@
 use super::SelectorState;
 use super::attribute_matcher::AttributeMatcher;
 use super::compiler::{CompiledAttributeExpr, CompiledLocalNameExpr};
+use bitflags::bitflags;
 use crate::html::LocalName;
-use std::collections::HashSet;
+use hashbrown::HashSet;
 use std::hash::Hash;
 use std::ops::Range;
 
@@ -96,10 +97,18 @@ where
     }
 }
 
+bitflags! {
+    pub struct ProgramFlags: u16 {
+        /// Enables nth-of-type tag tracking.
+        const NTH_OF_TYPE = 0b0000_0001;
+    }
+}
+
 pub struct Program<P>
 where
     P: Hash + Eq,
 {
     pub instructions: Box<[Instruction<P>]>,
     pub entry_points: AddressRange,
+    pub flags: ProgramFlags,
 }

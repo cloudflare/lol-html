@@ -4,8 +4,8 @@ use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
 use crate::transform_stream::*;
+use hashbrown::HashSet;
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Default)]

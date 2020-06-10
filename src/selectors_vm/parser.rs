@@ -90,6 +90,8 @@ impl SelectorsParser {
             | Component::Class(_)
             | Component::FirstChild
             | Component::NthChild(_, _)
+            | Component::FirstOfType
+            | Component::NthOfType(_, _)
             | Component::AttributeInNoNamespaceExists { .. }
             | Component::AttributeInNoNamespace { .. } => Ok(()),
 
@@ -99,13 +101,11 @@ impl SelectorsParser {
 
             // Unsupported
             Component::Empty
-            | Component::FirstOfType
             | Component::Host(_)
             | Component::LastChild
             | Component::LastOfType
             | Component::NthLastChild(_, _)
             | Component::NthLastOfType(_, _)
-            | Component::NthOfType(_, _)
             | Component::OnlyChild
             | Component::OnlyOfType
             | Component::Root

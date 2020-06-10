@@ -1,7 +1,7 @@
 use super::parser::{Selector, SelectorImplDescriptor};
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component};
-use std::collections::HashSet;
+use hashbrown::HashSet;
 use std::fmt::{self, Formatter, Debug};
 use std::hash::Hash;
 
@@ -40,6 +40,7 @@ pub enum OnTagNameExpr {
     Unmatchable,
     LocalName(String),
     NthChild(NthChild),
+    NthOfType(NthChild),
 }
 
 #[derive(Eq, PartialEq)]
@@ -138,6 +139,12 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
             }
             &Component::NthChild(a, b) => {
                 Condition::OnTagName(OnTagNameExpr::NthChild(NthChild::new(a, b)))
+            }
+            Component::FirstOfType => {
+                Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::first()))
+            },
+            &Component::NthOfType(a, b) => {
+                Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(a, b)))
             }
             // NOTE: the rest of the components are explicit namespace or
             // pseudo class-related. Ideally none of them should appear in
@@ -811,7 +818,6 @@ mod tests {
             ":empty",
             ":enabled",
             ":first",
-            ":first-of-type",
             ":fullscreen",
             ":future",
             ":focus",
@@ -836,7 +842,6 @@ mod tests {
             ":nth-last-child(1)",
             ":nth-last-col(1)",
             ":nth-last-of-type(1)",
-            ":nth-of-type(1)",
             ":only-child",
             ":only-of-type",
             ":optional",

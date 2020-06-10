@@ -1,6 +1,6 @@
 use super::attribute_matcher::AttributeMatcher;
 use super::program::{
-    AddressRange, ExecutionBranch, Program, Instruction
+    AddressRange, ExecutionBranch, Program, Instruction, ProgramFlags
 };
 use super::{Ast, AstNode, Expr, AttributeExpr, OnTagNameExpr, OnAttributesExpr, Predicate, SelectorState};
 use crate::base::{Bytes, HasReplacementsError};
@@ -51,7 +51,7 @@ macro_rules! curry_compile_expr_macro {
 }
 
 trait Compilable {
-    fn compile(&self, encoding: &'static Encoding, exprs: &mut ExprSet);
+    fn compile(&self, encoding: &'static Encoding, exprs: &mut ExprSet, flags: &mut ProgramFlags);
 }
 
 impl Compilable for Expr<OnTagNameExpr> {
@@ -59,6 +59,7 @@ impl Compilable for Expr<OnTagNameExpr> {
         &self,
         encoding: &'static Encoding,
         ExprSet { local_name_exprs, .. }: &mut ExprSet,
+        flags: &mut ProgramFlags,
     ) {
         let &Self { negation, ref simple_expr } = self;
         curry_compile_expr_macro!(negation);
@@ -80,7 +81,11 @@ impl Compilable for Expr<OnTagNameExpr> {
                     }
                 }
                 &OnTagNameExpr::NthChild(nth) => {
-                    compile_expr!(|state, _| nth.has_index(state.counter.cumulative))
+                    compile_expr!(|state, _| state.counter.is_nth(nth))
+                }
+                &OnTagNameExpr::NthOfType(nth) => {
+                    *flags |= ProgramFlags::NTH_OF_TYPE;
+                    compile_expr!(|state, _| state.type_counter.expect("Counter for type required at this point").is_nth(nth))
                 }
             }
         );
@@ -91,7 +96,8 @@ impl Compilable for Expr<OnAttributesExpr> {
     fn compile(
         &self,
         encoding: &'static Encoding,
-        ExprSet { attribute_exprs, .. }: &mut ExprSet
+        ExprSet { attribute_exprs, .. }: &mut ExprSet,
+        _: &mut ProgramFlags,
     ) {
         let &Self { negation, ref simple_expr } = self;
         curry_compile_expr_macro!(negation);
@@ -184,16 +190,17 @@ where
             on_attr_exprs,
         }: &Predicate,
         branch: ExecutionBranch<P>,
+        flags: &mut ProgramFlags,
     ) -> Instruction<P> {
         #[inline]
-        fn compile_all<'a, T: Compilable + 'a, I: IntoIterator<Item = &'a T> + 'a>(iter: I, encoding: &'static Encoding, exprs: &mut ExprSet) {
-            iter.into_iter().for_each(|c| c.compile(encoding, exprs))
+        fn compile_all<'a, T: Compilable + 'a, I: IntoIterator<Item = &'a T> + 'a>(iter: I, encoding: &'static Encoding, exprs: &mut ExprSet, flags: &mut ProgramFlags) {
+            iter.into_iter().for_each(|c| c.compile(encoding, exprs, flags))
         }
 
         let mut exprs = ExprSet::default();
 
-        compile_all(on_tag_name_exprs, self.encoding, &mut exprs);
-        compile_all(on_attr_exprs, self.encoding, &mut exprs);
+        compile_all(on_tag_name_exprs, self.encoding, &mut exprs, flags);
+        compile_all(on_attr_exprs, self.encoding, &mut exprs, flags);
 
         let ExprSet {
             local_name_exprs,
@@ -224,15 +231,15 @@ where
     }
 
     #[inline]
-    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>) -> Option<AddressRange> {
+    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>, flags: &mut ProgramFlags) -> Option<AddressRange> {
         if nodes.is_empty() {
             None
         } else {
-            Some(self.compile_nodes(nodes))
+            Some(self.compile_nodes(nodes, flags))
         }
     }
 
-    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>) -> AddressRange {
+    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>, flags: &mut ProgramFlags) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
         // we can reference them by range instead of vector of addresses.
         let addr_range = self.reserve(&nodes);
@@ -240,24 +247,26 @@ where
         for (node, position) in nodes.into_iter().zip(addr_range.clone()) {
             let branch = ExecutionBranch {
                 matched_payload: node.payload,
-                jumps: self.compile_descendants(node.children),
-                hereditary_jumps: self.compile_descendants(node.descendants),
+                jumps: self.compile_descendants(node.children, flags),
+                hereditary_jumps: self.compile_descendants(node.descendants, flags),
             };
 
-            self.instructions[position] = Some(self.compile_predicate(&node.predicate, branch));
+            self.instructions[position] = Some(self.compile_predicate(&node.predicate, branch, flags));
         }
 
         addr_range
     }
 
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
+        let mut flags = ProgramFlags::empty();
         self.instructions = iter::repeat_with(|| None).take(ast.cumulative_node_count).collect();
 
-        let entry_points = self.compile_nodes(ast.root);
+        let entry_points = self.compile_nodes(ast.root, &mut flags);
 
         Program {
             instructions: self.instructions.into_vec().into_iter().map(|o| o.unwrap()).collect(),
             entry_points,
+            flags,
         }
     }
 }
@@ -270,7 +279,7 @@ mod tests {
     use crate::selectors_vm::{TryExecResult, tests::test_with_token};
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
-    use std::collections::HashSet;
+    use hashbrown::HashSet;
 
     macro_rules! assert_instr_res {
         ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
@@ -359,7 +368,7 @@ mod tests {
         for (input, matching_data) in test_cases.iter() {
             with_start_tag(input, encoding, |local_name, attr_matcher| {
                 let counter = Default::default();
-                let state = SelectorState { counter: &counter };
+                let state = SelectorState { counter: &counter, type_counter: None };
                 action(input, matching_data, &state, local_name, attr_matcher);
             });
         }
@@ -899,7 +908,7 @@ mod tests {
                 let mut jumps = Vec::default();
                 let mut hereditary_jumps = Vec::default();
                 let counter = Default::default();
-                let state = SelectorState { counter: &counter };
+                let state = SelectorState { counter: &counter, type_counter: None };
 
                 with_start_tag($html, UTF_8, |local_name, attr_matcher| {
                     let res = exec_instr_range!($add_range, program, &state, local_name, attr_matcher);

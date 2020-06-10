@@ -3,7 +3,7 @@ use crate::harness::Input;
 use lol_html::test_utils::ASCII_COMPATIBLE_ENCODINGS;
 use lol_html::Selector;
 use serde_json::{self, from_reader};
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::io::prelude::*;
 
 fn read_test_file(suite: &'static str, name: &str) -> String {
