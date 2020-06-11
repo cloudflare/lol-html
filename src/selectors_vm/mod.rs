@@ -67,8 +67,8 @@ struct Bailout<T> {
 
 /// A container for tracking state from various places on the stack.
 pub struct SelectorState<'i> {
-    pub counter: &'i ChildCounter,
-    pub type_counter: Option<&'i ChildCounter>,
+    pub cumulative: &'i ChildCounter,
+    pub typed: Option<&'i ChildCounter>,
 }
 
 struct ExecutionCtx<'i, E: ElementData> {
@@ -356,8 +356,9 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         ctx: &mut ExecutionCtx<E>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
+        let state = self.stack.build_state(&ctx.stack_item.local_name);
         if let Some(branch) =
-            self.program.instructions[addr].complete_exec_with_attrs(&self.stack.build_state(&ctx.stack_item.local_name), &attr_matcher)
+            self.program.instructions[addr].complete_exec_with_attrs(&state, &attr_matcher)
         {
             ctx.add_execution_branch(branch, match_handler);
         }
@@ -371,9 +372,10 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<usize>> {
         let start = addr_range.start;
+        let state = self.stack.build_state(&ctx.stack_item.local_name);
 
         for addr in addr_range {
-            match self.program.instructions[addr].try_exec_without_attrs(&self.stack.build_state(&ctx.stack_item.local_name), &ctx.stack_item.local_name) {
+            match self.program.instructions[addr].try_exec_without_attrs(&state, &ctx.stack_item.local_name) {
                 TryExecResult::Branch(branch) => {
                     ctx.add_execution_branch(branch, match_handler)
                 }
@@ -383,7 +385,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
                         recovery_point: addr - start + 1,
                     });
                 },
-                _ => { }
+                _ => ()
             }
         }
 
@@ -399,10 +401,11 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         offset: usize,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
+        let state = self.stack.build_state(&ctx.stack_item.local_name);
         for addr in addr_range.start + offset..addr_range.end {
             let instr = &self.program.instructions[addr];
 
-            if let Some(branch) = instr.exec(&self.stack.build_state(&ctx.stack_item.local_name), &ctx.stack_item.local_name, attr_matcher) {
+            if let Some(branch) = instr.exec(&state, &ctx.stack_item.local_name, attr_matcher) {
                 ctx.add_execution_branch(branch, match_handler);
             }
         }

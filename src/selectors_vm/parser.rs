@@ -172,8 +172,10 @@ impl<'i> Parser<'i> for SelectorsParser {
 /// ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 /// `*`                            | any element                                                                                                                 |
 /// `E`                            | any element of type `E`                                                                                                     |
-/// `E:nth-child(2)`               | an `E` element that is the 2nd child in an element                                                                          |
-/// `E:first-child`                | an `E` element that is the first child of an element. The same as `E:nth-child(1)`                                          |
+/// `E:nth-child(n)`               | an `E` element, the n-th child of its parent                                                                                |
+/// `E:first-child`                | an `E` element, first child of its parent                                                                                   |
+/// `E:nth-of-type(n)`             | an `E` element, the n-th sibling of its type                                                                                |
+/// `E:first-of-type`              | an `E` element, first sibling of its type                                                                                   |
 /// `E:not(s)`                     | an `E` element that does not match either compound selector `s`                                                             |
 /// `E.warning`                    | an `E` element belonging to the class `warning`                                                                             |
 /// `E#myid`                       | an `E` element with `ID` equal to `"myid"`.                                                                                 |

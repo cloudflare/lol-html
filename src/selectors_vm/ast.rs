@@ -13,23 +13,31 @@ pub struct NthChild {
 
 impl NthChild {
     /// A first child with a step of 0 and an offset of 1
+    #[inline]
     pub fn first() -> Self {
         Self::new(0, 1)
     }
 
+    #[inline]
     pub fn new(step: i32, offset: i32) -> Self {
         Self { step, offset }
     }
 
     pub fn has_index(self, index: i32) -> bool {
         let Self { offset, step } = self;
-        let offsetted = index - offset;
+        // wrap to prevent panic/abort. we won't wrap around anyway, even with a
+        // max offset value (i32::MAX) since index is always more than 0
+        let offsetted = index.wrapping_sub(offset);
         if step == 0 {
             offsetted == 0
         } else if (offsetted < 0 && step > 0) || (offsetted > 0 && step < 0) {
             false
         } else {
-            (offsetted % step) == 0
+            // again, wrap the remainder op. overflow only occurs with
+            // i32::MIN / -1. while the step can be -1, the offsetted
+            // value will never be i32::MIN since this index is always
+            // more than 0
+            offsetted.wrapping_rem(step) == 0
         }
     }
 }
@@ -44,14 +52,14 @@ pub enum OnTagNameExpr {
 }
 
 #[derive(Eq, PartialEq)]
-pub struct AttributeExpr {
+pub struct AttributeComparisonExpr {
     pub name: String,
     pub value: String,
     pub case_sensitivity: ParsedCaseSensitivity,
     pub operator: AttrSelectorOperator,
 }
 
-impl AttributeExpr {
+impl AttributeComparisonExpr {
     #[inline]
     pub fn new(
         name: String,
@@ -63,7 +71,7 @@ impl AttributeExpr {
     }
 }
 
-impl Debug for AttributeExpr {
+impl Debug for AttributeComparisonExpr {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("AttributeExpr")
             .field("name", &self.name)
@@ -87,7 +95,7 @@ pub enum OnAttributesExpr {
     Id(String),
     Class(String),
     AttributeExists(String),
-    AttributeExpr(AttributeExpr),
+    AttributeComparisonExpr(AttributeComparisonExpr),
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -126,7 +134,7 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                 if never_matches {
                     Condition::OnTagName(OnTagNameExpr::Unmatchable)
                 } else {
-                    Condition::OnAttributes(OnAttributesExpr::AttributeExpr(AttributeExpr::new(
+                    Condition::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr::new(
                         local_name.to_owned(),
                         value.to_owned(),
                         case_sensitivity,
@@ -411,7 +419,7 @@ mod tests {
             (
                 r#"[foo="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeExpr(AttributeExpr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
@@ -423,7 +431,7 @@ mod tests {
             (
                 r#"[foo~="bar" i]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeExpr(AttributeExpr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::AsciiCaseInsensitive,
@@ -435,7 +443,7 @@ mod tests {
             (
                 r#"[foo|="bar" s]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeExpr(AttributeExpr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::ExplicitCaseSensitive,
@@ -447,7 +455,7 @@ mod tests {
             (
                 r#"[foo^="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeExpr(AttributeExpr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
@@ -459,7 +467,7 @@ mod tests {
             (
                 r#"[foo*="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeExpr(AttributeExpr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
@@ -471,7 +479,7 @@ mod tests {
             (
                 r#"[foo$="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeExpr(AttributeExpr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
@@ -483,7 +491,7 @@ mod tests {
             (
                 r#":not([foo$="bar"])"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeExpr(AttributeExpr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
