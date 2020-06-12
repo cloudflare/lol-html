@@ -18,8 +18,8 @@ pub use self::attribute_matcher::AttributeMatcher;
 pub use self::compiler::Compiler;
 pub use self::error::SelectorError;
 pub use self::parser::Selector;
-pub use self::program::{ExecutionBranch, Program};
-pub use self::stack::{ElementData, Stack, StackItem};
+pub use self::program::{ExecutionBranch, Program, TryExecResult};
+pub use self::stack::{ElementData, Stack, StackItem, ChildCounter};
 
 pub struct MatchInfo<P> {
     pub payload: P,
@@ -63,6 +63,12 @@ struct HereditaryJumpPtr {
 struct Bailout<T> {
     at_addr: usize,
     recovery_point: T,
+}
+
+/// A container for tracking state from various places on the stack.
+pub struct SelectorState<'i> {
+    pub cumulative: &'i ChildCounter,
+    pub typed: Option<&'i ChildCounter>,
 }
 
 struct ExecutionCtx<'i, E: ElementData> {
@@ -141,10 +147,11 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         memory_limiter: SharedMemoryLimiter,
     ) -> Self {
         let program = Compiler::new(encoding).compile(ast);
+        let enable_nth_of_type = program.enable_nth_of_type;
 
         SelectorMatchingVm {
             program,
-            stack: Stack::new(memory_limiter),
+            stack: Stack::new(memory_limiter, enable_nth_of_type),
         }
     }
 
@@ -156,9 +163,11 @@ impl<E: ElementData> SelectorMatchingVm<E> {
     ) -> Result<(), VmError<E, E::MatchPayload>> {
         use StackDirective::*;
 
+        self.stack.add_child(&local_name);
+
         let mut ctx = ExecutionCtx::new(local_name, ns);
 
-        match self.stack.get_stack_directive(&ctx.stack_item, ns) {
+        match Stack::get_stack_directive(&ctx.stack_item, ns) {
             PopImmediately => {
                 ctx.with_content = false;
                 self.exec_without_attrs(ctx, match_handler)
@@ -347,8 +356,9 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         ctx: &mut ExecutionCtx<E>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
+        let state = self.stack.build_state(&ctx.stack_item.local_name);
         if let Some(branch) =
-            self.program.instructions[addr].complete_execution_with_attrs(&attr_matcher)
+            self.program.instructions[addr].complete_exec_with_attrs(&state, &attr_matcher)
         {
             ctx.add_execution_branch(branch, match_handler);
         }
@@ -362,18 +372,20 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<usize>> {
         let start = addr_range.start;
+        let state = self.stack.build_state(&ctx.stack_item.local_name);
 
         for addr in addr_range {
-            let instr = &self.program.instructions[addr];
-            let result = instr.try_exec_without_attrs(&ctx.stack_item.local_name);
-
-            if let Ok(Some(branch)) = result {
-                ctx.add_execution_branch(branch, match_handler)
-            } else if result.is_err() {
-                return Err(Bailout {
-                    at_addr: addr,
-                    recovery_point: addr - start + 1,
-                });
+            match self.program.instructions[addr].try_exec_without_attrs(&state, &ctx.stack_item.local_name) {
+                TryExecResult::Branch(branch) => {
+                    ctx.add_execution_branch(branch, match_handler)
+                }
+                TryExecResult::AttributesRequired => {
+                    return Err(Bailout {
+                        at_addr: addr,
+                        recovery_point: addr - start + 1,
+                    });
+                },
+                _ => ()
             }
         }
 
@@ -389,10 +401,11 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         offset: usize,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
+        let state = self.stack.build_state(&ctx.stack_item.local_name);
         for addr in addr_range.start + offset..addr_range.end {
             let instr = &self.program.instructions[addr];
 
-            if let Some(branch) = instr.exec(&ctx.stack_item.local_name, attr_matcher) {
+            if let Some(branch) = instr.exec(&state, &ctx.stack_item.local_name, attr_matcher) {
                 ctx.add_execution_branch(branch, match_handler);
             }
         }
@@ -535,11 +548,12 @@ mod tests {
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
     };
     use encoding_rs::UTF_8;
-    use std::collections::{HashMap, HashSet};
+    use hashbrown::{HashMap, HashSet};
 
     struct Expectation {
         should_bailout: bool,
         should_match_with_content: bool,
+        /// The indexes of selectors that match this tag
         matched_payload: HashSet<usize>,
     }
 
@@ -963,6 +977,234 @@ mod tests {
                 matched_payload: set![0, 1, 2],
             }
         );
+    }
+
+    #[test]
+    fn nth_child() {
+        let mut vm = create_vm!(&["div:first-child", "div:nth-child(2n+1)"]);
+
+        // Stack:
+        // 0: html
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<html>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![0, 1],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(0, 1), (1, 1)]);
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: false,
+                matched_payload: set![],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        exec_for_end_tag_and_assert!(vm, "</div>", map![]);
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![1],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: div
+        // 2: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![0, 1],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(0, 1), (1, 1)]);
+
+        // Stack:
+        // 0: html
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(1, 1)]);
+
+        // Stack:
+        exec_for_end_tag_and_assert!(vm, "</html>", map![]);
+    }
+
+    #[test]
+    fn nth_of_type() {
+        let mut vm = create_vm!(&["div:first-of-type", "div:nth-of-type(2n+1)"]);
+
+        // Stack:
+        // 0: html
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<html>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![0, 1],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(0, 1), (1, 1)]);
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: false,
+                matched_payload: set![],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        exec_for_end_tag_and_assert!(vm, "</div>", map![]);
+
+        // Stack:
+        // 0: html
+        // 1: a
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<a>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: a
+        // 2: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![0, 1],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: a
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(0, 1), (1, 1)]);
+
+        // Stack:
+        // 0: html
+        exec_for_end_tag_and_assert!(vm, "</a>", map![]);
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![1],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: div
+        // 2: div
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![0, 1],
+            }
+        );
+
+        // Stack:
+        // 0: html
+        // 1: div
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(0, 1), (1, 1)]);
+
+        // Stack:
+        // 0: html
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(1, 1)]);
+
+        // Stack:
+        exec_for_end_tag_and_assert!(vm, "</html>", map![]);
     }
 
     #[test]

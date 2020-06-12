@@ -1,4 +1,4 @@
-use super::compiler::CompiledAttributeExprOperand;
+use super::compiler::AttrExprOperands;
 use crate::base::Bytes;
 use crate::html::Namespace;
 use crate::parser::{AttributeOutline, SharedAttributeBuffer};
@@ -75,7 +75,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn id_matches(&self, id: &Bytes) -> bool {
+    pub fn has_id(&self, id: &Bytes) -> bool {
         match self.id.borrow_with(|| self.get_value(&ID_ATTR)) {
             Some(actual_id) => actual_id == id,
             None => false,
@@ -101,7 +101,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn attr_eq(&self, operand: &CompiledAttributeExprOperand) -> bool {
+    pub fn attr_eq(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             operand
                 .case_sensitivity
@@ -111,7 +111,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn matches_splitted_by_whitespace(&self, operand: &CompiledAttributeExprOperand) -> bool {
+    pub fn matches_splitted_by_whitespace(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = operand
                 .case_sensitivity
@@ -124,7 +124,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn has_attr_with_prefix(&self, operand: &CompiledAttributeExprOperand) -> bool {
+    pub fn has_attr_with_prefix(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = operand
                 .case_sensitivity
@@ -138,7 +138,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn has_dash_matching_attr(&self, operand: &CompiledAttributeExprOperand) -> bool {
+    pub fn has_dash_matching_attr(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = operand
                 .case_sensitivity
@@ -156,7 +156,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn has_attr_with_suffix(&self, operand: &CompiledAttributeExprOperand) -> bool {
+    pub fn has_attr_with_suffix(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = operand
                 .case_sensitivity
@@ -171,7 +171,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    pub fn has_attr_with_substring(&self, operand: &CompiledAttributeExprOperand) -> bool {
+    pub fn has_attr_with_substring(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = operand
                 .case_sensitivity

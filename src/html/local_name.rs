@@ -1,5 +1,5 @@
 use super::Tag;
-use crate::base::{Bytes, Range};
+use crate::base::{Bytes, HasReplacementsError, Range};
 use encoding_rs::Encoding;
 
 // NOTE: All standard tag names contain only ASCII alpha characters
@@ -25,7 +25,7 @@ use encoding_rs::Encoding;
 // for digits, but considering that tag name can't start with a digit
 // we are safe here, since we'll just get first character shifted left
 // by zeroes as repetitave 1 digits get added to the hash.
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Default, Hash)]
 pub struct LocalNameHash(Option<u64>);
 
 impl LocalNameHash {
@@ -98,7 +98,7 @@ impl PartialEq<Tag> for LocalNameHash {
 /// LocalName is used for the comparison of tag names.
 /// In the majority of cases it will be represented as a hash, however for long
 /// non-standard tag names it fallsback to the Name representation.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, Hash)]
 pub enum LocalName<'i> {
     Hash(LocalNameHash),
     Bytes(Bytes<'i>),
@@ -126,7 +126,7 @@ impl<'i> LocalName<'i> {
     pub fn from_str_without_replacements<'s>(
         string: &'s str,
         encoding: &'static Encoding,
-    ) -> Result<LocalName<'s>, ()> {
+    ) -> Result<LocalName<'s>, HasReplacementsError> {
         let hash = LocalNameHash::from(string);
 
         if hash.is_empty() {

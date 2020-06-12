@@ -6,8 +6,12 @@ use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::str;
 
+/// An error used to indicate that an encoded string has replacements and can't be converted losslessly.
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct HasReplacementsError;
+
 /// A thin wrapper around either byte slice or owned bytes with some handy APIs attached
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Bytes<'b>(Cow<'b, [u8]>);
 
 impl<'b> Bytes<'b> {
@@ -20,11 +24,11 @@ impl<'b> Bytes<'b> {
     pub fn from_str_without_replacements(
         string: &'b str,
         encoding: &'static Encoding,
-    ) -> Result<Self, ()> {
+    ) -> Result<Self, HasReplacementsError> {
         let (res, _, has_replacements) = encoding.encode(string);
 
         if has_replacements {
-            Err(())
+            Err(HasReplacementsError)
         } else {
             Ok(res.into())
         }

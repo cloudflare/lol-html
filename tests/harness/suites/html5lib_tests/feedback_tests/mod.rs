@@ -3,7 +3,7 @@ mod expected_tokens;
 use super::super::{for_each_test_file, get_test_file_reader};
 use super::{default_initial_states, Bailout, TestCase};
 use serde_json::from_reader;
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 

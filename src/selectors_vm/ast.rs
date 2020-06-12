@@ -1,86 +1,128 @@
 use super::parser::{Selector, SelectorImplDescriptor};
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component};
-use std::collections::HashSet;
-use std::fmt::Debug;
+use hashbrown::HashSet;
+use std::fmt::{self, Formatter, Debug};
 use std::hash::Hash;
 
-#[derive(Eq, PartialEq, Debug)]
-pub struct AttributeExprOperand {
-    pub name: String,
-    pub value: String,
-    pub case_sensitivity: ParsedCaseSensitivity,
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+pub struct NthChild {
+    step: i32,
+    offset: i32,
 }
 
-#[derive(PartialEq, Eq, Debug)]
-pub enum AttributeExpr {
-    Id(String),
-    Class(String),
-    AttributeExists(String),
-    AttributeEqual(AttributeExprOperand),
-    AttributeIncludes(AttributeExprOperand),
-    AttributeDashMatch(AttributeExprOperand),
-    AttributePrefix(AttributeExprOperand),
-    AttributeSubstring(AttributeExprOperand),
-    AttributeSuffix(AttributeExprOperand),
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub enum NonAttributeExpr {
-    ExplicitAny,
-    Unmatchable,
-    LocalName(String),
-}
-
-enum SimpleExpr {
-    NonAttributeExpr(NonAttributeExpr),
-    AttributeExpr(AttributeExpr),
-}
-
-impl SimpleExpr {
+impl NthChild {
+    /// A first child with a step of 0 and an offset of 1
     #[inline]
-    fn attr_expr_for_operator(
-        operator: AttrSelectorOperator,
-        name: &str,
-        value: &str,
-        case_sensitivity: ParsedCaseSensitivity,
-    ) -> AttributeExpr {
-        use AttrSelectorOperator::*;
+    pub fn first() -> Self {
+        Self::new(0, 1)
+    }
 
-        let operand = AttributeExprOperand {
-            name: name.to_owned(),
-            value: value.to_owned(),
-            case_sensitivity,
-        };
+    #[inline]
+    pub fn new(step: i32, offset: i32) -> Self {
+        Self { step, offset }
+    }
 
-        match operator {
-            DashMatch => AttributeExpr::AttributeDashMatch(operand),
-            Equal => AttributeExpr::AttributeEqual(operand),
-            Includes => AttributeExpr::AttributeIncludes(operand),
-            Prefix => AttributeExpr::AttributePrefix(operand),
-            Substring => AttributeExpr::AttributeSubstring(operand),
-            Suffix => AttributeExpr::AttributeSuffix(operand),
+    pub fn has_index(self, index: i32) -> bool {
+        let Self { offset, step } = self;
+        // wrap to prevent panic/abort. we won't wrap around anyway, even with a
+        // max offset value (i32::MAX) since index is always more than 0
+        let offsetted = index.wrapping_sub(offset);
+        if step == 0 {
+            offsetted == 0
+        } else if (offsetted < 0 && step > 0) || (offsetted > 0 && step < 0) {
+            false
+        } else {
+            // again, wrap the remainder op. overflow only occurs with
+            // i32::MIN / -1. while the step can be -1, the offsetted
+            // value will never be i32::MIN since this index is always
+            // more than 0
+            offsetted.wrapping_rem(step) == 0
         }
     }
 }
 
-impl From<&Component<SelectorImplDescriptor>> for SimpleExpr {
+#[derive(PartialEq, Eq, Debug)]
+pub enum OnTagNameExpr {
+    ExplicitAny,
+    Unmatchable,
+    LocalName(String),
+    NthChild(NthChild),
+    NthOfType(NthChild),
+}
+
+#[derive(Eq, PartialEq)]
+pub struct AttributeComparisonExpr {
+    pub name: String,
+    pub value: String,
+    pub case_sensitivity: ParsedCaseSensitivity,
+    pub operator: AttrSelectorOperator,
+}
+
+impl AttributeComparisonExpr {
+    #[inline]
+    pub fn new(
+        name: String,
+        value: String,
+        case_sensitivity: ParsedCaseSensitivity,
+        operator: AttrSelectorOperator,
+    ) -> Self {
+        Self { name, value, operator, case_sensitivity }
+    }
+}
+
+impl Debug for AttributeComparisonExpr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AttributeExpr")
+            .field("name", &self.name)
+            .field("value", &self.value)
+            .field("case_sensitivity", &self.case_sensitivity)
+            .field("operator", match self.operator {
+                AttrSelectorOperator::Equal     => &"AttrSelectorOperator::Equal",
+                AttrSelectorOperator::Includes  => &"AttrSelectorOperator::Includes",
+                AttrSelectorOperator::DashMatch => &"AttrSelectorOperator::DashMatch",
+                AttrSelectorOperator::Prefix    => &"AttrSelectorOperator::Prefix",
+                AttrSelectorOperator::Substring => &"AttrSelectorOperator::Substring",
+                AttrSelectorOperator::Suffix    => &"AttrSelectorOperator::Suffix",
+            })
+            .finish()
+    }
+}
+
+/// An attribute check when attributes are received and parsed.
+#[derive(PartialEq, Eq, Debug)]
+pub enum OnAttributesExpr {
+    Id(String),
+    Class(String),
+    AttributeExists(String),
+    AttributeComparisonExpr(AttributeComparisonExpr),
+}
+
+#[derive(PartialEq, Eq, Debug)]
+/// Conditions executed as part of a predicate, or an "expect" in pseudo instructions.
+/// These are executed in order of definition.
+enum Condition {
+    OnTagName(OnTagNameExpr),
+    OnAttributes(OnAttributesExpr),
+}
+
+impl From<&Component<SelectorImplDescriptor>> for Condition {
     #[inline]
     fn from(component: &Component<SelectorImplDescriptor>) -> Self {
         match component {
             Component::LocalName(n) => {
-                SimpleExpr::NonAttributeExpr(NonAttributeExpr::LocalName(n.name.to_owned()))
+                Condition::OnTagName(OnTagNameExpr::LocalName(n.name.to_owned()))
             }
             Component::ExplicitUniversalType | Component::ExplicitAnyNamespace => {
-                SimpleExpr::NonAttributeExpr(NonAttributeExpr::ExplicitAny)
+                Condition::OnTagName(OnTagNameExpr::ExplicitAny)
             }
             Component::ExplicitNoNamespace => {
-                SimpleExpr::NonAttributeExpr(NonAttributeExpr::Unmatchable)
+                Condition::OnTagName(OnTagNameExpr::Unmatchable)
             }
-            Component::ID(id) => SimpleExpr::AttributeExpr(AttributeExpr::Id(id.to_owned())),
-            Component::Class(c) => SimpleExpr::AttributeExpr(AttributeExpr::Class(c.to_owned())),
+            Component::ID(id) => Condition::OnAttributes(OnAttributesExpr::Id(id.to_owned())),
+            Component::Class(c) => Condition::OnAttributes(OnAttributesExpr::Class(c.to_owned())),
             Component::AttributeInNoNamespaceExists { local_name, .. } => {
-                SimpleExpr::AttributeExpr(AttributeExpr::AttributeExists(local_name.to_owned()))
+                Condition::OnAttributes(OnAttributesExpr::AttributeExists(local_name.to_owned()))
             }
             &Component::AttributeInNoNamespace {
                 ref local_name,
@@ -90,15 +132,27 @@ impl From<&Component<SelectorImplDescriptor>> for SimpleExpr {
                 never_matches,
             } => {
                 if never_matches {
-                    SimpleExpr::NonAttributeExpr(NonAttributeExpr::Unmatchable)
+                    Condition::OnTagName(OnTagNameExpr::Unmatchable)
                 } else {
-                    SimpleExpr::AttributeExpr(Self::attr_expr_for_operator(
-                        operator,
-                        local_name,
-                        value,
+                    Condition::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr::new(
+                        local_name.to_owned(),
+                        value.to_owned(),
                         case_sensitivity,
-                    ))
+                        operator,
+                    )))
                 }
+            }
+            Component::FirstChild => {
+                Condition::OnTagName(OnTagNameExpr::NthChild(NthChild::first()))
+            }
+            &Component::NthChild(a, b) => {
+                Condition::OnTagName(OnTagNameExpr::NthChild(NthChild::new(a, b)))
+            }
+            Component::FirstOfType => {
+                Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::first()))
+            },
+            &Component::NthOfType(a, b) => {
+                Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(a, b)))
             }
             // NOTE: the rest of the components are explicit namespace or
             // pseudo class-related. Ideally none of them should appear in
@@ -135,27 +189,26 @@ where
 
 #[derive(PartialEq, Eq, Debug, Default)]
 pub struct Predicate {
-    pub non_attr_exprs: Option<Vec<Expr<NonAttributeExpr>>>,
-    pub attr_exprs: Option<Vec<Expr<AttributeExpr>>>,
+    pub on_tag_name_exprs: Vec<Expr<OnTagNameExpr>>,
+    pub on_attr_exprs: Vec<Expr<OnAttributesExpr>>,
 }
 
 #[inline]
-fn add_expr_to_list<E>(list: &mut Option<Vec<Expr<E>>>, expr: E, negation: bool)
+fn add_expr_to_list<E>(list: &mut Vec<Expr<E>>, expr: E, negation: bool)
 where
     E: PartialEq + Eq + Debug,
 {
-    list.get_or_insert_with(Vec::default)
-        .push(Expr::new(expr, negation))
+    list.push(Expr::new(expr, negation))
 }
 
 impl Predicate {
     #[inline]
     fn add_component(&mut self, component: &Component<SelectorImplDescriptor>, negation: bool) {
-        match SimpleExpr::from(component) {
-            SimpleExpr::AttributeExpr(e) => add_expr_to_list(&mut self.attr_exprs, e, negation),
-            SimpleExpr::NonAttributeExpr(e) => {
-                add_expr_to_list(&mut self.non_attr_exprs, e, negation)
-            }
+        match Condition::from(component) {
+            Condition::OnTagName(e) =>
+                add_expr_to_list(&mut self.on_tag_name_exprs, e, negation),
+            Condition::OnAttributes(e) =>
+                add_expr_to_list(&mut self.on_attr_exprs, e, negation),
         }
     }
 }
@@ -293,28 +346,28 @@ mod tests {
             (
                 "*",
                 Expr {
-                    simple_expr: NonAttributeExpr::ExplicitAny,
+                    simple_expr: OnTagNameExpr::ExplicitAny,
                     negation: false,
                 },
             ),
             (
                 "div",
                 Expr {
-                    simple_expr: NonAttributeExpr::LocalName("div".into()),
+                    simple_expr: OnTagNameExpr::LocalName("div".into()),
                     negation: false,
                 },
             ),
             (
                 r#"[foo*=""]"#,
                 Expr {
-                    simple_expr: NonAttributeExpr::Unmatchable,
+                    simple_expr: OnTagNameExpr::Unmatchable,
                     negation: false,
                 },
             ),
             (
                 ":not(div)",
                 Expr {
-                    simple_expr: NonAttributeExpr::LocalName("div".into()),
+                    simple_expr: OnTagNameExpr::LocalName("div".into()),
                     negation: true,
                 },
             ),
@@ -326,8 +379,8 @@ mod tests {
                 Ast {
                     root: vec![AstNode {
                         predicate: Predicate {
-                            non_attr_exprs: Some(vec![expected]),
-                            attr_exprs: None,
+                            on_tag_name_exprs: vec![expected],
+                            ..Default::default()
                         },
                         children: vec![],
                         descendants: vec![],
@@ -345,31 +398,32 @@ mod tests {
             (
                 "#foo",
                 Expr {
-                    simple_expr: AttributeExpr::Id("foo".into()),
+                    simple_expr: OnAttributesExpr::Id("foo".into()),
                     negation: false,
                 },
             ),
             (
                 ".bar",
                 Expr {
-                    simple_expr: AttributeExpr::Class("bar".into()),
+                    simple_expr: OnAttributesExpr::Class("bar".into()),
                     negation: false,
                 },
             ),
             (
                 "[foo]",
                 Expr {
-                    simple_expr: AttributeExpr::AttributeExists("foo".into()),
+                    simple_expr: OnAttributesExpr::AttributeExists("foo".into()),
                     negation: false,
                 },
             ),
             (
                 r#"[foo="bar"]"#,
                 Expr {
-                    simple_expr: AttributeExpr::AttributeEqual(AttributeExprOperand {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                        operator: AttrSelectorOperator::Equal,
                     }),
                     negation: false,
                 },
@@ -377,10 +431,11 @@ mod tests {
             (
                 r#"[foo~="bar" i]"#,
                 Expr {
-                    simple_expr: AttributeExpr::AttributeIncludes(AttributeExprOperand {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::AsciiCaseInsensitive,
+                        operator: AttrSelectorOperator::Includes,
                     }),
                     negation: false,
                 },
@@ -388,10 +443,11 @@ mod tests {
             (
                 r#"[foo|="bar" s]"#,
                 Expr {
-                    simple_expr: AttributeExpr::AttributeDashMatch(AttributeExprOperand {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::ExplicitCaseSensitive,
+                        operator: AttrSelectorOperator::DashMatch,
                     }),
                     negation: false,
                 },
@@ -399,10 +455,11 @@ mod tests {
             (
                 r#"[foo^="bar"]"#,
                 Expr {
-                    simple_expr: AttributeExpr::AttributePrefix(AttributeExprOperand {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                        operator: AttrSelectorOperator::Prefix,
                     }),
                     negation: false,
                 },
@@ -410,10 +467,11 @@ mod tests {
             (
                 r#"[foo*="bar"]"#,
                 Expr {
-                    simple_expr: AttributeExpr::AttributeSubstring(AttributeExprOperand {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                        operator: AttrSelectorOperator::Substring,
                     }),
                     negation: false,
                 },
@@ -421,10 +479,11 @@ mod tests {
             (
                 r#"[foo$="bar"]"#,
                 Expr {
-                    simple_expr: AttributeExpr::AttributeSuffix(AttributeExprOperand {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                        operator: AttrSelectorOperator::Suffix,
                     }),
                     negation: false,
                 },
@@ -432,10 +491,11 @@ mod tests {
             (
                 r#":not([foo$="bar"])"#,
                 Expr {
-                    simple_expr: AttributeExpr::AttributeSuffix(AttributeExprOperand {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                         name: "foo".into(),
                         value: "bar".into(),
                         case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                        operator: AttrSelectorOperator::Suffix,
                     }),
                     negation: true,
                 },
@@ -448,8 +508,8 @@ mod tests {
                 Ast {
                     root: vec![AstNode {
                         predicate: Predicate {
-                            non_attr_exprs: None,
-                            attr_exprs: Some(vec![expected]),
+                            on_attr_exprs: vec![expected],
+                            ..Default::default()
                         },
                         children: vec![],
                         descendants: vec![],
@@ -468,24 +528,24 @@ mod tests {
             Ast {
                 root: vec![AstNode {
                     predicate: Predicate {
-                        non_attr_exprs: Some(vec![Expr {
-                            simple_expr: NonAttributeExpr::LocalName("div".into()),
+                        on_tag_name_exprs: vec![Expr {
+                            simple_expr: OnTagNameExpr::LocalName("div".into()),
                             negation: false,
-                        }]),
-                        attr_exprs: Some(vec![
+                        }],
+                        on_attr_exprs: vec![
                             Expr {
-                                simple_expr: AttributeExpr::AttributeExists("baz".into()),
+                                simple_expr: OnAttributesExpr::AttributeExists("baz".into()),
                                 negation: true,
                             },
                             Expr {
-                                simple_expr: AttributeExpr::Id("bar".into()),
+                                simple_expr: OnAttributesExpr::Id("bar".into()),
                                 negation: false,
                             },
                             Expr {
-                                simple_expr: AttributeExpr::Class("foo".into()),
+                                simple_expr: OnAttributesExpr::Class("foo".into()),
                                 negation: false,
                             },
-                        ]),
+                        ],
                     },
                     children: vec![],
                     descendants: vec![],
@@ -503,11 +563,11 @@ mod tests {
             Ast {
                 root: vec![AstNode {
                     predicate: Predicate {
-                        non_attr_exprs: None,
-                        attr_exprs: Some(vec![Expr {
-                            simple_expr: AttributeExpr::Id("foo".into()),
+                        on_attr_exprs: vec![Expr {
+                            simple_expr: OnAttributesExpr::Id("foo".into()),
                             negation: false,
-                        }]),
+                        }],
+                        ..Default::default()
                     },
                     children: vec![],
                     descendants: vec![],
@@ -525,20 +585,20 @@ mod tests {
             Ast {
                 root: vec![AstNode {
                     predicate: Predicate {
-                        non_attr_exprs: None,
-                        attr_exprs: Some(vec![Expr {
-                            simple_expr: AttributeExpr::Id("foo".into()),
+                        on_attr_exprs: vec![Expr {
+                            simple_expr: OnAttributesExpr::Id("foo".into()),
                             negation: false,
-                        }]),
+                        }],
+                        ..Default::default()
                     },
                     children: vec![
                         AstNode {
                             predicate: Predicate {
-                                non_attr_exprs: Some(vec![Expr {
-                                    simple_expr: NonAttributeExpr::LocalName("div".into()),
+                                on_tag_name_exprs: vec![Expr {
+                                    simple_expr: OnTagNameExpr::LocalName("div".into()),
                                     negation: false,
-                                }]),
-                                attr_exprs: None,
+                                }],
+                                ..Default::default()
                             },
                             children: vec![],
                             descendants: vec![],
@@ -546,11 +606,11 @@ mod tests {
                         },
                         AstNode {
                             predicate: Predicate {
-                                non_attr_exprs: Some(vec![Expr {
-                                    simple_expr: NonAttributeExpr::LocalName("span".into()),
+                                on_tag_name_exprs: vec![Expr {
+                                    simple_expr: OnTagNameExpr::LocalName("span".into()),
                                     negation: false,
-                                }]),
-                                attr_exprs: None,
+                                }],
+                                ..Default::default()
                             },
                             children: vec![],
                             descendants: vec![],
@@ -558,11 +618,11 @@ mod tests {
                         },
                         AstNode {
                             predicate: Predicate {
-                                non_attr_exprs: None,
-                                attr_exprs: Some(vec![Expr {
-                                    simple_expr: AttributeExpr::Class("c1".into()),
+                                on_attr_exprs: vec![Expr {
+                                    simple_expr: OnAttributesExpr::Class("c1".into()),
                                     negation: false,
-                                }]),
+                                }],
+                                ..Default::default()
                             },
                             children: vec![],
                             descendants: vec![],
@@ -570,11 +630,11 @@ mod tests {
                         },
                         AstNode {
                             predicate: Predicate {
-                                non_attr_exprs: None,
-                                attr_exprs: Some(vec![Expr {
-                                    simple_expr: AttributeExpr::Class("c2".into()),
+                                on_attr_exprs: vec![Expr {
+                                    simple_expr: OnAttributesExpr::Class("c2".into()),
                                     negation: false,
-                                }]),
+                                }],
+                                ..Default::default()
                             },
                             children: vec![],
                             descendants: vec![],
@@ -604,39 +664,39 @@ mod tests {
                 root: vec![
                     AstNode {
                         predicate: Predicate {
-                            non_attr_exprs: None,
-                            attr_exprs: Some(vec![Expr {
-                                simple_expr: AttributeExpr::Class("c1".into()),
+                            on_attr_exprs: vec![Expr {
+                                simple_expr: OnAttributesExpr::Class("c1".into()),
                                 negation: false,
-                            }]),
+                            }],
+                            ..Default::default()
                         },
                         children: vec![
                             AstNode {
                                 predicate: Predicate {
-                                    non_attr_exprs: None,
-                                    attr_exprs: Some(vec![Expr {
-                                        simple_expr: AttributeExpr::Class("c2".into()),
+                                    on_attr_exprs: vec![Expr {
+                                        simple_expr: OnAttributesExpr::Class("c2".into()),
                                         negation: false,
-                                    }]),
+                                    }],
+                                    ..Default::default()
                                 },
                                 children: vec![],
                                 descendants: vec![
                                     AstNode {
                                         predicate: Predicate {
-                                            non_attr_exprs: None,
-                                            attr_exprs: Some(vec![Expr {
-                                                simple_expr: AttributeExpr::Class("c3".into()),
+                                            on_attr_exprs: vec![Expr {
+                                                simple_expr: OnAttributesExpr::Class("c3".into()),
                                                 negation: false,
-                                            }]),
+                                            }],
+                                            ..Default::default()
                                         },
                                         children: vec![],
                                         descendants: vec![AstNode {
                                             predicate: Predicate {
-                                                non_attr_exprs: None,
-                                                attr_exprs: Some(vec![Expr {
-                                                    simple_expr: AttributeExpr::Id("foo".into()),
+                                                on_attr_exprs: vec![Expr {
+                                                    simple_expr: OnAttributesExpr::Id("foo".into()),
                                                     negation: false,
-                                                }]),
+                                                }],
+                                                ..Default::default()
                                             },
                                             children: vec![],
                                             descendants: vec![],
@@ -646,11 +706,11 @@ mod tests {
                                     },
                                     AstNode {
                                         predicate: Predicate {
-                                            non_attr_exprs: None,
-                                            attr_exprs: Some(vec![Expr {
-                                                simple_expr: AttributeExpr::Id("bar".into()),
+                                            on_attr_exprs: vec![Expr {
+                                                simple_expr: OnAttributesExpr::Id("bar".into()),
                                                 negation: false,
-                                            }]),
+                                            }],
+                                            ..Default::default()
                                         },
                                         children: vec![],
                                         descendants: vec![],
@@ -661,11 +721,11 @@ mod tests {
                             },
                             AstNode {
                                 predicate: Predicate {
-                                    non_attr_exprs: None,
-                                    attr_exprs: Some(vec![Expr {
-                                        simple_expr: AttributeExpr::Id("qux".into()),
+                                    on_attr_exprs: vec![Expr {
+                                        simple_expr: OnAttributesExpr::Id("qux".into()),
                                         negation: false,
-                                    }]),
+                                    }],
+                                    ..Default::default()
                                 },
                                 children: vec![],
                                 descendants: vec![],
@@ -675,11 +735,11 @@ mod tests {
                         descendants: vec![
                             AstNode {
                                 predicate: Predicate {
-                                    non_attr_exprs: None,
-                                    attr_exprs: Some(vec![Expr {
-                                        simple_expr: AttributeExpr::Id("baz".into()),
+                                    on_attr_exprs: vec![Expr {
+                                        simple_expr: OnAttributesExpr::Id("baz".into()),
                                         negation: false,
-                                    }]),
+                                    }],
+                                    ..Default::default()
                                 },
                                 children: vec![],
                                 descendants: vec![],
@@ -687,22 +747,22 @@ mod tests {
                             },
                             AstNode {
                                 predicate: Predicate {
-                                    non_attr_exprs: None,
-                                    attr_exprs: Some(vec![Expr {
-                                        simple_expr: AttributeExpr::AttributeExists("foo".into()),
+                                    on_attr_exprs: vec![Expr {
+                                        simple_expr: OnAttributesExpr::AttributeExists("foo".into()),
                                         negation: false,
-                                    }]),
+                                    }],
+                                    ..Default::default()
                                 },
                                 children: vec![],
                                 descendants: vec![AstNode {
                                     predicate: Predicate {
-                                        non_attr_exprs: None,
-                                        attr_exprs: Some(vec![Expr {
-                                            simple_expr: AttributeExpr::AttributeExists(
+                                        on_attr_exprs: vec![Expr {
+                                            simple_expr: OnAttributesExpr::AttributeExists(
                                                 "bar".into(),
                                             ),
                                             negation: false,
-                                        }]),
+                                        }],
+                                        ..Default::default()
                                     },
                                     children: vec![],
                                     descendants: vec![],
@@ -715,11 +775,11 @@ mod tests {
                     },
                     AstNode {
                         predicate: Predicate {
-                            non_attr_exprs: None,
-                            attr_exprs: Some(vec![Expr {
-                                simple_expr: AttributeExpr::Id("quz".into()),
+                            on_attr_exprs: vec![Expr {
+                                simple_expr: OnAttributesExpr::Id("quz".into()),
                                 negation: false,
-                            }]),
+                            }],
+                            ..Default::default()
                         },
                         children: vec![],
                         descendants: vec![],
@@ -766,8 +826,6 @@ mod tests {
             ":empty",
             ":enabled",
             ":first",
-            ":first-child",
-            ":first-of-type",
             ":fullscreen",
             ":future",
             ":focus",
@@ -788,12 +846,10 @@ mod tests {
             ":left",
             ":link",
             ":local-link",
-            ":nth-child(1)",
             ":nth-col(1)",
             ":nth-last-child(1)",
             ":nth-last-col(1)",
             ":nth-last-of-type(1)",
-            ":nth-of-type(1)",
             ":only-child",
             ":only-of-type",
             ":optional",
@@ -843,5 +899,22 @@ mod tests {
             ":not(:nth-last-child(even))",
             SelectorError::UnsupportedPseudoClassOrElement,
         );
+    }
+
+    #[test]
+    fn nth_child_is_index() {
+        let even = NthChild::new(2, 0);
+        assert!(even.has_index(2));
+        assert!(!even.has_index(1));
+
+        let odd = NthChild::new(2, 1);
+        assert!(odd.has_index(1));
+        assert!(!odd.has_index(2));
+        assert!(odd.has_index(3));
+
+        let first = NthChild::first();
+        assert!(first.has_index(1));
+        assert!(!first.has_index(2));
+        assert!(!first.has_index(3));
     }
 }

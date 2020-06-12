@@ -6,7 +6,7 @@ use html5ever::tokenizer::{
     TokenizerResult,
 };
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::iter::FromIterator;
 use std::string::ToString;
 
