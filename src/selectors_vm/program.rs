@@ -95,18 +95,13 @@ where
     }
 }
 
-bitflags! {
-    pub struct ProgramFlags: u16 {
-        /// Enables nth-of-type tag tracking.
-        const NTH_OF_TYPE = 0b0000_0001;
-    }
-}
-
 pub struct Program<P>
 where
     P: Hash + Eq,
 {
     pub instructions: Box<[Instruction<P>]>,
     pub entry_points: AddressRange,
-    pub flags: ProgramFlags,
+    /// Enables tracking child types for nth-of-type selectors.
+    /// This is disabled if no nth-of-type selectors are used in the program.
+    pub enable_nth_of_type: bool,
 }

@@ -1,6 +1,6 @@
 use super::attribute_matcher::AttributeMatcher;
 use super::program::{
-    AddressRange, ExecutionBranch, Program, Instruction, ProgramFlags
+    AddressRange, ExecutionBranch, Program, Instruction
 };
 use super::{Ast, AstNode, Expr, AttributeComparisonExpr, OnTagNameExpr, OnAttributesExpr, Predicate, SelectorState};
 use crate::base::{Bytes, HasReplacementsError};
@@ -40,7 +40,7 @@ impl Expr<OnTagNameExpr> {
 }
 
 trait Compilable {
-    fn compile(&self, encoding: &'static Encoding, exprs: &mut ExprSet, flags: &mut ProgramFlags);
+    fn compile(&self, encoding: &'static Encoding, exprs: &mut ExprSet, enable_nth_of_type: &mut bool);
 }
 
 impl Compilable for Expr<OnTagNameExpr> {
@@ -48,7 +48,7 @@ impl Compilable for Expr<OnTagNameExpr> {
         &self,
         encoding: &'static Encoding,
         exprs: &mut ExprSet,
-        flags: &mut ProgramFlags,
+        enable_nth_of_type: &mut bool,
     ) {
         let expr = match &self.simple_expr {
             OnTagNameExpr::ExplicitAny => self.compile_expr(|_, _| true),
@@ -69,7 +69,7 @@ impl Compilable for Expr<OnTagNameExpr> {
                 self.compile_expr(move |state, _| state.cumulative.is_nth(nth))
             }
             &OnTagNameExpr::NthOfType(nth) => {
-                *flags |= ProgramFlags::NTH_OF_TYPE;
+                *enable_nth_of_type = true;
                 self.compile_expr(move |state, _| state.typed.expect("Counter for type required at this point").is_nth(nth))
             }
         };
@@ -109,7 +109,7 @@ impl Compilable for Expr<OnAttributesExpr> {
         &self,
         encoding: &'static Encoding,
         exprs: &mut ExprSet,
-        _: &mut ProgramFlags,
+        _: &mut bool,
     ) {
         let expr_result = match &self.simple_expr {
             OnAttributesExpr::Id(id) =>
@@ -179,12 +179,12 @@ where
             on_attr_exprs,
         }: &Predicate,
         branch: ExecutionBranch<P>,
-        flags: &mut ProgramFlags,
+        enable_nth_of_type: &mut bool,
     ) -> Instruction<P> {
         let mut exprs = ExprSet::default();
 
-        on_tag_name_exprs.into_iter().for_each(|c| c.compile(self.encoding, &mut exprs, flags));
-        on_attr_exprs.into_iter().for_each(|c| c.compile(self.encoding, &mut exprs, flags));
+        on_tag_name_exprs.into_iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
+        on_attr_exprs.into_iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
 
         let ExprSet {
             local_name_exprs,
@@ -213,15 +213,15 @@ where
     }
 
     #[inline]
-    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>, flags: &mut ProgramFlags) -> Option<AddressRange> {
+    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>, enable_nth_of_type: &mut bool) -> Option<AddressRange> {
         if nodes.is_empty() {
             None
         } else {
-            Some(self.compile_nodes(nodes, flags))
+            Some(self.compile_nodes(nodes, enable_nth_of_type))
         }
     }
 
-    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>, flags: &mut ProgramFlags) -> AddressRange {
+    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>, enable_nth_of_type: &mut bool) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
         // we can reference them by range instead of vector of addresses.
         let addr_range = self.reserve(&nodes);
@@ -229,26 +229,26 @@ where
         for (node, position) in nodes.into_iter().zip(addr_range.clone()) {
             let branch = ExecutionBranch {
                 matched_payload: node.payload,
-                jumps: self.compile_descendants(node.children, flags),
-                hereditary_jumps: self.compile_descendants(node.descendants, flags),
+                jumps: self.compile_descendants(node.children, enable_nth_of_type),
+                hereditary_jumps: self.compile_descendants(node.descendants, enable_nth_of_type),
             };
 
-            self.instructions[position] = Some(self.compile_predicate(&node.predicate, branch, flags));
+            self.instructions[position] = Some(self.compile_predicate(&node.predicate, branch, enable_nth_of_type));
         }
 
         addr_range
     }
 
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
-        let mut flags = ProgramFlags::empty();
+        let mut enable_nth_of_type = false;
         self.instructions = iter::repeat_with(|| None).take(ast.cumulative_node_count).collect();
 
-        let entry_points = self.compile_nodes(ast.root, &mut flags);
+        let entry_points = self.compile_nodes(ast.root, &mut enable_nth_of_type);
 
         Program {
             instructions: self.instructions.into_vec().into_iter().map(|o| o.unwrap()).collect(),
             entry_points,
-            flags,
+            enable_nth_of_type,
         }
     }
 }

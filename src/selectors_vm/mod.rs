@@ -147,11 +147,11 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         memory_limiter: SharedMemoryLimiter,
     ) -> Self {
         let program = Compiler::new(encoding).compile(ast);
-        let flags = program.flags;
+        let enable_nth_of_type = program.enable_nth_of_type;
 
         SelectorMatchingVm {
             program,
-            stack: Stack::new(memory_limiter, flags),
+            stack: Stack::new(memory_limiter, enable_nth_of_type),
         }
     }
 

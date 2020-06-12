@@ -1,5 +1,5 @@
 use super::SelectorState;
-use super::program::{AddressRange, ProgramFlags};
+use super::program::AddressRange;
 use super::ast::NthChild;
 use crate::html::{LocalName, Namespace, Tag};
 use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
@@ -95,17 +95,17 @@ impl<'i, E: ElementData> StackItem<'i, E> {
 
 pub struct Stack<E: ElementData> {
     /// A counter for root elements
-    root_counter: ChildCounter,
+    root_child_counter: ChildCounter,
     /// A typed counter for root elements. This is optional to indicate if types are actually being counted.
-    root_typed_counters: Option<HashMap<LocalName<'static>, ChildCounter>>,
+    root_typed_child_counters: Option<HashMap<LocalName<'static>, ChildCounter>>,
     items: LimitedVec<StackItem<'static, E>>,
 }
 
 impl<E: ElementData> Stack<E> {
-    pub fn new(memory_limiter: SharedMemoryLimiter, flags: ProgramFlags) -> Self {
+    pub fn new(memory_limiter: SharedMemoryLimiter, enable_nth_of_type: bool) -> Self {
         Stack {
-            root_counter: Default::default(),
-            root_typed_counters: if flags.contains(ProgramFlags::NTH_OF_TYPE) { Some(Default::default()) } else { None },
+            root_child_counter: Default::default(),
+            root_typed_child_counters: if enable_nth_of_type { Some(Default::default()) } else { None },
             items: LimitedVec::new(memory_limiter),
         }
     }
@@ -113,7 +113,7 @@ impl<E: ElementData> Stack<E> {
     pub fn add_child<'i>(&mut self, name: &LocalName<'i>) {
         let (cumulative, typed_counters) = match self.items.last_mut() {
             Some(last) => (&mut last.child_counter, &mut last.typed_child_counters),
-            None => (&mut self.root_counter, &mut self.root_typed_counters),
+            None => (&mut self.root_child_counter, &mut self.root_typed_child_counters),
         };
 
         cumulative.inc();
@@ -138,7 +138,7 @@ impl<E: ElementData> Stack<E> {
     {
         let (cumulative, typed) = match self.items.last() {
             Some(last) => (&last.child_counter, &last.typed_child_counters),
-            None => (&self.root_counter, &self.root_typed_counters),
+            None => (&self.root_child_counter, &self.root_typed_child_counters),
         };
         SelectorState { cumulative, typed: typed.as_ref().and_then(|map| map.get(name)) }
     }
@@ -193,7 +193,7 @@ impl<E: ElementData> Stack<E> {
             }
         }
 
-        if self.root_typed_counters.is_some() {
+        if self.root_typed_child_counters.is_some() {
             item.typed_child_counters = Some(Default::default())
         }
 
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn hereditary_jumps_flag() {
-        let mut stack = Stack::new(MemoryLimiter::new_shared(2048), ProgramFlags::empty());
+        let mut stack = Stack::new(MemoryLimiter::new_shared(2048), false);
 
         stack.push_item(item("item1", 0)).unwrap();
 
@@ -261,7 +261,7 @@ mod tests {
     fn pop_up_to() {
         macro_rules! assert_pop_result {
             ($up_to:expr, $expected_unmatched:expr, $expected_items:expr) => {{
-                let mut stack = Stack::new(MemoryLimiter::new_shared(2048), ProgramFlags::empty());
+                let mut stack = Stack::new(MemoryLimiter::new_shared(2048), false);
 
                 stack.push_item(item("html", 0)).unwrap();
                 stack.push_item(item("body", 1)).unwrap();
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn pop_up_to_on_empty_stack() {
-        let mut stack = Stack::new(MemoryLimiter::new_shared(2048), ProgramFlags::empty());
+        let mut stack = Stack::new(MemoryLimiter::new_shared(2048), false);
         let mut handler_called = false;
 
         stack.pop_up_to(local_name("div"), |_: TestElementData| {
