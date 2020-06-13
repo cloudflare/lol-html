@@ -1,7 +1,6 @@
 use super::SelectorState;
 use super::attribute_matcher::AttributeMatcher;
 use super::compiler::{CompiledAttributeExpr, CompiledLocalNameExpr};
-use bitflags::bitflags;
 use crate::html::LocalName;
 use hashbrown::HashSet;
 use std::hash::Hash;

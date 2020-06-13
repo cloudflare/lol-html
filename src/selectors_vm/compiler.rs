@@ -183,8 +183,8 @@ where
     ) -> Instruction<P> {
         let mut exprs = ExprSet::default();
 
-        on_tag_name_exprs.into_iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
-        on_attr_exprs.into_iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
+        on_tag_name_exprs.iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
+        on_attr_exprs.iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
 
         let ExprSet {
             local_name_exprs,
