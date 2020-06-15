@@ -3,7 +3,8 @@ use super::program::AddressRange;
 use super::ast::NthChild;
 use crate::html::{LocalName, Namespace, Tag};
 use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
-use hashbrown::{HashSet, HashMap};
+// use hashbrown for raw entry, switch back to std once it stablizes there
+use hashbrown::{HashSet, HashMap, hash_map::RawEntryMut};
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher, BuildHasher};
 
@@ -42,6 +43,11 @@ pub struct ChildCounter {
 
 impl ChildCounter {
     #[inline]
+    pub fn new_and_inc() -> Self {
+        Self { cumulative: 1 }
+    }
+
+    #[inline]
     pub fn inc(&mut self) {
         self.cumulative += 1;
     }
@@ -52,13 +58,100 @@ impl ChildCounter {
     }
 }
 
+struct CounterItem {
+    /// The counter at this index
+    pub counter: ChildCounter,
+    /// The index of this counter in the stack
+    pub index: usize,
+}
+
+struct CounterList {
+    items: Vec<CounterItem>,
+    // we always have at least one item, an empty list shouldn't exist in the map
+    current: CounterItem,
+}
+
+impl CounterList {
+    pub fn new(start: usize) -> Self {
+        Self {
+            items: Vec::new(),
+            current: CounterItem { counter: ChildCounter::new_and_inc(), index: start }
+        }
+    }
+}
+
+#[derive(Default)]
+/// A more efficient counter that only requires one owned local name to track counters across multiple stack frames
+pub struct TypedChildCounterMap(HashMap<LocalName<'static>, CounterList>);
+
+impl TypedChildCounterMap {
+    fn hash_name(&self, name: &LocalName) -> u64 {
+        let mut hasher = self.0.hasher().build_hasher();
+        name.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// Adds a seen child to the map. The index is the level of the item
+    pub fn add_child(&mut self, name: &LocalName, index: usize) {
+        let hash = self.hash_name(name);
+        let entry = self.0.raw_entry_mut().from_hash(hash, |n| name == n);
+        match entry {
+            RawEntryMut::Vacant(vacant) => {
+                vacant.insert_hashed_nocheck(
+                    hash,
+                    name.clone().into_owned(), // the hash won't change just because we've got ownership
+                    CounterList::new(index)
+                );
+            },
+            RawEntryMut::Occupied(mut occupied) => {
+                let CounterList { items, current } = occupied.get_mut();
+                if current.index == index {
+                    current.counter.inc();
+                } else {
+                    let counter = ChildCounter::new_and_inc();
+                    let old = std::mem::replace(current, CounterItem { counter, index });
+                    items.push(old);
+                }
+            },
+        }
+    }
+
+    #[inline]
+    pub fn pop_to(&mut self, index: usize) {
+        self.0.drain_filter(move |_, v| {
+            while v.current.index > index {
+                match v.items.pop() {
+                    Some(next) => {
+                        v.current = next;
+                    },
+                    None => return false
+                }
+            }
+            true
+        }).for_each(drop);
+    }
+
+    #[inline]
+    pub fn get<'a, 'i>(&'a self, name: &LocalName<'i>, index: usize) -> Option<&'i ChildCounter>
+    where
+        'a: 'i
+    {
+        match self.0.get(name) {
+            Some(CounterList {
+                current: CounterItem { counter, index: current_index },
+                ..
+            }) if *current_index == index => Some(counter),
+            _ => None,
+        }
+    }
+}
+
 pub struct StackItem<'i, E: ElementData> {
     pub local_name: LocalName<'i>,
     pub element_data: E,
     pub jumps: Vec<AddressRange>,
     pub hereditary_jumps: Vec<AddressRange>,
     pub child_counter: ChildCounter,
-    pub typed_child_counters: Option<HashMap<LocalName<'static>, ChildCounter>>,
     pub has_ancestor_with_hereditary_jumps: bool,
     pub stack_directive: StackDirective,
 }
@@ -72,7 +165,6 @@ impl<'i, E: ElementData> StackItem<'i, E> {
             jumps: Vec::default(),
             hereditary_jumps: Vec::default(),
             child_counter: Default::default(),
-            typed_child_counters: Default::default(),
             has_ancestor_with_hereditary_jumps: false,
             stack_directive: StackDirective::Push,
         }
@@ -86,7 +178,6 @@ impl<'i, E: ElementData> StackItem<'i, E> {
             jumps: self.jumps,
             hereditary_jumps: self.hereditary_jumps,
             child_counter: self.child_counter,
-            typed_child_counters: self.typed_child_counters,
             has_ancestor_with_hereditary_jumps: self.has_ancestor_with_hereditary_jumps,
             stack_directive: self.stack_directive,
         }
@@ -96,8 +187,8 @@ impl<'i, E: ElementData> StackItem<'i, E> {
 pub struct Stack<E: ElementData> {
     /// A counter for root elements
     root_child_counter: ChildCounter,
-    /// A typed counter for root elements. This is optional to indicate if types are actually being counted.
-    root_typed_child_counters: Option<HashMap<LocalName<'static>, ChildCounter>>,
+    /// A typed counter for all elements on all frames. This is optional to indicate if types are actually being counted.
+    typed_child_counters: Option<TypedChildCounterMap>,
     items: LimitedVec<StackItem<'static, E>>,
 }
 
@@ -105,30 +196,20 @@ impl<E: ElementData> Stack<E> {
     pub fn new(memory_limiter: SharedMemoryLimiter, enable_nth_of_type: bool) -> Self {
         Stack {
             root_child_counter: Default::default(),
-            root_typed_child_counters: if enable_nth_of_type { Some(Default::default()) } else { None },
+            typed_child_counters: if enable_nth_of_type { Some(Default::default()) } else { None },
             items: LimitedVec::new(memory_limiter),
         }
     }
 
+    /// Adds a child to child counters. Called before pushing the element to the stack.
     pub fn add_child<'i>(&mut self, name: &LocalName<'i>) {
-        let (cumulative, typed_counters) = match self.items.last_mut() {
-            Some(last) => (&mut last.child_counter, &mut last.typed_child_counters),
-            None => (&mut self.root_child_counter, &mut self.root_typed_child_counters),
-        };
+        match self.items.last_mut() {
+            Some(last) => &mut last.child_counter,
+            None => &mut self.root_child_counter,
+        }.inc();
 
-        cumulative.inc();
-        if let Some(of_type) = typed_counters {
-            // to keep from having to own every exotic local name we come across before we know if we're going to insert it in the map,
-            // we create a hash ourselves and perform comparisons to bypass std's normal map entry API requirements
-            let hash = {
-                let mut hasher = of_type.hasher().build_hasher();
-                name.hash(&mut hasher);
-                hasher.finish()
-            };
-            of_type.raw_entry_mut()
-                .from_hash(hash, |n| name == n)
-                .or_insert_with(|| (name.clone().into_owned(), Default::default())).1
-                .inc();
+        if let Some(counters) = &mut self.typed_child_counters {
+            counters.add_child(name, self.items.len());
         }
     }
 
@@ -136,11 +217,17 @@ impl<E: ElementData> Stack<E> {
     where
         'a: 'i // 'a outlives 'i, required to downcast 'a lifetimes into 'i
     {
-        let (cumulative, typed) = match self.items.last() {
-            Some(last) => (&last.child_counter, &last.typed_child_counters),
-            None => (&self.root_child_counter, &self.root_typed_child_counters),
+        let cumulative = match self.items.last() {
+            Some(last) => &last.child_counter,
+            None => &self.root_child_counter,
         };
-        SelectorState { cumulative, typed: typed.as_ref().and_then(|map| map.get(name)) }
+        SelectorState {
+            cumulative,
+            typed:
+                self.typed_child_counters
+                    .as_ref()
+                    .and_then(|f| f.get(name, self.items.len()))
+        }
     }
 
     #[inline]
@@ -159,16 +246,18 @@ impl<E: ElementData> Stack<E> {
     pub fn pop_up_to(
         &mut self,
         local_name: LocalName,
-        mut popped_element_data_handler: impl FnMut(E),
+        popped_element_data_handler: impl FnMut(E),
     ) {
-        for i in (0..self.items.len()).rev() {
-            if self.items[i].local_name == local_name {
-                for item in self.items.drain(i..self.items.len()) {
-                    popped_element_data_handler(item.element_data);
-                }
-
-                break;
-            }
+        let pop_to_index =
+            self.items
+                .iter()
+                .enumerate()
+                .rev()
+                .find(|(_, item)| item.local_name == local_name)
+                .map(|(i, _)| i);
+        if let Some(index) = pop_to_index {
+            self.typed_child_counters.as_mut().map(|c| c.pop_to(index));
+            self.items.drain(index..).map(|i| i.element_data).for_each(popped_element_data_handler)
         }
     }
 
@@ -191,10 +280,6 @@ impl<E: ElementData> Stack<E> {
             if last.has_ancestor_with_hereditary_jumps || !last.hereditary_jumps.is_empty() {
                 item.has_ancestor_with_hereditary_jumps = true;
             }
-        }
-
-        if self.root_typed_child_counters.is_some() {
-            item.typed_child_counters = Some(Default::default())
         }
 
         self.items.push(item)?;
