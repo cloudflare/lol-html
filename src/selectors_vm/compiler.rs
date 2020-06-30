@@ -101,7 +101,7 @@ fn compile_literal_lowercase(encoding: &'static Encoding, lit: &str) -> Result<B
 
 #[inline]
 fn compile_operands(encoding: &'static Encoding, name: &str, value: &str) -> Result<(Bytes<'static>, Bytes<'static>), HasReplacementsError> {
-    Ok((compile_literal(encoding, name)?, compile_literal_lowercase(encoding, value)?))
+    Ok((compile_literal_lowercase(encoding, name)?, compile_literal(encoding, value)?))
 }
 
 impl Compilable for Expr<OnAttributesExpr> {
@@ -730,6 +730,7 @@ mod tests {
                 &[
                     ("<div fOo='bar1\nbarφ2 bar3\tbar4'>", true),
                     ("<div foo='barφ'>", true),
+                    ("<div foo='Barφ'>", false),
                     ("<div foo='42BaRφ42'>", false),
                     ("<div foo='bazbatbarφ'>", true),
                     ("<div foo='42'>", false),
@@ -742,7 +743,7 @@ mod tests {
                 encoding,
                 &[
                     ("<div fOo='bar1\nbarφ2 bar3\tbar4'>", true),
-                    ("<div foo='barφ'>", true),
+                    ("<div Foo='barφ'>", true),
                     ("<div foo='42BaRφ42'>", true),
                     ("<div foo='bazbatbarφ'>", true),
                     ("<div foo='42'>", false),
