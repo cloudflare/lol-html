@@ -275,7 +275,7 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
 /// ```
 pub fn rewrite_str<'h, 's>(
     html: &str,
-    settings: RewriteStrSettings<'h, 's>,
+    settings: impl Into<Settings<'h, 's>>,
 ) -> Result<String, RewritingError> {
     let mut output = vec![];
 
@@ -335,6 +335,12 @@ mod tests {
         .unwrap();
 
         assert_eq!(res, "<!-- 42 --><span><!--hello--></span>");
+    }
+
+    #[test]
+    fn rewrite_arbitrary_settings() {
+        let res = rewrite_str("<span>Some text</span>", Settings::default()).unwrap();
+        assert_eq!(res, "<span>Some text</span>");
     }
 
     #[test]
