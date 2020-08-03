@@ -256,7 +256,9 @@ impl<E: ElementData> Stack<E> {
                 .find(|(_, item)| item.local_name == local_name)
                 .map(|(i, _)| i);
         if let Some(index) = pop_to_index {
-            self.typed_child_counters.as_mut().map(|c| c.pop_to(index));
+            if let Some(c) = self.typed_child_counters.as_mut() {
+                c.pop_to(index)
+            }
             self.items.drain(index..).map(|i| i.element_data).for_each(popped_element_data_handler)
         }
     }
@@ -317,6 +319,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::reversed_empty_ranges)]
     fn hereditary_jumps_flag() {
         let mut stack = Stack::new(MemoryLimiter::new_shared(2048), false);
 
