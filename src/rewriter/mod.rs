@@ -72,7 +72,7 @@ pub enum RewritingError {
 
     /// An error that was propagated from one of the content handlers.
     #[error("{0}")]
-    ContentHandlerError(Box<dyn StdError>),
+    ContentHandlerError(Box<dyn StdError + Send + Sync>),
 }
 
 /// A streaming HTML rewriter.
