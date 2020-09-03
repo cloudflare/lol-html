@@ -124,10 +124,10 @@ impl TypedChildCounterMap {
                     Some(next) => {
                         v.current = next;
                     },
-                    None => return false
+                    None => return true
                 }
             }
-            true
+            false
         }).for_each(drop);
     }
 
