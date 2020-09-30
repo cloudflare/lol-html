@@ -1,4 +1,4 @@
-# LOL HTML
+# LOL FACE EMOJI HTML
 
 <p align="center">
     <a href="https://github.com/cloudflare/lol-html">
