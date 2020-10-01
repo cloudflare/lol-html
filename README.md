@@ -1,4 +1,4 @@
-# LOL HTML
+# AN AMAZING PROJECT LOL HTML
 
 <p align="center">
     <a href="https://github.com/cloudflare/lol-html">
