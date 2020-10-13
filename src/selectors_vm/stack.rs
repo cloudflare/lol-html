@@ -118,7 +118,7 @@ impl TypedChildCounterMap {
 
     #[inline]
     pub fn pop_to(&mut self, index: usize) {
-        self.0.drain_filter(move |_, v| {
+        self.0.retain(|_, v| {
             while v.current.index > index {
                 match v.items.pop() {
                     Some(next) => {
@@ -128,7 +128,7 @@ impl TypedChildCounterMap {
                 }
             }
             true
-        }).for_each(drop);
+        });
     }
 
     #[inline]
