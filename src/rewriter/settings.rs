@@ -1,5 +1,6 @@
 use crate::rewritable_units::{Comment, Doctype, DocumentEnd, Element, EndTag, TextChunk};
 use crate::selectors_vm::Selector;
+use std::borrow::Cow;
 use std::error::Error;
 
 pub(super) type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
@@ -108,7 +109,7 @@ impl<'h> DocumentContentHandlers<'h> {
 macro_rules! __element_content_handler {
     ($selector:expr, $handler_name:ident, $handler:expr) => {
         (
-            &$selector.parse::<$crate::Selector>().unwrap(),
+            ::std::borrow::Cow::Owned($selector.parse::<$crate::Selector>().unwrap()),
             $crate::ElementContentHandlers::default().$handler_name($handler),
         )
     };
@@ -417,12 +418,13 @@ pub struct Settings<'h, 's> {
     ///
     /// ### Example
     /// ```
+    /// use std::borrow::Cow;
     /// use lol_html::{ElementContentHandlers, Settings};
     ///
     /// let settings = Settings {
     ///     element_content_handlers: vec! [
     ///         (
-    ///             &"div[foo]".parse().unwrap(),
+    ///             Cow::Owned("div[foo]".parse().unwrap()),
     ///             ElementContentHandlers::default().element(|el| {
     ///                 // ...
     ///
@@ -430,7 +432,7 @@ pub struct Settings<'h, 's> {
     ///             })
     ///         ),
     ///         (
-    ///             &"body".parse().unwrap(),
+    ///             Cow::Owned("body".parse().unwrap()),
     ///             ElementContentHandlers::default().comments(|c| {
     ///                 // ...
     ///
@@ -445,7 +447,7 @@ pub struct Settings<'h, 's> {
     /// [`element`]: macro.element.html
     /// [`comments`]: macro.comments.html
     /// [`text`]: macro.text.html
-    pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
+    pub element_content_handlers: Vec<(Cow<'s, Selector>, ElementContentHandlers<'h>)>,
 
     /// Specifies rewriting handlers for the content without associating it to a particular
     /// CSS selector.
@@ -552,12 +554,13 @@ pub struct RewriteStrSettings<'h, 's> {
     ///
     /// ### Example
     /// ```
+    /// use std::borrow::Cow;
     /// use lol_html::{ElementContentHandlers, RewriteStrSettings};
     ///
     /// let settings = RewriteStrSettings {
     ///     element_content_handlers: vec! [
     ///         (
-    ///             &"div[foo]".parse().unwrap(),
+    ///             Cow::Owned("div[foo]".parse().unwrap()),
     ///             ElementContentHandlers::default().element(|el| {
     ///                 // ...
     ///
@@ -565,7 +568,7 @@ pub struct RewriteStrSettings<'h, 's> {
     ///             })
     ///         ),
     ///         (
-    ///             &"body".parse().unwrap(),
+    ///             Cow::Owned("div[foo]".parse().unwrap()),
     ///             ElementContentHandlers::default().comments(|c| {
     ///                 // ...
     ///
@@ -580,7 +583,7 @@ pub struct RewriteStrSettings<'h, 's> {
     /// [`element`]: macro.element.html
     /// [`comments`]: macro.comments.html
     /// [`text`]: macro.text.html
-    pub element_content_handlers: Vec<(&'s Selector, ElementContentHandlers<'h>)>,
+    pub element_content_handlers: Vec<(Cow<'s, Selector>, ElementContentHandlers<'h>)>,
 
     /// Specifies rewriting handlers for the content without associating it to a particular
     /// CSS selector.

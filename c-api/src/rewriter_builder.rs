@@ -1,5 +1,6 @@
 use super::*;
 use libc::c_void;
+use std::borrow::Cow;
 
 #[repr(C)]
 pub enum RewriterDirective {
@@ -89,7 +90,7 @@ impl ExternElementContentHandlers {
 
 pub struct SafeContentHandlers<'b> {
     pub document: Vec<DocumentContentHandlers<'b>>,
-    pub element: Vec<(&'b Selector, ElementContentHandlers<'b>)>,
+    pub element: Vec<(Cow<'b, Selector>, ElementContentHandlers<'b>)>,
 }
 
 #[derive(Default)]
@@ -109,7 +110,7 @@ impl HtmlRewriterBuilder {
             element: self
                 .element_content_handlers
                 .iter()
-                .map(|(s, h)| (*s, h.as_safe_element_content_handlers()))
+                .map(|(s, h)| (Cow::Borrowed(*s), h.as_safe_element_content_handlers()))
                 .collect(),
         }
     }

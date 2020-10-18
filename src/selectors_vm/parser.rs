@@ -195,7 +195,7 @@ impl<'i> Parser<'i> for SelectorsParser {
 /// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [element content handlers]: struct.Settings.html#structfield.element_content_handlers
 /// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Selector(pub(crate) SelectorList<SelectorImplDescriptor>);
 
 impl FromStr for Selector {
