@@ -120,7 +120,6 @@ pub enum RewritingError {
 /// ```
 pub struct HtmlRewriter<'h, O: OutputSink> {
     stream: TransformStream<HtmlRewriteController<'h>, O>,
-    finished: bool,
     poisoned: bool,
 }
 
@@ -194,7 +193,6 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
 
         HtmlRewriter {
             stream,
-            finished: false,
             poisoned: false,
         }
     }
@@ -204,17 +202,11 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     /// # Panics
     ///  * If previous invocation of the method returned a [`RewritingError`]
     ///    (these errors are unrecovarable).
-    ///  * If called after [`end`].
     ///
     /// [`RewritingError`]: errors/enum.RewritingError.html
     /// [`end`]: struct.HtmlRewriter.html#method.end
     #[inline]
     pub fn write(&mut self, data: &[u8]) -> Result<(), RewritingError> {
-        assert!(
-            !self.finished,
-            "Data was written into the stream after it has ended."
-        );
-
         guarded!(self, self.stream.write(data))
     }
 
@@ -225,15 +217,11 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     /// # Panics
     ///  * If previous invocation of [`write`] returned a [`RewritingError`] (these errors
     ///    are unrecovarable).
-    ///  * If called twice.
     ///
     /// [`RewritingError`]: errors/enum.RewritingError.html
     /// [`write`]: struct.HtmlRewriter.html#method.write
     #[inline]
-    pub fn end(&mut self) -> Result<(), RewritingError> {
-        assert!(!self.finished, "Stream was ended twice.");
-        self.finished = true;
-
+    pub fn end(mut self) -> Result<(), RewritingError> {
         guarded!(self, self.stream.end())
     }
 }
@@ -305,7 +293,7 @@ mod tests {
     use std::rc::Rc;
 
     fn write_chunks<O: OutputSink>(
-        rewriter: &mut HtmlRewriter<O>,
+        mut rewriter: HtmlRewriter<O>,
         encoding: &'static Encoding,
         chunks: &[&str],
     ) {
@@ -360,7 +348,7 @@ mod tests {
             let mut doctypes = Vec::default();
 
             {
-                let mut rewriter = HtmlRewriter::new(
+                let rewriter = HtmlRewriter::new(
                     Settings {
                         document_content_handlers: vec![doctype!(|d| {
                             doctypes.push((d.name(), d.public_id(), d.system_id()));
@@ -374,7 +362,7 @@ mod tests {
                 );
 
                 write_chunks(
-                    &mut rewriter,
+                    rewriter,
                     enc,
                     &[
                         "<!doctype html1>",
@@ -407,7 +395,7 @@ mod tests {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::new(
+                let rewriter = HtmlRewriter::new(
                     Settings {
                         element_content_handlers: vec![element!("*", |el| {
                             el.set_attribute("foo", "bar").unwrap();
@@ -421,7 +409,7 @@ mod tests {
                 );
 
                 write_chunks(
-                    &mut rewriter,
+                    rewriter,
                     enc,
                     &[
                         "<!doctype html>\n",
@@ -458,7 +446,7 @@ mod tests {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::new(
+                let rewriter = HtmlRewriter::new(
                     Settings {
                         element_content_handlers: vec![],
                         document_content_handlers: vec![
@@ -481,7 +469,7 @@ mod tests {
                 );
 
                 write_chunks(
-                    &mut rewriter,
+                    rewriter,
                     enc,
                     &[
                         "<!doctype html>\n",
@@ -591,24 +579,6 @@ mod tests {
                 RewritingError::MemoryLimitExceeded(e) => assert_eq!(e, MemoryLimitExceededError),
                 _ => panic!("{}", write_err),
             }
-        }
-
-        #[test]
-        #[should_panic(expected = "Data was written into the stream after it has ended.")]
-        fn write_after_end() {
-            let mut rewriter = create_rewriter(512, |_: &[u8]| {});
-
-            rewriter.end().unwrap();
-            rewriter.write(b"foo").unwrap();
-        }
-
-        #[test]
-        #[should_panic(expected = "Stream was ended twice.")]
-        fn end_twice() {
-            let mut rewriter = create_rewriter(512, |_: &[u8]| {});
-
-            rewriter.end().unwrap();
-            rewriter.end().unwrap();
         }
 
         #[test]
