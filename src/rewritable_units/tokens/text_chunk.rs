@@ -25,7 +25,7 @@ use std::fmt::{self, Debug};
 /// let mut greeting = String::new();
 ///
 /// {
-///     let mut rewriter = HtmlRewriter::try_new(
+///     let mut rewriter = HtmlRewriter::new(
 ///         Settings {
 ///            element_content_handlers: vec![
 ///                text!("div", |t| {
@@ -41,7 +41,7 @@ use std::fmt::{self, Debug};
 ///             ..Settings::default()
 ///         },
 ///         |_:&[u8]| {}
-///     ).unwrap();
+///     );
 ///
 ///     rewriter.write(b"<div>He").unwrap();
 ///     rewriter.write(b"llo w").unwrap();

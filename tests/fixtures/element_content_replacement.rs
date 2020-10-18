@@ -16,10 +16,10 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
 
     fn run(test: &TestCase) {
         let encoding = test.input.encoding().unwrap();
-        let mut output = Output::new(encoding);
+        let mut output = Output::new(encoding.into());
 
         {
-            let mut rewriter = HtmlRewriter::try_new(Settings {
+            let mut rewriter = HtmlRewriter::new(Settings {
                     element_content_handlers: vec![
                         element!(test.selector, |el| {
                             el.set_inner_content(
@@ -30,12 +30,11 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
                             Ok(())
                         })
                     ],
-                    encoding: encoding.name(),
+                    encoding,
                     ..Settings::default()
                 },
                 |c: &[u8]| output.push(c)
-            )
-            .unwrap();
+            );
 
             for chunk in test.input.chunks() {
                 rewriter.write(chunk).unwrap();

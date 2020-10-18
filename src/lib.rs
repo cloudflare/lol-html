@@ -34,8 +34,8 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    rewrite_str, DocumentContentHandlers, ElementContentHandlers, HtmlRewriter, MemorySettings,
-    RewriteStrSettings, Settings,
+    rewrite_str, AsciiCompatibleEncoding, DocumentContentHandlers, ElementContentHandlers,
+    HtmlRewriter, MemorySettings, RewriteStrSettings, Settings,
 };
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
@@ -45,7 +45,7 @@ pub mod errors {
     pub use super::memory::MemoryLimitExceededError;
     pub use super::parser::ParsingAmbiguityError;
     pub use super::rewritable_units::{AttributeNameError, CommentTextError, TagNameError};
-    pub use super::rewriter::{EncodingError, RewritingError};
+    pub use super::rewriter::RewritingError;
     pub use super::selectors_vm::SelectorError;
 }
 
@@ -100,6 +100,9 @@ pub mod test_utils {
         X_MAC_CYRILLIC,
         X_USER_DEFINED,
     ];
+
+    pub static NON_ASCII_COMPATIBLE_ENCODINGS: [&encoding_rs::Encoding; 4] =
+        [UTF_16BE, UTF_16LE, ISO_2022_JP, REPLACEMENT];
 
     pub struct Output {
         bytes: Vec<u8>,

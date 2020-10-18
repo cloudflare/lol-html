@@ -19,33 +19,36 @@ use thiserror::Error;
 
 pub use self::settings::*;
 
-fn try_encoding_from_str(encoding: &str) -> Result<&'static Encoding, EncodingError> {
-    let encoding = Encoding::for_label_no_replacement(encoding.as_bytes())
-        .ok_or(EncodingError::UnknownEncoding)?;
+/// This is an encoding known to be ASCII-compatible.
+///
+/// Non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`, `ISO-2022-JP` and
+/// `replacement`) are not supported by lol_html.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct AsciiCompatibleEncoding(&'static Encoding);
 
-    if encoding.is_ascii_compatible() {
-        Ok(encoding)
-    } else {
-        Err(EncodingError::NonAsciiCompatibleEncoding)
+impl AsciiCompatibleEncoding {
+    /// Returns `Some` if `Encoding` is ascii-compatible, or `None` otherwise.
+    pub fn new(encoding: &'static Encoding) -> Option<Self> {
+        if encoding.is_ascii_compatible() {
+            Some(Self(encoding))
+        } else {
+            None
+        }
     }
 }
 
-/// An error that occurs if incorrect [`encoding`] label was provided in [`Settings`].
-///
-/// [`encoding`]: ../struct.Settings.html#structfield.encoding
-/// [`Settings`]: ../struct.Settings.html
-#[derive(Error, Debug, PartialEq, Copy, Clone)]
-pub enum EncodingError {
-    /// The provided value doesn't match any of the [labels specified in the standard].
-    ///
-    /// [labels specified in the standard]: https://encoding.spec.whatwg.org/#names-and-labels
-    #[error("Unknown character encoding has been provided.")]
-    UnknownEncoding,
+impl From<AsciiCompatibleEncoding> for &'static Encoding {
+    fn from(ascii_enc: AsciiCompatibleEncoding) -> &'static Encoding {
+        ascii_enc.0
+    }
+}
 
-    /// The provided label is for one of the non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`,
-    /// `ISO-2022-JP` and `replacement`). These encodings are not supported.
-    #[error("Expected ASCII-compatible encoding.")]
-    NonAsciiCompatibleEncoding,
+impl std::convert::TryFrom<&'static Encoding> for AsciiCompatibleEncoding {
+    type Error = ();
+
+    fn try_from(enc: &'static Encoding) -> Result<Self, ()> {
+        Self::new(enc).ok_or(())
+    }
 }
 
 /// A compound error type that can be returned by [`write`] and [`end`] methods of the rewriter.
@@ -84,7 +87,7 @@ pub enum RewritingError {
 /// let mut output = vec![];
 ///
 /// {
-///     let mut rewriter = HtmlRewriter::try_new(
+///     let mut rewriter = HtmlRewriter::new(
 ///         Settings {
 ///             element_content_handlers: vec![
 ///                 // Rewrite insecure hyperlinks
@@ -102,7 +105,7 @@ pub enum RewritingError {
 ///             ..Settings::default()
 ///         },
 ///         |c: &[u8]| output.extend_from_slice(c)
-///     ).unwrap();
+///     );
 ///
 ///     rewriter.write(b"<div><a href=").unwrap();
 ///     rewriter.write(b"http://example.com>").unwrap();
@@ -147,8 +150,8 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     /// For the convenience the [`OutputSink`] trait is implemented for closures.
     ///
     /// [`OutputSink`]: trait.OutputSink.html
-    pub fn try_new<'s>(settings: Settings<'h, 's>, output_sink: O) -> Result<Self, EncodingError> {
-        let encoding = try_encoding_from_str(settings.encoding)?;
+    pub fn new<'s>(settings: Settings<'h, 's>, output_sink: O) -> Self {
+        let encoding = settings.encoding;
         let mut selectors_ast = selectors_vm::Ast::default();
         let mut dispatcher = ContentHandlersDispatcher::default();
         let has_selectors = !settings.element_content_handlers.is_empty();
@@ -169,7 +172,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         let selector_matching_vm = if has_selectors {
             Some(SelectorMatchingVm::new(
                 selectors_ast,
-                encoding,
+                encoding.into(),
                 Rc::clone(&memory_limiter),
             ))
         } else {
@@ -185,15 +188,15 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
                 .memory_settings
                 .preallocated_parsing_buffer_size,
             memory_limiter,
-            encoding,
+            encoding: encoding.into(),
             strict: settings.strict,
         });
 
-        Ok(HtmlRewriter {
+        HtmlRewriter {
             stream,
             finished: false,
             poisoned: false,
-        })
+        }
     }
 
     /// Writes a chunk of input data to the rewriter.
@@ -280,11 +283,9 @@ pub fn rewrite_str<'h, 's>(
 ) -> Result<String, RewritingError> {
     let mut output = vec![];
 
-    // NOTE: never panics because encoding is always "utf-8".
-    let mut rewriter = HtmlRewriter::try_new(settings.into(), |c: &[u8]| {
+    let mut rewriter = HtmlRewriter::new(settings.into(), |c: &[u8]| {
         output.extend_from_slice(c);
-    })
-    .unwrap();
+    });
 
     rewriter.write(html.as_bytes())?;
     rewriter.end()?;
@@ -297,8 +298,10 @@ pub fn rewrite_str<'h, 's>(
 mod tests {
     use super::*;
     use crate::html_content::ContentType;
-    use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS};
+    use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
+    use encoding_rs::Encoding;
     use std::cell::RefCell;
+    use std::convert::TryInto;
     use std::rc::Rc;
 
     fn write_chunks<O: OutputSink>(
@@ -345,51 +348,30 @@ mod tests {
     }
 
     #[test]
-    fn unknown_encoding() {
-        let err = HtmlRewriter::try_new(
-            Settings {
-                encoding: "hey-yo",
-                ..Settings::default()
-            },
-            |_: &[u8]| {},
-        )
-        .unwrap_err();
-
-        assert_eq!(err, EncodingError::UnknownEncoding);
-    }
-
-    #[test]
     fn non_ascii_compatible_encoding() {
-        let err = HtmlRewriter::try_new(
-            Settings {
-                encoding: "utf-16be",
-                ..Settings::default()
-            },
-            |_: &[u8]| {},
-        )
-        .unwrap_err();
-
-        assert_eq!(err, EncodingError::NonAsciiCompatibleEncoding);
+        for encoding in &NON_ASCII_COMPATIBLE_ENCODINGS {
+            assert_eq!(AsciiCompatibleEncoding::new(encoding), None);
+        }
     }
 
     #[test]
     fn doctype_info() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for &enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let mut doctypes = Vec::default();
 
             {
-                let mut rewriter = HtmlRewriter::try_new(
+                let mut rewriter = HtmlRewriter::new(
                     Settings {
                         document_content_handlers: vec![doctype!(|d| {
                             doctypes.push((d.name(), d.public_id(), d.system_id()));
                             Ok(())
                         })],
-                        encoding: enc.name(),
+                        // NOTE: unwrap() here is intentional; it also tests `Ascii::new`.
+                        encoding: enc.try_into().unwrap(),
                         ..Settings::default()
                     },
                     |_: &[u8]| {},
-                )
-                .unwrap();
+                );
 
                 write_chunks(
                     &mut rewriter,
@@ -421,23 +403,22 @@ mod tests {
 
     #[test]
     fn rewrite_start_tags() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for &enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_new(
+                let mut rewriter = HtmlRewriter::new(
                     Settings {
                         element_content_handlers: vec![element!("*", |el| {
                             el.set_attribute("foo", "bar").unwrap();
                             el.prepend("<test></test>", ContentType::Html);
                             Ok(())
                         })],
-                        encoding: enc.name(),
+                        encoding: enc.try_into().unwrap(),
                         ..Settings::default()
                     },
                     |c: &[u8]| output.push(c),
-                )
-                .unwrap();
+                );
 
                 write_chunks(
                     &mut rewriter,
@@ -473,11 +454,11 @@ mod tests {
 
     #[test]
     fn rewrite_document_content() {
-        for enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for &enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
             let actual: String = {
                 let mut output = Output::new(enc);
 
-                let mut rewriter = HtmlRewriter::try_new(
+                let mut rewriter = HtmlRewriter::new(
                     Settings {
                         element_content_handlers: vec![],
                         document_content_handlers: vec![
@@ -493,12 +474,11 @@ mod tests {
                                 Ok(())
                             }),
                         ],
-                        encoding: enc.name(),
+                        encoding: enc.try_into().unwrap(),
                         ..Settings::default()
                     },
                     |c: &[u8]| output.push(c),
-                )
-                .unwrap();
+                );
 
                 write_chunks(
                     &mut rewriter,
@@ -579,7 +559,7 @@ mod tests {
             max_allowed_memory_usage: usize,
             output_sink: O,
         ) -> HtmlRewriter<'static, O> {
-            HtmlRewriter::try_new(
+            HtmlRewriter::new(
                 Settings {
                     element_content_handlers: vec![element!("*", |_| Ok(()))],
                     memory_settings: MemorySettings {
@@ -590,7 +570,6 @@ mod tests {
                 },
                 output_sink,
             )
-            .unwrap()
         }
 
         #[test]
@@ -653,7 +632,7 @@ mod tests {
             ) {
                 use std::borrow::Cow;
 
-                let mut rewriter = HtmlRewriter::try_new(
+                let mut rewriter = HtmlRewriter::new(
                     Settings {
                         element_content_handlers: vec![(
                             Cow::Owned("*".parse().unwrap()),
@@ -663,8 +642,7 @@ mod tests {
                         ..Settings::default()
                     },
                     |_: &[u8]| {},
-                )
-                .unwrap();
+                );
 
                 let chunks = [
                     "<!--doc comment--> Doc text",
