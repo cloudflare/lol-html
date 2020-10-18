@@ -90,6 +90,7 @@ mod test_utils {
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS};
     use crate::*;
     use encoding_rs::Encoding;
+    use std::borrow::Cow;
 
     pub fn encoded(input: &str) -> Vec<(Vec<u8>, &'static Encoding)> {
         ASCII_COMPATIBLE_ENCODINGS
@@ -113,10 +114,10 @@ mod test_utils {
             .collect()
     }
 
-    pub fn rewrite_html(
+    pub fn rewrite_html<'a>(
         html: &[u8],
         encoding: &'static Encoding,
-        element_content_handlers: Vec<(&Selector, ElementContentHandlers)>,
+        element_content_handlers: Vec<(Cow<'a, Selector>, ElementContentHandlers)>,
         document_content_handlers: Vec<DocumentContentHandlers>,
     ) -> String {
         let mut output = Output::new(encoding);

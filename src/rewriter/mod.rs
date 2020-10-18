@@ -156,7 +156,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         for (selector, handlers) in settings.element_content_handlers {
             let locator = dispatcher.add_selector_associated_handlers(handlers);
 
-            selectors_ast.add_selector(selector, locator);
+            selectors_ast.add_selector(&selector, locator);
         }
 
         for handlers in settings.document_content_handlers {
@@ -251,22 +251,23 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
 /// ```
 /// use lol_html::{rewrite_str, element, RewriteStrSettings};
 ///
+/// let element_content_handlers = vec![
+///     // Rewrite insecure hyperlinks
+///     element!("a[href]", |el| {
+///         let href = el
+///             .get_attribute("href")
+///             .unwrap()
+///             .replace("http:", "https:");
+///
+///          el.set_attribute("href", &href).unwrap();
+///
+///          Ok(())
+///     })
+/// ];
 /// let output = rewrite_str(
 ///     r#"<div><a href="http://example.com"></a></div>"#,
 ///     RewriteStrSettings {
-///         element_content_handlers: vec![
-///             // Rewrite insecure hyperlinks
-///             element!("a[href]", |el| {
-///                 let href = el
-///                     .get_attribute("href")
-///                     .unwrap()
-///                     .replace("http:", "https:");
-///
-///                  el.set_attribute("href", &href).unwrap();
-///
-///                  Ok(())
-///             })
-///         ],
+///         element_content_handlers,
 ///         ..RewriteStrSettings::default()
 ///     }
 /// ).unwrap();
@@ -650,9 +651,14 @@ mod tests {
                 document_handlers: DocumentContentHandlers,
                 expected_err: &'static str,
             ) {
+                use std::borrow::Cow;
+
                 let mut rewriter = HtmlRewriter::try_new(
                     Settings {
-                        element_content_handlers: vec![(&"*".parse().unwrap(), element_handlers)],
+                        element_content_handlers: vec![(
+                            Cow::Owned("*".parse().unwrap()),
+                            element_handlers,
+                        )],
                         document_content_handlers: vec![document_handlers],
                         ..Settings::default()
                     },
