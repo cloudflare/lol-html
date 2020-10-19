@@ -3,6 +3,7 @@ use lol_html::html_content::*;
 use lol_html::*;
 use std::cell::RefCell;
 use std::{ptr, slice, str};
+use thiserror::Error;
 
 #[inline]
 fn to_ptr<T>(val: T) -> *const T {
@@ -131,3 +132,21 @@ pub use self::string::Str;
 // NOTE: prevent dead code from complaining about enum
 // never being constructed in the Rust code.
 pub use self::rewriter_builder::RewriterDirective;
+
+/// An error that occurs if incorrect [`encoding`] label was provided in [`Settings`].
+///
+/// [`encoding`]: ../struct.Settings.html#structfield.encoding
+/// [`Settings`]: ../struct.Settings.html
+#[derive(Error, Debug, PartialEq, Copy, Clone)]
+pub enum EncodingError {
+    /// The provided value doesn't match any of the [labels specified in the standard].
+    ///
+    /// [labels specified in the standard]: https://encoding.spec.whatwg.org/#names-and-labels
+    #[error("Unknown character encoding has been provided.")]
+    UnknownEncoding,
+
+    /// The provided label is for one of the non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`,
+    /// `ISO-2022-JP` and `replacement`). These encodings are not supported.
+    #[error("Expected ASCII-compatible encoding.")]
+    NonAsciiCompatibleEncoding,
+}

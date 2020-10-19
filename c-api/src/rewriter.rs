@@ -40,19 +40,24 @@ pub extern "C" fn lol_html_rewriter_build(
     output_sink_user_data: *mut c_void,
     strict: bool,
 ) -> *mut HtmlRewriter<'static, ExternOutputSink> {
+    use std::convert::TryInto;
+
     let builder = to_ref!(builder);
     let handlers = builder.get_safe_handlers();
 
+    let maybe_encoding =
+        encoding_rs::Encoding::for_label_no_replacement(to_bytes!(encoding, encoding_len));
+    let encoding = unwrap_or_ret_null! { maybe_encoding.ok_or(EncodingError::UnknownEncoding) };
     let settings = Settings {
         element_content_handlers: handlers.element,
         document_content_handlers: handlers.document,
-        encoding: unwrap_or_ret_null! { to_str!(encoding, encoding_len) },
+        encoding: unwrap_or_ret_null! { encoding.try_into().or(Err(EncodingError::NonAsciiCompatibleEncoding)) },
         memory_settings,
         strict,
     };
 
     let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);
-    let rewriter = unwrap_or_ret_null! { HtmlRewriter::try_new(settings, output_sink) };
+    let rewriter = HtmlRewriter::new(settings, output_sink);
 
     to_ptr_mut(rewriter)
 }

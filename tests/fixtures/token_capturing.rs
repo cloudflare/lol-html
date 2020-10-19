@@ -96,7 +96,7 @@ pub fn parse(
         .encoding()
         .expect("Input should be initialized before parsing");
 
-    let mut output = Output::new(encoding);
+    let mut output = Output::new(encoding.into());
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
     let memory_limiter = MemoryLimiter::new_shared(2048);
 
@@ -106,7 +106,7 @@ pub fn parse(
             output_sink: |chunk: &[u8]| output.push(chunk),
             preallocated_parsing_buffer_size: 0,
             memory_limiter,
-            encoding,
+            encoding: encoding.into(),
             strict: true
         }
     );

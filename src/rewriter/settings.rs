@@ -1,5 +1,7 @@
 use crate::rewritable_units::{Comment, Doctype, DocumentEnd, Element, EndTag, TextChunk};
 use crate::selectors_vm::Selector;
+// N.B. `use crate::` will break this because the constructor is not public, only the struct itself
+use super::AsciiCompatibleEncoding;
 use std::borrow::Cow;
 use std::error::Error;
 
@@ -476,7 +478,7 @@ pub struct Settings<'h, 's> {
     /// ### Default
     ///
     /// `"utf-8"` when constructed with `Settings::default()`.
-    pub encoding: &'s str,
+    pub encoding: AsciiCompatibleEncoding,
 
     /// Specifies the memory settings.
     pub memory_settings: MemorySettings,
@@ -522,7 +524,7 @@ impl Default for Settings<'_, '_> {
         Settings {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
-            encoding: "utf-8",
+            encoding: AsciiCompatibleEncoding(encoding_rs::UTF_8),
             memory_settings: MemorySettings::default(),
             strict: true,
         }

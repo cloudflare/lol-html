@@ -13,11 +13,11 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
 
     fn run(test: &TestCase) {
         let encoding = test.input.encoding().unwrap();
-        let mut output = Output::new(encoding);
+        let mut output = Output::new(encoding.into());
         let mut first_text_chunk_expected = true;
 
         {
-            let mut rewriter = HtmlRewriter::try_new(
+            let mut rewriter = HtmlRewriter::new(
                 Settings {
                     element_content_handlers: vec![
                         element!(test.selector, |el| {
@@ -67,11 +67,11 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
                             Ok(())
                         })
                     ],
-                    encoding: encoding.name(),
+                    encoding,
                     ..Settings::default()
                 },
                 |c: &[u8]| output.push(c)
-            ).unwrap();
+            );
 
             for chunk in test.input.chunks() {
                 rewriter.write(chunk).unwrap();

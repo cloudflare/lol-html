@@ -22,7 +22,7 @@ fn main() {
     };
 
     // Create the rewriter
-    let mut rewriter = HtmlRewriter::try_new(
+    let mut rewriter = HtmlRewriter::new(
         Settings {
             element_content_handlers: vec![
                 element!("a[href], link[rel=stylesheet][href]", |el| {
@@ -40,8 +40,7 @@ fn main() {
             ..Settings::default()
         },
         output_sink,
-    )
-    .unwrap();
+    );
 
     // Feed chunks from the stdin to the rewriter
     loop {

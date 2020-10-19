@@ -123,16 +123,15 @@ mod test_utils {
         let mut output = Output::new(encoding);
 
         {
-            let mut rewriter = HtmlRewriter::try_new(
+            let mut rewriter = HtmlRewriter::new(
                 Settings {
                     element_content_handlers,
                     document_content_handlers,
-                    encoding: encoding.name(),
+                    encoding: AsciiCompatibleEncoding::new(encoding).unwrap(),
                     ..Settings::default()
                 },
                 |c: &[u8]| output.push(c),
-            )
-            .unwrap();
+            );
 
             rewriter.write(html).unwrap();
             rewriter.end().unwrap();

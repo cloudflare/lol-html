@@ -1,4 +1,5 @@
 use crate::harness::suites::html5lib_tests::Unescape;
+use lol_html::AsciiCompatibleEncoding;
 use encoding_rs::Encoding;
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
@@ -12,7 +13,7 @@ pub struct Input {
     input: String,
     chunks: Vec<Vec<u8>>,
     initialized: bool,
-    encoding: Option<&'static Encoding>,
+    encoding: Option<AsciiCompatibleEncoding>,
 }
 
 impl From<String> for Input {
@@ -32,6 +33,8 @@ impl Input {
         encoding: &'static Encoding,
         single_chunk: bool,
     ) -> Result<usize, Box<dyn Error>> {
+        use std::convert::TryInto;
+
         let (bytes, _, had_unmappable_chars) = encoding.encode(&self.input);
 
         // NOTE: Input had unmappable characters for this encoding which were
@@ -51,7 +54,7 @@ impl Input {
 
         let len = bytes.len();
 
-        self.encoding = Some(encoding);
+        self.encoding = Some(encoding.try_into().unwrap());
 
         let chunk_size = if single_chunk {
             len
@@ -75,7 +78,7 @@ impl Input {
         Ok(chunk_size)
     }
 
-    pub fn encoding(&self) -> Option<&'static Encoding> {
+    pub fn encoding(&self) -> Option<AsciiCompatibleEncoding> {
         self.encoding
     }
 
