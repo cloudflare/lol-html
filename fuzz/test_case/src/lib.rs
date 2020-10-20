@@ -89,12 +89,12 @@ pub fn run_rewriter(data: &[u8]) -> () {
 }
 
 pub fn run_c_api_rewriter(data: &[u8]) -> () {
-    run_c_api_rewriter_iter(data, get_random_encoding());
+    run_c_api_rewriter_iter(data, get_random_encoding().name());
 }
 
-fn get_random_encoding() -> &'static str {
+fn get_random_encoding() -> &'static Encoding {
     let random_encoding_index = rand::thread_rng().gen_range(0, ASCII_COMPATIBLE_ENCODINGS.len());
-    return ASCII_COMPATIBLE_ENCODINGS[random_encoding_index].name();
+    return ASCII_COMPATIBLE_ENCODINGS[random_encoding_index];
 }
 
 fn get_random_selector() -> &'static str {
@@ -102,8 +102,10 @@ fn get_random_selector() -> &'static str {
     return SUPPORTED_SELECTORS[random_selector_index];
 }
 
-fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &str) -> () {
-    let mut rewriter = HtmlRewriter::try_new(
+fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) -> () {
+    use std::convert::TryInto;
+
+    let mut rewriter = HtmlRewriter::new(
         Settings {
             element_content_handlers: vec![
                 element!(selector, |el| {
@@ -176,13 +178,12 @@ fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &str) -> () {
                     Ok(())
                 }),
             ],
-            encoding,
+            encoding: encoding.try_into().unwrap(),
             memory_settings: MemorySettings::default(),
             strict: false,
         },
         |_: &[u8]| {},
-    )
-    .unwrap();
+    );
 
     rewriter.write(data).unwrap();
     rewriter.end().unwrap();
