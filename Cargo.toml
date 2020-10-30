@@ -57,7 +57,7 @@ serde_json = "1.0.5"
 pre-commit = "0.5.2"
 rand = "0.5.5"
 rustc-test = "0.3.0"
-itertools = "0.6.0"
+itertools = "0.8.0"
 cargo-fuzz = "0.5.2"
 
 [package.metadata.precommit]

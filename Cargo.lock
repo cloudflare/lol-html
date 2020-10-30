@@ -152,7 +152,7 @@ dependencies = [
  "clap",
  "criterion-plot",
  "csv",
- "itertools 0.8.0",
+ "itertools",
  "lazy_static",
  "num-traits",
  "rand_core 0.5.1",
@@ -173,7 +173,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eccdc6ce8bbe352ca89025bee672aa6d24f4eb8c53e3a8b5d1bc58011da072a2"
 dependencies = [
  "cast",
- "itertools 0.8.0",
+ "itertools",
 ]
 
 [[package]]
@@ -390,15 +390,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3f2be4da1690a039e9ae5fd575f706a63ad5a2120f161b1d653c9da3930dd21"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b8467d9c1cebe26feb08c640139247fac215782d35371ade9a2136ed6085358"
@@ -462,7 +453,7 @@ dependencies = [
  "glob",
  "hashbrown",
  "html5ever",
- "itertools 0.6.5",
+ "itertools",
  "lazy_static",
  "lazycell",
  "memchr",
