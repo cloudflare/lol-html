@@ -49,7 +49,7 @@ hashbrown = "0.9.0"
 [dev-dependencies]
 criterion = "0.3.0"
 glob = "0.2.11"
-html5ever = "0.21.0"
+html5ever = "0.24.0"
 hashbrown = { version = "0.9.0", features = ["serde"] }
 serde = "1.0.19"
 serde_derive = "1.0.19"
@@ -57,8 +57,8 @@ serde_json = "1.0.5"
 pre-commit = "0.5.2"
 rand = "0.5.5"
 rustc-test = "0.3.0"
-itertools = "0.6.0"
-cargo-fuzz = "0.5.2"
+itertools = "0.8.0"
+cargo-fuzz = "0.8.0"
 
 [package.metadata.precommit]
 fmt = "bash ./scripts/precommit.sh"
