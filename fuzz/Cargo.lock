@@ -314,7 +314,7 @@ dependencies = [
 
 [[package]]
 name = "lol_html"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -696,7 +696,7 @@ dependencies = [
  "bindgen 0.50.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "encoding_rs 0.8.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "lol_html 0.2.0",
+ "lol_html 0.3.0",
  "rand 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
