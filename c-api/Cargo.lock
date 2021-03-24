@@ -160,7 +160,7 @@ dependencies = [
 
 [[package]]
 name = "lol_html"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bitflags",
  "cfg-if",
