@@ -18,4 +18,4 @@ panic = "abort"
 lto = true
 
 [lib]
-crate-type = ["staticlib", "cdylib"]
+crate-type = ["staticlib", "cdylib", "rlib"]
