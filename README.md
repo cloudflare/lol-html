@@ -35,7 +35,7 @@ use lol_html::{element, HtmlRewriter, Settings};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = vec![];
 
-    let mut rewriter = HtmlRewriter::try_new(
+    let mut rewriter = HtmlRewriter::new(
         Settings {
             element_content_handlers: vec![
                 element!("a[href]", |el| {
@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ..Settings::default()
         },
         |c: &[u8]| output.extend_from_slice(c)
-    )?;
+    );
 
     rewriter.write(b"<div><a href=")?;
     rewriter.write(b"http://example.com>")?;
