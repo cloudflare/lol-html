@@ -54,7 +54,7 @@ impl<'i> Comment<'i> {
     /// Sets the text of the comment.
     #[inline]
     pub fn set_text(&mut self, text: &str) -> Result<(), CommentTextError> {
-        if text.find("-->").is_some() {
+        if text.contains("-->") {
             Err(CommentTextError::CommentClosingSequence)
         } else {
             // NOTE: if character can't be represented in the given

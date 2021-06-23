@@ -358,7 +358,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
     ) {
         let state = self.stack.build_state(&ctx.stack_item.local_name);
         if let Some(branch) =
-            self.program.instructions[addr].complete_exec_with_attrs(&state, &attr_matcher)
+            self.program.instructions[addr].complete_exec_with_attrs(&state, attr_matcher)
         {
             ctx.add_execution_branch(branch, match_handler);
         }
@@ -698,7 +698,7 @@ mod tests {
                                         &mut match_handler,
                                     )
                                     .unwrap(),
-                                    VmError::MemoryLimitExceeded(e) => panic!(e),
+                                    VmError::MemoryLimitExceeded(e) => panic!("{}", e),
                                 }
                             } else {
                                 // NOTE: can't use unwrap() or expect() here, because

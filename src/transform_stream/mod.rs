@@ -112,7 +112,7 @@ where
 
         self.dispatcher
             .borrow_mut()
-            .flush_remaining_input(&chunk, consumed_byte_count);
+            .flush_remaining_input(chunk, consumed_byte_count);
 
         if consumed_byte_count < chunk.len() {
             self.buffer_blocked_bytes(data, consumed_byte_count)?;

@@ -54,7 +54,7 @@ impl Compilable for Expr<OnTagNameExpr> {
             OnTagNameExpr::ExplicitAny => self.compile_expr(|_, _| true),
             OnTagNameExpr::Unmatchable => self.compile_expr(|_, _| false),
             OnTagNameExpr::LocalName(local_name) => {
-                match LocalName::from_str_without_replacements(&local_name, encoding)
+                match LocalName::from_str_without_replacements(local_name, encoding)
                     .map(LocalName::into_owned)
                 {
                     Ok(local_name) => {
@@ -444,7 +444,7 @@ mod tests {
         let instr = &program.instructions[program.entry_points.start];
 
         for_each_test_case(
-            &test_cases,
+            test_cases,
             encoding,
             |input, should_match, state, local_name, attr_matcher| {
                 let res = exec_generic_instr!(instr, state, local_name, attr_matcher);
@@ -508,7 +508,7 @@ mod tests {
         // NOTE: encoding of the individual components is tested by other tests,
         // so we use only UTF-8 here.
         for_each_test_case(
-            &test_cases,
+            test_cases,
             UTF_8,
             |input, expected_payload, state, local_name, attr_matcher| {
                 let (matched_payload, _, _) =
