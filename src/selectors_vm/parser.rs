@@ -96,7 +96,7 @@ impl SelectorsParser {
             | Component::AttributeInNoNamespace { .. } => Ok(()),
 
             Component::Negation(components) => {
-                components.iter().map(Self::validate_component).collect()
+                components.iter().try_for_each(Self::validate_component)
             }
 
             // Unsupported

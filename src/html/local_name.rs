@@ -154,7 +154,7 @@ impl PartialEq<LocalName<'_>> for LocalName<'_> {
 
         match (self, other) {
             (Hash(s), Hash(o)) => s == o,
-            (Bytes(s), Bytes(o)) => s.eq_ignore_ascii_case(&o),
+            (Bytes(s), Bytes(o)) => s.eq_ignore_ascii_case(o),
             _ => false,
         }
     }

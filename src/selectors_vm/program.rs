@@ -49,7 +49,7 @@ where
         state: &SelectorState,
         local_name: &LocalName,
     ) -> TryExecResult<'i, P> {
-        if self.local_name_exprs.iter().all(|e| e(&*state, &local_name)) {
+        if self.local_name_exprs.iter().all(|e| e(&*state, local_name)) {
             if self.attribute_exprs.is_empty() {
                 TryExecResult::Branch(&self.associated_branch)
             } else {

@@ -99,7 +99,7 @@ where
         let output = &input[self.remaining_content_start..consumed_byte_count];
 
         if self.emission_enabled && !output.is_empty() {
-            self.output_sink.handle_chunk(&output);
+            self.output_sink.handle_chunk(output);
         }
 
         self.remaining_content_start = 0;

@@ -67,7 +67,7 @@ impl AttributeComparisonExpr {
         case_sensitivity: ParsedCaseSensitivity,
         operator: AttrSelectorOperator,
     ) -> Self {
-        Self { name, value, operator, case_sensitivity }
+        Self { name, value, case_sensitivity, operator }
     }
 }
 

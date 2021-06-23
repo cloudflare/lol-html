@@ -195,7 +195,7 @@ impl<'i> AttributeMatcher<'i> {
             let mut haystack = &*actual_value;
 
             loop {
-                match first_byte_searcher(&haystack) {
+                match first_byte_searcher(haystack) {
                     Some(pos) => {
                         haystack = &haystack[pos + 1..];
 
