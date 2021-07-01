@@ -79,7 +79,7 @@ fn get_text_type_adjustment(tag_name: LocalNameHash) -> TreeBuilderFeedback {
         PlainText.into()
     } else if tag_name == Tag::Script {
         ScriptData.into()
-    } else if tag_is_one_of!(tag_name, [Style, Iframe, Xmp, Noembed, Noframes, Noscript]) {
+    } else if tag_is_one_of!(tag_name, [Style, Svg, Iframe, Xmp, Noembed, Noframes, Noscript]) {
         RawText.into()
     } else {
         TreeBuilderFeedback::None
