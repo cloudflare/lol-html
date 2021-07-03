@@ -1,5 +1,6 @@
 use super::{Mutations, Token};
 use crate::base::Bytes;
+use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -33,6 +34,22 @@ impl<'i> EndTag<'i> {
     pub fn set_name(&mut self, name: Bytes<'static>) {
         self.name = name;
         self.raw = None;
+    }
+
+    #[inline]
+    pub fn before(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.before(content, content_type);
+    }
+
+    #[inline]
+    pub fn after(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.after(content, content_type);
+    }
+
+    /// Removes the end tag.
+    #[inline]
+    pub fn remove(&mut self) {
+        self.mutations.remove();
     }
 
     #[inline]

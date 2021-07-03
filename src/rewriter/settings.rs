@@ -5,7 +5,7 @@ use super::AsciiCompatibleEncoding;
 use std::borrow::Cow;
 use std::error::Error;
 
-pub(super) type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
+pub(crate) type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
 pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + 'h>;
 pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>;
 pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;

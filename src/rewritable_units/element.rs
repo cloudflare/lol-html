@@ -1,6 +1,6 @@
 use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag};
 use crate::base::Bytes;
-use crate::rewriter::EndTagHandler;
+use crate::rewriter::{EndTagHandler, HandlerResult};
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
@@ -30,6 +30,14 @@ pub enum TagNameError {
     UnencodableCharacter,
 }
 
+/// An error that occurs when invalid value is provided for the tag name.
+#[derive(Error, Debug, PartialEq, Copy, Clone)]
+pub enum EndTagError {
+    /// The tag has no end tag.
+    #[error("No end tag.")]
+    NoEndTag,
+}
+
 /// An HTML element rewritable unit.
 ///
 /// Exposes API for examination and modification of a parsed HTML element.
@@ -37,6 +45,7 @@ pub struct Element<'r, 't> {
     start_tag: &'r mut StartTag<'t>,
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Bytes<'static>>,
+    end_tag_handler: Option<EndTagHandler<'static>>,
     can_have_content: bool,
     should_remove_content: bool,
     encoding: &'static Encoding,
@@ -51,6 +60,7 @@ impl<'r, 't> Element<'r, 't> {
             start_tag,
             end_tag_mutations: None,
             modified_end_tag_name: None,
+            end_tag_handler: None,
             can_have_content,
             should_remove_content: false,
             encoding,
@@ -457,11 +467,73 @@ impl<'r, 't> Element<'r, 't> {
         self.should_remove_content
     }
 
+    /// Sets a handler to run when the end tag is reached.
+    ///
+    /// Subsequent calls to the method on the same element replace the previous handler.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use lol_html::html_content::ContentType;
+    /// use lol_html::{element, rewrite_str, text, RewriteStrSettings};
+    /// let buffer = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    /// let html = rewrite_str(
+    ///     "<span>Short</span><span><b>13</b> characters</span>",
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("span", |el| {
+    ///                 // Truncate string for each new span.
+    ///                 buffer.borrow_mut().clear();
+    ///                 let buffer = buffer.clone();
+    ///                 el.on_end_tag(move |end| {
+    ///                     let s = buffer.borrow();
+    ///                     if s.len() == 13 {
+    ///                         // add text before the end tag
+    ///                         end.before("!", ContentType::Text);
+    ///                     } else {
+    ///                         // replace the end tag with an uppercase version
+    ///                         end.remove();
+    ///                         let name = end.name().to_uppercase();
+    ///                         end.after(&format!("</{}>", name), ContentType::Html);
+    ///                     }
+    ///                     Ok(())
+    ///                 })?;
+    ///                 Ok(())
+    ///             }),
+    ///             text!("span", |t| {
+    ///                 // Save the text contents for the end tag handler.
+    ///                 buffer.borrow_mut().push_str(t.as_str());
+    ///                 Ok(())
+    ///             }),
+    ///         ],
+    ///         ..RewriteStrSettings::default()
+    ///     },
+    /// )
+    /// .unwrap();
+    ///
+    /// assert_eq!(html, "<span>Short</SPAN><span><b>13</b> characters!</span>");
+    /// ```
+    pub fn on_end_tag(
+        &mut self,
+        handler: impl FnMut(&mut EndTag) -> HandlerResult + 'static,
+    ) -> Result<(), EndTagError> {
+        if self.can_have_content {
+            self.end_tag_handler = Some(Box::new(handler));
+            Ok(())
+        } else {
+            Err(EndTagError::NoEndTag)
+        }
+    }
+
     pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {
         let end_tag_mutations = self.end_tag_mutations;
         let modified_end_tag_name = self.modified_end_tag_name;
+        let end_tag_handler = self.end_tag_handler;
 
-        if end_tag_mutations.is_some() || modified_end_tag_name.is_some() {
+        if end_tag_mutations.is_some()
+            || modified_end_tag_name.is_some()
+            || end_tag_handler.is_some()
+        {
             Some(Box::new(move |end_tag: &mut EndTag| {
                 if let Some(name) = modified_end_tag_name {
                     end_tag.set_name(name);
@@ -471,7 +543,11 @@ impl<'r, 't> Element<'r, 't> {
                     end_tag.mutations = mutations;
                 }
 
-                Ok(())
+                if let Some(handler) = end_tag_handler {
+                    handler(end_tag)
+                } else {
+                    Ok(())
+                }
             }))
         } else {
             None

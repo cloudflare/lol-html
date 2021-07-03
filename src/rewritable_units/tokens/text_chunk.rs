@@ -12,11 +12,15 @@ use std::fmt::{self, Debug};
 /// text node can be represented by multiple text chunks. The size of a chunk depends on multiple
 /// parameters, such as decoding buffer size and input chunk size.
 ///
-/// It is up to a user of the rewriter to buffer content of chunks to get whole text node content
-/// where desired. Last chunk in a text node can be determined by calling [`last_in_text_node`]
-/// method of the chunk.
+/// It is up to a user of the rewriter to buffer content of chunks to get the whole text node
+/// content where desired. The last chunk in a text node can be determined by calling
+/// [`last_in_text_node`] method of the chunk.
 ///
-/// Note that the last chunk in a text node can have empty textual content.
+/// Note that in the sequence `"<span>red-<b>or</b>-blue</span>"` the `span` element contains three text
+/// nodes: `"red-"`, `"or"`, and `"-blue"`. Each of these can produce multiple text chunks and each will
+/// produce one text chunk where [`last_in_text_node`] returns `true`. The last chunk in a text
+/// node can have empty textual content. To perform an action once on the text contents of an
+/// element, see [`Element::on_end_tag`][crate::rewritable_units::Element::on_end_tag].
 ///
 /// # Example
 /// ```
