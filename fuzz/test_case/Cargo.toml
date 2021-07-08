@@ -8,7 +8,7 @@ edition = "2018"
 lol_html = { path = "../../" }
 encoding_rs = "0.8.13"
 libc = "0.2.61"
-rand = "0.7.0"
+rand = "0.8.4"
 
 [build-dependencies]
 bindgen = "0.50"
