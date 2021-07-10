@@ -194,10 +194,12 @@ checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 name = "lol-html-js-api"
 version = "1.1.1"
 dependencies = [
+ "encoding_rs",
  "js-sys",
  "lol_html",
  "serde",
  "serde-wasm-bindgen",
+ "thiserror",
  "wasm-bindgen",
 ]
 
@@ -438,9 +440,9 @@ dependencies = [
 
 [[package]]
 name = "serde-wasm-bindgen"
-version = "0.4.5"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3b4c031cd0d9014307d82b8abf653c0290fbdaeb4c02d00c63cf52f728628bf"
+checksum = "1102fa7714968fcf70fd8efa29fb3b189e20ef0e7701fbab9634384dda034bf3"
 dependencies = [
  "js-sys",
  "serde",
