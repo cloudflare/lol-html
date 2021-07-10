@@ -42,7 +42,7 @@ impl Element {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn attributes(&self, name: &str) -> JsResult<JsValue> {
+    pub fn attributes(&self) -> JsResult<JsValue> {
         self.0
             .get()
             .map(|e| {
