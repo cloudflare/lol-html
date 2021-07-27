@@ -539,6 +539,23 @@ mod tests {
         assert_eq!(*handlers_executed.borrow(), vec![0, 1, 2, 3, 4]);
     }
 
+    #[test]
+    fn write_esi_tags() {
+        let res = rewrite_str(
+            "<span><esi:include src=a></span>",
+            RewriteStrSettings {
+                element_content_handlers: vec![element!("esi\\:include", |el| {
+                    el.replace("?", ContentType::Text);
+                    Ok(())
+                })],
+                ..RewriteStrSettings::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(res, "<span>?</span>");
+    }
+
     mod fatal_errors {
         use super::*;
         use crate::errors::MemoryLimitExceededError;
