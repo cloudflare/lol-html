@@ -1,12 +1,12 @@
-use super::SelectorState;
-use super::program::AddressRange;
 use super::ast::NthChild;
+use super::program::AddressRange;
+use super::SelectorState;
 use crate::html::{LocalName, Namespace, Tag};
 use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
 // use hashbrown for raw entry, switch back to std once it stablizes there
-use hashbrown::{HashSet, HashMap, hash_map::RawEntryMut};
+use hashbrown::{hash_map::RawEntryMut, HashMap, HashSet};
 use std::fmt::Debug;
-use std::hash::{Hash, Hasher, BuildHasher};
+use std::hash::{BuildHasher, Hash, Hasher};
 
 #[inline]
 fn is_void_element(local_name: &LocalName) -> bool {
@@ -15,13 +15,24 @@ fn is_void_element(local_name: &LocalName) -> bool {
         return false;
     }
 
-    tag_is_one_of!(
+    if tag_is_one_of!(
         *local_name,
         [
             Area, Base, Basefont, Bgsound, Br, Col, Embed, Hr, Img, Input, Keygen, Link, Meta,
             Param, Source, Track, Wbr
         ]
-    )
+    ) {
+        return true;
+    }
+
+    if let LocalName::Bytes(bytes) = local_name {
+        // https://www.w3.org/TR/esi-lang/
+        if &**bytes == b"esi:include" || &**bytes == b"esi:comment" {
+            return true;
+        }
+    }
+
+    false
 }
 
 pub trait ElementData: Default + 'static {
@@ -75,7 +86,10 @@ impl CounterList {
     pub fn new(start: usize) -> Self {
         Self {
             items: Vec::new(),
-            current: CounterItem { counter: ChildCounter::new_and_inc(), index: start }
+            current: CounterItem {
+                counter: ChildCounter::new_and_inc(),
+                index: start,
+            },
         }
     }
 }
@@ -100,9 +114,9 @@ impl TypedChildCounterMap {
                 vacant.insert_hashed_nocheck(
                     hash,
                     name.clone().into_owned(), // the hash won't change just because we've got ownership
-                    CounterList::new(index)
+                    CounterList::new(index),
                 );
-            },
+            }
             RawEntryMut::Occupied(mut occupied) => {
                 let CounterList { items, current } = occupied.get_mut();
                 if current.index == index {
@@ -112,7 +126,7 @@ impl TypedChildCounterMap {
                     let old = std::mem::replace(current, CounterItem { counter, index });
                     items.push(old);
                 }
-            },
+            }
         }
     }
 
@@ -123,8 +137,8 @@ impl TypedChildCounterMap {
                 match v.items.pop() {
                     Some(next) => {
                         v.current = next;
-                    },
-                    None => return false
+                    }
+                    None => return false,
                 }
             }
             true
@@ -134,11 +148,15 @@ impl TypedChildCounterMap {
     #[inline]
     pub fn get<'a, 'i>(&'a self, name: &LocalName<'i>, index: usize) -> Option<&'i ChildCounter>
     where
-        'a: 'i
+        'a: 'i,
     {
         match self.0.get(name) {
             Some(CounterList {
-                current: CounterItem { counter, index: current_index },
+                current:
+                    CounterItem {
+                        counter,
+                        index: current_index,
+                    },
                 ..
             }) if *current_index == index => Some(counter),
             _ => None,
@@ -196,7 +214,11 @@ impl<E: ElementData> Stack<E> {
     pub fn new(memory_limiter: SharedMemoryLimiter, enable_nth_of_type: bool) -> Self {
         Stack {
             root_child_counter: Default::default(),
-            typed_child_counters: if enable_nth_of_type { Some(Default::default()) } else { None },
+            typed_child_counters: if enable_nth_of_type {
+                Some(Default::default())
+            } else {
+                None
+            },
             items: LimitedVec::new(memory_limiter),
         }
     }
@@ -206,7 +228,8 @@ impl<E: ElementData> Stack<E> {
         match self.items.last_mut() {
             Some(last) => &mut last.child_counter,
             None => &mut self.root_child_counter,
-        }.inc();
+        }
+        .inc();
 
         if let Some(counters) = &mut self.typed_child_counters {
             counters.add_child(name, self.items.len());
@@ -215,7 +238,7 @@ impl<E: ElementData> Stack<E> {
 
     pub fn build_state<'a, 'i>(&'a self, name: &LocalName<'i>) -> SelectorState<'i>
     where
-        'a: 'i // 'a outlives 'i, required to downcast 'a lifetimes into 'i
+        'a: 'i, // 'a outlives 'i, required to downcast 'a lifetimes into 'i
     {
         let cumulative = match self.items.last() {
             Some(last) => &last.child_counter,
@@ -223,10 +246,10 @@ impl<E: ElementData> Stack<E> {
         };
         SelectorState {
             cumulative,
-            typed:
-                self.typed_child_counters
-                    .as_ref()
-                    .and_then(|f| f.get(name, self.items.len()))
+            typed: self
+                .typed_child_counters
+                .as_ref()
+                .and_then(|f| f.get(name, self.items.len())),
         }
     }
 
@@ -243,23 +266,22 @@ impl<E: ElementData> Stack<E> {
         }
     }
 
-    pub fn pop_up_to(
-        &mut self,
-        local_name: LocalName,
-        popped_element_data_handler: impl FnMut(E),
-    ) {
-        let pop_to_index =
-            self.items
-                .iter()
-                .enumerate()
-                .rev()
-                .find(|(_, item)| item.local_name == local_name)
-                .map(|(i, _)| i);
+    pub fn pop_up_to(&mut self, local_name: LocalName, popped_element_data_handler: impl FnMut(E)) {
+        let pop_to_index = self
+            .items
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, item)| item.local_name == local_name)
+            .map(|(i, _)| i);
         if let Some(index) = pop_to_index {
             if let Some(c) = self.typed_child_counters.as_mut() {
                 c.pop_to(index)
             }
-            self.items.drain(index..).map(|i| i.element_data).for_each(popped_element_data_handler)
+            self.items
+                .drain(index..)
+                .map(|i| i.element_data)
+                .for_each(popped_element_data_handler)
         }
     }
 
