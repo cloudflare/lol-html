@@ -173,6 +173,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
                 selectors_ast,
                 encoding.into(),
                 Rc::clone(&memory_limiter),
+                settings.enable_esi_tags,
             ))
         } else {
             None
@@ -548,6 +549,7 @@ mod tests {
                     el.replace("?", ContentType::Text);
                     Ok(())
                 })],
+                enable_esi_tags: true,
                 ..RewriteStrSettings::default()
             },
         )

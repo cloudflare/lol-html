@@ -243,6 +243,16 @@ lol_html_rewriter_t *lol_html_rewriter_build(
     bool strict
 );
 
+lol_html_rewriter_t *unstable_lol_html_rewriter_build_with_esi_tags(
+    lol_html_rewriter_builder_t *builder,
+    const char *encoding,
+    size_t encoding_len,
+    lol_html_memory_settings_t memory_settings,
+    void (*output_sink)(const char *chunk, size_t chunk_len, void *user_data),
+    void *output_sink_user_data,
+    bool strict
+);
+
 // Write HTML chunk to rewriter.
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
