@@ -9,7 +9,7 @@ use std::fmt::Debug;
 use std::hash::{BuildHasher, Hash, Hasher};
 
 #[inline]
-fn is_void_element(local_name: &LocalName) -> bool {
+fn is_void_element(local_name: &LocalName, enable_esi_tags: bool) -> bool {
     // NOTE: fast path for the most commonly used elements
     if tag_is_one_of!(*local_name, [Div, A, Span, Li]) {
         return false;
@@ -25,10 +25,12 @@ fn is_void_element(local_name: &LocalName) -> bool {
         return true;
     }
 
-    if let LocalName::Bytes(bytes) = local_name {
-        // https://www.w3.org/TR/esi-lang/
-        if &**bytes == b"esi:include" || &**bytes == b"esi:comment" {
-            return true;
+    if enable_esi_tags {
+        if let LocalName::Bytes(bytes) = local_name {
+            // https://www.w3.org/TR/esi-lang/
+            if &**bytes == b"esi:include" || &**bytes == b"esi:comment" {
+                return true;
+            }
         }
     }
 
@@ -254,9 +256,13 @@ impl<E: ElementData> Stack<E> {
     }
 
     #[inline]
-    pub fn get_stack_directive(item: &StackItem<E>, ns: Namespace) -> StackDirective {
+    pub fn get_stack_directive(
+        item: &StackItem<E>,
+        ns: Namespace,
+        enable_esi_tags: bool,
+    ) -> StackDirective {
         if ns == Namespace::Html {
-            if is_void_element(&item.local_name) {
+            if is_void_element(&item.local_name, enable_esi_tags) {
                 StackDirective::PopImmediately
             } else {
                 StackDirective::Push

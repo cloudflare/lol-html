@@ -516,6 +516,8 @@ pub struct Settings<'h, 's> {
     ///
     /// `true` when constructed with `Settings::default()`.
     pub strict: bool,
+
+    pub enable_esi_tags: bool,
 }
 
 impl Default for Settings<'_, '_> {
@@ -527,6 +529,7 @@ impl Default for Settings<'_, '_> {
             encoding: AsciiCompatibleEncoding(encoding_rs::UTF_8),
             memory_settings: MemorySettings::default(),
             strict: true,
+            enable_esi_tags: false,
         }
     }
 }
@@ -538,6 +541,7 @@ impl<'h, 's> From<RewriteStrSettings<'h, 's>> for Settings<'h, 's> {
             element_content_handlers: settings.element_content_handlers,
             document_content_handlers: settings.document_content_handlers,
             strict: settings.strict,
+            enable_esi_tags: settings.enable_esi_tags,
             ..Settings::default()
         }
     }
@@ -635,6 +639,8 @@ pub struct RewriteStrSettings<'h, 's> {
     ///
     /// `true` when constructed with `Settings::default()`.
     pub strict: bool,
+
+    pub enable_esi_tags: bool,
 }
 
 impl Default for RewriteStrSettings<'_, '_> {
@@ -644,6 +650,7 @@ impl Default for RewriteStrSettings<'_, '_> {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
             strict: true,
+            enable_esi_tags: true,
         }
     }
 }

@@ -19,7 +19,7 @@ pub use self::compiler::Compiler;
 pub use self::error::SelectorError;
 pub use self::parser::Selector;
 pub use self::program::{ExecutionBranch, Program, TryExecResult};
-pub use self::stack::{ElementData, Stack, StackItem, ChildCounter};
+pub use self::stack::{ChildCounter, ElementData, Stack, StackItem};
 
 pub struct MatchInfo<P> {
     pub payload: P,
@@ -75,15 +75,17 @@ struct ExecutionCtx<'i, E: ElementData> {
     stack_item: StackItem<'i, E>,
     with_content: bool,
     ns: Namespace,
+    enable_esi_tags: bool,
 }
 
 impl<'i, E: ElementData> ExecutionCtx<'i, E> {
     #[inline]
-    pub fn new(local_name: LocalName<'i>, ns: Namespace) -> Self {
+    pub fn new(local_name: LocalName<'i>, ns: Namespace, enable_esi_tags: bool) -> Self {
         ExecutionCtx {
             stack_item: StackItem::new(local_name),
             with_content: true,
             ns,
+            enable_esi_tags,
         }
     }
 
@@ -124,6 +126,7 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
             stack_item: self.stack_item.into_owned(),
             with_content: self.with_content,
             ns: self.ns,
+            enable_esi_tags: self.enable_esi_tags,
         }
     }
 }
@@ -137,6 +140,7 @@ macro_rules! aux_info_request {
 pub struct SelectorMatchingVm<E: ElementData> {
     program: Program<E::MatchPayload>,
     stack: Stack<E>,
+    enable_esi_tags: bool,
 }
 
 impl<E: ElementData> SelectorMatchingVm<E> {
@@ -145,12 +149,14 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         ast: Ast<E::MatchPayload>,
         encoding: &'static Encoding,
         memory_limiter: SharedMemoryLimiter,
+        enable_esi_tags: bool,
     ) -> Self {
         let program = Compiler::new(encoding).compile(ast);
         let enable_nth_of_type = program.enable_nth_of_type;
 
         SelectorMatchingVm {
             program,
+            enable_esi_tags,
             stack: Stack::new(memory_limiter, enable_nth_of_type),
         }
     }
@@ -165,9 +171,9 @@ impl<E: ElementData> SelectorMatchingVm<E> {
 
         self.stack.add_child(&local_name);
 
-        let mut ctx = ExecutionCtx::new(local_name, ns);
+        let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags);
 
-        match Stack::get_stack_directive(&ctx.stack_item, ns) {
+        match Stack::get_stack_directive(&ctx.stack_item, ns, ctx.enable_esi_tags) {
             PopImmediately => {
                 ctx.with_content = false;
                 self.exec_without_attrs(ctx, match_handler)
@@ -375,17 +381,17 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         let state = self.stack.build_state(&ctx.stack_item.local_name);
 
         for addr in addr_range {
-            match self.program.instructions[addr].try_exec_without_attrs(&state, &ctx.stack_item.local_name) {
-                TryExecResult::Branch(branch) => {
-                    ctx.add_execution_branch(branch, match_handler)
-                }
+            match self.program.instructions[addr]
+                .try_exec_without_attrs(&state, &ctx.stack_item.local_name)
+            {
+                TryExecResult::Branch(branch) => ctx.add_execution_branch(branch, match_handler),
                 TryExecResult::AttributesRequired => {
                     return Err(Bailout {
                         at_addr: addr,
                         recovery_point: addr - start + 1,
                     });
-                },
-                _ => ()
+                }
+                _ => (),
             }
         }
 
@@ -660,8 +666,9 @@ mod tests {
             }
 
             let memory_limiter = MemoryLimiter::new_shared(2048);
+            let enable_esi_tags = false;
             let vm: SelectorMatchingVm<TestElementData> =
-                SelectorMatchingVm::new(ast, UTF_8, memory_limiter);
+                SelectorMatchingVm::new(ast, UTF_8, memory_limiter, enable_esi_tags);
 
             vm
         }};
