@@ -108,6 +108,7 @@ impl From<SelectorParseError<'_>> for SelectorError {
                 }
                 SelectorParseErrorKind::ClassNeedsIdent(_) => SelectorError::InvalidClassName,
                 SelectorParseErrorKind::EmptyNegation => SelectorError::EmptyNegation,
+                SelectorParseErrorKind::InvalidState => panic!("invalid state"),
             },
         }
     }

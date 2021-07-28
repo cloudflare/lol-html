@@ -15,6 +15,7 @@ impl SelectorImpl for SelectorImplDescriptor {
     type AttrValue = String;
     type Identifier = String;
     type ClassName = String;
+    type PartName = String;
     type LocalName = String;
     type NamespacePrefix = String;
     type NamespaceUrl = Namespace;
@@ -49,6 +50,14 @@ impl NonTSPseudoClass for NonTSPseudoClassStub {
     fn is_active_or_hover(&self) -> bool {
         match *self {}
     }
+
+    fn is_user_action_state(&self) -> bool {
+        match *self {}
+    }
+
+    fn has_zero_specificity(&self) -> bool {
+        match *self {}
+    }
 }
 
 impl ToCss for NonTSPseudoClassStub {
@@ -74,6 +83,7 @@ impl SelectorsParser {
                 Combinator::Child | Combinator::Descendant => Ok(()),
 
                 // Unsupported
+                Combinator::Part => Err(SelectorError::UnsupportedPseudoClassOrElement),
                 Combinator::NextSibling => Err(SelectorError::UnsupportedCombinator('+')),
                 Combinator::LaterSibling => Err(SelectorError::UnsupportedCombinator('~')),
                 Combinator::PseudoElement | Combinator::SlotAssignment => {
@@ -101,6 +111,7 @@ impl SelectorsParser {
 
             // Unsupported
             Component::Empty
+            | Component::Part(_)
             | Component::Host(_)
             | Component::LastChild
             | Component::LastOfType
