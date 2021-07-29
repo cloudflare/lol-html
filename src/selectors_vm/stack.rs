@@ -270,10 +270,7 @@ impl<E: ElementData> Stack<E> {
         let pop_to_index = self
             .items
             .iter()
-            .enumerate()
-            .rev()
-            .find(|(_, item)| item.local_name == local_name)
-            .map(|(i, _)| i);
+            .rposition(|item| item.local_name == local_name);
         if let Some(index) = pop_to_index {
             if let Some(c) = self.typed_child_counters.as_mut() {
                 c.pop_to(index)
