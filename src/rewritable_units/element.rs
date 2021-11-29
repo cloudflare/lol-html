@@ -46,6 +46,7 @@ pub struct Element<'r, 't> {
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Bytes<'static>>,
     end_tag_handler: Option<EndTagHandler<'static>>,
+    after_end_tag_handler: Option<EndTagHandler<'static>>,
     can_have_content: bool,
     should_remove_content: bool,
     encoding: &'static Encoding,
@@ -61,6 +62,7 @@ impl<'r, 't> Element<'r, 't> {
             end_tag_mutations: None,
             modified_end_tag_name: None,
             end_tag_handler: None,
+            after_end_tag_handler: None,
             can_have_content,
             should_remove_content: false,
             encoding,
@@ -525,12 +527,36 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
-    pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {
+    /// Sets a handler to run *after* the end tag is reached.
+    ///
+    /// This is very similar to `on_end_tag` but will fire after the end tag has
+    /// already been emitted to the sink.  This means that you cannot perform any
+    /// modifications on the end tag and expect them to be handled.  However it
+    /// means you can maintain a proper stack of where you are in the callback
+    /// chain which can be useful for more advanced purposes.
+    pub fn on_after_end_tag(
+        &mut self,
+        handler: impl FnMut(&mut EndTag) -> HandlerResult + 'static,
+    ) -> Result<(), EndTagError> {
+        if self.can_have_content {
+            self.after_end_tag_handler = Some(Box::new(handler));
+            Ok(())
+        } else {
+            Err(EndTagError::NoEndTag)
+        }
+    }
+
+    pub(crate) fn into_end_tag_handlers(
+        self,
+    ) -> (
+        Option<EndTagHandler<'static>>,
+        Option<EndTagHandler<'static>>,
+    ) {
         let end_tag_mutations = self.end_tag_mutations;
         let modified_end_tag_name = self.modified_end_tag_name;
         let end_tag_handler = self.end_tag_handler;
 
-        if end_tag_mutations.is_some()
+        let first: Option<EndTagHandler<'static>> = if end_tag_mutations.is_some()
             || modified_end_tag_name.is_some()
             || end_tag_handler.is_some()
         {
@@ -551,7 +577,23 @@ impl<'r, 't> Element<'r, 't> {
             }))
         } else {
             None
-        }
+        };
+
+        let after_end_tag_handler = self.after_end_tag_handler;
+
+        let second: Option<EndTagHandler<'static>> = if after_end_tag_handler.is_some() {
+            Some(Box::new(move |end_tag: &mut EndTag| {
+                if let Some(handler) = after_end_tag_handler {
+                    handler(end_tag)
+                } else {
+                    Ok(())
+                }
+            }))
+        } else {
+            None
+        };
+
+        (first, second)
     }
 }
 

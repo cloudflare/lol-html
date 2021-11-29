@@ -118,6 +118,7 @@ pub struct ContentHandlersDispatcher<'h> {
     comment_handlers: HandlerVec<CommentHandler<'h>>,
     text_handlers: HandlerVec<TextHandler<'h>>,
     end_tag_handlers: HandlerVec<EndTagHandler<'h>>,
+    after_end_tag_handlers: HandlerVec<EndTagHandler<'h>>,
     element_handlers: HandlerVec<ElementHandler<'h>>,
     end_handlers: HandlerVec<EndHandler<'h>>,
     next_element_can_have_content: bool,
@@ -207,6 +208,10 @@ impl<'h> ContentHandlersDispatcher<'h> {
             self.end_tag_handlers.inc_user_count(idx);
         }
 
+        if let Some(idx) = elem_desc.after_end_tag_handler_idx {
+            self.after_end_tag_handlers.inc_user_count(idx);
+        }
+
         if elem_desc.remove_content {
             self.matched_elements_with_removed_content -= 1;
         }
@@ -233,10 +238,16 @@ impl<'h> ContentHandlersDispatcher<'h> {
                     self.matched_elements_with_removed_content += 1;
                 }
 
-                if let Some(handler) = element.into_end_tag_handler() {
+                let (end_tag_handler, after_end_tag_handler) = element.into_end_tag_handlers();
+                if let Some(handler) = end_tag_handler {
                     elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.len());
 
                     self.end_tag_handlers.push(handler, false);
+                }
+                if let Some(handler) = after_end_tag_handler {
+                    elem_desc.after_end_tag_handler_idx = Some(self.after_end_tag_handlers.len());
+
+                    self.after_end_tag_handlers.push(handler, false);
                 }
             }
         }
@@ -257,6 +268,22 @@ impl<'h> ContentHandlersDispatcher<'h> {
                 .do_for_each_active_and_remove(|h| h(end_tag)),
             Token::TextChunk(text) => self.text_handlers.for_each_active(|h| h(text)),
             Token::Comment(comment) => self.comment_handlers.for_each_active(|h| h(comment)),
+        }
+    }
+
+    pub fn handle_after_token(
+        &mut self,
+        token: &mut Token,
+        _current_element_data: Option<&mut ElementDescriptor>,
+    ) -> HandlerResult {
+        match token {
+            Token::Doctype(_) => Ok(()),
+            Token::StartTag(_) => Ok(()),
+            Token::EndTag(end_tag) => self
+                .after_end_tag_handlers
+                .do_for_each_active_and_remove(|h| h(end_tag)),
+            Token::TextChunk(_) => Ok(()),
+            Token::Comment(_) => Ok(()),
         }
     }
 
@@ -281,7 +308,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
             flags |= TokenCaptureFlags::TEXT;
         }
 
-        if self.end_tag_handlers.has_active() {
+        if self.end_tag_handlers.has_active() || self.after_end_tag_handlers.has_active() {
             flags |= TokenCaptureFlags::NEXT_END_TAG;
         }
 
