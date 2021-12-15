@@ -198,7 +198,7 @@ impl<'i> Parser<'i> for SelectorsParser {
 /// `E[foo^="bar"]`                | an `E` element whose foo attribute value begins exactly with the string `"bar"`                                             |
 /// `E[foo$="bar"]`                | an `E` element whose foo attribute value ends exactly with the string `"bar"`                                               |
 /// `E[foo*="bar"]`                | an `E` element whose foo attribute value contains the substring `"bar"`                                                     |
-/// <code>E[foo&#124;="en"]</code> | an `E` element whose foo attribute value is a hyphen-separated list of values beginning with `"en"`                         |
+/// <code>E\[foo&#124;="en"\]</code> | an `E` element whose foo attribute value is a hyphen-separated list of values beginning with `"en"`                         |
 /// `E F`                          | an `F` element descendant of an `E` element                                                                                 |
 /// `E > F`                        | an `F` element child of an `E` element                                                                                      |
 ///
