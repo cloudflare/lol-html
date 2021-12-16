@@ -1,6 +1,6 @@
 use crate::harness::suites::html5lib_tests::Unescape;
-use lol_html::AsciiCompatibleEncoding;
 use encoding_rs::Encoding;
+use lol_html::AsciiCompatibleEncoding;
 use rand::{thread_rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde_json::error::Error as SerdeError;

@@ -1,12 +1,13 @@
 use super::attribute_matcher::AttributeMatcher;
-use super::program::{
-    AddressRange, ExecutionBranch, Program, Instruction
+use super::program::{AddressRange, ExecutionBranch, Instruction, Program};
+use super::{
+    Ast, AstNode, AttributeComparisonExpr, Expr, OnAttributesExpr, OnTagNameExpr, Predicate,
+    SelectorState,
 };
-use super::{Ast, AstNode, Expr, AttributeComparisonExpr, OnTagNameExpr, OnAttributesExpr, Predicate, SelectorState};
 use crate::base::{Bytes, HasReplacementsError};
 use crate::html::LocalName;
 use encoding_rs::Encoding;
-use selectors::attr::{ParsedCaseSensitivity, AttrSelectorOperator};
+use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter;
@@ -30,7 +31,10 @@ pub struct AttrExprOperands {
 
 impl Expr<OnTagNameExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &LocalName) -> bool + 'static>(&self, f: F) -> CompiledLocalNameExpr {
+    pub fn compile_expr<F: Fn(&SelectorState, &LocalName) -> bool + 'static>(
+        &self,
+        f: F,
+    ) -> CompiledLocalNameExpr {
         if self.negation {
             Box::new(move |s, a| !f(s, a))
         } else {
@@ -40,7 +44,12 @@ impl Expr<OnTagNameExpr> {
 }
 
 trait Compilable {
-    fn compile(&self, encoding: &'static Encoding, exprs: &mut ExprSet, enable_nth_of_type: &mut bool);
+    fn compile(
+        &self,
+        encoding: &'static Encoding,
+        exprs: &mut ExprSet,
+        enable_nth_of_type: &mut bool,
+    );
 }
 
 impl Compilable for Expr<OnTagNameExpr> {
@@ -57,9 +66,7 @@ impl Compilable for Expr<OnTagNameExpr> {
                 match LocalName::from_str_without_replacements(local_name, encoding)
                     .map(LocalName::into_owned)
                 {
-                    Ok(local_name) => {
-                        self.compile_expr(move |_, actual| *actual == local_name)
-                    }
+                    Ok(local_name) => self.compile_expr(move |_, actual| *actual == local_name),
                     // NOTE: selector value can't be converted to the given encoding, so
                     // it won't ever match.
                     Err(_) => self.compile_expr(|_, _| false),
@@ -70,7 +77,12 @@ impl Compilable for Expr<OnTagNameExpr> {
             }
             &OnTagNameExpr::NthOfType(nth) => {
                 *enable_nth_of_type = true;
-                self.compile_expr(move |state, _| state.typed.expect("Counter for type required at this point").is_nth(nth))
+                self.compile_expr(move |state, _| {
+                    state
+                        .typed
+                        .expect("Counter for type required at this point")
+                        .is_nth(nth)
+                })
             }
         };
 
@@ -80,7 +92,10 @@ impl Compilable for Expr<OnTagNameExpr> {
 
 impl Expr<OnAttributesExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &AttributeMatcher) -> bool + 'static>(&self, f: F) -> CompiledAttributeExpr {
+    pub fn compile_expr<F: Fn(&SelectorState, &AttributeMatcher) -> bool + 'static>(
+        &self,
+        f: F,
+    ) -> CompiledAttributeExpr {
         if self.negation {
             Box::new(move |s, a| !f(s, a))
         } else {
@@ -90,64 +105,82 @@ impl Expr<OnAttributesExpr> {
 }
 
 #[inline]
-fn compile_literal(encoding: &'static Encoding, lit: &str) -> Result<Bytes<'static>, HasReplacementsError> {
+fn compile_literal(
+    encoding: &'static Encoding,
+    lit: &str,
+) -> Result<Bytes<'static>, HasReplacementsError> {
     Bytes::from_str_without_replacements(lit, encoding).map(Bytes::into_owned)
 }
 
 #[inline]
-fn compile_literal_lowercase(encoding: &'static Encoding, lit: &str) -> Result<Bytes<'static>, HasReplacementsError> {
+fn compile_literal_lowercase(
+    encoding: &'static Encoding,
+    lit: &str,
+) -> Result<Bytes<'static>, HasReplacementsError> {
     compile_literal(encoding, &lit.to_ascii_lowercase())
 }
 
 #[inline]
-fn compile_operands(encoding: &'static Encoding, name: &str, value: &str) -> Result<(Bytes<'static>, Bytes<'static>), HasReplacementsError> {
-    Ok((compile_literal_lowercase(encoding, name)?, compile_literal(encoding, value)?))
+fn compile_operands(
+    encoding: &'static Encoding,
+    name: &str,
+    value: &str,
+) -> Result<(Bytes<'static>, Bytes<'static>), HasReplacementsError> {
+    Ok((
+        compile_literal_lowercase(encoding, name)?,
+        compile_literal(encoding, value)?,
+    ))
 }
 
 impl Compilable for Expr<OnAttributesExpr> {
-    fn compile(
-        &self,
-        encoding: &'static Encoding,
-        exprs: &mut ExprSet,
-        _: &mut bool,
-    ) {
-        let expr_result = match &self.simple_expr {
-            OnAttributesExpr::Id(id) =>
-                compile_literal(encoding, id)
+    fn compile(&self, encoding: &'static Encoding, exprs: &mut ExprSet, _: &mut bool) {
+        let expr_result =
+            match &self.simple_expr {
+                OnAttributesExpr::Id(id) => compile_literal(encoding, id)
                     .map(|id| self.compile_expr(move |_, m| m.has_id(&id))),
 
-            OnAttributesExpr::Class(class) =>
-                compile_literal(encoding, class)
+                OnAttributesExpr::Class(class) => compile_literal(encoding, class)
                     .map(|class| self.compile_expr(move |_, m| m.has_class(&class))),
 
-            OnAttributesExpr::AttributeExists(name) =>
-                compile_literal(encoding, name)
+                OnAttributesExpr::AttributeExists(name) => compile_literal(encoding, name)
                     .map(|name| self.compile_expr(move |_, m| m.has_attribute(&name))),
 
-            &OnAttributesExpr::AttributeComparisonExpr(
-                AttributeComparisonExpr {
+                &OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                     ref name,
                     ref value,
                     case_sensitivity,
-                    operator
-                }
-            ) => {
-                compile_operands(encoding, name, value)
-                    .map(move |(name, value)| {
-                        let operands = AttrExprOperands { name, value, case_sensitivity };
-                        match operator {
-                            AttrSelectorOperator::Equal     => self.compile_expr(move |_, m| m.attr_eq(&operands)),
-                            AttrSelectorOperator::Includes  => self.compile_expr(move |_, m| m.matches_splitted_by_whitespace(&operands)),
-                            AttrSelectorOperator::DashMatch => self.compile_expr(move |_, m| m.has_dash_matching_attr(&operands)),
-                            AttrSelectorOperator::Prefix    => self.compile_expr(move |_, m| m.has_attr_with_prefix(&operands)),
-                            AttrSelectorOperator::Suffix    => self.compile_expr(move |_, m| m.has_attr_with_suffix(&operands)),
-                            AttrSelectorOperator::Substring => self.compile_expr(move |_, m| m.has_attr_with_substring(&operands)),
+                    operator,
+                }) => compile_operands(encoding, name, value).map(move |(name, value)| {
+                    let operands = AttrExprOperands {
+                        name,
+                        value,
+                        case_sensitivity,
+                    };
+                    match operator {
+                        AttrSelectorOperator::Equal => {
+                            self.compile_expr(move |_, m| m.attr_eq(&operands))
                         }
-                    })
-            }
-        };
+                        AttrSelectorOperator::Includes => self
+                            .compile_expr(move |_, m| m.matches_splitted_by_whitespace(&operands)),
+                        AttrSelectorOperator::DashMatch => {
+                            self.compile_expr(move |_, m| m.has_dash_matching_attr(&operands))
+                        }
+                        AttrSelectorOperator::Prefix => {
+                            self.compile_expr(move |_, m| m.has_attr_with_prefix(&operands))
+                        }
+                        AttrSelectorOperator::Suffix => {
+                            self.compile_expr(move |_, m| m.has_attr_with_suffix(&operands))
+                        }
+                        AttrSelectorOperator::Substring => {
+                            self.compile_expr(move |_, m| m.has_attr_with_substring(&operands))
+                        }
+                    }
+                }),
+            };
 
-        exprs.attribute_exprs.push(expr_result.unwrap_or_else(|_| self.compile_expr(|_, _| false)));
+        exprs
+            .attribute_exprs
+            .push(expr_result.unwrap_or_else(|_| self.compile_expr(|_, _| false)));
     }
 }
 
@@ -183,15 +216,22 @@ where
     ) -> Instruction<P> {
         let mut exprs = ExprSet::default();
 
-        on_tag_name_exprs.iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
-        on_attr_exprs.iter().for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
+        on_tag_name_exprs
+            .iter()
+            .for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
+        on_attr_exprs
+            .iter()
+            .for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
 
         let ExprSet {
             local_name_exprs,
             attribute_exprs,
         } = exprs;
 
-        debug_assert!(!local_name_exprs.is_empty() || !attribute_exprs.is_empty(), "Predicate should contain expressions");
+        debug_assert!(
+            !local_name_exprs.is_empty() || !attribute_exprs.is_empty(),
+            "Predicate should contain expressions"
+        );
 
         Instruction {
             associated_branch: branch,
@@ -213,7 +253,11 @@ where
     }
 
     #[inline]
-    fn compile_descendants(&mut self, nodes: Vec<AstNode<P>>, enable_nth_of_type: &mut bool) -> Option<AddressRange> {
+    fn compile_descendants(
+        &mut self,
+        nodes: Vec<AstNode<P>>,
+        enable_nth_of_type: &mut bool,
+    ) -> Option<AddressRange> {
         if nodes.is_empty() {
             None
         } else {
@@ -221,7 +265,11 @@ where
         }
     }
 
-    fn compile_nodes(&mut self, nodes: Vec<AstNode<P>>, enable_nth_of_type: &mut bool) -> AddressRange {
+    fn compile_nodes(
+        &mut self,
+        nodes: Vec<AstNode<P>>,
+        enable_nth_of_type: &mut bool,
+    ) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
         // we can reference them by range instead of vector of addresses.
         let addr_range = self.reserve(&nodes);
@@ -233,7 +281,8 @@ where
                 hereditary_jumps: self.compile_descendants(node.descendants, enable_nth_of_type),
             };
 
-            self.instructions[position] = Some(self.compile_predicate(&node.predicate, branch, enable_nth_of_type));
+            self.instructions[position] =
+                Some(self.compile_predicate(&node.predicate, branch, enable_nth_of_type));
         }
 
         addr_range
@@ -241,12 +290,19 @@ where
 
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
         let mut enable_nth_of_type = false;
-        self.instructions = iter::repeat_with(|| None).take(ast.cumulative_node_count).collect();
+        self.instructions = iter::repeat_with(|| None)
+            .take(ast.cumulative_node_count)
+            .collect();
 
         let entry_points = self.compile_nodes(ast.root, &mut enable_nth_of_type);
 
         Program {
-            instructions: self.instructions.into_vec().into_iter().map(|o| o.unwrap()).collect(),
+            instructions: self
+                .instructions
+                .into_vec()
+                .into_iter()
+                .map(|o| o.unwrap())
+                .collect(),
             entry_points,
             enable_nth_of_type,
         }
@@ -258,7 +314,7 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::Token;
-    use crate::selectors_vm::{TryExecResult, tests::test_with_token};
+    use crate::selectors_vm::{tests::test_with_token, TryExecResult};
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
     use hashbrown::HashSet;
@@ -350,7 +406,10 @@ mod tests {
         for (input, matching_data) in test_cases.iter() {
             with_start_tag(input, encoding, |local_name, attr_matcher| {
                 let counter = Default::default();
-                let state = SelectorState { cumulative: &counter, typed: None };
+                let state = SelectorState {
+                    cumulative: &counter,
+                    typed: None,
+                };
                 action(input, matching_data, &state, local_name, attr_matcher);
             });
         }
@@ -368,7 +427,13 @@ mod tests {
             test_cases,
             encoding,
             |input, should_match, state, local_name, attr_matcher| {
-                assert!(matches!(instr.try_exec_without_attrs(state, &local_name), TryExecResult::AttributesRequired), "Instruction should not execute without attributes");
+                assert!(
+                    matches!(
+                        instr.try_exec_without_attrs(state, &local_name),
+                        TryExecResult::AttributesRequired
+                    ),
+                    "Instruction should not execute without attributes"
+                );
 
                 let multi_step_res = instr.complete_exec_with_attrs(&*state, &attr_matcher);
                 let res = instr.exec(state, &local_name, &attr_matcher);
@@ -396,7 +461,9 @@ mod tests {
                     let multi_step_res = match instr.try_exec_without_attrs(state, &local_name) {
                         TryExecResult::Branch(b) => Some(b),
                         TryExecResult::Fail => None,
-                        TryExecResult::AttributesRequired => panic!("Should match without attribute request"),
+                        TryExecResult::AttributesRequired => {
+                            panic!("Should match without attribute request")
+                        }
                     };
 
                     let res = instr.exec(state, &local_name, &attr_matcher);
@@ -426,7 +493,9 @@ mod tests {
             let multi_step_res = match $instr.try_exec_without_attrs($state, &$local_name) {
                 TryExecResult::Branch(b) => Some(b),
                 TryExecResult::Fail => None,
-                TryExecResult::AttributesRequired => $instr.complete_exec_with_attrs(&*$state, &$attr_matcher),
+                TryExecResult::AttributesRequired => {
+                    $instr.complete_exec_with_attrs(&*$state, &$attr_matcher)
+                }
             };
 
             assert_eq!(res, multi_step_res);
@@ -461,8 +530,12 @@ mod tests {
             let mut hereditary_jumps = Vec::default();
 
             for addr in $range.clone() {
-                let res =
-                    exec_generic_instr!($program.instructions[addr], $state, $local_name, $attr_matcher);
+                let res = exec_generic_instr!(
+                    $program.instructions[addr],
+                    $state,
+                    $local_name,
+                    $attr_matcher
+                );
 
                 if let Some(res) = res {
                     for &p in res.matched_payload.iter() {
@@ -511,8 +584,13 @@ mod tests {
             test_cases,
             UTF_8,
             |input, expected_payload, state, local_name, attr_matcher| {
-                let (matched_payload, _, _) =
-                    exec_instr_range!(program.entry_points, program, state, local_name, attr_matcher);
+                let (matched_payload, _, _) = exec_instr_range!(
+                    program.entry_points,
+                    program,
+                    state,
+                    local_name,
+                    attr_matcher
+                );
 
                 assert_payload!(matched_payload, expected_payload, selectors, input);
             },
@@ -891,10 +969,14 @@ mod tests {
                 let mut jumps = Vec::default();
                 let mut hereditary_jumps = Vec::default();
                 let counter = Default::default();
-                let state = SelectorState { cumulative: &counter, typed: None };
+                let state = SelectorState {
+                    cumulative: &counter,
+                    typed: None,
+                };
 
                 with_start_tag($html, UTF_8, |local_name, attr_matcher| {
-                    let res = exec_instr_range!($add_range, program, &state, local_name, attr_matcher);
+                    let res =
+                        exec_instr_range!($add_range, program, &state, local_name, attr_matcher);
 
                     assert_payload!(res.0, $expected_payload, selectors, $html);
 

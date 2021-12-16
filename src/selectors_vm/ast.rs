@@ -1,8 +1,8 @@
 use super::parser::{Selector, SelectorImplDescriptor};
+use hashbrown::HashSet;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component};
-use hashbrown::HashSet;
-use std::fmt::{self, Formatter, Debug};
+use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
@@ -67,7 +67,12 @@ impl AttributeComparisonExpr {
         case_sensitivity: ParsedCaseSensitivity,
         operator: AttrSelectorOperator,
     ) -> Self {
-        Self { name, value, case_sensitivity, operator }
+        Self {
+            name,
+            value,
+            case_sensitivity,
+            operator,
+        }
     }
 }
 
@@ -77,14 +82,17 @@ impl Debug for AttributeComparisonExpr {
             .field("name", &self.name)
             .field("value", &self.value)
             .field("case_sensitivity", &self.case_sensitivity)
-            .field("operator", match self.operator {
-                AttrSelectorOperator::Equal     => &"AttrSelectorOperator::Equal",
-                AttrSelectorOperator::Includes  => &"AttrSelectorOperator::Includes",
-                AttrSelectorOperator::DashMatch => &"AttrSelectorOperator::DashMatch",
-                AttrSelectorOperator::Prefix    => &"AttrSelectorOperator::Prefix",
-                AttrSelectorOperator::Substring => &"AttrSelectorOperator::Substring",
-                AttrSelectorOperator::Suffix    => &"AttrSelectorOperator::Suffix",
-            })
+            .field(
+                "operator",
+                match self.operator {
+                    AttrSelectorOperator::Equal => &"AttrSelectorOperator::Equal",
+                    AttrSelectorOperator::Includes => &"AttrSelectorOperator::Includes",
+                    AttrSelectorOperator::DashMatch => &"AttrSelectorOperator::DashMatch",
+                    AttrSelectorOperator::Prefix => &"AttrSelectorOperator::Prefix",
+                    AttrSelectorOperator::Substring => &"AttrSelectorOperator::Substring",
+                    AttrSelectorOperator::Suffix => &"AttrSelectorOperator::Suffix",
+                },
+            )
             .finish()
     }
 }
@@ -116,9 +124,7 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
             Component::ExplicitUniversalType | Component::ExplicitAnyNamespace => {
                 Condition::OnTagName(OnTagNameExpr::ExplicitAny)
             }
-            Component::ExplicitNoNamespace => {
-                Condition::OnTagName(OnTagNameExpr::Unmatchable)
-            }
+            Component::ExplicitNoNamespace => Condition::OnTagName(OnTagNameExpr::Unmatchable),
             Component::ID(id) => Condition::OnAttributes(OnAttributesExpr::Id(id.to_owned())),
             Component::Class(c) => Condition::OnAttributes(OnAttributesExpr::Class(c.to_owned())),
             Component::AttributeInNoNamespaceExists { local_name, .. } => {
@@ -134,12 +140,14 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                 if never_matches {
                     Condition::OnTagName(OnTagNameExpr::Unmatchable)
                 } else {
-                    Condition::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr::new(
-                        local_name.to_owned(),
-                        value.to_owned(),
-                        case_sensitivity,
-                        operator,
-                    )))
+                    Condition::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr::new(
+                            local_name.to_owned(),
+                            value.to_owned(),
+                            case_sensitivity,
+                            operator,
+                        ),
+                    ))
                 }
             }
             Component::FirstChild => {
@@ -150,7 +158,7 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
             }
             Component::FirstOfType => {
                 Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::first()))
-            },
+            }
             &Component::NthOfType(a, b) => {
                 Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(a, b)))
             }
@@ -205,10 +213,8 @@ impl Predicate {
     #[inline]
     fn add_component(&mut self, component: &Component<SelectorImplDescriptor>, negation: bool) {
         match Condition::from(component) {
-            Condition::OnTagName(e) =>
-                add_expr_to_list(&mut self.on_tag_name_exprs, e, negation),
-            Condition::OnAttributes(e) =>
-                add_expr_to_list(&mut self.on_attr_exprs, e, negation),
+            Condition::OnTagName(e) => add_expr_to_list(&mut self.on_tag_name_exprs, e, negation),
+            Condition::OnAttributes(e) => add_expr_to_list(&mut self.on_attr_exprs, e, negation),
         }
     }
 }
@@ -419,84 +425,98 @@ mod tests {
             (
                 r#"[foo="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
-                        name: "foo".into(),
-                        value: "bar".into(),
-                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
-                        operator: AttrSelectorOperator::Equal,
-                    }),
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                            operator: AttrSelectorOperator::Equal,
+                        },
+                    ),
                     negation: false,
                 },
             ),
             (
                 r#"[foo~="bar" i]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
-                        name: "foo".into(),
-                        value: "bar".into(),
-                        case_sensitivity: ParsedCaseSensitivity::AsciiCaseInsensitive,
-                        operator: AttrSelectorOperator::Includes,
-                    }),
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::AsciiCaseInsensitive,
+                            operator: AttrSelectorOperator::Includes,
+                        },
+                    ),
                     negation: false,
                 },
             ),
             (
                 r#"[foo|="bar" s]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
-                        name: "foo".into(),
-                        value: "bar".into(),
-                        case_sensitivity: ParsedCaseSensitivity::ExplicitCaseSensitive,
-                        operator: AttrSelectorOperator::DashMatch,
-                    }),
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::ExplicitCaseSensitive,
+                            operator: AttrSelectorOperator::DashMatch,
+                        },
+                    ),
                     negation: false,
                 },
             ),
             (
                 r#"[foo^="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
-                        name: "foo".into(),
-                        value: "bar".into(),
-                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
-                        operator: AttrSelectorOperator::Prefix,
-                    }),
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                            operator: AttrSelectorOperator::Prefix,
+                        },
+                    ),
                     negation: false,
                 },
             ),
             (
                 r#"[foo*="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
-                        name: "foo".into(),
-                        value: "bar".into(),
-                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
-                        operator: AttrSelectorOperator::Substring,
-                    }),
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                            operator: AttrSelectorOperator::Substring,
+                        },
+                    ),
                     negation: false,
                 },
             ),
             (
                 r#"[foo$="bar"]"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
-                        name: "foo".into(),
-                        value: "bar".into(),
-                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
-                        operator: AttrSelectorOperator::Suffix,
-                    }),
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                            operator: AttrSelectorOperator::Suffix,
+                        },
+                    ),
                     negation: false,
                 },
             ),
             (
                 r#":not([foo$="bar"])"#,
                 Expr {
-                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
-                        name: "foo".into(),
-                        value: "bar".into(),
-                        case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
-                        operator: AttrSelectorOperator::Suffix,
-                    }),
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                            operator: AttrSelectorOperator::Suffix,
+                        },
+                    ),
                     negation: true,
                 },
             ),
@@ -748,7 +768,9 @@ mod tests {
                             AstNode {
                                 predicate: Predicate {
                                     on_attr_exprs: vec![Expr {
-                                        simple_expr: OnAttributesExpr::AttributeExists("foo".into()),
+                                        simple_expr: OnAttributesExpr::AttributeExists(
+                                            "foo".into(),
+                                        ),
                                         negation: false,
                                     }],
                                     ..Default::default()

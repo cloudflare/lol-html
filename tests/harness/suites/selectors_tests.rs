@@ -1,9 +1,9 @@
 use super::{for_each_test_file, get_test_file_reader};
 use crate::harness::Input;
+use hashbrown::HashMap;
 use lol_html::test_utils::ASCII_COMPATIBLE_ENCODINGS;
 use lol_html::Selector;
 use serde_json::{self, from_reader};
-use hashbrown::HashMap;
 use std::io::prelude::*;
 
 fn read_test_file(suite: &'static str, name: &str) -> String {

@@ -1,9 +1,9 @@
 use super::decoder::{decode_attr_value, decode_text, to_null_decoded};
 use super::Unescape;
+use hashbrown::HashMap;
 use lol_html::Token;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
 use serde_json::error::Error;
-use hashbrown::HashMap;
 use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
 
@@ -73,9 +73,7 @@ impl<'de> Deserialize<'de> for TestToken {
 
                                 value
                             }
-                            None => {
-                                return Err(DeError::invalid_length(actual_length, &$error_msg))
-                            }
+                            None => return Err(DeError::invalid_length(actual_length, &$error_msg)),
                         }
                     };
                 }

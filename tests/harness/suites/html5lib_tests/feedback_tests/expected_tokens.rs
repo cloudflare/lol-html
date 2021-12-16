@@ -1,4 +1,5 @@
 use super::super::TestToken;
+use hashbrown::HashMap;
 use html5ever::rcdom::RcDom;
 use html5ever::tendril::StrTendril;
 use html5ever::tokenizer::{
@@ -6,7 +7,6 @@ use html5ever::tokenizer::{
     TokenizerResult,
 };
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
-use hashbrown::HashMap;
 use std::iter::FromIterator;
 use std::string::ToString;
 
