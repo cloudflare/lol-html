@@ -57,9 +57,10 @@ impl<'i> Attribute<'i> {
     ) -> Result<Bytes<'static>, AttributeNameError> {
         if name.is_empty() {
             Err(AttributeNameError::Empty)
-        } else if let Some(ch) = name.chars().find(|&ch|
-            matches!(ch, ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>' | '=')
-        ) {
+        } else if let Some(ch) = name
+            .chars()
+            .find(|&ch| matches!(ch, ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>' | '='))
+        {
             Err(AttributeNameError::ForbiddenCharacter(ch))
         } else {
             // NOTE: if character can't be represented in the given
