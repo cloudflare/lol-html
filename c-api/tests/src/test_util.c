@@ -92,6 +92,7 @@ void expect_stop(lol_html_rewriter_builder_t *builder, const char *html, void *u
     lol_html_str_t *msg = lol_html_take_last_error();
     str_eq(msg, "The rewriter has been stopped.");
     lol_html_str_free(*msg);
+    lol_html_rewriter_free(rewriter);
 }
 
 void check_output(

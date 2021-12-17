@@ -715,5 +715,7 @@ void element_api_test() {
 
         test_element_ns_is_html(selector, &user_data);
         test_element_ns_is_svg(selector, &user_data);
+
+        lol_html_selector_free(selector);
     }
 }
