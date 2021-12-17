@@ -131,9 +131,8 @@ pub extern "C" fn lol_html_rewriter_end(rewriter: *mut HtmlRewriter) -> c_int {
 
 #[no_mangle]
 pub extern "C" fn lol_html_rewriter_free(rewriter: *mut HtmlRewriter) {
-    assert_not_null!(rewriter);
-    // SAFETY: We already know `rewriter` is not NULL.
+    // SAFETY: `to_box` includes a check that `rewriter` is non-null.
     // The caller is required to ensure that `rewriter` is aligned and that `free` has not been called before.
     // NOTE: if `end()` was called before, it is valid (but not recommended) to call `free()` more than once.
-    unsafe { std::ptr::drop_in_place(rewriter) };
+    drop(to_box!(rewriter))
 }
