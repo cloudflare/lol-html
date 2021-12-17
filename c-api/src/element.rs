@@ -79,11 +79,11 @@ pub extern "C" fn lol_html_element_get_attribute(
     element: *const Element,
     name: *const c_char,
     name_len: size_t,
-) -> *const Str {
+) -> Str {
     let element = to_ref!(element);
-    let name = unwrap_or_ret_null! { to_str!(name, name_len) };
+    let name = unwrap_or_ret!(to_str!(name, name_len), Str::from_opt(None));
 
-    Str::opt_ptr(element.get_attribute(name))
+    Str::from_opt(element.get_attribute(name))
 }
 
 #[no_mangle]

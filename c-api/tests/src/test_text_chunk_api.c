@@ -25,7 +25,7 @@ static lol_html_rewriter_directive_t insert_before_and_after_text_chunk(
 
     if (content.len > 0) {
         note("Content");
-        str_eq(&content, "Hey 42");
+        str_eq(content, "Hey 42");
 
         note("Remove and last in text node flags");
         ok(!lol_html_text_chunk_is_last_in_text_node(chunk));

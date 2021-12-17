@@ -63,12 +63,14 @@ typedef struct {
 //---------------------------------------------------------------------
 
 // Frees the memory held by the library-allocated string.
+//
+// This is valid to call even if `str.data == NULL` (it does nothing, like `free(NULL)`).
 void lol_html_str_free(lol_html_str_t str);
 
 // Returns the last error message and resets last error to NULL.
 //
-// Return NULL if there was no error.
-lol_html_str_t *lol_html_take_last_error();
+// The `data` field will be NULL if there was no error.
+lol_html_str_t lol_html_take_last_error();
 
 // Creates new HTML rewriter builder.
 lol_html_rewriter_builder_t *lol_html_rewriter_builder_new();
@@ -283,18 +285,18 @@ void lol_html_rewriter_free(lol_html_rewriter_t *rewriter);
 
 // Returns doctype's name.
 //
-// Returns NULL if the doctype doesn't have a name.
-lol_html_str_t *lol_html_doctype_name_get(const lol_html_doctype_t *doctype);
+// The `data` field will be NULL if the doctype doesn't have a name.
+lol_html_str_t lol_html_doctype_name_get(const lol_html_doctype_t *doctype);
 
 // Returns doctype's PUBLIC identifier.
 //
-// Returns NULL if the doctype doesn't have a PUBLIC identifier.
-lol_html_str_t *lol_html_doctype_public_id_get(const lol_html_doctype_t *doctype);
+// The `data` field will be NULL if the doctype doesn't have a PUBLIC identifier.
+lol_html_str_t lol_html_doctype_public_id_get(const lol_html_doctype_t *doctype);
 
 // Returns doctype's SYSTEM identifier.
 //
-// Returns NULL if the doctype doesn't have a SYSTEM identifier.
-lol_html_str_t *lol_html_doctype_system_id_get(const lol_html_doctype_t *doctype);
+// The `data` field will be NULL if the doctype doesn't have a SYSTEM identifier.
+lol_html_str_t lol_html_doctype_system_id_get(const lol_html_doctype_t *doctype);
 
 // Attaches custom user data to the doctype.
 //
@@ -517,14 +519,14 @@ lol_html_str_t lol_html_attribute_name_get(const lol_html_attribute_t *attribute
 // Returns the attribute value.
 lol_html_str_t lol_html_attribute_value_get(const lol_html_attribute_t *attribute);
 
-// Returns the attribute value or NULL if attribute with the given name
+// Returns the attribute value. The `data` field will be NULL if an attribute with the given name
 // doesn't exist on the element.
 //
 // Name should be a valid UTF8-string.
 //
 // If the provided name is invalid UTF8-string the function returns NULL as well.
 // Therefore one should always check `lol_html_take_last_error` result after the call.
-lol_html_str_t *lol_html_element_get_attribute(
+lol_html_str_t lol_html_element_get_attribute(
     const lol_html_element_t *element,
     const char *name,
     size_t name_len

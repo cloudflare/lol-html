@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Change string allocators in the C API to return `lol_html_str_t`, not `lol_html_str_t*`. This was necessary to fix a memory leak in `lol_html_str_free`. (#115)
+
 ## v0.3.0
 - Add unofficial Go bindings to the README (#77)
 - Update dependencies (#73)

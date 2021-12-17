@@ -9,9 +9,9 @@
 #define MAX_MEMORY 2048
 
 #define str_eq(actual, expected) { \
-    ok((actual) != NULL); \
-    ok((actual)->len == strlen(expected)); \
-    ok(!memcmp((actual)->data, expected, (actual)->len)); \
+    ok((actual).data != NULL); \
+    ok((actual).len == strlen(expected)); \
+    ok(!memcmp((actual).data, expected, (actual).len)); \
 }
 
 #define c_str_eq(actual, expected) ok(!strcmp(actual, expected))

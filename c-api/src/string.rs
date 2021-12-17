@@ -17,16 +17,25 @@ impl Str {
     }
 
     #[inline]
-    pub fn opt_ptr(string: Option<String>) -> *const Self {
+    /// Convert an `Option<String>` to a C-style string.
+    ///
+    /// If `string` is `None`, `data` will be set to `NULL`.
+    pub fn from_opt(string: Option<String>) -> Self {
         match string {
-            Some(string) => to_ptr(Self::new(string)),
-            None => ptr::null(),
+            Some(string) => Self::new(string),
+            None => Self {
+                data: ptr::null(),
+                len: 0,
+            },
         }
     }
 }
 
 impl Drop for Str {
     fn drop(&mut self) {
+        if self.data == ptr::null() {
+            return;
+        }
         let bytes = unsafe { slice::from_raw_parts_mut(self.data as *mut c_char, self.len) };
 
         drop(unsafe { Box::from_raw(bytes) });

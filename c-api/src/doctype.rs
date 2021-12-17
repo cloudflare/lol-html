@@ -1,18 +1,18 @@
 use super::*;
 
 #[no_mangle]
-pub extern "C" fn lol_html_doctype_name_get(doctype: *const Doctype) -> *const Str {
-    Str::opt_ptr(to_ref!(doctype).name())
+pub extern "C" fn lol_html_doctype_name_get(doctype: *const Doctype) -> Str {
+    Str::from_opt(to_ref!(doctype).name())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_doctype_public_id_get(doctype: *const Doctype) -> *const Str {
-    Str::opt_ptr(to_ref!(doctype).public_id())
+pub extern "C" fn lol_html_doctype_public_id_get(doctype: *const Doctype) -> Str {
+    Str::from_opt(to_ref!(doctype).public_id())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_doctype_system_id_get(doctype: *const Doctype) -> *const Str {
-    Str::opt_ptr(to_ref!(doctype).system_id())
+pub extern "C" fn lol_html_doctype_system_id_get(doctype: *const Doctype) -> Str {
+    Str::from_opt(to_ref!(doctype).system_id())
 }
 
 #[no_mangle]

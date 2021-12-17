@@ -24,7 +24,7 @@ static lol_html_rewriter_directive_t get_set_comment_text(
     note("Get/set text");
     lol_html_str_t text = lol_html_comment_text_get(comment);
 
-    str_eq(&text, "Hey 42");
+    str_eq(text, "Hey 42");
 
     lol_html_str_free(text);
 
