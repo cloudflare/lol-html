@@ -26,9 +26,9 @@ void test_non_ascii_encoding() {
 
     ok(rewriter == NULL);
 
-    lol_html_str_t *msg = lol_html_take_last_error();
+    lol_html_str_t msg = lol_html_take_last_error();
 
     str_eq(msg, "Expected ASCII-compatible encoding.");
 
-    lol_html_str_free(*msg);
+    lol_html_str_free(msg);
 }

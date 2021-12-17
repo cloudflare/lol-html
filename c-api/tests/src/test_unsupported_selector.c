@@ -11,9 +11,9 @@ void test_unsupported_selector() {
 
     ok(selector == NULL);
 
-    lol_html_str_t *msg = lol_html_take_last_error();
+    lol_html_str_t msg = lol_html_take_last_error();
 
     str_eq(msg, "Unsupported pseudo-class or pseudo-element in selector.");
 
-    lol_html_str_free(*msg);
+    lol_html_str_free(msg);
 }

@@ -6,8 +6,8 @@ thread_local! {
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_take_last_error() -> *const Str {
+pub extern "C" fn lol_html_take_last_error() -> Str {
     let err = LAST_ERROR.with(|e| e.borrow_mut().take());
 
-    Str::opt_ptr(err.map(|e| e.to_string()))
+    Str::from_opt(err.map(|e| e.to_string()))
 }

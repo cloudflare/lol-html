@@ -21,14 +21,14 @@ lol_html_rewriter_directive_t get_and_free_empty_element_attribute(
     ok(lol_html_element_has_attribute(element, attr1, strlen(attr1)) == 1);
 
     note("Get attribute");
-    lol_html_str_t *value = lol_html_element_get_attribute(
+    lol_html_str_t value = lol_html_element_get_attribute(
         element,
         attr1,
         strlen(attr1)
     );
 
     str_eq(value, "");
-    lol_html_str_free(*value);
+    lol_html_str_free(value);
 
     return LOL_HTML_CONTINUE;
 }
@@ -89,9 +89,9 @@ void expect_stop(lol_html_rewriter_builder_t *builder, const char *html, void *u
     );
 
     ok(lol_html_rewriter_write(rewriter, in, strlen(in)));
-    lol_html_str_t *msg = lol_html_take_last_error();
+    lol_html_str_t msg = lol_html_take_last_error();
     str_eq(msg, "The rewriter has been stopped.");
-    lol_html_str_free(*msg);
+    lol_html_str_free(msg);
     lol_html_rewriter_free(rewriter);
 }
 

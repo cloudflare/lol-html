@@ -21,16 +21,16 @@ static lol_html_rewriter_directive_t get_doctype_fields(
 
     note("Fields");
 
-    lol_html_str_t *name = lol_html_doctype_name_get(doctype);
-    lol_html_str_t *public_id = lol_html_doctype_public_id_get(doctype);
-    lol_html_str_t *system_id = lol_html_doctype_system_id_get(doctype);
+    lol_html_str_t name = lol_html_doctype_name_get(doctype);
+    lol_html_str_t public_id = lol_html_doctype_public_id_get(doctype);
+    lol_html_str_t system_id = lol_html_doctype_system_id_get(doctype);
 
     str_eq(name, "math");
-    ok(public_id == NULL);
+    ok(public_id.data == NULL);
     str_eq(system_id, "http://www.w3.org/Math/DTD/mathml1/mathml.dtd");
 
-    lol_html_str_free(*name);
-    lol_html_str_free(*system_id);
+    lol_html_str_free(name);
+    lol_html_str_free(system_id);
 
     return LOL_HTML_CONTINUE;
 }

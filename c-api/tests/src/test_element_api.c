@@ -24,18 +24,18 @@ static lol_html_rewriter_directive_t modify_element_tag_name(
     note("Get tag name");
     lol_html_str_t name = lol_html_element_tag_name_get(element);
 
-    str_eq(&name, "div");
+    str_eq(name, "div");
 
     lol_html_str_free(name);
 
     note("Set invalid tag name");
     ok(lol_html_element_tag_name_set(element, "", 0) == -1);
 
-    lol_html_str_t *msg = lol_html_take_last_error();
+    lol_html_str_t msg = lol_html_take_last_error();
 
     str_eq(msg, "Tag name can't be empty.");
 
-    lol_html_str_free(*msg);
+    lol_html_str_free(msg);
 
     note("Set tag name");
     ok(!lol_html_element_tag_name_set(element, new_name, strlen(new_name)));
@@ -132,7 +132,7 @@ static lol_html_rewriter_directive_t get_and_modify_attributes(
     ok(!lol_html_element_has_attribute(element, attr2, strlen(attr2)));
 
     note("Get attribute");
-    lol_html_str_t *value = lol_html_element_get_attribute(
+    lol_html_str_t value = lol_html_element_get_attribute(
         element,
         attr1,
         strlen(attr1)
@@ -146,7 +146,7 @@ static lol_html_rewriter_directive_t get_and_modify_attributes(
         strlen(attr2)
     );
 
-    ok(value == NULL);
+    ok(value.data == NULL);
 
     note("Set attribute");
     int err = lol_html_element_set_attribute(
@@ -472,8 +472,8 @@ static lol_html_rewriter_directive_t iterate_element_attributes(
     lol_html_str_t name = lol_html_attribute_name_get(attr);
     lol_html_str_t value = lol_html_attribute_value_get(attr);
 
-    str_eq(&name, "foo");
-    str_eq(&value, "42");
+    str_eq(name, "foo");
+    str_eq(value, "42");
 
     lol_html_str_free(name);
     lol_html_str_free(value);
@@ -485,8 +485,8 @@ static lol_html_rewriter_directive_t iterate_element_attributes(
     name = lol_html_attribute_name_get(attr);
     value = lol_html_attribute_value_get(attr);
 
-    str_eq(&name, "bar");
-    str_eq(&value, "1337");
+    str_eq(name, "bar");
+    str_eq(value, "1337");
 
     lol_html_str_free(name);
     lol_html_str_free(value);
