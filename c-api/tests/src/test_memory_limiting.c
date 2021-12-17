@@ -36,4 +36,5 @@ void test_memory_limiting() {
     str_eq(msg, "The memory limit has been exceeded.");
     lol_html_str_free(*msg);
     lol_html_rewriter_free(rewriter);
+    lol_html_selector_free(selector);
 }
