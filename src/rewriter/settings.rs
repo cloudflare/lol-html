@@ -675,3 +675,8 @@ impl Default for RewriteStrSettings<'_, '_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    static_assertions::assert_impl_all!(crate::Settings: Send, Sync);
+}
