@@ -289,9 +289,8 @@ mod tests {
     use crate::html_content::ContentType;
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
     use encoding_rs::Encoding;
-    use std::cell::RefCell;
     use std::convert::TryInto;
-    use std::rc::Rc;
+    use std::sync::Mutex;
 
     fn write_chunks<O: OutputSink>(
         mut rewriter: HtmlRewriter<O>,
@@ -507,15 +506,17 @@ mod tests {
 
     #[test]
     fn handler_invocation_order() {
-        let handlers_executed = Rc::new(RefCell::new(Vec::default()));
+        use std::sync::Arc;
+
+        let handlers_executed = Arc::new(Mutex::new(Vec::default()));
 
         macro_rules! create_handlers {
             ($sel:expr, $idx:expr) => {
                 element!($sel, {
-                    let handlers_executed = Rc::clone(&handlers_executed);
+                    let handlers_executed = Arc::clone(&handlers_executed);
 
                     move |_| {
-                        handlers_executed.borrow_mut().push($idx);
+                        handlers_executed.lock().unwrap().push($idx);
                         Ok(())
                     }
                 })
@@ -537,7 +538,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(*handlers_executed.borrow(), vec![0, 1, 2, 3, 4]);
+        assert_eq!(*handlers_executed.lock().unwrap(), vec![0, 1, 2, 3, 4]);
     }
 
     #[test]

@@ -118,7 +118,7 @@ mod tests {
     fn rewrite_doctype(
         html: &[u8],
         encoding: &'static Encoding,
-        mut handler: impl FnMut(&mut Doctype),
+        mut handler: impl Send + Sync + FnMut(&mut Doctype),
     ) -> String {
         let mut handler_called = false;
 

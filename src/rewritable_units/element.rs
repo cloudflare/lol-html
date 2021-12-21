@@ -515,7 +515,7 @@ impl<'r, 't> Element<'r, 't> {
     /// ```
     pub fn on_end_tag(
         &mut self,
-        handler: impl FnMut(&mut EndTag) -> HandlerResult + 'static,
+        handler: impl Send + Sync + FnMut(&mut EndTag) -> HandlerResult + 'static,
     ) -> Result<(), EndTagError> {
         if self.can_have_content {
             self.end_tag_handler = Some(Box::new(handler));
@@ -578,7 +578,7 @@ mod tests {
         html: &[u8],
         encoding: &'static Encoding,
         selector: &str,
-        mut handler: impl FnMut(&mut Element),
+        mut handler: impl Send + Sync + FnMut(&mut Element),
     ) -> String {
         let mut handler_called = false;
 
