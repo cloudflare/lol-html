@@ -23,6 +23,7 @@ const INCLUDE_DIR: &str = "../include";
 
 fn glob_c_files<P: AsRef<Path>>(dirname: P) -> Vec<PathBuf> {
     const C_PATTERN: &str = "*.c";
+    let cwd = std::env::current_dir().expect("failed to determine working directory");
 
     glob(
         dirname
@@ -33,6 +34,14 @@ fn glob_c_files<P: AsRef<Path>>(dirname: P) -> Vec<PathBuf> {
     )
     .expect("Failed to read glob pattern")
     .filter_map(Result::ok)
+    .inspect(|path| {
+        let relative_path = path
+            .strip_prefix(&cwd)
+            .unwrap_or(path)
+            .to_str()
+            .expect("non-ascii C source file");
+        println!("cargo:rerun-if-changed={}", relative_path);
+    })
     .collect::<Vec<_>>()
 }
 
@@ -42,6 +51,8 @@ fn main() {
     for cflag in CFLAGS {
         build.flag(cflag);
     }
+
+    println!("cargo:rerun-if-changed=../include/lol_html.h");
 
     // Collect all the C files from src/deps/picotest and src.
     let mut c_files = glob_c_files(PICOTEST_DIR);
