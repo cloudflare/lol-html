@@ -144,7 +144,7 @@ macro_rules! __element_content_handler {
 #[macro_export(local_inner_macros)]
 macro_rules! element {
     ($selector:expr, $handler:expr) => {
-        __element_content_handler!($selector, element, $handler);
+        __element_content_handler!($selector, element, $handler)
     };
 }
 
@@ -177,7 +177,7 @@ macro_rules! element {
 #[macro_export(local_inner_macros)]
 macro_rules! text {
     ($selector:expr, $handler:expr) => {
-        __element_content_handler!($selector, text, $handler);
+        __element_content_handler!($selector, text, $handler)
     };
 }
 
@@ -208,7 +208,7 @@ macro_rules! text {
 #[macro_export(local_inner_macros)]
 macro_rules! comments {
     ($selector:expr, $handler:expr) => {
-        __element_content_handler!($selector, comments, $handler);
+        __element_content_handler!($selector, comments, $handler)
     };
 }
 
@@ -246,7 +246,7 @@ macro_rules! __document_content_handler {
 #[macro_export(local_inner_macros)]
 macro_rules! doctype {
     ($handler:expr) => {
-        __document_content_handler!(doctype, $handler);
+        __document_content_handler!(doctype, $handler)
     };
 }
 
@@ -278,7 +278,7 @@ macro_rules! doctype {
 #[macro_export(local_inner_macros)]
 macro_rules! doc_text {
     ($handler:expr) => {
-        __document_content_handler!(text, $handler);
+        __document_content_handler!(text, $handler)
     };
 }
 
@@ -308,7 +308,7 @@ macro_rules! doc_text {
 #[macro_export(local_inner_macros)]
 macro_rules! doc_comments {
     ($handler:expr) => {
-        __document_content_handler!(comments, $handler);
+        __document_content_handler!(comments, $handler)
     };
 }
 
@@ -347,7 +347,7 @@ macro_rules! doc_comments {
 #[macro_export(local_inner_macros)]
 macro_rules! end {
     ($handler:expr) => {
-        __document_content_handler!(end, $handler);
+        __document_content_handler!(end, $handler)
     };
 }
 
