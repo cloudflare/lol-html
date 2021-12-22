@@ -617,6 +617,48 @@ static void test_stop(lol_html_selector_t *selector, void *user_data) {
     ok(!err);
 }
 
+static lol_html_rewriter_directive_t modify_element_end_tag_name_inner(lol_html_end_tag_t *end_tag, void *user_data) {
+    int times_run = *(int*)user_data;
+
+    if (times_run == 0) {
+        lol_ok(lol_html_end_tag_before(end_tag, "!", 1, false));
+        const char *after_html = "<span>extra data</span>";
+        lol_ok(lol_html_end_tag_after(end_tag, after_html, strlen(after_html), true));
+
+        lol_html_str_t name = lol_html_end_tag_name_get(end_tag);
+        str_eq(name, "div");
+
+        lol_ok(lol_html_end_tag_name_set(end_tag, "div1", strlen("div1")));
+        name = lol_html_end_tag_name_get(end_tag);
+        str_eq(name, "div1");
+    } else {
+        lol_html_end_tag_remove(end_tag);
+    }
+
+    return LOL_HTML_CONTINUE;
+}
+
+static lol_html_rewriter_directive_t modify_element_end_tag_name_outer(
+    lol_html_element_t *element,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    static int times_run = -1; // so that it will be 0 on the first call to `inner`
+
+    lol_ok(lol_html_element_on_end_tag(element, modify_element_end_tag_name_inner, &times_run));
+    times_run += 1;
+
+    return LOL_HTML_CONTINUE;
+}
+
+EXPECT_OUTPUT(
+    modify_element_end_tag,
+    "<div>42!</div1><span>extra data</span><div>some data",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
 void element_api_test() {
     int user_data = 43;
 
@@ -717,5 +759,31 @@ void element_api_test() {
         test_element_ns_is_svg(selector, &user_data);
 
         lol_html_selector_free(selector);
+    }
+
+    {
+        note("EndTagChange");
+
+        const char *selector_str = "div";
+        lol_html_selector_t *selector = lol_html_selector_parse(
+            selector_str,
+            strlen(selector_str)
+        );
+
+        lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
+
+        lol_ok(lol_html_rewriter_builder_add_element_content_handlers(
+            builder,
+            selector,
+            modify_element_end_tag_name_outer,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            NULL
+        ));
+
+        const char *input = "<div>42</div><div>some data</div>";
+        run_rewriter(builder, input, modify_element_end_tag, &user_data);
     }
 }

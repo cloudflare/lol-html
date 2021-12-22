@@ -217,3 +217,68 @@ pub extern "C" fn lol_html_element_user_data_set(element: *mut Element, user_dat
 pub extern "C" fn lol_html_element_user_data_get(element: *mut Element) -> *mut c_void {
     get_user_data!(element)
 }
+
+type EndTagHandler = unsafe extern "C" fn(*mut EndTag, *mut c_void) -> RewriterDirective;
+
+#[no_mangle]
+pub extern "C" fn lol_html_element_on_end_tag(
+    element: *mut Element,
+    handler: EndTagHandler,
+    user_data: *mut c_void,
+) -> c_int {
+    let element = to_ref_mut!(element);
+    // TODO: should this pass `user_data`? The problem is it will be using an old version of the
+    // user data set before the rewriter started running ... maybe we should just let the callback
+    // call `user_data_get` if it wants to associate data with this?
+    // let user_data = element.user_data().downcase_ref::<*mut c_void>().unwrap_or(ptr::null_mut());
+    let () = unwrap_or_ret_err_code!(element.on_end_tag(move |end_tag| {
+        match unsafe { handler(end_tag, user_data) } {
+            RewriterDirective::Continue => Ok(()),
+            RewriterDirective::Stop => Err("The rewriter has been stopped.".into()),
+        }
+    }));
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_end_tag_before(
+    end_tag: *mut EndTag,
+    content: *const c_char,
+    content_len: size_t,
+    is_html: bool,
+) -> c_int {
+    content_insertion_fn_body! { end_tag.before(content, content_len, is_html) }
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_end_tag_after(
+    end_tag: *mut EndTag,
+    content: *const c_char,
+    content_len: size_t,
+    is_html: bool,
+) -> c_int {
+    content_insertion_fn_body! { end_tag.after(content, content_len, is_html) }
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_end_tag_remove(end_tag: *mut EndTag) {
+    to_ref_mut!(end_tag).remove();
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_end_tag_name_get(end_tag: *mut EndTag) -> Str {
+    let tag = to_ref_mut!(end_tag);
+    Str::new(tag.name())
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_end_tag_name_set(
+    end_tag: *mut EndTag,
+    name: *const c_char,
+    len: size_t,
+) -> c_int {
+    let tag = to_ref_mut!(end_tag);
+    let name = unwrap_or_ret_err_code! { to_str!(name, len) };
+    tag.set_name_str(name);
+    0
+}
