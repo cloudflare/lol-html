@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "picotest.h"
+#include "../../../../include/lol_html.h"
 
 struct test_t {
     int num_tests;
@@ -73,6 +74,16 @@ void _ok(int cond, const char *fmt, ...)
 
     printf("\n");
     fflush(stdout);
+}
+
+void _lol_ok(int cond, const char *file, int line) {
+    cond = !cond; // lol-html returns 0 on success
+    _ok(cond, "%s %d", file, line);
+    if (!cond) {
+        lol_html_str_t err = lol_html_take_last_error();
+        assert(err.data != NULL && err.len != 0);
+        printf("err: last lol_html err: %s", err.data);
+    }
 }
 
 int done_testing(void)

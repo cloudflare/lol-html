@@ -22,13 +22,17 @@
 #ifndef picotest_h
 #define picotest_h
 
+#include <assert.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void note(const char *fmt, ...)  __attribute__((format (printf, 1, 2)));
 void _ok(int cond, const char *fmt, ...) __attribute__((format (printf, 2, 3)));
+void _lol_ok(int cond, const char *file, int line);
 #define ok(cond) _ok(cond, "%s %d", __FILE__, __LINE__)
+#define lol_ok(cond) _lol_ok(cond, __FILE__, __LINE__)
 int done_testing(void);
 void subtest(const char *name, void (*cb)(void));
 
