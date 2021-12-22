@@ -23,6 +23,7 @@ typedef struct lol_html_HtmlRewriterBuilder lol_html_rewriter_builder_t;
 typedef struct lol_html_HtmlRewriter lol_html_rewriter_t;
 typedef struct lol_html_Doctype lol_html_doctype_t;
 typedef struct lol_html_DocumentEnd lol_html_doc_end_t;
+typedef struct lol_html_EndTag lol_html_end_tag_t;
 typedef struct lol_html_Comment lol_html_comment_t;
 typedef struct lol_html_TextChunk lol_html_text_chunk_t;
 typedef struct lol_html_Element lol_html_element_t;
@@ -107,6 +108,11 @@ typedef lol_html_rewriter_directive_t (*lol_html_element_handler_t)(
 
 typedef lol_html_rewriter_directive_t (*lol_html_doc_end_handler_t)(
     lol_html_doc_end_t *doc_end,
+    void *user_data
+);
+
+typedef lol_html_rewriter_directive_t (*lol_html_end_tag_handler_t)(
+    lol_html_end_tag_t *end_tag,
     void *user_data
 );
 
@@ -670,6 +676,69 @@ void lol_html_element_user_data_set(
 
 // Returns user data attached to the text chunk.
 void *lol_html_element_user_data_get(const lol_html_element_t *element);
+
+// Adds content handlers to the builder for the end tag of the given element.
+//
+// Subsequent calls to the method on the same element replace the previous handler.
+//
+// The handler can optionally have associated user data which will be
+// passed to the handler on each invocation along with the rewritable
+// unit argument.
+//
+// If the handler returns LOL_HTML_STOP directive then rewriting
+// stops immediately and `write()` or `end()` of the rewriter methods
+// return an error code.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+//
+// WARNING: Pointers passed to handlers are valid only during the
+// handler execution. So they should never be leaked outside of handlers.
+int lol_html_element_on_end_tag(lol_html_element_t* element, lol_html_end_tag_handler_t end_tag_handler, void* user_data);
+
+// Inserts the content string before the element's end tag either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_end_tag_before(
+    lol_html_end_tag_t *end_tag,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Inserts the content string right after the element's end tag as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_end_tag_after(
+    lol_html_end_tag_t *end_tag,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Removes the end tag.
+void lol_html_end_tag_remove(lol_html_end_tag_t *end_tag);
+
+// Returns the end tag name.
+lol_html_str_t lol_html_end_tag_name_get(const lol_html_end_tag_t *end_tag);
+
+// Sets the tag name of the end tag.
+//
+// Name should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_end_tag_name_set(
+    lol_html_end_tag_t *end_tag,
+    const char *name,
+    size_t name_len
+);
 
 // Inserts the content at the end of the document, either as raw text or as HTML.
 //

@@ -37,6 +37,12 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
+    // FIXME(encoding_rs#77): take an owned value for `name` to avoid an extra copy.
+    pub fn set_name_str(&mut self, name: &str) {
+        self.set_name(Bytes::from_str(name, self.encoding).into_owned())
+    }
+
+    #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.mutations.before(content, content_type);
     }
