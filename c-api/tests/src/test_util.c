@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "deps/picotest/picotest.h"
 #include "test_util.h"
@@ -107,8 +109,13 @@ void check_output(
         memcpy(*out + *out_len, chunk, chunk_len);
         *out_len += chunk_len;
     } else {
-        ok(*out_len == strlen(expected));
-        ok(!memcmp(*out, expected, *out_len));
+        int same_len = *out_len == strlen(expected);
+        ok(same_len);
+        int same_data = !memcmp(*out, expected, *out_len);
+        ok(same_data);
+        if (!same_len || !same_data) {
+            printf("err: '%s' != '%s'\n", *out, expected);
+        }
     }
 }
 
