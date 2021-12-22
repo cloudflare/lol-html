@@ -120,5 +120,6 @@ void check_output(
 }
 
 void check_user_data(void *user_data, void *user_data_expected, size_t user_data_len) {
+    assert(user_data != NULL);
     ok(!memcmp(user_data, user_data_expected, user_data_len));
 }
