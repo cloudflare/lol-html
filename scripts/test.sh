@@ -3,7 +3,7 @@
 set -e
 
 echo "===  Running library tests... ==="
-cargo clippy --features=integration_test --all-targets
+cargo clippy --features=integration_test --all-targets -- -Dwarnings
 cargo test --features=integration_test "$@"
 
 echo "=== Running C API tests... ==="
