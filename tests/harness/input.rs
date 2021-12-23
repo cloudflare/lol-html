@@ -63,7 +63,7 @@ impl Input {
                 Ok(val) => val.parse().unwrap(),
                 Err(_) => {
                     if len > 1 {
-                        thread_rng().gen_range(1, len)
+                        thread_rng().gen_range(1..len)
                     } else {
                         len
                     }

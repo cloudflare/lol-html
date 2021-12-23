@@ -1,12 +1,12 @@
 use super::super::TestToken;
 use hashbrown::HashMap;
-use html5ever::rcdom::RcDom;
 use html5ever::tendril::StrTendril;
 use html5ever::tokenizer::{
     BufferQueue, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
     TokenizerResult,
 };
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
+use markup5ever_rcdom::RcDom;
 use std::iter::FromIterator;
 use std::string::ToString;
 
