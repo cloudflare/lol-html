@@ -107,6 +107,7 @@ fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) -
 
     let mut rewriter = HtmlRewriter::new(
         Settings {
+            enable_esi_tags: true,
             element_content_handlers: vec![
                 element!(selector, |el| {
                     el.before(
