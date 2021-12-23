@@ -134,15 +134,16 @@ pub mod test_utils {
         }
     }
 
-    impl Into<String> for Output {
-        fn into(self) -> String {
+    impl From<Output> for String {
+        fn from(output: Output) -> String {
             assert!(
-                self.finalizing_chunk_received,
+                output.finalizing_chunk_received,
                 "Finalizing chunk for the output hasn't been received."
             );
 
-            self.encoding
-                .decode_without_bom_handling(&self.bytes)
+            output
+                .encoding
+                .decode_without_bom_handling(&output.bytes)
                 .0
                 .into_owned()
         }

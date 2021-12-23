@@ -180,7 +180,7 @@ impl TestTokenList {
                     }
                 } else {
                     self.0.push(TestToken::Text(if t.last_in_text_node() {
-                        decode_text(&text, t.text_type())
+                        decode_text(text, t.text_type())
                     } else {
                         text.into()
                     }));
@@ -216,8 +216,8 @@ impl TestTokenList {
     }
 }
 
-impl Into<Vec<TestToken>> for TestTokenList {
-    fn into(self) -> Vec<TestToken> {
-        self.0
+impl From<TestTokenList> for Vec<TestToken> {
+    fn from(list: TestTokenList) -> Vec<TestToken> {
+        list.0
     }
 }
