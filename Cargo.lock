@@ -490,8 +490,7 @@ dependencies = [
 [[package]]
 name = "html5ever"
 version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aafcf38a1a36118242d29b92e1b08ef84e67e4a5ed06e0a80be20e6a32bfed6b"
+source = "git+https://github.com/servo/html5ever?rev=1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021#1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021"
 dependencies = [
  "log",
  "mac",
@@ -578,6 +577,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "lazycell",
+ "markup5ever_rcdom",
  "memchr",
  "pre-commit",
  "rand 0.8.4",
@@ -598,9 +598,8 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "markup5ever"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a24f40fb03852d1cdd84330cddcaf98e9ec08a7b7768e952fad3b4cf048ec8fd"
+version = "0.10.0"
+source = "git+https://github.com/servo/html5ever?rev=1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021#1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021"
 dependencies = [
  "log",
  "phf",
@@ -608,6 +607,17 @@ dependencies = [
  "string_cache",
  "string_cache_codegen",
  "tendril",
+]
+
+[[package]]
+name = "markup5ever_rcdom"
+version = "0.1.0"
+source = "git+https://github.com/servo/html5ever?rev=1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021#1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021"
+dependencies = [
+ "html5ever",
+ "markup5ever",
+ "tendril",
+ "xml5ever",
 ]
 
 [[package]]
@@ -1595,3 +1605,14 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "xml5ever"
+version = "0.16.1"
+source = "git+https://github.com/servo/html5ever?rev=1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021#1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021"
+dependencies = [
+ "log",
+ "mac",
+ "markup5ever",
+ "time",
+]
