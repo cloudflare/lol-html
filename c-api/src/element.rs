@@ -227,10 +227,6 @@ pub extern "C" fn lol_html_element_on_end_tag(
     user_data: *mut c_void,
 ) -> c_int {
     let element = to_ref_mut!(element);
-    // TODO: should this pass `user_data`? The problem is it will be using an old version of the
-    // user data set before the rewriter started running ... maybe we should just let the callback
-    // call `user_data_get` if it wants to associate data with this?
-    // let user_data = element.user_data().downcase_ref::<*mut c_void>().unwrap_or(ptr::null_mut());
     let () = unwrap_or_ret_err_code!(element.on_end_tag(move |end_tag| {
         match unsafe { handler(end_tag, user_data) } {
             RewriterDirective::Continue => Ok(()),
@@ -279,6 +275,6 @@ pub extern "C" fn lol_html_end_tag_name_set(
 ) -> c_int {
     let tag = to_ref_mut!(end_tag);
     let name = unwrap_or_ret_err_code! { to_str!(name, len) };
-    tag.set_name_str(name);
+    tag.set_name_str(name.to_string());
     0
 }
