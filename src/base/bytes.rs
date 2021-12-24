@@ -20,6 +20,15 @@ impl<'b> Bytes<'b> {
         encoding.encode(string).0.into()
     }
 
+    /// Same as `Bytes::from_str(&string).into_owned()`, but avoids copying in the common case where
+    /// the output and input encodings are the same.
+    pub fn from_string(string: String, encoding: &'static Encoding) -> Bytes<'static> {
+        Bytes(Cow::Owned(match encoding.encode(&string).0 {
+            Cow::Owned(bytes) => bytes,
+            Cow::Borrowed(_) => string.into_bytes(),
+        }))
+    }
+
     #[inline]
     pub fn from_str_without_replacements(
         string: &'b str,
