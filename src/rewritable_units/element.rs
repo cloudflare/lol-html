@@ -515,7 +515,7 @@ impl<'r, 't> Element<'r, 't> {
     /// ```
     pub fn on_end_tag(
         &mut self,
-        handler: impl FnMut(&mut EndTag) -> HandlerResult + 'static,
+        handler: impl FnOnce(&mut EndTag) -> HandlerResult + 'static,
     ) -> Result<(), EndTagError> {
         if self.can_have_content {
             self.end_tag_handler = Some(Box::new(handler));
