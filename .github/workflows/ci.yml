@@ -23,20 +23,13 @@ jobs:
       - name: Get rust version
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
-      - name: Cache cargo index
+      - name: Cache cargo index and registry
         uses: actions/cache@v1
+        key: immutable # this will always be hit because it's a constant
         with:
-          path: ~/.cargo/registry/index
-          key: index-${{ runner.os }}-${{ github.run_number }}
-          restore-keys: |
-            index-${{ runner.os }}-
+          path: ~/.cargo/registry
       - name: Create lockfile
         run: cargo generate-lockfile
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry/cache
-          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
       - name: Fetch dependencies
         run: cargo fetch
       - name: Cache target directory
