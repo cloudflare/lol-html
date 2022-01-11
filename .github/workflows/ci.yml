@@ -1,6 +1,10 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - master
 
 env:
   RUSTFLAGS: -Dwarnings
@@ -23,8 +27,9 @@ jobs:
         uses: actions/cache@v1
         with:
           key: immutable # this will always be hit because it's a constant
-          path: ~/.cargo/registry/cache
-          path: ~/.cargo/registry/index
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/index
       - name: Create lockfile
         run: cargo generate-lockfile
       - name: Fetch dependencies
