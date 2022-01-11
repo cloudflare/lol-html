@@ -25,8 +25,8 @@ jobs:
         run: echo "::set-output name=version::$(rustc --version)"
       - name: Cache cargo index and registry
         uses: actions/cache@v1
-        key: immutable # this will always be hit because it's a constant
         with:
+          key: immutable # this will always be hit because it's a constant
           path: ~/.cargo/registry
       - name: Create lockfile
         run: cargo generate-lockfile
