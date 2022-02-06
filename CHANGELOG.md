@@ -1,7 +1,21 @@
 # Changelog
 
 ## Unreleased
+
+## v0.3.1
+
+### Added
+
+- Add `Element::on_end_tag` (#97, #107, #124)
+
+### Changed
+
 - Change string allocators in the C API to return `lol_html_str_t`, not `lol_html_str_t*`. This was necessary to fix a memory leak in `lol_html_str_free`. (#115)
+- Update dependencies (#98, #103)
+
+### Fixed
+
+- Fix memory leaks in C API (#113, #115)
 
 ## v0.3.0
 - Add unofficial Go bindings to the README (#77)
