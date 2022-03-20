@@ -15,7 +15,7 @@ define_state_group!(comment_states_group = {
 
     comment_state {
         b'<' => ( --> comment_less_than_sign_state )
-        b'-' => ( --> comment_end_dash_state )
+        b'-' => ( mark_comment_text_end; --> comment_end_dash_state )
         eof  => ( mark_comment_text_end; emit_current_token_and_eof?; )
         _    => ( mark_comment_text_end; )
     }
@@ -44,14 +44,14 @@ define_state_group!(comment_states_group = {
     comment_less_than_sign_state {
         b'!' => ( mark_comment_text_end; --> comment_less_than_sign_bang_state )
         b'<' => ( mark_comment_text_end; )
-        eof  => ( reconsume in comment_state )
-        _    => ( reconsume in comment_state )
+        eof  => ( mark_comment_text_end; reconsume in comment_state )
+        _    => ( mark_comment_text_end; reconsume in comment_state )
     }
 
     comment_less_than_sign_bang_state {
         b'-' => ( mark_comment_text_end; --> comment_less_than_sign_bang_dash_state )
-        eof  => ( reconsume in comment_state )
-        _    => ( reconsume in comment_state )
+        eof  => ( mark_comment_text_end; reconsume in comment_state )
+        _    => ( mark_comment_text_end; reconsume in comment_state )
     }
 
     comment_less_than_sign_bang_dash_state {
