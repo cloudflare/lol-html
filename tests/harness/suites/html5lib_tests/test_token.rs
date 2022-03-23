@@ -164,7 +164,10 @@ impl Unescape for TestToken {
 }
 
 #[derive(Debug, Default)]
-pub struct TestTokenList(Vec<TestToken>);
+pub struct TestTokenList {
+    tokens: Vec<TestToken>,
+    handled_text_decoding_until: usize,
+}
 
 impl TestTokenList {
     pub fn push(&mut self, token: &Token) {
@@ -172,24 +175,33 @@ impl TestTokenList {
             Token::TextChunk(t) => {
                 let text = t.as_str();
 
-                if let Some(TestToken::Text(last)) = self.0.last_mut() {
+                if let Some(TestToken::Text(last)) = self.tokens.last_mut() {
                     *last += text;
 
                     if t.last_in_text_node() {
-                        *last = decode_text(last, t.text_type());
+                        let decoded =
+                            decode_text(&last[self.handled_text_decoding_until..], t.text_type());
+                        last.truncate(self.handled_text_decoding_until);
+                        *last += &decoded;
+                        self.handled_text_decoding_until = last.len();
                     }
                 } else {
-                    self.0.push(TestToken::Text(if t.last_in_text_node() {
+                    let text = if t.last_in_text_node() {
+                        self.handled_text_decoding_until = text.len();
                         decode_text(text, t.text_type())
                     } else {
+                        self.handled_text_decoding_until = 0;
                         text.into()
-                    }));
+                    };
+                    self.tokens.push(TestToken::Text(text));
                 }
             }
 
-            Token::Comment(t) => self.0.push(TestToken::Comment(to_null_decoded(&t.text()))),
+            Token::Comment(t) => self
+                .tokens
+                .push(TestToken::Comment(to_null_decoded(&t.text()))),
 
-            Token::StartTag(t) => self.0.push(TestToken::StartTag {
+            Token::StartTag(t) => self.tokens.push(TestToken::StartTag {
                 name: to_null_decoded(&t.name()),
 
                 attributes: HashMap::from_iter(
@@ -202,11 +214,11 @@ impl TestTokenList {
                 self_closing: t.self_closing(),
             }),
 
-            Token::EndTag(t) => self.0.push(TestToken::EndTag {
+            Token::EndTag(t) => self.tokens.push(TestToken::EndTag {
                 name: to_null_decoded(&t.name()),
             }),
 
-            Token::Doctype(t) => self.0.push(TestToken::Doctype {
+            Token::Doctype(t) => self.tokens.push(TestToken::Doctype {
                 name: t.name().map(|s| to_null_decoded(&s)),
                 public_id: t.public_id().map(|s| to_null_decoded(&s)),
                 system_id: t.system_id().map(|s| to_null_decoded(&s)),
@@ -218,6 +230,6 @@ impl TestTokenList {
 
 impl From<TestTokenList> for Vec<TestToken> {
     fn from(list: TestTokenList) -> Vec<TestToken> {
-        list.0
+        list.tokens
     }
 }
