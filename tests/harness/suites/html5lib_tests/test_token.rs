@@ -184,14 +184,12 @@ impl TestTokenList {
                         *last += &decoded;
                         self.handled_text_decoding_until = last.len();
                     }
+                } else if t.last_in_text_node() {
+                    let decoded = decode_text(text, t.text_type());
+                    self.handled_text_decoding_until = decoded.len();
+                    self.tokens.push(TestToken::Text(decoded));
                 } else {
-                    let text = if t.last_in_text_node() {
-                        self.handled_text_decoding_until = text.len();
-                        decode_text(text, t.text_type())
-                    } else {
-                        self.handled_text_decoding_until = 0;
-                        text.into()
-                    };
+                    self.handled_text_decoding_until = 0;
                     self.tokens.push(TestToken::Text(text));
                 }
             }
