@@ -49,6 +49,9 @@ define_state_group!(comment_states_group = {
     }
 
     comment_less_than_sign_bang_state {
+        // careful! mark_comment_text_end ends the comment at the previous character! all of those
+        // states run mark_comment_text_end because the only transition leading to this state (! in
+        // comment_less_than_sign_state) "appends the current input character"
         b'-' => ( mark_comment_text_end; --> comment_less_than_sign_bang_dash_state )
         eof  => ( mark_comment_text_end; reconsume in comment_state )
         _    => ( mark_comment_text_end; reconsume in comment_state )
