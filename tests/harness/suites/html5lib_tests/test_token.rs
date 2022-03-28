@@ -191,7 +191,7 @@ impl TestTokenList {
                     self.tokens.push(TestToken::Text(decoded));
                 } else {
                     self.handled_text_decoding_until = 0;
-                    self.tokens.push(TestToken::Text(text));
+                    self.tokens.push(TestToken::Text(text.to_owned()));
                 }
             }
 
