@@ -317,6 +317,12 @@ void lol_html_doctype_user_data_set(
 // Returns user data attached to the doctype.
 void *lol_html_doctype_user_data_get(const lol_html_doctype_t *doctype);
 
+// Removes the doctype.
+void lol_html_doctype_remove(lol_html_doctype_t *doctype);
+
+// Returns `true` if the doctype has been removed.
+bool lol_html_doctype_is_removed(const lol_html_doctype_t *doctype);
+
 // Comment
 //---------------------------------------------------------------------
 

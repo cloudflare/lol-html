@@ -110,6 +110,48 @@ static void test_get_user_data(void *user_data) {
 }
 
 //-------------------------------------------------------------------------
+EXPECT_OUTPUT(
+    remove_doctype_output_sink,
+    "<!DOCTYPE><html></html>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
+static lol_html_rewriter_directive_t remove_doctype(
+    lol_html_doctype_t *doctype,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    note("Removed flag");
+    ok(!lol_html_doctype_is_removed(doctype));
+
+    note("Remove");
+    lol_html_doctype_remove(doctype);
+    ok(lol_html_doctype_is_removed(doctype));
+
+    return LOL_HTML_CONTINUE;
+}
+
+static void test_remove_doctype(void *user_data) {
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
+
+     lol_html_rewriter_builder_add_document_content_handlers(
+        builder,
+        &remove_doctype,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    run_rewriter(builder, "<!DOCTYPE><html></html>", remove_doctype_output_sink, user_data);
+}
+
+//-------------------------------------------------------------------------
 static lol_html_rewriter_directive_t stop_rewriting(
     lol_html_doctype_t *doctype,
     void *user_data
@@ -145,5 +187,6 @@ void test_doctype_api() {
 
     test_get_doctype_fields(&user_data);
     test_get_user_data(&user_data);
+    test_remove_doctype(&user_data);
     test_stop(&user_data);
 }
