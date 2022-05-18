@@ -112,7 +112,7 @@ static void test_get_user_data(void *user_data) {
 //-------------------------------------------------------------------------
 EXPECT_OUTPUT(
     remove_doctype_output_sink,
-    "<!DOCTYPE><html></html>",
+    "<html></html>",
     &EXPECTED_USER_DATA,
     sizeof(EXPECTED_USER_DATA)
 );
