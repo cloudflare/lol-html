@@ -126,9 +126,9 @@ mod tests {
             html,
             encoding,
             vec![],
-            vec![doctype!(|c| {
+            vec![doctype!(|d| {
                 handler_called = true;
-                handler(c);
+                handler(d);
                 Ok(())
             })],
         );
