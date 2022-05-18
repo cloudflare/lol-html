@@ -36,6 +36,7 @@ pub struct Doctype<'i> {
     public_id: Option<Bytes<'i>>,
     system_id: Option<Bytes<'i>>,
     force_quirks: bool,
+    removed: bool,
     raw: Bytes<'i>,
     encoding: &'static Encoding,
     user_data: Box<dyn Any>,
@@ -47,6 +48,7 @@ impl<'i> Doctype<'i> {
         public_id: Option<Bytes<'i>>,
         system_id: Option<Bytes<'i>>,
         force_quirks: bool,
+        removed: bool,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
     ) -> Token<'i> {
@@ -55,6 +57,7 @@ impl<'i> Doctype<'i> {
             public_id,
             system_id,
             force_quirks,
+            removed,
             raw,
             encoding,
             user_data: Box::new(()),
@@ -86,6 +89,18 @@ impl<'i> Doctype<'i> {
     pub fn force_quirks(&self) -> bool {
         self.force_quirks
     }
+
+    /// Removes the doctype.
+    #[inline]
+    pub fn remove(&mut self) {
+        self.removed = true
+    }
+
+    /// Returns `true` if the doctype has been replaced or removed.
+    #[inline]
+    pub fn removed(&self) -> bool {
+        self.removed
+    }
 }
 
 impl_user_data!(Doctype<'_>);
@@ -93,7 +108,9 @@ impl_user_data!(Doctype<'_>);
 impl Serialize for Doctype<'_> {
     #[inline]
     fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
-        output_handler(&self.raw);
+        if !self.removed() {
+            output_handler(&self.raw);
+        }
     }
 }
 
@@ -104,6 +121,7 @@ impl Debug for Doctype<'_> {
             .field("public_id", &self.public_id())
             .field("system_id", &self.system_id())
             .field("force_quirks", &self.force_quirks)
+            .field("removed", &self.removed)
             .finish()
     }
 }
@@ -157,6 +175,21 @@ mod tests {
             let output = rewrite_doctype(&html, enc, |_| {});
 
             assert_eq!(output, r#"<!DOCTYPE html SYSTEM "Ĥey">"#);
+        }
+    }
+
+    #[test]
+    fn removed() {
+        for (html, enc) in encoded("<!DOCTYPE><html><body><p>Howdy!</p></body></html>") {
+            let output = rewrite_doctype(&html, enc, |d| {
+                assert!(!d.removed());
+
+                d.remove();
+
+                assert!(d.removed());
+            });
+
+            assert_eq!(output, "<html><body><p>Howdy!</p></body></html>");
         }
     }
 }

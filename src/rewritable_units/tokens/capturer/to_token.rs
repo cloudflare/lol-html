@@ -90,6 +90,7 @@ impl ToToken for NonTagContentLexeme<'_> {
                 self.opt_part(public_id),
                 self.opt_part(system_id),
                 force_quirks,
+                false, // removed
                 self.raw(),
                 encoding,
             )
