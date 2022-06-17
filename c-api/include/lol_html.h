@@ -680,7 +680,7 @@ void lol_html_element_user_data_set(
     void *user_data
 );
 
-// Returns user data attached to the text chunk.
+// Returns user data attached to the element.
 void *lol_html_element_user_data_get(const lol_html_element_t *element);
 
 // Adds content handlers to the builder for the end tag of the given element.
