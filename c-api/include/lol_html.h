@@ -266,7 +266,7 @@ lol_html_rewriter_t *unstable_lol_html_rewriter_build_with_esi_tags(
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `lol_html_take_last_error` function.
 //
-// WARNING: if this function errors the rewriter gets into the unrecovarable state,
+// WARNING: if this function errors the rewriter gets into the unrecoverable state,
 // so any further attempts to use the rewriter will cause a thread panic.
 int lol_html_rewriter_write(
     lol_html_rewriter_t *rewriter,
