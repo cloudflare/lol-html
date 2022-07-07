@@ -100,7 +100,7 @@ impl<'i> StartTag<'i> {
             // NOTE: attributes can be modified the way that
             // last attribute has an unquoted value. We always
             // add extra space before the `/`, because otherwise
-            // it will be treated as a part of such an unquotted
+            // it will be treated as a part of such an unquoted
             // attribute value.
             if self.self_closing {
                 output_handler(b" ");
