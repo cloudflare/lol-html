@@ -55,10 +55,7 @@ hashbrown = { version = "0.12", features = ["serde"] }
 serde = "1.0.126"
 serde_derive = "1.0.19"
 serde_json = "1.0.65"
-pre-commit = "0.5.2"
 rand = "0.8.4"
 rustc-test = "0.3.1"
 itertools = "0.10.1"
 
-[package.metadata.precommit]
-fmt = "bash ./scripts/precommit.sh"
