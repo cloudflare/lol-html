@@ -8,7 +8,7 @@ use std::ops::Deref;
 use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the attribute name.
-#[derive(Error, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
 pub enum AttributeNameError {
     /// The provided value is empty.
     #[error("Attribute name can't be empty.")]

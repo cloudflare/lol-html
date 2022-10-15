@@ -17,7 +17,7 @@ use cfg_if::cfg_if;
 ///
 /// [HTML entities]: https://developer.mozilla.org/en-US/docs/Glossary/Entity
 /// [HTML parsing specification]: https://html.spec.whatwg.org/multipage/parsing.html
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum TextType {
     /// Text inside a `<plaintext>` element.
     PlainText,

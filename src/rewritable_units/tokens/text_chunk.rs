@@ -86,7 +86,7 @@ impl<'i> TextChunk<'i> {
     /// Returns the textual content of the chunk.
     #[inline]
     pub fn as_str(&self) -> &str {
-        &*self.text
+        &self.text
     }
 
     /// Returns the type of the text in the chunk.

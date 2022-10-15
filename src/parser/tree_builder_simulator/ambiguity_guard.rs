@@ -66,7 +66,7 @@ use thiserror::Error;
 /// correct parsing context.
 ///
 /// [`strict`]: ../struct.Settings.html#structfield.strict
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, Eq, PartialEq)]
 pub struct ParsingAmbiguityError {
     on_tag_name: String,
 }

@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the tag name.
-#[derive(Error, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
 pub enum TagNameError {
     /// The provided value is empty.
     #[error("Tag name can't be empty.")]
@@ -31,7 +31,7 @@ pub enum TagNameError {
 }
 
 /// An error that occurs when invalid value is provided for the tag name.
-#[derive(Error, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
 pub enum EndTagError {
     /// The tag has no end tag.
     #[error("No end tag.")]

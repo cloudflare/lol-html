@@ -27,6 +27,7 @@ const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
+    #[allow(clippy::type_complexity)]
     RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback>),
     None,
 }

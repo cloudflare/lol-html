@@ -49,7 +49,7 @@ where
         state: &SelectorState,
         local_name: &LocalName,
     ) -> TryExecResult<'i, P> {
-        if self.local_name_exprs.iter().all(|e| e(&*state, local_name)) {
+        if self.local_name_exprs.iter().all(|e| e(state, local_name)) {
             if self.attribute_exprs.is_empty() {
                 TryExecResult::Branch(&self.associated_branch)
             } else {
@@ -78,11 +78,8 @@ where
         local_name: &LocalName,
         attr_matcher: &AttributeMatcher,
     ) -> Option<&'i ExecutionBranch<P>> {
-        let is_match = self.local_name_exprs.iter().all(|e| e(&*state, local_name))
-            && self
-                .attribute_exprs
-                .iter()
-                .all(|e| e(&*state, attr_matcher));
+        let is_match = self.local_name_exprs.iter().all(|e| e(state, local_name))
+            && self.attribute_exprs.iter().all(|e| e(state, attr_matcher));
 
         if is_match {
             Some(&self.associated_branch)

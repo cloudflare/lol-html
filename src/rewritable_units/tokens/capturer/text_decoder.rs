@@ -65,7 +65,7 @@ impl TextDecoder {
                 emit!(self, &buffer[..written], last, event_handler)?;
             }
 
-            if let CoderResult::InputEmpty = status {
+            if status == CoderResult::InputEmpty {
                 break;
             }
 

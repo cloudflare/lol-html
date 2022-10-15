@@ -58,7 +58,7 @@ impl<'i> StartTag<'i> {
 
     #[inline]
     pub fn attributes(&self) -> &[Attribute<'i>] {
-        &*self.attributes
+        &self.attributes
     }
 
     #[inline]

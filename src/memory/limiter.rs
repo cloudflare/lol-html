@@ -8,7 +8,7 @@ pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
 /// [`MemorySettings`].
 ///
 /// [`MemorySettings`]: ../struct.MemorySettings.html
-#[derive(Error, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
 #[error("The memory limit has been exceeded.")]
 pub struct MemoryLimitExceededError;
 

@@ -634,7 +634,7 @@ mod tests {
             strict: true,
         });
 
-        transform_stream.write(&*html).unwrap();
+        transform_stream.write(&html).unwrap();
         transform_stream.end().unwrap();
     }
 
