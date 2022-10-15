@@ -301,7 +301,7 @@ mod tests {
         for chunk in chunks {
             let (chunk, _, _) = encoding.encode(chunk);
 
-            rewriter.write(&*chunk).unwrap();
+            rewriter.write(&chunk).unwrap();
         }
 
         rewriter.end().unwrap();

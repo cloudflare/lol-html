@@ -6,7 +6,7 @@ use std::fmt::{self, Debug};
 use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the HTML comment text.
-#[derive(Error, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
 pub enum CommentTextError {
     /// The provided value contains the `-->` character sequence that preemptively closes the comment.
     #[error("Comment text shouldn't contain comment closing sequence (`-->`).")]

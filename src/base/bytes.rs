@@ -174,6 +174,6 @@ impl Deref for Bytes<'_> {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {
-        &*self.0
+        &self.0
     }
 }

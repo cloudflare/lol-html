@@ -435,7 +435,7 @@ mod tests {
                     "Instruction should not execute without attributes"
                 );
 
-                let multi_step_res = instr.complete_exec_with_attrs(&*state, &attr_matcher);
+                let multi_step_res = instr.complete_exec_with_attrs(state, &attr_matcher);
                 let res = instr.exec(state, &local_name, &attr_matcher);
 
                 assert_eq!(multi_step_res, res);

@@ -3,7 +3,7 @@ use selectors::parser::{SelectorParseError, SelectorParseErrorKind};
 use thiserror::Error;
 
 /// A CSS selector parsing error.
-#[derive(Error, Debug, PartialEq, Copy, Clone)]
+#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
 pub enum SelectorError {
     /// Unexpected token in the selector.
     #[error("Unexpected token in selector.")]
