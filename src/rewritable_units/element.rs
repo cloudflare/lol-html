@@ -127,6 +127,12 @@ impl<'r, 't> Element<'r, 't> {
         Ok(())
     }
 
+    /// Whether the element is explicitly self-closing, e.g. `<foo />`.
+    #[inline]
+    pub fn is_self_closing(&self) -> bool {
+        self.start_tag.self_closing()
+    }
+
     /// Returns the [namespace URI] of the element.
     ///
     /// [namespace URI]: https://developer.mozilla.org/en-US/docs/Web/API/Element/namespaceURI
@@ -465,6 +471,12 @@ impl<'r, 't> Element<'r, 't> {
     #[inline]
     pub(crate) fn should_remove_content(&self) -> bool {
         self.should_remove_content
+    }
+
+    /// Returns the start tag.
+    #[inline]
+    pub fn start_tag(&mut self) -> &mut StartTag<'t> {
+        self.start_tag
     }
 
     /// Sets a handler to run when the end tag is reached.

@@ -77,7 +77,6 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    #[cfg(any(test, feature = "integration_test"))]
     pub fn self_closing(&self) -> bool {
         self.self_closing
     }
