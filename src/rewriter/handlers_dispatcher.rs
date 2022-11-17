@@ -34,7 +34,7 @@ impl<H> HandlerVec<H> {
     pub fn push(&mut self, handler: H, always_active: bool) {
         let item = HandlerVecItem {
             handler,
-            user_count: if always_active { 1 } else { 0 },
+            user_count: usize::from(always_active),
         };
 
         self.user_count += item.user_count;
