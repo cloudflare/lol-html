@@ -8,7 +8,7 @@ pub struct EndTag<'i> {
     name: Bytes<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    pub mutations: Mutations,
+    pub(crate) mutations: Mutations,
 }
 
 impl<'i> EndTag<'i> {
@@ -49,6 +49,11 @@ impl<'i> EndTag<'i> {
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         self.mutations.after(content, content_type);
+    }
+
+    #[inline]
+    pub fn replace(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.replace(content, content_type);
     }
 
     /// Removes the end tag.

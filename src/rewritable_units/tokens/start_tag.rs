@@ -2,6 +2,7 @@ use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
 use crate::base::Bytes;
 use crate::html::Namespace;
+use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -12,7 +13,7 @@ pub struct StartTag<'i> {
     self_closing: bool,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    pub mutations: Mutations,
+    pub(crate) mutations: Mutations,
 }
 
 impl<'i> StartTag<'i> {
@@ -79,6 +80,27 @@ impl<'i> StartTag<'i> {
     #[inline]
     pub fn self_closing(&self) -> bool {
         self.self_closing
+    }
+
+    #[inline]
+    pub fn before(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.before(content, content_type);
+    }
+
+    #[inline]
+    pub fn after(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.after(content, content_type);
+    }
+
+    #[inline]
+    pub fn replace(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.replace(content, content_type);
+    }
+
+    /// Removes the start tag.
+    #[inline]
+    pub fn remove(&mut self) {
+        self.mutations.remove();
     }
 
     #[inline]
