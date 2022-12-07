@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- Add `Element::{start_tag, is_self_closing}` (#148)
+- Add `Doctype::Remove` (#129)
+- Implement `Eq` for all types that implement `PartialEq` (#146)
+
+### Fixed
+
+- Changed the HTML parser to more closely match the spec. This only affects rewriters which modify HTML comments. (#128)
+
 ## v0.3.1
 
 ### Added
