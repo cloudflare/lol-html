@@ -24,6 +24,7 @@ https://docs.rs/lol_html/
 - [C](https://github.com/cloudflare/lol-html/tree/master/c-api)
 - [Lua](https://github.com/jdesgats/lua-lolhtml)
 - [Go](https://github.com/coolspring8/go-lolhtml) (unofficial, not coming from Cloudflare)
+- [Ruby](https://github.com/gjtorikian/selma) (unofficial, not coming from Cloudflare)
 
 ## Example
 
