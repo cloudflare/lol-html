@@ -12,6 +12,7 @@ use std::rc::Rc;
 pub struct ElementDescriptor {
     pub matched_content_handlers: HashSet<SelectorHandlersLocator>,
     pub end_tag_handler_idx: Option<usize>,
+    pub after_end_tag_handler_idx: Option<usize>,
     pub remove_content: bool,
 }
 
@@ -128,6 +129,19 @@ impl TransformController for HtmlRewriteController<'_> {
         self.handlers_dispatcher
             .borrow_mut()
             .handle_token(token, current_element_data)
+            .map_err(RewritingError::ContentHandlerError)
+    }
+
+    #[inline]
+    fn handle_after_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
+        let current_element_data = self
+            .selector_matching_vm
+            .as_mut()
+            .and_then(SelectorMatchingVm::current_element_data_mut);
+
+        self.handlers_dispatcher
+            .borrow_mut()
+            .handle_after_token(token, current_element_data)
             .map_err(RewritingError::ContentHandlerError)
     }
 

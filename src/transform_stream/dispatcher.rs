@@ -35,6 +35,10 @@ pub trait TransformController: Sized {
     fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
     fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
     fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError>;
+    fn handle_after_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
+        let _ = token;
+        Ok(())
+    }
     fn handle_end(&mut self, document_end: &mut DocumentEnd) -> Result<(), RewritingError>;
     fn should_emit_content(&self) -> bool;
 }
@@ -154,6 +158,8 @@ where
                     if emission_enabled {
                         token.to_bytes(&mut |c| output_sink.handle_chunk(c));
                     }
+
+                    transform_controller.handle_after_token(&mut token)?;
                 }
             }
             Ok(())
@@ -268,6 +274,8 @@ where
                 if emission_enabled {
                     token.to_bytes(&mut |c| output_sink.handle_chunk(c));
                 }
+
+                transform_controller.handle_after_token(&mut token)?;
             }
 
             Ok(())
