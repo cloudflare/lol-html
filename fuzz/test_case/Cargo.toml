@@ -11,4 +11,4 @@ libc = "0.2.61"
 rand = "0.8.4"
 
 [build-dependencies]
-bindgen = "0.50"
+bindgen = "0.63.0"
