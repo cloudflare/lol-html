@@ -44,8 +44,6 @@ pub extern "C" fn lol_html_rewriter_build(
     output_sink_user_data: *mut c_void,
     strict: bool,
 ) -> *mut HtmlRewriter {
-    use std::convert::TryInto;
-
     let builder = to_ref!(builder);
     let handlers = builder.get_safe_handlers();
 
@@ -77,8 +75,6 @@ pub extern "C" fn unstable_lol_html_rewriter_build_with_esi_tags(
     output_sink_user_data: *mut c_void,
     strict: bool,
 ) -> *mut HtmlRewriter {
-    use std::convert::TryInto;
-
     let builder = to_ref!(builder);
     let handlers = builder.get_safe_handlers();
 
