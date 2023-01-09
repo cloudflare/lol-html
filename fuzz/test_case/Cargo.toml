@@ -2,7 +2,7 @@
 name = "test_case"
 version = "0.1.0"
 authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 lol_html = { path = "../../" }

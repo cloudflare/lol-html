@@ -103,8 +103,6 @@ fn get_random_selector() -> &'static str {
 }
 
 fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) -> () {
-    use std::convert::TryInto;
-
     let mut rewriter = HtmlRewriter::new(
         Settings {
             enable_esi_tags: true,

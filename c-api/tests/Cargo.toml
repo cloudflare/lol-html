@@ -2,7 +2,7 @@
 name = "ctests"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 
 [dependencies]

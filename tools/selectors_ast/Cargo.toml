@@ -2,7 +2,7 @@
 name = "selectors_ast"
 version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 lol_html = { path = "../../", features=["integration_test"] }

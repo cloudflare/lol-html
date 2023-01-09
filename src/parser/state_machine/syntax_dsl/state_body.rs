@@ -36,7 +36,7 @@ macro_rules! state_body {
     //--------------------------------------------------------------------
     ( @match_block
         | [ $self:tt, $input:ident, $ch:ident ] |>
-        $( $pat:pat $(|$pat_cont:pat)* $(if $pat_expr:expr)* => ( $($actions:tt)* ) )*
+        $( $pat:pat_param $(|$pat_cont:pat)* $(if $pat_expr:expr)* => ( $($actions:tt)* ) )*
     ) => {
         // NOTE: guard against unreachable patterns
         // (e.g. such may occur if `eof => ...` arm comes before `eoc => ...` arm.)
