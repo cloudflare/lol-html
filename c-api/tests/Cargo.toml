@@ -8,7 +8,7 @@ build = "build.rs"
 [dependencies]
 lol_html = { path = "../../" }
 lolhtml = { path = "../" }
-libc = "0"
+libc = "0.2.139"
 
 [build-dependencies]
 cc = "1.0.46"

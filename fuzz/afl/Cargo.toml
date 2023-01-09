@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 test_case = { path = "../test_case" }
-afl = "0.4.4"
+afl = "0.12.11"

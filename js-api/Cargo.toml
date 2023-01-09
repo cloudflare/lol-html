@@ -8,7 +8,7 @@ edition = "2018"
 js-sys = "0.3.33"
 lol_html = { path = "../" }
 serde = { version = "1.0.104", features = ["derive"] }
-serde-wasm-bindgen = "0.1.3"
+serde-wasm-bindgen = "0.4.5"
 wasm-bindgen = "0.2"
 
 [lib]
