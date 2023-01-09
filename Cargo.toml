@@ -19,7 +19,7 @@ include = [
     "/benches"
 ]
 autotests = false
-edition = "2018"
+edition = "2021"
 
 [features]
 debug_trace = []
