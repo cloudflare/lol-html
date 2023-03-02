@@ -133,6 +133,14 @@ impl<'r, 't> Element<'r, 't> {
         self.start_tag.self_closing()
     }
 
+    /// Whether the element can have inner content.  Returns `true` unless the element is an [HTML void
+    /// element](https://html.spec.whatwg.org/multipage/syntax.html#void-elements) or has a
+    /// self-closing tag (eg, `<foo />`).
+    #[inline]
+    pub fn can_have_content(&self) -> bool {
+        self.can_have_content
+    }
+
     /// Returns the [namespace URI] of the element.
     ///
     /// [namespace URI]: https://developer.mozilla.org/en-US/docs/Web/API/Element/namespaceURI
