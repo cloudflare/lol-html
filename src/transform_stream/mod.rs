@@ -4,9 +4,9 @@ use self::dispatcher::Dispatcher;
 use crate::memory::{Arena, SharedMemoryLimiter};
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use crate::rewriter::RewritingError;
+use atomic_refcell::AtomicRefCell;
 use encoding_rs::Encoding;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub use self::dispatcher::{
     AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
@@ -30,7 +30,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    dispatcher: Rc<RefCell<Dispatcher<C, O>>>,
+    dispatcher: Arc<AtomicRefCell<Dispatcher<C, O>>>,
     parser: Parser<Dispatcher<C, O>>,
     buffer: Arena,
     has_buffered_data: bool,
@@ -52,7 +52,7 @@ where
             ParserDirective::Lex
         };
 
-        let dispatcher = Rc::new(RefCell::new(Dispatcher::new(
+        let dispatcher = Arc::new(AtomicRefCell::new(Dispatcher::new(
             settings.transform_controller,
             settings.output_sink,
             settings.encoding,

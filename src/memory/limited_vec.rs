@@ -101,13 +101,13 @@ impl<T> Drop for LimitedVec<T> {
 mod tests {
     use super::super::MemoryLimiter;
     use super::*;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     #[test]
     fn current_usage() {
         {
             let limiter = MemoryLimiter::new_shared(10);
-            let mut vec_u8: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+            let mut vec_u8: LimitedVec<u8> = LimitedVec::new(Arc::clone(&limiter));
 
             vec_u8.push(1).unwrap();
             vec_u8.push(2).unwrap();
@@ -116,7 +116,7 @@ mod tests {
 
         {
             let limiter = MemoryLimiter::new_shared(10);
-            let mut vec_u32: LimitedVec<u32> = LimitedVec::new(Rc::clone(&limiter));
+            let mut vec_u32: LimitedVec<u32> = LimitedVec::new(Arc::clone(&limiter));
 
             vec_u32.push(1).unwrap();
             vec_u32.push(2).unwrap();
@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn max_limit() {
         let limiter = MemoryLimiter::new_shared(2);
-        let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+        let mut vector: LimitedVec<u8> = LimitedVec::new(Arc::clone(&limiter));
 
         vector.push(1).unwrap();
         vector.push(2).unwrap();
@@ -142,7 +142,7 @@ mod tests {
         let limiter = MemoryLimiter::new_shared(1);
 
         {
-            let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+            let mut vector: LimitedVec<u8> = LimitedVec::new(Arc::clone(&limiter));
 
             vector.push(1).unwrap();
             assert_eq!(limiter.borrow().current_usage(), 1);
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn drain() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+        let mut vector: LimitedVec<u8> = LimitedVec::new(Arc::clone(&limiter));
 
         vector.push(1).unwrap();
         vector.push(2).unwrap();

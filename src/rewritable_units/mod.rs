@@ -54,7 +54,7 @@ pub trait UserData {
     /// Returns a mutable reference to the attached user data.
     fn user_data_mut(&mut self) -> &mut dyn Any;
     /// Attaches user data to a rewritable unit.
-    fn set_user_data(&mut self, data: impl Any);
+    fn set_user_data(&mut self, data: impl Any + Send + Sync);
 }
 
 macro_rules! impl_user_data {
@@ -71,7 +71,7 @@ macro_rules! impl_user_data {
             }
 
             #[inline]
-            fn set_user_data(&mut self, data: impl Any){
+            fn set_user_data(&mut self, data: impl Any + Send + Sync){
                 self.user_data = Box::new(data);
             }
         }

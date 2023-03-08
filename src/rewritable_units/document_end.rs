@@ -65,7 +65,7 @@ mod tests {
     fn rewrite_on_end(
         html: &[u8],
         encoding: &'static Encoding,
-        mut handler: impl FnMut(&mut DocumentEnd),
+        mut handler: impl FnMut(&mut DocumentEnd) + Send + Sync,
     ) -> String {
         let mut handler_called = false;
 

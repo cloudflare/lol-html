@@ -4,6 +4,8 @@ mod actions;
 mod conditions;
 mod lexeme;
 
+use atomic_refcell::AtomicRefCell;
+
 use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
@@ -13,14 +15,13 @@ use crate::parser::{
     ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use crate::rewriter::RewritingError;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub use self::lexeme::*;
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
-pub trait LexemeSink {
+pub trait LexemeSink: Send + Sync {
     fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError>;
     fn handle_non_tag_content(
         &mut self,
@@ -29,7 +30,7 @@ pub trait LexemeSink {
 }
 
 pub type State<S> = fn(&mut Lexer<S>, &[u8]) -> StateResult;
-pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOutline>>>;
+pub type SharedAttributeBuffer = Arc<AtomicRefCell<Vec<AttributeOutline>>>;
 
 pub struct Lexer<S: LexemeSink> {
     next_pos: usize,
@@ -46,13 +47,16 @@ pub struct Lexer<S: LexemeSink> {
     last_start_tag_name_hash: LocalNameHash,
     closing_quote: u8,
     attr_buffer: SharedAttributeBuffer,
-    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    tree_builder_simulator: Arc<AtomicRefCell<TreeBuilderSimulator>>,
     last_text_type: TextType,
     feedback_directive: FeedbackDirective,
 }
 
 impl<S: LexemeSink> Lexer<S> {
-    pub fn new(lexeme_sink: S, tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>) -> Self {
+    pub fn new(
+        lexeme_sink: S,
+        tree_builder_simulator: Arc<AtomicRefCell<TreeBuilderSimulator>>,
+    ) -> Self {
         Lexer {
             next_pos: 0,
             is_last_input: false,
@@ -67,7 +71,7 @@ impl<S: LexemeSink> Lexer<S> {
             current_attr: None,
             last_start_tag_name_hash: LocalNameHash::default(),
             closing_quote: b'"',
-            attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
+            attr_buffer: Arc::new(AtomicRefCell::new(Vec::with_capacity(
                 DEFAULT_ATTR_BUFFER_CAPACITY,
             ))),
             tree_builder_simulator,

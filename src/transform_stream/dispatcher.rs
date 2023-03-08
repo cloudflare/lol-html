@@ -10,7 +10,6 @@ use crate::rewritable_units::{
 };
 use crate::rewriter::RewritingError;
 use encoding_rs::Encoding;
-use std::rc::Rc;
 
 use TagTokenOutline::*;
 
@@ -20,8 +19,11 @@ pub struct AuxStartTagInfo<'i> {
     pub self_closing: bool,
 }
 
-type AuxStartTagInfoRequest<C> =
-    Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError>>;
+type AuxStartTagInfoRequest<C> = Box<
+    dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError>
+        + Send
+        + Sync,
+>;
 
 pub enum DispatcherError<C> {
     InfoRequest(AuxStartTagInfoRequest<C>),
@@ -30,7 +32,7 @@ pub enum DispatcherError<C> {
 
 pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherError<C>>;
 
-pub trait TransformController: Sized {
+pub trait TransformController: Sized + Send + Sync {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
     fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
     fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
@@ -46,7 +48,7 @@ pub trait TransformController: Sized {
 /// [`HtmlRewriter`]: struct.HtmlRewriter.html
 /// [`Fn`]: https://doc.rust-lang.org/std/ops/trait.Fn.html
 /// [`FnMut`]: https://doc.rust-lang.org/std/ops/trait.FnMut.html
-pub trait OutputSink {
+pub trait OutputSink: Send + Sync {
     /// Handles rewriter's output chunk.
     ///
     /// # Note
@@ -54,7 +56,7 @@ pub trait OutputSink {
     fn handle_chunk(&mut self, chunk: &[u8]);
 }
 
-impl<F: FnMut(&[u8])> OutputSink for F {
+impl<F: FnMut(&[u8]) + Send + Sync> OutputSink for F {
     fn handle_chunk(&mut self, chunk: &[u8]) {
         self(chunk);
     }
@@ -187,7 +189,7 @@ where
                     &mut self.transform_controller,
                     AuxStartTagInfo {
                         input,
-                        attr_buffer: Rc::clone($attributes),
+                        attr_buffer: Arc::clone($attributes),
                         self_closing: $self_closing,
                     },
                 )

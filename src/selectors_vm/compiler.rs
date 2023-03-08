@@ -13,9 +13,9 @@ use std::hash::Hash;
 use std::iter;
 
 /// An expression using only the tag name of an element.
-pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState, &LocalName) -> bool>;
+pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState, &LocalName) -> bool + Send + Sync>;
 /// An expression using the attributes of an element.
-pub type CompiledAttributeExpr = Box<dyn Fn(&SelectorState, &AttributeMatcher) -> bool>;
+pub type CompiledAttributeExpr = Box<dyn Fn(&SelectorState, &AttributeMatcher) -> bool + Send + Sync>;
 
 #[derive(Default)]
 struct ExprSet {
@@ -31,7 +31,7 @@ pub struct AttrExprOperands {
 
 impl Expr<OnTagNameExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &LocalName) -> bool + 'static>(
+    pub fn compile_expr<F: Fn(&SelectorState, &LocalName) -> bool + Send + Sync + 'static>(
         &self,
         f: F,
     ) -> CompiledLocalNameExpr {
@@ -92,7 +92,7 @@ impl Compilable for Expr<OnTagNameExpr> {
 
 impl Expr<OnAttributesExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &AttributeMatcher) -> bool + 'static>(
+    pub fn compile_expr<F: Fn(&SelectorState, &AttributeMatcher) -> bool + Send + Sync + 'static>(
         &self,
         f: F,
     ) -> CompiledAttributeExpr {
@@ -382,7 +382,7 @@ mod tests {
     fn with_start_tag(
         html: &str,
         encoding: &'static Encoding,
-        mut action: impl FnMut(LocalName, AttributeMatcher),
+        mut action: impl FnMut(LocalName, AttributeMatcher) + Send + Sync,
     ) {
         test_with_token(html, encoding, |t| match t {
             Token::StartTag(t) => {
@@ -398,10 +398,10 @@ mod tests {
         });
     }
 
-    fn for_each_test_case<T>(
+    fn for_each_test_case<T: Send + Sync>(
         test_cases: &[(&str, T)],
         encoding: &'static Encoding,
-        action: impl Fn(&str, &T, &SelectorState, LocalName, AttributeMatcher),
+        action: impl Fn(&str, &T, &SelectorState, LocalName, AttributeMatcher) + Send + Sync,
     ) {
         for (input, matching_data) in test_cases.iter() {
             with_start_tag(input, encoding, |local_name, attr_matcher| {

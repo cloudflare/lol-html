@@ -14,7 +14,7 @@ use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use std::error::Error as StdError;
 use std::fmt::{self, Debug};
-use std::rc::Rc;
+use std::sync::Arc;
 use thiserror::Error;
 
 pub use self::settings::*;
@@ -172,7 +172,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
             Some(SelectorMatchingVm::new(
                 selectors_ast,
                 encoding.into(),
-                Rc::clone(&memory_limiter),
+                Arc::clone(&memory_limiter),
                 settings.enable_esi_tags,
             ))
         } else {
@@ -288,10 +288,18 @@ mod tests {
     use super::*;
     use crate::html_content::ContentType;
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
+    use atomic_refcell::AtomicRefCell;
     use encoding_rs::Encoding;
-    use std::cell::RefCell;
     use std::convert::TryInto;
-    use std::rc::Rc;
+    use std::sync::Arc;
+
+    fn __standin_send_test__<O: OutputSink + Send + Sync>(__t__: HtmlRewriter<'static, O>) {
+        struct VOID<T: Send> {
+            __t__: T,
+        }
+
+        let _: VOID<HtmlRewriter<'static, O>> = VOID { __t__ };
+    }
 
     fn write_chunks<O: OutputSink>(
         mut rewriter: HtmlRewriter<O>,
@@ -507,12 +515,12 @@ mod tests {
 
     #[test]
     fn handler_invocation_order() {
-        let handlers_executed = Rc::new(RefCell::new(Vec::default()));
+        let handlers_executed = Arc::new(AtomicRefCell::new(Vec::default()));
 
         macro_rules! create_handlers {
             ($sel:expr, $idx:expr) => {
                 element!($sel, {
-                    let handlers_executed = Rc::clone(&handlers_executed);
+                    let handlers_executed = Arc::clone(&handlers_executed);
 
                     move |_| {
                         handlers_executed.borrow_mut().push($idx);

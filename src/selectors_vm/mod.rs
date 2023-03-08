@@ -31,7 +31,7 @@ pub type AuxStartTagInfoRequest<E, P> = Box<
         &mut SelectorMatchingVm<E>,
         AuxStartTagInfo,
         &mut dyn FnMut(MatchInfo<P>),
-    ) -> Result<(), MemoryLimitExceededError>,
+    ) -> Result<(), MemoryLimitExceededError> + Send + Sync,
 >;
 
 pub enum VmError<E: ElementData, MatchPayload> {
@@ -238,7 +238,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         Ok(())
     }
 
-    fn bailout<T: 'static>(
+    fn bailout<T: Send + Sync + 'static>(
         ctx: ExecutionCtx<E>,
         bailout: Bailout<T>,
         recovery_point_handler: RecoveryPointHandler<T, E, E::MatchPayload>,
@@ -577,7 +577,7 @@ mod tests {
     pub fn test_with_token(
         html: &str,
         encoding: &'static Encoding,
-        test_fn: impl FnMut(&mut Token),
+        test_fn: impl FnMut(&mut Token) + Send + Sync,
     ) {
         let (html, _, has_unmappable_characters) = encoding.encode(html);
 
@@ -592,9 +592,9 @@ mod tests {
             return;
         }
 
-        pub struct TestTransformController<T: FnMut(&mut Token)>(T);
+        pub struct TestTransformController<T: FnMut(&mut Token) + Send + Sync>(T);
 
-        impl<T: FnMut(&mut Token)> TransformController for TestTransformController<T> {
+        impl<T: FnMut(&mut Token) + Send + Sync> TransformController for TestTransformController<T> {
             fn initial_capture_flags(&self) -> TokenCaptureFlags {
                 TokenCaptureFlags::all()
             }

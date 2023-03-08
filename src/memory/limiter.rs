@@ -1,8 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
+use atomic_refcell::AtomicRefCell;
 use thiserror::Error;
 
-pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
+pub type SharedMemoryLimiter = Arc<AtomicRefCell<MemoryLimiter>>;
 
 /// An error that occures when rewriter exceedes the memory limit specified in the
 /// [`MemorySettings`].
@@ -20,7 +20,7 @@ pub struct MemoryLimiter {
 
 impl MemoryLimiter {
     pub fn new_shared(max: usize) -> SharedMemoryLimiter {
-        Rc::new(RefCell::new(MemoryLimiter {
+        Arc::new(AtomicRefCell::new(MemoryLimiter {
             max,
             current_usage: 0,
         }))

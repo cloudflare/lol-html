@@ -37,7 +37,7 @@ fn is_void_element(local_name: &LocalName, enable_esi_tags: bool) -> bool {
     false
 }
 
-pub trait ElementData: Default + 'static {
+pub trait ElementData: Default + Send + Sync + 'static {
     type MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static;
 
     fn matched_payload_mut(&mut self) -> &mut HashSet<Self::MatchPayload>;

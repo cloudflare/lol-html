@@ -45,6 +45,7 @@ safemem = "0.3.3"
 selectors = "0.22.0"
 thiserror = "1.0.2"
 hashbrown = "0.13.1"
+atomic_refcell = "0.1.9"
 
 [dev-dependencies]
 criterion = "0.4.0"

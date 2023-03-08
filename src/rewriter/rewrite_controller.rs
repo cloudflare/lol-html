@@ -4,9 +4,9 @@ use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
 use crate::transform_stream::*;
+use atomic_refcell::AtomicRefCell;
 use hashbrown::HashSet;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Default)]
 pub struct ElementDescriptor {
@@ -25,7 +25,7 @@ impl ElementData for ElementDescriptor {
 }
 
 pub struct HtmlRewriteController<'h> {
-    handlers_dispatcher: Rc<RefCell<ContentHandlersDispatcher<'h>>>,
+    handlers_dispatcher: Arc<AtomicRefCell<ContentHandlersDispatcher<'h>>>,
     selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
 }
 
@@ -36,7 +36,7 @@ impl<'h> HtmlRewriteController<'h> {
         selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
     ) -> Self {
         HtmlRewriteController {
-            handlers_dispatcher: Rc::new(RefCell::new(handlers_dispatcher)),
+            handlers_dispatcher: Arc::new(AtomicRefCell::new(handlers_dispatcher)),
             selector_matching_vm,
         }
     }
@@ -46,7 +46,7 @@ impl<'h> HtmlRewriteController<'h> {
 // when we hold a mutable reference for the selector matching VM.
 macro_rules! create_match_handler {
     ($self:tt) => {{
-        let handlers_dispatcher = Rc::clone(&$self.handlers_dispatcher);
+        let handlers_dispatcher = Arc::clone(&$self.handlers_dispatcher);
 
         move |m| handlers_dispatcher.borrow_mut().start_matching(m)
     }};
@@ -108,7 +108,7 @@ impl TransformController for HtmlRewriteController<'_> {
 
     fn handle_end_tag(&mut self, local_name: LocalName) -> TokenCaptureFlags {
         if let Some(ref mut vm) = self.selector_matching_vm {
-            let handlers_dispatcher = Rc::clone(&self.handlers_dispatcher);
+            let handlers_dispatcher = Arc::clone(&self.handlers_dispatcher);
 
             vm.exec_for_end_tag(local_name, move |elem_desc| {
                 handlers_dispatcher.borrow_mut().stop_matching(elem_desc);

@@ -2,6 +2,8 @@
 mod actions;
 mod conditions;
 
+use atomic_refcell::AtomicRefCell;
+
 use crate::base::{Align, Bytes, Range};
 use crate::html::{LocalName, LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{FeedbackDirective, StateMachine, StateResult};
@@ -9,11 +11,10 @@ use crate::parser::{
     ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use crate::rewriter::RewritingError;
-use std::cell::RefCell;
 use std::cmp::min;
-use std::rc::Rc;
+use std::sync::Arc;
 
-pub trait TagHintSink {
+pub trait TagHintSink: Send + Sync {
     fn handle_start_tag_hint(
         &mut self,
         name: LocalName,
@@ -49,7 +50,7 @@ pub struct TagScanner<S: TagHintSink> {
     tag_hint_sink: S,
     state: State<S>,
     closing_quote: u8,
-    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    tree_builder_simulator: Arc<AtomicRefCell<TreeBuilderSimulator>>,
     pending_text_type_change: Option<TextType>,
     last_text_type: TextType,
 }
@@ -57,7 +58,7 @@ pub struct TagScanner<S: TagHintSink> {
 impl<S: TagHintSink> TagScanner<S> {
     pub fn new(
         tag_hint_sink: S,
-        tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+        tree_builder_simulator: Arc<AtomicRefCell<TreeBuilderSimulator>>,
     ) -> Self {
         TagScanner {
             next_pos: 0,

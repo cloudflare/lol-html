@@ -128,7 +128,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             name: Range::default(),
             name_hash: LocalNameHash::new(),
             ns: Namespace::default(),
-            attributes: Rc::clone(&self.attr_buffer),
+            attributes: Arc::clone(&self.attr_buffer),
             self_closing: false,
         });
     }

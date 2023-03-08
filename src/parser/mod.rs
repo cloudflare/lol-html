@@ -11,9 +11,9 @@ use self::tag_scanner::TagScanner;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
 use crate::html::{LocalName, Namespace};
 use crate::rewriter::RewritingError;
+use atomic_refcell::AtomicRefCell;
 use cfg_if::cfg_if;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub use self::lexer::{
     AttributeOutline, Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline,
@@ -32,7 +32,7 @@ pub enum ParserDirective {
     Lex,
 }
 
-impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
+impl<S: LexemeSink> LexemeSink for Arc<AtomicRefCell<S>> {
     #[inline]
     fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError> {
         self.borrow_mut().handle_tag(lexeme)
@@ -47,7 +47,7 @@ impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
     }
 }
 
-impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
+impl<S: TagHintSink> TagHintSink for Arc<AtomicRefCell<S>> {
     #[inline]
     fn handle_start_tag_hint(
         &mut self,
@@ -66,8 +66,8 @@ impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
 pub trait ParserOutputSink: LexemeSink + TagHintSink {}
 
 pub struct Parser<S: ParserOutputSink> {
-    lexer: Lexer<Rc<RefCell<S>>>,
-    tag_scanner: TagScanner<Rc<RefCell<S>>>,
+    lexer: Lexer<Arc<AtomicRefCell<S>>>,
+    tag_scanner: TagScanner<Arc<AtomicRefCell<S>>>,
     current_directive: ParserDirective,
 }
 
@@ -85,17 +85,18 @@ macro_rules! with_current_sm {
 
 impl<S: ParserOutputSink> Parser<S> {
     pub fn new(
-        output_sink: &Rc<RefCell<S>>,
+        output_sink: &Arc<AtomicRefCell<S>>,
         initial_directive: ParserDirective,
         strict: bool,
     ) -> Self {
-        let tree_builder_simulator = Rc::new(RefCell::new(TreeBuilderSimulator::new(strict)));
+        let tree_builder_simulator =
+            Arc::new(AtomicRefCell::new(TreeBuilderSimulator::new(strict)));
 
         Parser {
-            lexer: Lexer::new(Rc::clone(output_sink), Rc::clone(&tree_builder_simulator)),
+            lexer: Lexer::new(Arc::clone(output_sink), Arc::clone(&tree_builder_simulator)),
             tag_scanner: TagScanner::new(
-                Rc::clone(output_sink),
-                Rc::clone(&tree_builder_simulator),
+                Arc::clone(output_sink),
+                Arc::clone(&tree_builder_simulator),
             ),
             current_directive: initial_directive,
         }

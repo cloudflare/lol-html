@@ -222,7 +222,7 @@ impl<'i> Attributes<'i> {
 
     #[cfg(test)]
     pub fn raw_attributes(&self) -> (&'i Bytes<'i>, SharedAttributeBuffer) {
-        (self.input, std::rc::Rc::clone(&self.attribute_buffer))
+        (self.input, std::sync::Arc::clone(&self.attribute_buffer))
     }
 }
 

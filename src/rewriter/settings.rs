@@ -6,12 +6,12 @@ use std::borrow::Cow;
 use std::error::Error;
 
 pub(crate) type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
-pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + 'h>;
-pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>;
-pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;
-pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + 'h>;
-pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + 'h>;
-pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + 'h>;
+pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + Send + Sync + 'h>;
+pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + Send + Sync + 'h>;
+pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + Send + Sync + 'h>;
+pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + Send + Sync + 'h>;
+pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + Send + Sync + 'h>;
+pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + Send + Sync + 'h>;
 
 /// Specifies element content handlers associated with a selector.
 #[derive(Default)]
@@ -24,7 +24,7 @@ pub struct ElementContentHandlers<'h> {
 impl<'h> ElementContentHandlers<'h> {
     /// Sets a handler for elements matched by a selector.
     #[inline]
-    pub fn element(mut self, handler: impl FnMut(&mut Element) -> HandlerResult + 'h) -> Self {
+    pub fn element(mut self, handler: impl FnMut(&mut Element) -> HandlerResult + Send + Sync + 'h) -> Self {
         self.element = Some(Box::new(handler));
 
         self
@@ -32,7 +32,7 @@ impl<'h> ElementContentHandlers<'h> {
 
     /// Sets a handler for HTML comments in the inner content of elements matched by a selector.
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + 'h) -> Self {
+    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + Send + Sync + 'h) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
@@ -40,7 +40,7 @@ impl<'h> ElementContentHandlers<'h> {
 
     /// Sets a handler for text chunks in the inner content of elements matched by a selector.
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + 'h) -> Self {
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + Send + Sync + 'h) -> Self {
         self.text = Some(Box::new(handler));
 
         self
@@ -75,7 +75,7 @@ impl<'h> DocumentContentHandlers<'h> {
     ///
     /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
     #[inline]
-    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> HandlerResult + 'h) -> Self {
+    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> HandlerResult + Send + Sync + 'h) -> Self {
         self.doctype = Some(Box::new(handler));
 
         self
@@ -83,7 +83,7 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for all HTML comments present in the input HTML markup.
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + 'h) -> Self {
+    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + Send + Sync + 'h) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
@@ -91,7 +91,7 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for all text chunks present in the input HTML markup.
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + 'h) -> Self {
+    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + Send + Sync + 'h) -> Self {
         self.text = Some(Box::new(handler));
 
         self
@@ -99,7 +99,7 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for the document end, which is called after the last chunk is processed.
     #[inline]
-    pub fn end(mut self, handler: impl FnMut(&mut DocumentEnd) -> HandlerResult + 'h) -> Self {
+    pub fn end(mut self, handler: impl FnMut(&mut DocumentEnd) -> HandlerResult + Send + Sync + 'h) -> Self {
         self.end = Some(Box::new(handler));
 
         self

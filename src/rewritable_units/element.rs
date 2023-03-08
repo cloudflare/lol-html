@@ -488,7 +488,7 @@ impl<'r, 't> Element<'r, 't> {
     /// ```
     /// use lol_html::html_content::ContentType;
     /// use lol_html::{element, rewrite_str, text, RewriteStrSettings};
-    /// let buffer = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    /// let buffer = std::sync::Arc::new(atomic_refcell::AtomicRefCell::new(String::new()));
     /// let html = rewrite_str(
     ///     "<span>Short</span><span><b>13</b> characters</span>",
     ///     RewriteStrSettings {
@@ -527,7 +527,7 @@ impl<'r, 't> Element<'r, 't> {
     /// ```
     pub fn on_end_tag(
         &mut self,
-        handler: impl FnOnce(&mut EndTag) -> HandlerResult + 'static,
+        handler: impl FnOnce(&mut EndTag) -> HandlerResult + Send + Sync + 'static,
     ) -> Result<(), EndTagError> {
         if self.can_have_content {
             self.end_tag_handler = Some(Box::new(handler));
@@ -590,7 +590,7 @@ mod tests {
         html: &[u8],
         encoding: &'static Encoding,
         selector: &str,
-        mut handler: impl FnMut(&mut Element),
+        mut handler: impl FnMut(&mut Element) + Send + Sync,
     ) -> String {
         let mut handler_called = false;
 

@@ -216,7 +216,7 @@ mod tests {
     fn rewrite_comment(
         html: &[u8],
         encoding: &'static Encoding,
-        mut handler: impl FnMut(&mut Comment),
+        mut handler: impl FnMut(&mut Comment) + Send + Sync,
     ) -> String {
         let mut handler_called = false;
 

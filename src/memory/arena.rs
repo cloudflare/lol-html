@@ -63,12 +63,12 @@ impl Arena {
 mod tests {
     use super::super::limiter::MemoryLimiter;
     use super::*;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     #[test]
     fn append() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut arena = Arena::new(Rc::clone(&limiter), 2);
+        let mut arena = Arena::new(Arc::clone(&limiter), 2);
 
         arena.append(&[1, 2]).unwrap();
         assert_eq!(arena.bytes(), &[1, 2]);
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn init_with() {
         let limiter = MemoryLimiter::new_shared(5);
-        let mut arena = Arena::new(Rc::clone(&limiter), 0);
+        let mut arena = Arena::new(Arc::clone(&limiter), 0);
 
         arena.init_with(&[1]).unwrap();
         assert_eq!(arena.bytes(), &[1]);
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn shift() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut arena = Arena::new(Rc::clone(&limiter), 0);
+        let mut arena = Arena::new(Arc::clone(&limiter), 0);
 
         arena.append(&[0, 1, 2, 3]).unwrap();
         arena.shift(2);
