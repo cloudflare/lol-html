@@ -1,10 +1,10 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
+use crate::base::SharedEncoding;
 use crate::memory::{Arena, SharedMemoryLimiter};
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use crate::rewriter::RewritingError;
-use encoding_rs::Encoding;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -21,7 +21,7 @@ where
     pub output_sink: O,
     pub preallocated_parsing_buffer_size: usize,
     pub memory_limiter: SharedMemoryLimiter,
-    pub encoding: &'static Encoding,
+    pub encoding: SharedEncoding,
     pub strict: bool,
 }
 

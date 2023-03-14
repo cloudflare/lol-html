@@ -2,10 +2,7 @@ use crate::harness::suites::html5lib_tests::{
     get_test_cases, TestCase, TestToken, TestTokenList,
 };
 use crate::harness::{TestFixture, Input};
-use lol_html::{
-    LocalNameHash, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController,
-    TransformStream, Namespace, TransformStreamSettings, MemoryLimiter
-};
+use lol_html::{LocalNameHash, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController, TransformStream, Namespace, TransformStreamSettings, MemoryLimiter, SharedEncoding};
 use lol_html::errors::RewritingError;
 use lol_html::html_content::{DocumentEnd, TextType};
 use lol_html::test_utils::Output;
@@ -106,7 +103,7 @@ pub fn parse(
             output_sink: |chunk: &[u8]| output.push(chunk),
             preallocated_parsing_buffer_size: 0,
             memory_limiter,
-            encoding: encoding.into(),
+            encoding: SharedEncoding::new(encoding),
             strict: true
         }
     );

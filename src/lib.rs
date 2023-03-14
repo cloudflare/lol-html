@@ -154,6 +154,8 @@ cfg_if! {
     if #[cfg(feature = "integration_test")] {
         pub mod selectors_vm;
 
+        pub use self::base::SharedEncoding;
+
         pub use self::transform_stream::{
             StartTagHandlingResult, TransformController, TransformStream,
             TransformStreamSettings
