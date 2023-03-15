@@ -11,6 +11,7 @@ use encoding_rs::Encoding;
 pub use self::to_token::{ToToken, ToTokenResult};
 
 bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct TokenCaptureFlags: u8 {
         const TEXT = 0b0000_0001;
         const COMMENTS = 0b0000_0010;
