@@ -226,7 +226,7 @@ impl<E: ElementData> Stack<E> {
     }
 
     /// Adds a child to child counters. Called before pushing the element to the stack.
-    pub fn add_child<'i>(&mut self, name: &LocalName<'i>) {
+    pub fn add_child(&mut self, name: &LocalName<'_>) {
         match self.items.last_mut() {
             Some(last) => &mut last.child_counter,
             None => &mut self.root_child_counter,

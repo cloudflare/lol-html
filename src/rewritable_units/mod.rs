@@ -114,10 +114,10 @@ mod test_utils {
             .collect()
     }
 
-    pub fn rewrite_html<'a>(
+    pub fn rewrite_html(
         html: &[u8],
         encoding: &'static Encoding,
-        element_content_handlers: Vec<(Cow<'a, Selector>, ElementContentHandlers)>,
+        element_content_handlers: Vec<(Cow<'_, Selector>, ElementContentHandlers)>,
         document_content_handlers: Vec<DocumentContentHandlers>,
     ) -> String {
         let mut output = Output::new(encoding);

@@ -1,5 +1,6 @@
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Namespace {
+    #[default]
     Html,
     Svg,
     MathML,
@@ -16,12 +17,5 @@ impl Namespace {
             Svg => "http://www.w3.org/2000/svg",
             MathML => "http://www.w3.org/1998/Math/MathML",
         }
-    }
-}
-
-impl Default for Namespace {
-    #[inline]
-    fn default() -> Self {
-        Namespace::Html
     }
 }
