@@ -34,7 +34,7 @@ harness = false
 name = "bench"
 
 [dependencies]
-bitflags = "1.0.4"
+bitflags = "2.0.0"
 cfg-if = "1.0.0"
 cssparser = "0.27.2"
 encoding_rs = "0.8.13"
@@ -49,12 +49,12 @@ hashbrown = "0.13.1"
 [dev-dependencies]
 criterion = "0.4.0"
 glob = "0.3.0"
-html5ever = { version = "0.25.1", git = "https://github.com/servo/html5ever", rev = "1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021" }
-markup5ever_rcdom = { version = "0.1", git = "https://github.com/servo/html5ever", rev = "1b34cf17c6586a2dc1c120bf6a1fd88cf4c86021" }
+html5ever = "0.26.0"
+markup5ever_rcdom = "0.2.0"
 hashbrown = { version = "0.13.1", features = ["serde"] }
 serde = "1.0.126"
 serde_derive = "1.0.19"
 serde_json = "1.0.65"
-rand = "0.8.4"
+rand = "0.8.5"
 rustc-test = "0.3.1"
 itertools = "0.10.1"
