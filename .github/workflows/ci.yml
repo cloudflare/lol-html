@@ -51,3 +51,15 @@ jobs:
       shell: bash
     - name: Run tests
       run: scripts/test.sh
+  format:
+    name: Check code format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust (rustup)
+        run: |
+          rustup update stable --no-self-update && rustup default stable
+          rustup component add rustfmt
+        shell: bash
+      - name: Check format
+        run: cargo fmt -- --check
