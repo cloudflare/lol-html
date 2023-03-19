@@ -57,6 +57,7 @@ pub extern "C" fn lol_html_rewriter_build(
         memory_settings,
         strict,
         enable_esi_tags: false,
+        adjust_charset_on_meta_tag: false,
     };
 
     let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);
@@ -88,6 +89,7 @@ pub extern "C" fn unstable_lol_html_rewriter_build_with_esi_tags(
         memory_settings,
         strict,
         enable_esi_tags: true,
+        adjust_charset_on_meta_tag: false,
     };
 
     let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);

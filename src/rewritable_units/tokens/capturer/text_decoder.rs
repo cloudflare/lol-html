@@ -1,27 +1,28 @@
 use super::*;
+use crate::base::SharedEncoding;
 use crate::html::TextType;
 use crate::rewriter::RewritingError;
-use encoding_rs::{CoderResult, Decoder, Encoding};
+use encoding_rs::{CoderResult, Decoder};
 
 // NOTE: this can't be refactored into method, because we hold a mutable reference for `self`
 // during the decoding loop in `feed_text`.
 macro_rules! emit {
     ($self:tt, $text:expr, $last:ident, $event_handler:ident) => {{
-        let token = TextChunk::new_token($text, $self.last_text_type, $last, $self.encoding);
+        let token = TextChunk::new_token($text, $self.last_text_type, $last, $self.encoding.get());
 
         $event_handler(TokenCapturerEvent::TokenProduced(Box::new(token)))
     }};
 }
 
 pub struct TextDecoder {
-    encoding: &'static Encoding,
+    encoding: SharedEncoding,
     pending_text_streaming_decoder: Option<Decoder>,
     text_buffer: String,
     last_text_type: TextType,
 }
 
 impl TextDecoder {
-    pub fn new(encoding: &'static Encoding) -> Self {
+    pub fn new(encoding: SharedEncoding) -> Self {
         TextDecoder {
             encoding,
             pending_text_streaming_decoder: None,
@@ -49,7 +50,7 @@ impl TextDecoder {
         last: bool,
         event_handler: CapturerEventHandler,
     ) -> Result<(), RewritingError> {
-        let encoding = self.encoding;
+        let encoding = self.encoding.get();
         let buffer = self.text_buffer.as_mut_str();
 
         let decoder = self

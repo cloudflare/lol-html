@@ -546,14 +546,16 @@ impl<E: ElementData> SelectorMatchingVm<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::base::SharedEncoding;
     use crate::errors::RewritingError;
     use crate::html::Namespace;
     use crate::memory::MemoryLimiter;
     use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
+    use crate::rewriter::AsciiCompatibleEncoding;
     use crate::transform_stream::{
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
     };
-    use encoding_rs::UTF_8;
+    use encoding_rs::{Encoding, UTF_8};
     use hashbrown::{HashMap, HashSet};
 
     struct Expectation {
@@ -629,7 +631,7 @@ mod tests {
             transform_controller: TestTransformController(test_fn),
             output_sink: |_: &[u8]| {},
             preallocated_parsing_buffer_size: 0,
-            encoding,
+            encoding: SharedEncoding::new(AsciiCompatibleEncoding::new(encoding).unwrap()),
             memory_limiter: MemoryLimiter::new_shared(2048),
             strict: true,
         });

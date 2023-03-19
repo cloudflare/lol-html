@@ -6,12 +6,15 @@ mod settings;
 
 use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::*;
+use crate::base::SharedEncoding;
 use crate::memory::MemoryLimitExceededError;
 use crate::memory::MemoryLimiter;
 use crate::parser::ParsingAmbiguityError;
 use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
+use mime::Mime;
+use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
@@ -34,6 +37,16 @@ impl AsciiCompatibleEncoding {
         } else {
             None
         }
+    }
+
+    fn from_mimetype(mime: &Mime) -> Option<AsciiCompatibleEncoding> {
+        mime.get_param("charset")
+            .and_then(|cs| Encoding::for_label_no_replacement(cs.as_str().as_bytes()))
+            .and_then(AsciiCompatibleEncoding::new)
+    }
+
+    pub fn utf_8() -> AsciiCompatibleEncoding {
+        Self(encoding_rs::UTF_8)
     }
 }
 
@@ -150,12 +163,24 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
     ///
     /// [`OutputSink`]: trait.OutputSink.html
     pub fn new<'s>(settings: Settings<'h, 's>, output_sink: O) -> Self {
-        let encoding = settings.encoding;
+        let encoding = SharedEncoding::new(settings.encoding);
         let mut selectors_ast = selectors_vm::Ast::default();
         let mut dispatcher = ContentHandlersDispatcher::default();
-        let has_selectors = !settings.element_content_handlers.is_empty();
+        let has_selectors =
+            !settings.element_content_handlers.is_empty() || settings.adjust_charset_on_meta_tag;
 
-        for (selector, handlers) in settings.element_content_handlers {
+        let charset_adjust_handler = if settings.adjust_charset_on_meta_tag {
+            let encoding = SharedEncoding::clone(&encoding);
+            Some(handler_adjust_charset_on_meta_tag(encoding))
+        } else {
+            None
+        };
+
+        let element_content_handlers = charset_adjust_handler
+            .into_iter()
+            .chain(settings.element_content_handlers);
+
+        for (selector, handlers) in element_content_handlers {
             let locator = dispatcher.add_selector_associated_handlers(handlers);
 
             selectors_ast.add_selector(&selector, locator);
@@ -171,7 +196,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         let selector_matching_vm = if has_selectors {
             Some(SelectorMatchingVm::new(
                 selectors_ast,
-                encoding.into(),
+                settings.encoding.into(),
                 Rc::clone(&memory_limiter),
                 settings.enable_esi_tags,
             ))
@@ -188,7 +213,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
                 .memory_settings
                 .preallocated_parsing_buffer_size,
             memory_limiter,
-            encoding: encoding.into(),
+            encoding,
             strict: settings.strict,
         });
 
@@ -234,6 +259,34 @@ impl<O: OutputSink> Debug for HtmlRewriter<'_, O> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "HtmlRewriter")
     }
+}
+
+fn handler_adjust_charset_on_meta_tag(
+    encoding: SharedEncoding,
+) -> (
+    Cow<'static, crate::Selector>,
+    ElementContentHandlers<'static>,
+) {
+    element!("meta", move |el| {
+        let attr_charset = el
+            .get_attribute("charset")
+            .and_then(|cs| Encoding::for_label_no_replacement(cs.as_bytes()))
+            .and_then(AsciiCompatibleEncoding::new);
+
+        let attr_http_equiv = el
+            .get_attribute("http-equiv")
+            .filter(|http_equiv| http_equiv.eq_ignore_ascii_case("Content-Type"))
+            .and_then(|_| el.get_attribute("content"))
+            .and_then(|ct| ct.parse::<Mime>().ok())
+            .as_ref()
+            .and_then(AsciiCompatibleEncoding::from_mimetype);
+
+        if let Some(charset) = attr_charset.or(attr_http_equiv) {
+            encoding.set(charset)
+        }
+
+        Ok(())
+    })
 }
 
 /// Rewrites given `html` string with the provided `settings`.
@@ -289,6 +342,7 @@ mod tests {
     use crate::html_content::ContentType;
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
     use encoding_rs::Encoding;
+    use itertools::Itertools;
     use std::cell::RefCell;
     use std::convert::TryInto;
     use std::rc::Rc;
@@ -305,6 +359,17 @@ mod tests {
         }
 
         rewriter.end().unwrap();
+    }
+
+    fn rewrite_html_bytes(html: &[u8], settings: Settings) -> Vec<u8> {
+        let mut out: Vec<u8> = Vec::with_capacity(html.len());
+
+        let mut rewriter = HtmlRewriter::new(settings, |c: &[u8]| out.extend_from_slice(c));
+
+        rewriter.write(html).unwrap();
+        rewriter.end().unwrap();
+
+        out
     }
 
     #[test]
@@ -556,6 +621,114 @@ mod tests {
         .unwrap();
 
         assert_eq!(res, "<span>?</span>");
+    }
+
+    #[test]
+    fn test_rewrite_adjust_charset_on_meta_tag_attribute_charset() {
+        use crate::html_content::{ContentType, TextChunk};
+
+        let enthusiastic_text_handler = || {
+            doc_text!(move |text: &mut TextChunk| {
+                let new_text = text.as_str().replace('!', "!!!");
+                text.replace(&new_text, ContentType::Text);
+                Ok(())
+            })
+        };
+
+        let html: Vec<u8> = [
+            r#"<meta charset="windows-1251"><html><head></head><body>I love "#
+                .as_bytes()
+                .to_vec(),
+            vec![0xd5, 0xec, 0xb3, 0xcb, 0xdc],
+            r#"!</body></html>"#.as_bytes().to_vec(),
+        ]
+        .into_iter()
+        .concat();
+
+        let expected: Vec<u8> = html
+            .iter()
+            .copied()
+            .flat_map(|c| match c {
+                b'!' => vec![b'!', b'!', b'!'],
+                c => vec![c],
+            })
+            .collect();
+
+        let transformed_no_charset_adjustment: Vec<u8> = rewrite_html_bytes(
+            &html,
+            Settings {
+                document_content_handlers: vec![enthusiastic_text_handler()],
+                ..Settings::default()
+            },
+        );
+
+        // Without charset adjustment the response has to be corrupted:
+        assert_ne!(transformed_no_charset_adjustment, expected);
+
+        let transformed_charset_adjustment: Vec<u8> = rewrite_html_bytes(
+            &html,
+            Settings {
+                document_content_handlers: vec![enthusiastic_text_handler()],
+                adjust_charset_on_meta_tag: true,
+                ..Settings::default()
+            },
+        );
+
+        // If it adapts the charset according to the meta tag everything will be correctly
+        // encoded in windows-1251:
+        assert_eq!(transformed_charset_adjustment, expected);
+    }
+
+    #[test]
+    fn test_rewrite_adjust_charset_on_meta_tag_attribute_content_type() {
+        use crate::html_content::{ContentType, TextChunk};
+
+        let enthusiastic_text_handler = || {
+            doc_text!(move |text: &mut TextChunk| {
+                let new_text = text.as_str().replace('!', "!!!");
+                text.replace(&new_text, ContentType::Text);
+                Ok(())
+            })
+        };
+
+        let html: Vec<u8> = [
+            r#"<meta http-equiv="content-type" content="text/html; charset=windows-1251"><html><head></head><body>I love "#.as_bytes().to_vec(),
+            vec![0xd5, 0xec, 0xb3, 0xcb, 0xdc],
+            r#"!</body></html>"#.as_bytes().to_vec(),
+        ].into_iter().concat();
+
+        let expected: Vec<u8> = html
+            .iter()
+            .copied()
+            .flat_map(|c| match c {
+                b'!' => vec![b'!', b'!', b'!'],
+                c => vec![c],
+            })
+            .collect();
+
+        let transformed_no_charset_adjustment: Vec<u8> = rewrite_html_bytes(
+            &html,
+            Settings {
+                document_content_handlers: vec![enthusiastic_text_handler()],
+                ..Settings::default()
+            },
+        );
+
+        // Without charset adjustment the response has to be corrupted:
+        assert_ne!(transformed_no_charset_adjustment, expected);
+
+        let transformed_charset_adjustment: Vec<u8> = rewrite_html_bytes(
+            &html,
+            Settings {
+                document_content_handlers: vec![enthusiastic_text_handler()],
+                adjust_charset_on_meta_tag: true,
+                ..Settings::default()
+            },
+        );
+
+        // If it adapts the charset according to the meta tag everything will be correctly
+        // encoded in windows-1251:
+        assert_eq!(transformed_charset_adjustment, expected);
     }
 
     mod fatal_errors {

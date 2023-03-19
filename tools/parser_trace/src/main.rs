@@ -103,7 +103,7 @@ fn main() {
         output_sink: |_: &[u8]| {},
         preallocated_parsing_buffer_size: 0,
         memory_limiter: MemoryLimiter::new_shared(2048),
-        encoding: UTF_8,
+        encoding: SharedEncoding::new(AsciiCompatibleEncoding::new(UTF_8).unwrap()),
         strict: true,
     });
 

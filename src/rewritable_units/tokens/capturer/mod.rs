@@ -3,10 +3,10 @@ mod to_token;
 
 use self::text_decoder::TextDecoder;
 use super::*;
+use crate::base::SharedEncoding;
 use crate::parser::Lexeme;
 use crate::rewriter::RewritingError;
 use bitflags::bitflags;
-use encoding_rs::Encoding;
 
 pub use self::to_token::{ToToken, ToTokenResult};
 
@@ -30,15 +30,15 @@ pub enum TokenCapturerEvent<'i> {
 type CapturerEventHandler<'h> = &'h mut dyn FnMut(TokenCapturerEvent) -> Result<(), RewritingError>;
 
 pub struct TokenCapturer {
-    encoding: &'static Encoding,
+    encoding: SharedEncoding,
     text_decoder: TextDecoder,
     capture_flags: TokenCaptureFlags,
 }
 
 impl TokenCapturer {
-    pub fn new(capture_flags: TokenCaptureFlags, encoding: &'static Encoding) -> Self {
+    pub fn new(capture_flags: TokenCaptureFlags, encoding: SharedEncoding) -> Self {
         TokenCapturer {
-            encoding,
+            encoding: SharedEncoding::clone(&encoding),
             text_decoder: TextDecoder::new(encoding),
             capture_flags,
         }
@@ -70,7 +70,7 @@ impl TokenCapturer {
     where
         Lexeme<'i, T>: ToToken,
     {
-        match lexeme.to_token(&mut self.capture_flags, self.encoding) {
+        match lexeme.to_token(&mut self.capture_flags, self.encoding.get()) {
             ToTokenResult::Token(token) => {
                 self.flush_pending_text(&mut event_handler)?;
                 event_handler(TokenCapturerEvent::LexemeConsumed)?;

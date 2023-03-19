@@ -1,6 +1,5 @@
 use super::mutations::content_to_bytes;
 use super::ContentType;
-
 use encoding_rs::Encoding;
 
 use crate::transform_stream::OutputSink;

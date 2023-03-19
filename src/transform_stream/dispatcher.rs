@@ -1,5 +1,5 @@
 use super::*;
-use crate::base::{Bytes, Range};
+use crate::base::{Bytes, Range, SharedEncoding};
 use crate::html::{LocalName, Namespace};
 use crate::parser::{
     Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHintSink,
@@ -9,7 +9,6 @@ use crate::rewritable_units::{
     DocumentEnd, Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
 use crate::rewriter::RewritingError;
-use encoding_rs::Encoding;
 use std::rc::Rc;
 
 use TagTokenOutline::*;
@@ -72,7 +71,7 @@ where
     got_flags_from_hint: bool,
     pending_element_aux_info_req: Option<AuxStartTagInfoRequest<C>>,
     emission_enabled: bool,
-    encoding: &'static Encoding,
+    encoding: SharedEncoding,
 }
 
 impl<C, O> Dispatcher<C, O>
@@ -80,14 +79,17 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    pub fn new(transform_controller: C, output_sink: O, encoding: &'static Encoding) -> Self {
+    pub fn new(transform_controller: C, output_sink: O, encoding: SharedEncoding) -> Self {
         let initial_capture_flags = transform_controller.initial_capture_flags();
 
         Dispatcher {
             transform_controller,
             output_sink,
             remaining_content_start: 0,
-            token_capturer: TokenCapturer::new(initial_capture_flags, encoding),
+            token_capturer: TokenCapturer::new(
+                initial_capture_flags,
+                SharedEncoding::clone(&encoding),
+            ),
             got_flags_from_hint: false,
             pending_element_aux_info_req: None,
             emission_enabled: true,
@@ -108,7 +110,7 @@ where
     pub fn finish(&mut self, input: &[u8]) -> Result<(), RewritingError> {
         self.flush_remaining_input(input, input.len());
 
-        let mut document_end = DocumentEnd::new(&mut self.output_sink, self.encoding);
+        let mut document_end = DocumentEnd::new(&mut self.output_sink, self.encoding.get());
 
         self.transform_controller.handle_end(&mut document_end)?;
 

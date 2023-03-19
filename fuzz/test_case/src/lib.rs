@@ -180,6 +180,7 @@ fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) -
             encoding: encoding.try_into().unwrap(),
             memory_settings: MemorySettings::default(),
             strict: false,
+            adjust_charset_on_meta_tag: false,
         },
         |_: &[u8]| {},
     );

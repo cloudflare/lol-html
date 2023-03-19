@@ -518,6 +518,32 @@ pub struct Settings<'h, 's> {
     pub strict: bool,
 
     pub enable_esi_tags: bool,
+
+    /// If enabled the rewriter will dynamically change the charset when it encounters a `meta` tag
+    /// that specifies the charset.
+    ///
+    /// The charset can be modified by the `meta` tag with
+    ///
+    /// ```html
+    /// <meta charset="windows-1251">
+    /// ```
+    ///
+    /// or
+    ///
+    /// ```html
+    /// <meta http-equiv="content-type" content="text/html; charset=windows-1251">
+    /// ```
+    ///
+    /// Note that an explicit `charset` in the `Content-type` header should take precedence over
+    /// the `meta` tag, so only enable this if the content type does not explicitly specify a
+    /// charset.  For details check [this][html5encoding].
+    ///
+    /// [html5encoding]: https://blog.whatwg.org/the-road-to-html-5-character-encoding
+    ///
+    /// ### Default
+    ///
+    /// `false` when constructed with `Settings::default()`.
+    pub adjust_charset_on_meta_tag: bool,
 }
 
 impl Default for Settings<'_, '_> {
@@ -530,6 +556,7 @@ impl Default for Settings<'_, '_> {
             memory_settings: MemorySettings::default(),
             strict: true,
             enable_esi_tags: false,
+            adjust_charset_on_meta_tag: false,
         }
     }
 }
