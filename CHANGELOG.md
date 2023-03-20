@@ -1,12 +1,20 @@
 # Changelog
 
-## Unreleased
+## v0.3.3
 
 ### Added
 
-- Add `Element::{start_tag, is_self_closing}` (#148)
-- Add `Doctype::Remove` (#129)
-- Implement `Eq` for all types that implement `PartialEq` (#146)
+- Support dynamic charset change on meta tags in HtmlRewriter. (#162)
+- Add `Element::can_have_content`. (#163)
+
+## v0.3.2
+
+### Added
+
+- Add `Doctype::remove`. (#129)
+- Add `Element::start_tag()` and `Element::is_self_closing()`. (#148)
+- Add mutation methods to `StartTag` and `EndTag`. (#148)
+- Implement `Eq` for all types that implement `PartialEq`. (#146)
 
 ### Fixed
 
