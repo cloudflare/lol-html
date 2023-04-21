@@ -89,6 +89,19 @@ impl<'i> TextChunk<'i> {
         &self.text
     }
 
+    /// Returns the textual content of the chunk that the caller can modify.  Note that this can
+    /// cause the string to be allocated.
+    #[inline]
+    pub fn as_mut_str(&mut self) -> &mut String {
+        self.text.to_mut()
+    }
+
+    /// Sets the textual content of the chunk.
+    #[inline]
+    pub fn set_str(&mut self, text: String) {
+        self.text = Cow::Owned(text);
+    }
+
     /// Returns the type of the text in the chunk.
     ///
     /// The type of the text depends on the surrounding context of the text. E.g. regular visible
@@ -315,6 +328,20 @@ mod tests {
 
             assert_eq!(*c.user_data().downcast_ref::<usize>().unwrap(), 1337usize);
         });
+    }
+
+    #[test]
+    fn in_place_text_modifications() {
+        use super::super::Token;
+
+        let encoding = Encoding::for_label_no_replacement("utf-8".as_bytes()).unwrap();
+        let Token::TextChunk(mut chunk) = TextChunk::new_token("original text", TextType::PlainText, true, encoding) else { unreachable!() };
+
+        assert_eq!(chunk.as_str(), "original text");
+        chunk.set_str("hello".to_owned());
+        assert_eq!(chunk.as_str(), "hello");
+        chunk.as_mut_str().push_str(" world!");
+        assert_eq!(chunk.as_str(), "hello world!");
     }
 
     mod serialization {
