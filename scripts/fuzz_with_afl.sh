@@ -4,9 +4,9 @@ set -eu
 
 cargo +nightly install afl
 (
-	cd ./c-api
-	# ok to use default toolchain here since C ABI is stable
-	cargo build
+    cd ./c-api
+    # ok to use default toolchain here since C ABI is stable
+    cargo build
 )
 LOLHTML_LIB_PATH="$(realpath ${CARGO_TARGET_DIR:-c-api/target}/debug/deps)"
 # add `liblolhtml.so` to compiling linker path
