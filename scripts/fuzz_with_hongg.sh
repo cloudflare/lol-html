@@ -16,7 +16,7 @@ export RUSTFLAGS="-L $LOLHTML_LIB_PATH"
 # add `liblolhtml.so` to runtime linker path
 export LD_LIBRARY_PATH="$LOLHTML_LIB_PATH"
 (
-	cd ./fuzz/hongg
-	cargo +nightly build
+    cd ./fuzz/hongg
+    cargo +nightly build
     HFUZZ_INPUT=../corpus/selector_matching cargo +nightly hfuzz run hongg
 )
