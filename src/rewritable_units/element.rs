@@ -45,7 +45,7 @@ pub struct Element<'r, 't> {
     start_tag: &'r mut StartTag<'t>,
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Bytes<'static>>,
-    end_tag_handler: Option<EndTagHandler<'static>>,
+    end_tag_handlers: Vec<EndTagHandler<'static>>,
     can_have_content: bool,
     should_remove_content: bool,
     encoding: &'static Encoding,
@@ -60,7 +60,7 @@ impl<'r, 't> Element<'r, 't> {
             start_tag,
             end_tag_mutations: None,
             modified_end_tag_name: None,
-            end_tag_handler: None,
+            end_tag_handlers: Vec::new(),
             can_have_content,
             should_remove_content: false,
             encoding,
@@ -489,7 +489,8 @@ impl<'r, 't> Element<'r, 't> {
 
     /// Sets a handler to run when the end tag is reached.
     ///
-    /// Subsequent calls to the method on the same element replace the previous handler.
+    /// Consecutive calls to this method will register multiple handlers.  The handlers will
+    /// run in the order of registration.
     ///
     /// # Example
     ///
@@ -538,7 +539,7 @@ impl<'r, 't> Element<'r, 't> {
         handler: impl FnOnce(&mut EndTag) -> HandlerResult + 'static,
     ) -> Result<(), EndTagError> {
         if self.can_have_content {
-            self.end_tag_handler = Some(Box::new(handler));
+            self.end_tag_handlers.push(Box::new(handler));
             Ok(())
         } else {
             Err(EndTagError::NoEndTag)
@@ -548,11 +549,11 @@ impl<'r, 't> Element<'r, 't> {
     pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {
         let end_tag_mutations = self.end_tag_mutations;
         let modified_end_tag_name = self.modified_end_tag_name;
-        let end_tag_handler = self.end_tag_handler;
+        let end_tag_handlers = self.end_tag_handlers;
 
         if end_tag_mutations.is_some()
             || modified_end_tag_name.is_some()
-            || end_tag_handler.is_some()
+            || !end_tag_handlers.is_empty()
         {
             Some(Box::new(move |end_tag: &mut EndTag| {
                 if let Some(name) = modified_end_tag_name {
@@ -563,11 +564,11 @@ impl<'r, 't> Element<'r, 't> {
                     end_tag.mutations = mutations;
                 }
 
-                if let Some(handler) = end_tag_handler {
-                    handler(end_tag)
-                } else {
-                    Ok(())
+                for handler in end_tag_handlers.into_iter() {
+                    handler(end_tag)?;
                 }
+
+                Ok(())
             }))
         } else {
             None
