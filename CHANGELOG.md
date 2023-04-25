@@ -1,11 +1,23 @@
 # Changelog
 
+## v0.4.0
+
+### Added
+
+- Added method `TextChunk::as_mut_str()` and `TextChunk::set_str()` for in-place modifications to the text in a
+  `TextChunk`. (#175)
+
+### Changed
+
+- Modified method `Element::on_end_tag()` to support multiple handlers. This is a breaking change since the old
+  semantics of the method was to overwrite any previously set handler. (#177)
+
 ## v0.3.3
 
 ### Added
 
 - Support dynamic charset change on meta tags in HtmlRewriter. (#162)
-- Add `Element::can_have_content`. (#163)
+- Add `Element::can_have_content()`. (#163)
 
 ## v0.3.2
 
