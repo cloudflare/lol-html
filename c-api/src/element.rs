@@ -221,19 +221,33 @@ pub extern "C" fn lol_html_element_user_data_get(element: *mut Element) -> *mut 
 type EndTagHandler = unsafe extern "C" fn(*mut EndTag, *mut c_void) -> RewriterDirective;
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_on_end_tag(
+pub extern "C" fn lol_html_element_add_end_tag_handler(
     element: *mut Element,
     handler: EndTagHandler,
     user_data: *mut c_void,
 ) -> c_int {
     let element = to_ref_mut!(element);
-    let () = unwrap_or_ret_err_code!(element.on_end_tag(move |end_tag| {
-        match unsafe { handler(end_tag, user_data) } {
-            RewriterDirective::Continue => Ok(()),
-            RewriterDirective::Stop => Err("The rewriter has been stopped.".into()),
+
+    match element.end_tag_handlers() {
+        Some(handlers) => {
+            handlers.push(Box::new(move |end_tag| {
+                match unsafe { handler(end_tag, user_data) } {
+                    RewriterDirective::Continue => Ok(()),
+                    RewriterDirective::Stop => Err("The rewriter has been stopped.".into()),
+                }
+            }));
+            0
         }
-    }));
-    0
+        None => -1,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_element_clear_end_tag_handlers(element: *mut Element) {
+    let element = to_ref_mut!(element);
+    if let Some(handlers) = element.end_tag_handlers() {
+        handlers.clear();
+    }
 }
 
 #[no_mangle]

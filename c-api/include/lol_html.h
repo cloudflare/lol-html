@@ -685,7 +685,8 @@ void *lol_html_element_user_data_get(const lol_html_element_t *element);
 
 // Adds content handlers to the builder for the end tag of the given element.
 //
-// Subsequent calls to the method on the same element replace the previous handler.
+// Subsequent calls to the method on the same element adds new handler.
+// They will run in the order in which they were registered.
 //
 // The handler can optionally have associated user data which will be
 // passed to the handler on each invocation along with the rewritable
@@ -700,7 +701,14 @@ void *lol_html_element_user_data_get(const lol_html_element_t *element);
 //
 // WARNING: Pointers passed to handlers are valid only during the
 // handler execution. So they should never be leaked outside of handlers.
-int lol_html_element_on_end_tag(lol_html_element_t* element, lol_html_end_tag_handler_t end_tag_handler, void* user_data);
+int lol_html_element_add_end_tag_handler(
+    lol_html_element_t* element,
+    lol_html_end_tag_handler_t end_tag_handler,
+    void* user_data
+);
+
+// Clears the handlers that would run on the end tag of the given element.
+void lol_html_element_clear_end_tag_handlers(lol_html_element_t* element);
 
 // Inserts the content string before the element's end tag either as raw text or as HTML.
 //

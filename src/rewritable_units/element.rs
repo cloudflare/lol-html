@@ -1,6 +1,6 @@
 use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag};
 use crate::base::Bytes;
-use crate::rewriter::{EndTagHandler, HandlerResult};
+use crate::rewriter::EndTagHandler;
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
@@ -487,10 +487,10 @@ impl<'r, 't> Element<'r, 't> {
         self.start_tag
     }
 
-    /// Sets a handler to run when the end tag is reached.
+    /// Returns the handlers that will run when the end tag is reached.  You can use this
+    /// to add your "on end tag" handlers.
     ///
-    /// Consecutive calls to this method will register multiple handlers.  The handlers will
-    /// run in the order of registration.
+    /// This will return `None` if the element does not have an end tag.
     ///
     /// # Example
     ///
@@ -506,19 +506,21 @@ impl<'r, 't> Element<'r, 't> {
     ///                 // Truncate string for each new span.
     ///                 buffer.borrow_mut().clear();
     ///                 let buffer = buffer.clone();
-    ///                 el.on_end_tag(move |end| {
-    ///                     let s = buffer.borrow();
-    ///                     if s.len() == 13 {
-    ///                         // add text before the end tag
-    ///                         end.before("!", ContentType::Text);
-    ///                     } else {
-    ///                         // replace the end tag with an uppercase version
-    ///                         end.remove();
-    ///                         let name = end.name().to_uppercase();
-    ///                         end.after(&format!("</{}>", name), ContentType::Html);
-    ///                     }
-    ///                     Ok(())
-    ///                 })?;
+    ///                 if let Some(handlers) = el.end_tag_handlers() {
+    ///                     handlers.push(Box::new(move |end| {
+    ///                         let s = buffer.borrow();
+    ///                         if s.len() == 13 {
+    ///                             // add text before the end tag
+    ///                             end.before("!", ContentType::Text);
+    ///                         } else {
+    ///                             // replace the end tag with an uppercase version
+    ///                             end.remove();
+    ///                             let name = end.name().to_uppercase();
+    ///                             end.after(&format!("</{}>", name), ContentType::Html);
+    ///                         }
+    ///                         Ok(())
+    ///                     }));
+    ///                 }
     ///                 Ok(())
     ///             }),
     ///             text!("span", |t| {
@@ -534,15 +536,11 @@ impl<'r, 't> Element<'r, 't> {
     ///
     /// assert_eq!(html, "<span>Short</SPAN><span><b>13</b> characters!</span>");
     /// ```
-    pub fn on_end_tag(
-        &mut self,
-        handler: impl FnOnce(&mut EndTag) -> HandlerResult + 'static,
-    ) -> Result<(), EndTagError> {
+    pub fn end_tag_handlers(&mut self) -> Option<&mut Vec<EndTagHandler<'static>>> {
         if self.can_have_content {
-            self.end_tag_handlers.push(Box::new(handler));
-            Ok(())
+            Some(&mut self.end_tag_handlers)
         } else {
-            Err(EndTagError::NoEndTag)
+            None
         }
     }
 
@@ -1070,6 +1068,25 @@ mod tests {
 
             assert_eq!(*el.user_data().downcast_ref::<usize>().unwrap(), 1337usize);
         });
+    }
+
+    #[test]
+    fn on_end_tag_handlers() {
+        let handler = |el: &mut Element| {
+            el.end_tag_handlers().unwrap().push(Box::new(move |end| {
+                end.before("X", ContentType::Html);
+                Ok(())
+            }));
+
+            el.end_tag_handlers().unwrap().push(Box::new(move |end| {
+                end.before("Y", ContentType::Html);
+                Ok(())
+            }));
+        };
+
+        let res = rewrite_element("<div>foo</div>".as_bytes(), UTF_8, "div", handler);
+
+        assert_eq!(res, "<div>fooXY</div>");
     }
 
     mod serialization {
