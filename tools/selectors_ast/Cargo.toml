@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 edition = "2021"
 
+publish = false
+
 [dependencies]
 lol_html = { path = "../../", features=["integration_test"] }
 serde_json = "1.0.5"

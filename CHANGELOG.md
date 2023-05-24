@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.0
+
+Yes, you got that right: this is the first 1.x release!  From now on you should expect this project to adhere to
+the semantic versioning spec (we have been somewhat relaxed about that in the past).
+
+### Added
+
+* Added `Element::end_tag_handlers()` which allows better control over the end tag handlers.
+
+### Changed
+
+* Removed `Element::on_end_tag()` and `Element::add_on_end_tag()` in favor of the newly added
+  `Element::end_tag_handlers()`.
+
 ## v0.4.0
 
 ### Added

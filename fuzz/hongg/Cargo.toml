@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
 edition = "2021"
 
+publish = false
+
 [dependencies]
 honggfuzz = "0.5.45"
 test_case = { path = "../test_case" }

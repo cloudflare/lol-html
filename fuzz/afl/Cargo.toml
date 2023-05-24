@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
 edition = "2021"
 
+publish = false
+
 [dependencies]
 test_case = { path = "../test_case" }
 afl = "0.12.11"
