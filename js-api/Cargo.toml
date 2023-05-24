@@ -1,8 +1,10 @@
 [package]
 name = "lol-html-js-api"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
 edition = "2021"
+
+publish = false
 
 [dependencies]
 js-sys = "0.3.33"
