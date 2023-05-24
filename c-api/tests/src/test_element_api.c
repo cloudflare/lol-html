@@ -646,7 +646,8 @@ static lol_html_rewriter_directive_t modify_element_end_tag_name_outer(
 
     static int times_run = -1; // so that it will be 0 on the first call to `inner`
 
-    lol_ok(lol_html_element_on_end_tag(element, modify_element_end_tag_name_inner, &times_run));
+    lol_html_element_clear_end_tag_handlers(element);
+    lol_ok(lol_html_element_add_end_tag_handler(element, modify_element_end_tag_name_inner, &times_run));
     times_run += 1;
 
     return LOL_HTML_CONTINUE;

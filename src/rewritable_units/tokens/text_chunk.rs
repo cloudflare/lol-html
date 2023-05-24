@@ -20,7 +20,7 @@ use std::fmt::{self, Debug};
 /// nodes: `"red-"`, `"or"`, and `"-blue"`. Each of these can produce multiple text chunks and each will
 /// produce one text chunk where [`last_in_text_node`] returns `true`. The last chunk in a text
 /// node can have empty textual content. To perform an action once on the text contents of an
-/// element, see [`Element::on_end_tag`][crate::rewritable_units::Element::on_end_tag].
+/// element, see [`Element::end_tag_handlers`][crate::rewritable_units::Element::end_tag_handlers].
 ///
 /// # Example
 /// ```
