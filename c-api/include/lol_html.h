@@ -696,6 +696,10 @@ void *lol_html_element_user_data_get(const lol_html_element_t *element);
 // stops immediately and `write()` or `end()` of the rewriter methods
 // return an error code.
 //
+// Not all elements (for example, `<br>`) support end tags. If this function is
+// called on such an element, this function returns an error code as described
+// below.
+//
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `lol_html_take_last_error` function.
 //

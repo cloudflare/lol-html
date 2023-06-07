@@ -52,8 +52,8 @@ pub mod errors {
 /// HTML content descriptors that can be produced and modified by a rewriter.
 pub mod html_content {
     pub use super::rewritable_units::{
-        Attribute, Comment, ContentType, Doctype, DocumentEnd, Element, EndTag, EndTagError,
-        StartTag, TextChunk, UserData,
+        Attribute, Comment, ContentType, Doctype, DocumentEnd, Element, EndTag, StartTag,
+        TextChunk, UserData,
     };
 
     pub use super::html::TextType;

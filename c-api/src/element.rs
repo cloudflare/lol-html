@@ -228,18 +228,18 @@ pub extern "C" fn lol_html_element_add_end_tag_handler(
 ) -> c_int {
     let element = to_ref_mut!(element);
 
-    match element.end_tag_handlers() {
-        Some(handlers) => {
-            handlers.push(Box::new(move |end_tag| {
-                match unsafe { handler(end_tag, user_data) } {
-                    RewriterDirective::Continue => Ok(()),
-                    RewriterDirective::Stop => Err("The rewriter has been stopped.".into()),
-                }
-            }));
-            0
+    let handlers = unwrap_or_ret_err_code! {
+        element.end_tag_handlers().ok_or("No end tag.")
+    };
+
+    handlers.push(Box::new(move |end_tag| {
+        match unsafe { handler(end_tag, user_data) } {
+            RewriterDirective::Continue => Ok(()),
+            RewriterDirective::Stop => Err("The rewriter has been stopped.".into()),
         }
-        None => -1,
-    }
+    }));
+
+    0
 }
 
 #[no_mangle]

@@ -660,6 +660,36 @@ EXPECT_OUTPUT(
     sizeof(EXPECTED_USER_DATA)
 );
 
+static lol_html_rewriter_directive_t noop_end_tag_handler(lol_html_end_tag_t *end_tag, void *user_data) {
+  UNUSED(end_tag);
+  UNUSED(user_data);
+  return LOL_HTML_CONTINUE;
+}
+
+static lol_html_rewriter_directive_t add_end_tag_handler_to_element_with_no_end_tag(
+    lol_html_element_t *element,
+    void *user_data
+) {
+    UNUSED(user_data);
+
+    ok(lol_html_element_add_end_tag_handler(element, noop_end_tag_handler, NULL) == -1);
+
+    lol_html_str_t msg = lol_html_take_last_error();
+
+    str_eq(msg, "No end tag.");
+
+    lol_html_str_free(msg);
+
+    return LOL_HTML_CONTINUE;
+}
+
+EXPECT_OUTPUT(
+    no_end_tag,
+    "<br>",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
 void element_api_test() {
     int user_data = 43;
 
@@ -786,5 +816,31 @@ void element_api_test() {
 
         const char *input = "<div>42</div><div>some data</div>";
         run_rewriter(builder, input, modify_element_end_tag, &user_data);
+    }
+
+    {
+        note("NoEndTag");
+
+        const char *selector_str = "br";
+        lol_html_selector_t *selector = lol_html_selector_parse(
+            selector_str,
+            strlen(selector_str)
+        );
+
+        lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
+
+        lol_ok(lol_html_rewriter_builder_add_element_content_handlers(
+            builder,
+            selector,
+            add_end_tag_handler_to_element_with_no_end_tag,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            NULL
+        ));
+
+        const char *input = "<br>";
+        run_rewriter(builder, input, no_end_tag, &user_data);
     }
 }
