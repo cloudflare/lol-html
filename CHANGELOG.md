@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.1
+
+### Fixed
+
+- The C API's new `lol_html_element_add_end_tag_handler()` function now sets the last error retrievable by `lol_html_take_last_error()` if it is called on an element that can have no end tag.
+
 ## v1.0.0
 
 Yes, you got that right: this is the first 1.x release!  From now on you should expect this project to adhere to
