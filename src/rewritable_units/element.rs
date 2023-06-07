@@ -30,14 +30,6 @@ pub enum TagNameError {
     UnencodableCharacter,
 }
 
-/// An error that occurs when invalid value is provided for the tag name.
-#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
-pub enum EndTagError {
-    /// The tag has no end tag.
-    #[error("No end tag.")]
-    NoEndTag,
-}
-
 /// An HTML element rewritable unit.
 ///
 /// Exposes API for examination and modification of a parsed HTML element.
