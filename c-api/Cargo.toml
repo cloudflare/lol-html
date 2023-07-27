@@ -1,6 +1,6 @@
 [package]
 name = "lolhtml"
-version = "1.0.1"
+version = "1.1.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>", "Joshua Nelson <jnelson@cloudflare.com>"]
 edition = "2021"
 

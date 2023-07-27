@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.0
+
+### Added
+
+- Added ability to get the tag and attribute names with the original casing.
+
 ## v1.0.1
 
 ### Fixed
