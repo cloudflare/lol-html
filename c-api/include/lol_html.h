@@ -483,6 +483,9 @@ void *lol_html_text_chunk_user_data_get(const lol_html_text_chunk_t *chunk);
 // Returns the tag name of the element.
 lol_html_str_t lol_html_element_tag_name_get(const lol_html_element_t *element);
 
+// Returns the tag name of the element, preserving its case.
+lol_html_str_t lol_html_element_tag_name_get_preserve_case(const lol_html_element_t *element);
+
 // Sets the tag name of the element.
 //
 // Name should be a valid UTF8-string.
@@ -527,6 +530,9 @@ const lol_html_attribute_t *lol_html_attributes_iterator_next(
 
 // Returns the attribute name.
 lol_html_str_t lol_html_attribute_name_get(const lol_html_attribute_t *attribute);
+
+// Returns the attribute name, preserving its case.
+lol_html_str_t lol_html_attribute_name_get_preserve_case(const lol_html_attribute_t *attribute);
 
 // Returns the attribute value.
 lol_html_str_t lol_html_attribute_value_get(const lol_html_attribute_t *attribute);
@@ -745,6 +751,9 @@ void lol_html_end_tag_remove(lol_html_end_tag_t *end_tag);
 
 // Returns the end tag name.
 lol_html_str_t lol_html_end_tag_name_get(const lol_html_end_tag_t *end_tag);
+
+// Returns the end tag name, preserving its case.
+lol_html_str_t lol_html_end_tag_name_get_preserve_case(const lol_html_end_tag_t *end_tag);
 
 // Sets the tag name of the end tag.
 //

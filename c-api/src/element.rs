@@ -9,6 +9,13 @@ pub extern "C" fn lol_html_element_tag_name_get(element: *const Element) -> Str 
 }
 
 #[no_mangle]
+pub extern "C" fn lol_html_element_tag_name_get_preserve_case(element: *const Element) -> Str {
+    let element = to_ref!(element);
+
+    Str::new(element.tag_name_preserve_case())
+}
+
+#[no_mangle]
 pub extern "C" fn lol_html_element_tag_name_set(
     element: *mut Element,
     name: *const c_char,
@@ -65,6 +72,13 @@ pub extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute) -> St
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.name())
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_attribute_name_get_preserve_case(attribute: *const Attribute) -> Str {
+    let attribute = to_ref!(attribute);
+
+    Str::new(attribute.name_preserve_case())
 }
 
 #[no_mangle]
@@ -279,6 +293,12 @@ pub extern "C" fn lol_html_end_tag_remove(end_tag: *mut EndTag) {
 pub extern "C" fn lol_html_end_tag_name_get(end_tag: *mut EndTag) -> Str {
     let tag = to_ref_mut!(end_tag);
     Str::new(tag.name())
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_end_tag_name_get_preserve_case(end_tag: *mut EndTag) -> Str {
+    let tag = to_ref_mut!(end_tag);
+    Str::new(tag.name_preserve_case())
 }
 
 #[no_mangle]
