@@ -25,9 +25,16 @@ impl<'i> EndTag<'i> {
         })
     }
 
+    /// Returns the name of the tag.
     #[inline]
     pub fn name(&self) -> String {
         self.name.as_lowercase_string(self.encoding)
+    }
+
+    /// Returns the name of the tag, preserving its case.
+    #[inline]
+    pub fn name_preserve_case(&self) -> String {
+        self.name.as_string(self.encoding)
     }
 
     #[inline]

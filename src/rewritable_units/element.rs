@@ -105,6 +105,12 @@ impl<'r, 't> Element<'r, 't> {
         self.start_tag.name()
     }
 
+    /// Returns the tag name of the element, preserving its case.
+    #[inline]
+    pub fn tag_name_preserve_case(&self) -> String {
+        self.start_tag.name_preserve_case()
+    }
+
     /// Sets the tag name of the element.
     #[inline]
     pub fn set_tag_name(&mut self, name: &str) -> Result<(), TagNameError> {

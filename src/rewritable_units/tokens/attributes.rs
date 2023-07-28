@@ -94,6 +94,12 @@ impl<'i> Attribute<'i> {
         self.name.as_lowercase_string(self.encoding)
     }
 
+    /// Returns the name of the attribute, preserving its case.
+    #[inline]
+    pub fn name_preserve_case(&self) -> String {
+        self.name.as_string(self.encoding)
+    }
+
     /// Returns the value of the attribute.
     #[inline]
     pub fn value(&self) -> String {
