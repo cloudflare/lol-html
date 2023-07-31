@@ -79,7 +79,11 @@ impl<S: TagHintSink> TagScanner<S> {
         }
     }
 
-    fn emit_tag_hint(&mut self, input: &[u8]) -> Result<ParserDirective, RewritingError> {
+    fn emit_tag_hint(
+        &mut self,
+        input: &[u8],
+        is_in_end_tag: bool,
+    ) -> Result<ParserDirective, RewritingError> {
         let name_range = Range {
             start: self.tag_name_start,
             end: self.pos(),
@@ -90,8 +94,7 @@ impl<S: TagHintSink> TagScanner<S> {
 
         trace!(@output name);
 
-        if self.is_in_end_tag {
-            self.is_in_end_tag = false;
+        if is_in_end_tag {
             self.tag_hint_sink.handle_end_tag_hint(name)
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;

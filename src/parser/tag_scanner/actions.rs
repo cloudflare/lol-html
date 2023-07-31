@@ -45,6 +45,10 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
             .try_apply_tree_builder_feedback()
             .map_err(ActionError::from)?;
 
+        let is_in_end_tag = self.is_in_end_tag;
+
+        self.is_in_end_tag = false;
+
         if let Some(unhandled_feedback) = unhandled_feedback {
             return self.change_parser_directive(
                 tag_start,
@@ -54,7 +58,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
         }
 
         match self
-            .emit_tag_hint(input)
+            .emit_tag_hint(input, is_in_end_tag)
             .map_err(ActionError::RewritingError)?
         {
             ParserDirective::WherePossibleScanForTagsOnly => Ok(()),
