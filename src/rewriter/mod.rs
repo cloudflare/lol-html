@@ -731,6 +731,15 @@ mod tests {
         assert_eq!(transformed_charset_adjustment, expected);
     }
 
+    #[test]
+    fn test_parsing_handle_parser_change_directive_inside_mathml() {
+        let body: &str = "<math><mtext><x-x>AAA</x-x><y-y>BBB</y-y></mtext></math>";
+
+        let result = rewrite_html_bytes(body.as_bytes(), Settings::default());
+
+        assert_eq!(body.as_bytes(), &result);
+    }
+
     mod fatal_errors {
         use super::*;
         use crate::errors::MemoryLimitExceededError;
