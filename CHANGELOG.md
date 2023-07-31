@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.1
+
+### Fixed
+
+- Ensure that `TagScanner::is_in_end_tag` resets when changing parsers.
+
 ## v1.1.0
 
 ### Added
