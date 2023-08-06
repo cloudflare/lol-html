@@ -498,6 +498,18 @@ int lol_html_element_tag_name_set(
     size_t name_len
 );
 
+// Whether the element is explicitly self-closing, e.g. `<foo />`.
+bool lol_html_element_is_self_closing(
+    lol_html_element_t *element
+);
+
+// Whether the element can have inner content.  Returns `true` unless the element is an [HTML void
+// element](https://html.spec.whatwg.org/multipage/syntax.html#void-elements) or has a
+// self-closing tag (eg, `<foo />`).
+bool lol_html_element_can_have_content(
+    lol_html_element_t *element
+);
+
 // Returns the namespace URI of the element.
 //
 // NOTE: This method returns static zero-terminated C string, so it don't

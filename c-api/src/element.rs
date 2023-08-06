@@ -30,6 +30,16 @@ pub extern "C" fn lol_html_element_tag_name_set(
 }
 
 #[no_mangle]
+pub extern "C" fn lol_html_element_is_self_closing(element: *mut Element) -> bool {
+    to_ref!(element).is_self_closing()
+}
+
+#[no_mangle]
+pub extern "C" fn lol_html_element_can_have_content(element: *mut Element) -> bool {
+    to_ref!(element).can_have_content()
+}
+
+#[no_mangle]
 pub extern "C" fn lol_html_element_namespace_uri_get(element: *mut Element) -> *const c_char {
     let element = to_ref!(element);
 
