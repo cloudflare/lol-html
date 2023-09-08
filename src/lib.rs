@@ -34,8 +34,9 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    rewrite_str, AsciiCompatibleEncoding, DocumentContentHandlers, ElementContentHandlers,
-    HtmlRewriter, MemorySettings, RewriteStrSettings, Settings,
+    rewrite_str, AsciiCompatibleEncoding, CommentHandler, DoctypeHandler, DocumentContentHandlers,
+    ElementContentHandlers, ElementHandler, EndHandler, EndTagHandler, HandlerResult, HtmlRewriter,
+    MemorySettings, RewriteStrSettings, Settings, TextHandler,
 };
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;

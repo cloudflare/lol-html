@@ -5,20 +5,32 @@ use super::AsciiCompatibleEncoding;
 use std::borrow::Cow;
 use std::error::Error;
 
-pub(crate) type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
+/// The result of a handler.
+pub type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
+/// Handler for the [document type declaration].
+///
+/// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
 pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + 'h>;
+/// Handler for HTML comments.
 pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>;
+/// Handler for text chunks present the HTML.
 pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;
+/// Handler for elements matched by a selector.
 pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + 'h>;
+/// Handler for an end tag.
 pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + 'h>;
+/// Handler for the document end, which is called after the last chunk is processed.
 pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + 'h>;
 
 /// Specifies element content handlers associated with a selector.
 #[derive(Default)]
 pub struct ElementContentHandlers<'h> {
-    pub(super) element: Option<ElementHandler<'h>>,
-    pub(super) comments: Option<CommentHandler<'h>>,
-    pub(super) text: Option<TextHandler<'h>>,
+    /// Element handler.  See [ElementHandler].
+    pub element: Option<ElementHandler<'h>>,
+    /// Comment handler.  See [CommentHandler].
+    pub comments: Option<CommentHandler<'h>>,
+    /// Text handler.  See [TextHandler].
+    pub text: Option<TextHandler<'h>>,
 }
 
 impl<'h> ElementContentHandlers<'h> {
@@ -64,10 +76,14 @@ impl<'h> ElementContentHandlers<'h> {
 /// ```
 #[derive(Default)]
 pub struct DocumentContentHandlers<'h> {
-    pub(super) doctype: Option<DoctypeHandler<'h>>,
-    pub(super) comments: Option<CommentHandler<'h>>,
-    pub(super) text: Option<TextHandler<'h>>,
-    pub(super) end: Option<EndHandler<'h>>,
+    /// Doctype handler. See [DoctypeHandler].
+    pub doctype: Option<DoctypeHandler<'h>>,
+    /// Comment handler. See [CommentHandler].
+    pub comments: Option<CommentHandler<'h>>,
+    /// Text handler. See [TextHandler].
+    pub text: Option<TextHandler<'h>>,
+    /// End handler. See [EndHandler].
+    pub end: Option<EndHandler<'h>>,
 }
 
 impl<'h> DocumentContentHandlers<'h> {
