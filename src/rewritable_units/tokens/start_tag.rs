@@ -89,16 +89,25 @@ impl<'i> StartTag<'i> {
         self.self_closing
     }
 
+    /// Inserts `content` before the start tag.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.mutations.before(content, content_type);
     }
 
+    /// Inserts `content` after the start tag.
+    ///
+    /// Consequent calls to the method prepend `content` to the previously inserted content.
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         self.mutations.after(content, content_type);
     }
 
+    /// Replaces the start tag with `content`.
+    ///
+    /// Consequent calls to the method overwrite previous replacement content.
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
         self.mutations.replace(content, content_type);

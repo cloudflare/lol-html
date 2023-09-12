@@ -17,6 +17,9 @@
 //! [`HtmlRewriter`]: struct.HtmlRewriter.html
 //! [`rewrite_str`]: fn.rewrite_str.html
 
+// TODO Uncomment this once we have all items documented.
+// #![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
+
 #[macro_use]
 mod base;
 
@@ -166,7 +169,6 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
         };
 
-        pub use self::base::Bytes;
         pub use self::memory::MemoryLimiter;
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace};
     } else {

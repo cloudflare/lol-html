@@ -48,16 +48,25 @@ impl<'i> EndTag<'i> {
         self.set_name(Bytes::from_string(name, self.encoding))
     }
 
+    /// Inserts `content` before the end tag.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.mutations.before(content, content_type);
     }
 
+    /// Inserts `content` after the end tag.
+    ///
+    /// Consequent calls to the method prepend `content` to the previously inserted content.
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         self.mutations.after(content, content_type);
     }
 
+    /// Replaces the end tag with `content`.
+    ///
+    /// Consequent calls to the method overwrite previous replacement content.
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
         self.mutations.replace(content, content_type);
