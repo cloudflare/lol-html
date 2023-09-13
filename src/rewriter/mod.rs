@@ -45,6 +45,7 @@ impl AsciiCompatibleEncoding {
             .and_then(AsciiCompatibleEncoding::new)
     }
 
+    /// Returns the most commonly used UTF-8 encoding.
     pub fn utf_8() -> AsciiCompatibleEncoding {
         Self(encoding_rs::UTF_8)
     }

@@ -6,6 +6,9 @@ use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
+/// An HTML start tag rewritable unit.
+///
+/// Exposes API for examination and modification of a parsed HTML start tag.
 pub struct StartTag<'i> {
     name: Bytes<'i>,
     attributes: Attributes<'i>,
@@ -37,7 +40,7 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    pub fn encoding(&self) -> &'static Encoding {
+    pub(crate) fn encoding(&self) -> &'static Encoding {
         self.encoding
     }
 
@@ -53,22 +56,31 @@ impl<'i> StartTag<'i> {
         self.name.as_string(self.encoding)
     }
 
+    /// Sets the name of the tag.
     #[inline]
     pub fn set_name(&mut self, name: Bytes<'static>) {
         self.name = name;
         self.raw = None;
     }
 
+    /// Returns the [namespace URI] of the tag's element.
+    ///
+    /// [namespace URI]: https://developer.mozilla.org/en-US/docs/Web/API/Element/namespaceURI
     #[inline]
     pub fn namespace_uri(&self) -> &'static str {
         self.ns.uri()
     }
 
+    /// Returns an immutable collection of tag's attributes.
     #[inline]
     pub fn attributes(&self) -> &[Attribute<'i>] {
         &self.attributes
     }
 
+    /// Sets `value` of tag's attribute with `name`.
+    ///
+    /// If tag doesn't have an attribute with the `name`, method adds new attribute
+    /// to the tag with `name` and `value`.
     #[inline]
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
         self.attributes.set_attribute(name, value, self.encoding)?;
@@ -77,6 +89,7 @@ impl<'i> StartTag<'i> {
         Ok(())
     }
 
+    /// Removes an attribute with the `name` if it is present.
     #[inline]
     pub fn remove_attribute(&mut self, name: &str) {
         if self.attributes.remove_attribute(name) {
@@ -84,6 +97,7 @@ impl<'i> StartTag<'i> {
         }
     }
 
+    /// Whether the tag is explicitly self-closing, e.g. `<foo />`.
     #[inline]
     pub fn self_closing(&self) -> bool {
         self.self_closing
