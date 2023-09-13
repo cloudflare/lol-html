@@ -37,8 +37,8 @@ pub enum TextType {
 }
 
 impl TextType {
-    /// Returns `true` the text type allows [HTML entities].
-    /// 
+    /// Returns `true` if the text type allows [HTML entities].
+    ///
     /// [HTML entities]: https://developer.mozilla.org/en-US/docs/Glossary/Entity
     #[inline]
     pub fn allows_html_entities(self) -> bool {

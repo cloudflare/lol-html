@@ -40,7 +40,8 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    pub(crate) fn encoding(&self) -> &'static Encoding {
+    #[doc(hidden)]
+    pub fn encoding(&self) -> &'static Encoding {
         self.encoding
     }
 
@@ -79,7 +80,7 @@ impl<'i> StartTag<'i> {
 
     /// Sets `value` of tag's attribute with `name`.
     ///
-    /// If tag doesn't have an attribute with the `name`, method adds new attribute
+    /// If tag doesn't have an attribute with the `name`, method adds a new attribute
     /// to the tag with `name` and `value`.
     #[inline]
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
