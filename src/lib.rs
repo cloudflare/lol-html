@@ -17,8 +17,7 @@
 //! [`HtmlRewriter`]: struct.HtmlRewriter.html
 //! [`rewrite_str`]: fn.rewrite_str.html
 
-// TODO Uncomment this once we have all items documented.
-// #![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
+#![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
 
 #[macro_use]
 mod base;

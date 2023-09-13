@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.0
+
+- Expose `is_self_closing` and `can_have_content` in C api.
+- Make `ElementContentHandlers` and `DocumentContentHandlers` fields public.
+- Add missing docs to public API.
+
 ## v1.1.1
 
 ### Fixed

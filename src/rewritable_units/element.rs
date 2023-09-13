@@ -179,7 +179,7 @@ impl<'r, 't> Element<'r, 't> {
 
     /// Sets `value` of element's attribute with `name`.
     ///
-    /// If element doesn't have an attribute with the `name`, method adds new attribute
+    /// If element doesn't have an attribute with the `name`, method adds a new attribute
     /// to the element with `name` and `value`.
     #[inline]
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {

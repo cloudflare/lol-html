@@ -4,6 +4,9 @@ use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
+/// An HTML end tag rewritable unit.
+///
+/// Exposes API for examination and modification of a parsed HTML end tag.
 pub struct EndTag<'i> {
     name: Bytes<'i>,
     raw: Option<Bytes<'i>>,
@@ -37,12 +40,14 @@ impl<'i> EndTag<'i> {
         self.name.as_string(self.encoding)
     }
 
+    /// Sets the name of the tag.
     #[inline]
     pub fn set_name(&mut self, name: Bytes<'static>) {
         self.name = name;
         self.raw = None;
     }
 
+    /// Sets the name of the tag by encoding the given string.
     #[inline]
     pub fn set_name_str(&mut self, name: String) {
         self.set_name(Bytes::from_string(name, self.encoding))

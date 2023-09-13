@@ -533,6 +533,11 @@ pub struct Settings<'h, 's> {
     /// `true` when constructed with `Settings::default()`.
     pub strict: bool,
 
+    /// If enabled the rewriter enables support for [Edge Side Includes] tags, treating them as
+    /// [void elements] and allowing them to be replaced with desired content.
+    ///
+    /// [Edge Side Includes]: https://www.w3.org/TR/esi-lang/
+    /// [void elements]: https://developer.mozilla.org/en-US/docs/Glossary/Void_element
     pub enable_esi_tags: bool,
 
     /// If enabled the rewriter will dynamically change the charset when it encounters a `meta` tag
@@ -683,6 +688,11 @@ pub struct RewriteStrSettings<'h, 's> {
     /// `true` when constructed with `Settings::default()`.
     pub strict: bool,
 
+    /// If enabled the rewriter enables support for [Edge Side Includes] tags, treating them as
+    /// [void elements] and allowing them to be replaced with desired content.
+    ///
+    /// [Edge Side Includes]: https://www.w3.org/TR/esi-lang/
+    /// [void elements]: https://developer.mozilla.org/en-US/docs/Glossary/Void_element
     pub enable_esi_tags: bool,
 }
 
