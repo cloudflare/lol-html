@@ -4,6 +4,11 @@ use std::cell::Cell;
 use std::ops::Deref;
 use std::rc::Rc;
 
+/// A charset encoding that can be shared and modified.
+///
+/// This is, for instance, used to adapt the charset dynamically in a [crate::HtmlRewriter] if it
+/// encounters a `meta` tag that specifies the charset (that behavior is dependent on
+/// [crate::Settings::adjust_charset_on_meta_tag]).
 #[derive(Clone)]
 pub struct SharedEncoding {
     encoding: Rc<Cell<AsciiCompatibleEncoding>>,

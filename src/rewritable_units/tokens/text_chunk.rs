@@ -335,7 +335,11 @@ mod tests {
         use super::super::Token;
 
         let encoding = Encoding::for_label_no_replacement("utf-8".as_bytes()).unwrap();
-        let Token::TextChunk(mut chunk) = TextChunk::new_token("original text", TextType::PlainText, true, encoding) else { unreachable!() };
+        let Token::TextChunk(mut chunk) =
+            TextChunk::new_token("original text", TextType::PlainText, true, encoding)
+        else {
+            unreachable!()
+        };
 
         assert_eq!(chunk.as_str(), "original text");
         chunk.set_str("hello".to_owned());

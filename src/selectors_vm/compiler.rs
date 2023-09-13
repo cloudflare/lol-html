@@ -989,27 +989,27 @@ mod tests {
         }
 
         {
-            let (jumps, hereditary_jumps) = exec!("<div>", program.entry_points, vec![]);
+            let (jumps, hereditary_jumps) = exec!("<div>", program.entry_points, []);
 
             assert_eq!(jumps.len(), 1);
             assert_eq!(hereditary_jumps.len(), 1);
 
             {
-                let (jumps, hereditary_jumps) = exec!("<span class='c1 c2'>", jumps[0], vec![0, 1]);
+                let (jumps, hereditary_jumps) = exec!("<span class='c1 c2'>", jumps[0], [0, 1]);
 
                 assert_eq!(jumps.len(), 0);
                 assert_eq!(hereditary_jumps.len(), 0);
             }
 
             {
-                let (jumps, hereditary_jumps) = exec!("<span class='c2'>", jumps[0], vec![1]);
+                let (jumps, hereditary_jumps) = exec!("<span class='c2'>", jumps[0], [1]);
 
                 assert_eq!(jumps.len(), 0);
                 assert_eq!(hereditary_jumps.len(), 0);
             }
 
             {
-                let (jumps, hereditary_jumps) = exec!("<h1 id=d2>", hereditary_jumps[0], vec![3]);
+                let (jumps, hereditary_jumps) = exec!("<h1 id=d2>", hereditary_jumps[0], [3]);
 
                 assert_eq!(jumps.len(), 0);
                 assert_eq!(hereditary_jumps.len(), 0);
@@ -1017,27 +1017,26 @@ mod tests {
         }
 
         {
-            let (jumps, hereditary_jumps) = exec!("<div foo=bar>", program.entry_points, vec![]);
+            let (jumps, hereditary_jumps) = exec!("<div foo=bar>", program.entry_points, []);
 
             assert_eq!(jumps.len(), 1);
             assert_eq!(hereditary_jumps.len(), 2);
         }
 
         {
-            let (jumps, hereditary_jumps) = exec!("<span foo=bar>", program.entry_points, vec![]);
+            let (jumps, hereditary_jumps) = exec!("<span foo=bar>", program.entry_points, []);
 
             assert_eq!(jumps.len(), 0);
             assert_eq!(hereditary_jumps.len(), 1);
 
             {
-                let (jumps, hereditary_jumps) =
-                    exec!("<table id=id1>", hereditary_jumps[0], vec![]);
+                let (jumps, hereditary_jumps) = exec!("<table id=id1>", hereditary_jumps[0], []);
 
                 assert_eq!(jumps.len(), 1);
                 assert_eq!(hereditary_jumps.len(), 0);
 
                 {
-                    let (jumps, hereditary_jumps) = exec!("<span id=id2>", jumps[0], vec![4]);
+                    let (jumps, hereditary_jumps) = exec!("<span id=id2>", jumps[0], [4]);
 
                     assert_eq!(jumps.len(), 0);
                     assert_eq!(hereditary_jumps.len(), 0);
