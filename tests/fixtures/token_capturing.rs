@@ -1,11 +1,12 @@
-use crate::harness::suites::html5lib_tests::{
-    get_test_cases, TestCase, TestToken, TestTokenList,
-};
-use crate::harness::{TestFixture, Input};
-use lol_html::{LocalNameHash, TokenCaptureFlags, LocalName, Token, StartTagHandlingResult, TransformController, TransformStream, Namespace, TransformStreamSettings, MemoryLimiter, SharedEncoding};
+use crate::harness::suites::html5lib_tests::{get_test_cases, TestCase, TestToken, TestTokenList};
+use crate::harness::{Input, TestFixture};
 use lol_html::errors::RewritingError;
 use lol_html::html_content::{DocumentEnd, TextType};
 use lol_html::test_utils::Output;
+use lol_html::{
+    LocalName, LocalNameHash, MemoryLimiter, Namespace, SharedEncoding, StartTagHandlingResult,
+    Token, TokenCaptureFlags, TransformController, TransformStream, TransformStreamSettings,
+};
 
 macro_rules! expect_eql {
     ($actual:expr, $expected:expr, $state:expr, $input:expr, $msg:expr) => {
@@ -97,16 +98,14 @@ pub fn parse(
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
     let memory_limiter = MemoryLimiter::new_shared(2048);
 
-    let mut transform_stream = TransformStream::new(
-        TransformStreamSettings {
-            transform_controller,
-            output_sink: |chunk: &[u8]| output.push(chunk),
-            preallocated_parsing_buffer_size: 0,
-            memory_limiter,
-            encoding: SharedEncoding::new(encoding),
-            strict: true
-        }
-    );
+    let mut transform_stream = TransformStream::new(TransformStreamSettings {
+        transform_controller,
+        output_sink: |chunk: &[u8]| output.push(chunk),
+        preallocated_parsing_buffer_size: 0,
+        memory_limiter,
+        encoding: SharedEncoding::new(encoding),
+        strict: true,
+    });
 
     let parser = transform_stream.parser();
 
@@ -125,7 +124,6 @@ pub fn parse(
 fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<TestToken> {
     tokens
         .iter()
-        .cloned()
         .filter(|t| match t {
             TestToken::Doctype { .. } if capture_flags.contains(TokenCaptureFlags::DOCTYPES) => {
                 true
@@ -142,6 +140,7 @@ fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<
             TestToken::Text(_) if capture_flags.contains(TokenCaptureFlags::TEXT) => true,
             _ => false,
         })
+        .cloned()
         .collect()
 }
 
