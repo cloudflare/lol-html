@@ -6,7 +6,7 @@ use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
 // use hashbrown for raw entry, switch back to std once it stablizes there
 use hashbrown::{hash_map::RawEntryMut, HashMap, HashSet};
 use std::fmt::Debug;
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::{BuildHasher, Hash};
 
 #[inline]
 fn is_void_element(local_name: &LocalName, enable_esi_tags: bool) -> bool {
@@ -102,9 +102,7 @@ pub struct TypedChildCounterMap(HashMap<LocalName<'static>, CounterList>);
 
 impl TypedChildCounterMap {
     fn hash_name(&self, name: &LocalName) -> u64 {
-        let mut hasher = self.0.hasher().build_hasher();
-        name.hash(&mut hasher);
-        hasher.finish()
+        self.0.hasher().hash_one(name)
     }
 
     /// Adds a seen child to the map. The index is the level of the item
