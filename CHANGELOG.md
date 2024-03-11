@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.2.1
+- Remove unmaintained `safemem` dependency.
+
 ## v1.2.0
 
 - Expose `is_self_closing` and `can_have_content` in C api.
