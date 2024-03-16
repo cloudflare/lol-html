@@ -47,7 +47,7 @@ impl Input {
 
         // NOTE: Some encodings deviate from ASCII, e.g. in ShiftJIS yen sign (U+00A5) is
         // mapped to 0x5C which makes conversion from UTF8 to it non-roundtrippable despite the
-        // abscence of HTML entities replacements inserted by the encoder.
+        // absence of HTML entities replacements inserted by the encoder.
         if self.input != encoding.decode_without_bom_handling(&bytes).0 {
             return Err("ASCII characters deviation".into());
         }
