@@ -29,7 +29,7 @@ impl Arena {
             // give guarantees about exact capacity value :).
             self.limiter.borrow_mut().increase_usage(additional)?;
 
-            // NOTE: with wicely choosen preallocated size this branch should be
+            // NOTE: with wicely chosen preallocated size this branch should be
             // executed quite rarely. We can't afford to use double capacity
             // strategy used by default (see: https://github.com/rust-lang/rust/blob/bdfd698f37184da42254a03ed466ab1f90e6fb6c/src/liballoc/raw_vec.rs#L424)
             // as we'll run out of the space allowance quite quickly.

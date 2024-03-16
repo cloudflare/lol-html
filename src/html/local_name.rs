@@ -57,7 +57,7 @@ impl LocalNameHash {
                     b'a'..=b'z' | b'A'..=b'Z' => Some((h << 5) | ((u64::from(ch) & 0x1F) + 5)),
 
                     // NOTE: apply 0x0F mask on ASCII digit to convert it to number
-                    // from 1 to 6. Then substract 1 to make it zero-based.
+                    // from 1 to 6. Then subtract 1 to make it zero-based.
                     // Afterwards, put result as lower bits of the hash.
                     b'1'..=b'6' => Some((h << 5) | ((u64::from(ch) & 0x0F) - 1)),
 
