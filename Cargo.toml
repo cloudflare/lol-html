@@ -21,6 +21,9 @@ include = [
 autotests = false
 edition = "2021"
 
+[lib]
+bench = false
+
 [features]
 debug_trace = []
 integration_test = []
@@ -55,6 +58,7 @@ hashbrown = { version = "0.13.1", features = ["serde"] }
 serde = "1.0.126"
 serde_derive = "1.0.19"
 serde_json = "1.0.65"
+static_assertions = "1.1.0"
 rand = "0.8.5"
 rustc-test = "0.3.1"
 itertools = "0.10.1"
