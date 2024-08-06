@@ -40,7 +40,7 @@ impl<'a> DocumentEnd<'a> {
     ///             end.append("<baz>", ContentType::Text);
     ///             Ok(())
     ///         })],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///

@@ -44,7 +44,7 @@ pub use self::tokens::*;
 ///                 Ok(())
 ///             })
 ///         ],
-///         ..RewriteStrSettings::default()
+///         ..RewriteStrSettings::new()
 ///     }
 /// ).unwrap();
 /// ```
@@ -115,11 +115,11 @@ mod test_utils {
             .collect()
     }
 
-    pub fn rewrite_html(
+    pub fn rewrite_html<'h>(
         html: &[u8],
         encoding: &'static Encoding,
-        element_content_handlers: Vec<(Cow<'_, Selector>, ElementContentHandlers)>,
-        document_content_handlers: Vec<DocumentContentHandlers>,
+        element_content_handlers: Vec<(Cow<'_, Selector>, ElementContentHandlers<'h>)>,
+        document_content_handlers: Vec<DocumentContentHandlers<'h>>,
     ) -> String {
         let mut output = Output::new(encoding);
 
@@ -129,7 +129,7 @@ mod test_utils {
                     element_content_handlers,
                     document_content_handlers,
                     encoding: AsciiCompatibleEncoding::new(encoding).unwrap(),
-                    ..Settings::default()
+                    ..Settings::new()
                 },
                 |c: &[u8]| output.push(c),
             );

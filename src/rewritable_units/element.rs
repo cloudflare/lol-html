@@ -1,6 +1,6 @@
 use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag};
 use crate::base::Bytes;
-use crate::rewriter::EndTagHandler;
+use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
@@ -33,18 +33,18 @@ pub enum TagNameError {
 /// An HTML element rewritable unit.
 ///
 /// Exposes API for examination and modification of a parsed HTML element.
-pub struct Element<'r, 't> {
+pub struct Element<'r, 't, H: HandlerTypes = LocalHandlerTypes> {
     start_tag: &'r mut StartTag<'t>,
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Bytes<'static>>,
-    end_tag_handlers: Vec<EndTagHandler<'static>>,
+    end_tag_handlers: Vec<H::EndTagHandler<'static>>,
     can_have_content: bool,
     should_remove_content: bool,
     encoding: &'static Encoding,
     user_data: Box<dyn Any>,
 }
 
-impl<'r, 't> Element<'r, 't> {
+impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     pub(crate) fn new(start_tag: &'r mut StartTag<'t>, can_have_content: bool) -> Self {
         let encoding = start_tag.encoding();
 
@@ -214,7 +214,7 @@ impl<'r, 't> Element<'r, 't> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -247,7 +247,7 @@ impl<'r, 't> Element<'r, 't> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -291,7 +291,7 @@ impl<'r, 't> Element<'r, 't> {
     ///             element!("#foo", handler),
     ///             element!("img", handler),
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -333,7 +333,7 @@ impl<'r, 't> Element<'r, 't> {
     ///             element!("#foo", handler),
     ///             element!("img", handler),
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -374,7 +374,7 @@ impl<'r, 't> Element<'r, 't> {
     ///             element!("#foo", handler),
     ///             element!("img", handler),
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -409,7 +409,7 @@ impl<'r, 't> Element<'r, 't> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -453,7 +453,7 @@ impl<'r, 't> Element<'r, 't> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -493,14 +493,14 @@ impl<'r, 't> Element<'r, 't> {
     /// # Example
     ///
     /// ```
-    /// use lol_html::html_content::ContentType;
+    /// use lol_html::html_content::{ContentType, Element};
     /// use lol_html::{element, rewrite_str, text, RewriteStrSettings};
     /// let buffer = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     /// let html = rewrite_str(
     ///     "<span>Short</span><span><b>13</b> characters</span>",
     ///     RewriteStrSettings {
     ///         element_content_handlers: vec![
-    ///             element!("span", |el| {
+    ///             element!("span", |el: &mut Element| {
     ///                 // Truncate string for each new span.
     ///                 buffer.borrow_mut().clear();
     ///                 let buffer = buffer.clone();
@@ -527,14 +527,14 @@ impl<'r, 't> Element<'r, 't> {
     ///                 Ok(())
     ///             }),
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     },
     /// )
     /// .unwrap();
     ///
     /// assert_eq!(html, "<span>Short</SPAN><span><b>13</b> characters!</span>");
     /// ```
-    pub fn end_tag_handlers(&mut self) -> Option<&mut Vec<EndTagHandler<'static>>> {
+    pub fn end_tag_handlers(&mut self) -> Option<&mut Vec<H::EndTagHandler<'static>>> {
         if self.can_have_content {
             Some(&mut self.end_tag_handlers)
         } else {
@@ -542,30 +542,31 @@ impl<'r, 't> Element<'r, 't> {
         }
     }
 
-    pub(crate) fn into_end_tag_handler(self) -> Option<EndTagHandler<'static>> {
+    pub(crate) fn into_end_tag_handler(self) -> Option<H::EndTagHandler<'static>> {
         let end_tag_mutations = self.end_tag_mutations;
         let modified_end_tag_name = self.modified_end_tag_name;
-        let end_tag_handlers = self.end_tag_handlers;
+        let mut end_tag_handlers = self.end_tag_handlers;
 
         if end_tag_mutations.is_some()
             || modified_end_tag_name.is_some()
             || !end_tag_handlers.is_empty()
         {
-            Some(Box::new(move |end_tag: &mut EndTag| {
-                if let Some(name) = modified_end_tag_name {
-                    end_tag.set_name(name);
-                }
+            end_tag_handlers.insert(
+                0,
+                H::new_end_tag_handler(|end_tag: &mut EndTag| {
+                    if let Some(name) = modified_end_tag_name {
+                        end_tag.set_name(name);
+                    }
 
-                if let Some(mutations) = end_tag_mutations {
-                    end_tag.mutations = mutations;
-                }
+                    if let Some(mutations) = end_tag_mutations {
+                        end_tag.mutations = mutations;
+                    }
 
-                for handler in end_tag_handlers.into_iter() {
-                    handler(end_tag)?;
-                }
+                    Ok(())
+                }),
+            );
 
-                Ok(())
-            }))
+            Some(H::combine_handlers(end_tag_handlers))
         } else {
             None
         }
@@ -574,7 +575,7 @@ impl<'r, 't> Element<'r, 't> {
 
 impl_user_data!(Element<'_, '_>);
 
-impl Debug for Element<'_, '_> {
+impl<H: HandlerTypes> Debug for Element<'_, '_, H> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Element")
             .field("tag_name", &self.tag_name())

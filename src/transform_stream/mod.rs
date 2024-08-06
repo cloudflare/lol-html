@@ -1,14 +1,13 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
+pub use self::dispatcher::{
+    AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
+};
 use crate::base::SharedEncoding;
 use crate::memory::{Arena, SharedMemoryLimiter};
 use crate::parser::{Parser, ParserDirective};
 use crate::rewriter::RewritingError;
-
-pub use self::dispatcher::{
-    AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
-};
 
 pub struct TransformStreamSettings<C, O>
 where

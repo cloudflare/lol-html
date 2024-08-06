@@ -7,28 +7,28 @@ define_group!(
             "Match-all selector",
             Settings {
                 element_content_handlers: vec![element!("*", noop_handler!())],
-                ..Settings::default()
+                ..Settings::new()
             }
         ),
         (
             "Tag name selector",
             Settings {
                 element_content_handlers: vec![element!("div", noop_handler!())],
-                ..Settings::default()
+                ..Settings::new()
             }
         ),
         (
             "Class selector",
             Settings {
                 element_content_handlers: vec![element!(".note", noop_handler!())],
-                ..Settings::default()
+                ..Settings::new()
             }
         ),
         (
             "Attribute selector",
             Settings {
                 element_content_handlers: vec![element!("[href]", noop_handler!())],
-                ..Settings::default()
+                ..Settings::new()
             }
         ),
         (
@@ -43,7 +43,7 @@ define_group!(
                     element!("div img", noop_handler!()),
                     element!("div.note span", noop_handler!())
                 ],
-                ..Settings::default()
+                ..Settings::new()
             }
         )
     ]

@@ -112,21 +112,35 @@ impl<H> HandlerVec<H> {
     }
 }
 
-#[derive(Default)]
-pub struct ContentHandlersDispatcher<'h> {
-    doctype_handlers: HandlerVec<DoctypeHandler<'h>>,
-    comment_handlers: HandlerVec<CommentHandler<'h>>,
-    text_handlers: HandlerVec<TextHandler<'h>>,
-    end_tag_handlers: HandlerVec<EndTagHandler<'h>>,
-    element_handlers: HandlerVec<ElementHandler<'h>>,
-    end_handlers: HandlerVec<EndHandler<'h>>,
+pub struct ContentHandlersDispatcher<'h, H: HandlerTypes> {
+    doctype_handlers: HandlerVec<H::DoctypeHandler<'h>>,
+    comment_handlers: HandlerVec<H::CommentHandler<'h>>,
+    text_handlers: HandlerVec<H::TextHandler<'h>>,
+    end_tag_handlers: HandlerVec<H::EndTagHandler<'static>>,
+    element_handlers: HandlerVec<H::ElementHandler<'h>>,
+    end_handlers: HandlerVec<H::EndHandler<'h>>,
     next_element_can_have_content: bool,
     matched_elements_with_removed_content: usize,
 }
 
-impl<'h> ContentHandlersDispatcher<'h> {
+impl<'h, H: HandlerTypes> Default for ContentHandlersDispatcher<'h, H> {
+    fn default() -> Self {
+        ContentHandlersDispatcher {
+            doctype_handlers: Default::default(),
+            comment_handlers: Default::default(),
+            text_handlers: Default::default(),
+            end_tag_handlers: Default::default(),
+            element_handlers: Default::default(),
+            end_handlers: Default::default(),
+            next_element_can_have_content: false,
+            matched_elements_with_removed_content: 0,
+        }
+    }
+}
+
+impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
     #[inline]
-    pub fn add_document_content_handlers(&mut self, handlers: DocumentContentHandlers<'h>) {
+    pub fn add_document_content_handlers(&mut self, handlers: DocumentContentHandlers<'h, H>) {
         if let Some(handler) = handlers.doctype {
             self.doctype_handlers.push(handler, true);
         }
@@ -147,7 +161,7 @@ impl<'h> ContentHandlersDispatcher<'h> {
     #[inline]
     pub fn add_selector_associated_handlers(
         &mut self,
-        handlers: ElementContentHandlers<'h>,
+        handlers: ElementContentHandlers<'h, H>,
     ) -> SelectorHandlersLocator {
         SelectorHandlersLocator {
             element_handler_idx: handlers.element.map(|h| {

@@ -28,10 +28,11 @@ pub struct MatchInfo<P> {
 
 pub type AuxStartTagInfoRequest<E, P> = Box<
     dyn FnOnce(
-        &mut SelectorMatchingVm<E>,
-        AuxStartTagInfo,
-        &mut dyn FnMut(MatchInfo<P>),
-    ) -> Result<(), MemoryLimitExceededError>,
+            &mut SelectorMatchingVm<E>,
+            AuxStartTagInfo,
+            &mut dyn FnMut(MatchInfo<P>),
+        ) -> Result<(), MemoryLimitExceededError>
+        + Send,
 >;
 
 pub enum VmError<E: ElementData, MatchPayload> {
@@ -143,7 +144,10 @@ pub struct SelectorMatchingVm<E: ElementData> {
     enable_esi_tags: bool,
 }
 
-impl<E: ElementData> SelectorMatchingVm<E> {
+impl<E> SelectorMatchingVm<E>
+where
+    E: ElementData + Send,
+{
     #[inline]
     pub fn new(
         ast: Ast<E::MatchPayload>,
@@ -238,7 +242,7 @@ impl<E: ElementData> SelectorMatchingVm<E> {
         Ok(())
     }
 
-    fn bailout<T: 'static>(
+    fn bailout<T: 'static + Send>(
         ctx: ExecutionCtx<E>,
         bailout: Bailout<T>,
         recovery_point_handler: RecoveryPointHandler<T, E, E::MatchPayload>,

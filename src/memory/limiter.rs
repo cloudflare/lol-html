@@ -1,5 +1,5 @@
-use std::cell::Cell;
-use std::rc::Rc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use thiserror::Error;
 
 /// An error that occures when rewriter exceedes the memory limit specified in the
@@ -12,29 +12,27 @@ pub struct MemoryLimitExceededError;
 
 #[derive(Debug, Clone)]
 pub struct SharedMemoryLimiter {
-    current_usage: Rc<Cell<usize>>,
+    current_usage: Arc<AtomicUsize>,
     max: usize,
 }
 
 impl SharedMemoryLimiter {
     pub fn new(max: usize) -> SharedMemoryLimiter {
         SharedMemoryLimiter {
-            current_usage: Rc::new(Cell::new(0)),
+            current_usage: Arc::new(AtomicUsize::new(0)),
             max,
         }
     }
 
     #[cfg(test)]
     pub fn current_usage(&self) -> usize {
-        self.current_usage.get()
+        self.current_usage.load(Ordering::Relaxed)
     }
 
     #[inline]
     pub fn increase_usage(&self, byte_count: usize) -> Result<(), MemoryLimitExceededError> {
-        let previous_usage = self.current_usage.get();
+        let previous_usage = self.current_usage.fetch_add(byte_count, Ordering::Relaxed);
         let current_usage = previous_usage + byte_count;
-
-        self.current_usage.set(current_usage);
 
         if current_usage > self.max {
             Err(MemoryLimitExceededError)
@@ -52,10 +50,7 @@ impl SharedMemoryLimiter {
 
     #[inline]
     pub fn decrease_usage(&self, byte_count: usize) {
-        let previous_usage = self.current_usage.get();
-        let current_usage = previous_usage - byte_count;
-
-        self.current_usage.set(current_usage);
+        self.current_usage.fetch_sub(byte_count, Ordering::Relaxed);
     }
 }
 

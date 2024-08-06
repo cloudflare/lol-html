@@ -25,7 +25,7 @@ use std::fmt::{self, Debug};
 ///                 Ok(())
 ///             })
 ///         ],
-///         ..RewriteStrSettings::default()
+///         ..RewriteStrSettings::new()
 ///     }
 /// ).unwrap();
 /// ```

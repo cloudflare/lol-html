@@ -14,9 +14,7 @@ use std::ffi::{CStr, CString};
 
 use encoding_rs::*;
 use lol_html::html_content::ContentType;
-use lol_html::{
-    comments, doc_comments, doc_text, element, text, HtmlRewriter, MemorySettings, Settings,
-};
+use lol_html::{comments, doc_comments, doc_text, element, text, HtmlRewriter, MemorySettings, Settings};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -103,7 +101,7 @@ fn get_random_selector() -> &'static str {
 }
 
 fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) -> () {
-    let mut rewriter = HtmlRewriter::new(
+    let mut rewriter: HtmlRewriter<_> = HtmlRewriter::new(
         Settings {
             enable_esi_tags: true,
             element_content_handlers: vec![
@@ -178,7 +176,7 @@ fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) -
                 }),
             ],
             encoding: encoding.try_into().unwrap(),
-            memory_settings: MemorySettings::default(),
+            memory_settings: MemorySettings::new(),
             strict: false,
             adjust_charset_on_meta_tag: false,
         },
