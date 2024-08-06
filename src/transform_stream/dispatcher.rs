@@ -9,7 +9,6 @@ use crate::rewritable_units::{
     DocumentEnd, Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
 use crate::rewriter::RewritingError;
-use std::rc::Rc;
 
 use TagTokenOutline::*;
 
@@ -19,8 +18,9 @@ pub struct AuxStartTagInfo<'i> {
     pub self_closing: bool,
 }
 
-type AuxStartTagInfoRequest<C> =
-    Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError>>;
+type AuxStartTagInfoRequest<C> = Box<
+    dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError> + Send,
+>;
 
 pub enum DispatcherError<C> {
     InfoRequest(AuxStartTagInfoRequest<C>),
@@ -189,7 +189,7 @@ where
                     &mut self.transform_controller,
                     AuxStartTagInfo {
                         input,
-                        attr_buffer: Rc::clone($attributes),
+                        attr_buffer: Arc::clone($attributes),
                         self_closing: $self_closing,
                     },
                 )

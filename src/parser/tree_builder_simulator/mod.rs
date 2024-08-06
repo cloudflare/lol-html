@@ -28,7 +28,9 @@ pub enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
     #[allow(clippy::type_complexity)]
-    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback>),
+    RequestLexeme(
+        Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback + Sync + Send>,
+    ),
     None,
 }
 
@@ -41,7 +43,10 @@ impl From<TextType> for TreeBuilderFeedback {
 
 #[inline]
 fn request_lexeme(
-    callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback + 'static,
+    callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback
+        + 'static
+        + Send
+        + Sync,
 ) -> TreeBuilderFeedback {
     TreeBuilderFeedback::RequestLexeme(Box::new(callback))
 }
@@ -250,7 +255,7 @@ impl TreeBuilderSimulator {
             // to decide on foreign context exit
             return request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag { ref attributes, .. } => {
-                    for attr in attributes.borrow().iter() {
+                    for attr in attributes.lock().unwrap().iter() {
                         let name = lexeme.part(attr.name);
 
                         if eq_case_insensitive(&name, b"color")
@@ -279,7 +284,7 @@ impl TreeBuilderSimulator {
                     let name = lexeme.part(name);
 
                     if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
-                        for attr in attributes.borrow().iter() {
+                        for attr in attributes.lock().unwrap().iter() {
                             let name = lexeme.part(attr.name);
                             let value = lexeme.part(attr.value);
 

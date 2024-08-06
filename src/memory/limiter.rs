@@ -1,8 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
-pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
+pub type SharedMemoryLimiter = Arc<Mutex<MemoryLimiter>>;
 
 /// An error that occures when rewriter exceedes the memory limit specified in the
 /// [`MemorySettings`].
@@ -20,7 +19,7 @@ pub struct MemoryLimiter {
 
 impl MemoryLimiter {
     pub fn new_shared(max: usize) -> SharedMemoryLimiter {
-        Rc::new(RefCell::new(MemoryLimiter {
+        Arc::new(Mutex::new(MemoryLimiter {
             max,
             current_usage: 0,
         }))
@@ -62,7 +61,7 @@ mod tests {
     #[test]
     fn current_usage() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut limiter = limiter.borrow_mut();
+        let mut limiter = limiter.lock().unwrap();
 
         assert_eq!(limiter.current_usage(), 0);
 
@@ -86,7 +85,7 @@ mod tests {
     )]
     fn preallocate() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut limiter = limiter.borrow_mut();
+        let mut limiter = limiter.lock().unwrap();
 
         limiter.preallocate(8);
         assert_eq!(limiter.current_usage(), 8);

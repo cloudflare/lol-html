@@ -43,7 +43,8 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     fn find(&self, lowercased_name: &Bytes) -> Option<AttributeOutline> {
         self.attributes
-            .borrow()
+            .lock()
+            .unwrap()
             .iter()
             .find(|a| {
                 if lowercased_name.len() != a.name.end - a.name.start {

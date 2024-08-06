@@ -1,8 +1,7 @@
 use crate::rewriter::AsciiCompatibleEncoding;
 use encoding_rs::Encoding;
-use std::cell::Cell;
 use std::ops::Deref;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 /// A charset encoding that can be shared and modified.
 ///
@@ -11,22 +10,22 @@ use std::rc::Rc;
 /// [crate::Settings::adjust_charset_on_meta_tag]).
 #[derive(Clone)]
 pub struct SharedEncoding {
-    encoding: Rc<Cell<AsciiCompatibleEncoding>>,
+    encoding: Arc<Mutex<AsciiCompatibleEncoding>>,
 }
 
 impl SharedEncoding {
     pub fn new(encoding: AsciiCompatibleEncoding) -> SharedEncoding {
         SharedEncoding {
-            encoding: Rc::new(Cell::new(encoding)),
+            encoding: Arc::new(Mutex::new(encoding)),
         }
     }
 
     pub fn get(&self) -> &'static Encoding {
-        self.encoding.get().into()
+        (*self.encoding.lock().unwrap().deref()).into()
     }
 
     pub fn set(&self, encoding: AsciiCompatibleEncoding) {
-        self.encoding.set(encoding);
+        *self.encoding.lock().unwrap() = encoding;
     }
 }
 

@@ -4,6 +4,7 @@ mod actions;
 mod conditions;
 mod lexeme;
 
+pub use self::lexeme::*;
 use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
@@ -13,10 +14,7 @@ use crate::parser::{
     ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use crate::rewriter::RewritingError;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-pub use self::lexeme::*;
+use std::sync::{Arc, Mutex};
 
 const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
@@ -29,7 +27,7 @@ pub trait LexemeSink {
 }
 
 pub type State<S> = fn(&mut Lexer<S>, &[u8]) -> StateResult;
-pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOutline>>>;
+pub type SharedAttributeBuffer = Arc<Mutex<Vec<AttributeOutline>>>;
 
 pub struct Lexer<S: LexemeSink> {
     next_pos: usize,
@@ -46,13 +44,13 @@ pub struct Lexer<S: LexemeSink> {
     last_start_tag_name_hash: LocalNameHash,
     closing_quote: u8,
     attr_buffer: SharedAttributeBuffer,
-    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    tree_builder_simulator: Arc<Mutex<TreeBuilderSimulator>>,
     last_text_type: TextType,
     feedback_directive: FeedbackDirective,
 }
 
 impl<S: LexemeSink> Lexer<S> {
-    pub fn new(lexeme_sink: S, tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>) -> Self {
+    pub fn new(lexeme_sink: S, tree_builder_simulator: Arc<Mutex<TreeBuilderSimulator>>) -> Self {
         Lexer {
             next_pos: 0,
             is_last_input: false,
@@ -67,9 +65,7 @@ impl<S: LexemeSink> Lexer<S> {
             current_attr: None,
             last_start_tag_name_hash: LocalNameHash::default(),
             closing_quote: b'"',
-            attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
-                DEFAULT_ATTR_BUFFER_CAPACITY,
-            ))),
+            attr_buffer: Arc::new(Mutex::new(Vec::with_capacity(DEFAULT_ATTR_BUFFER_CAPACITY))),
             tree_builder_simulator,
             last_text_type: TextType::Data,
             feedback_directive: FeedbackDirective::None,
@@ -84,7 +80,7 @@ impl<S: LexemeSink> Lexer<S> {
             FeedbackDirective::ApplyUnhandledFeedback(feedback) => Some(feedback),
             FeedbackDirective::Skip => None,
             FeedbackDirective::None => Some({
-                let mut simulator = self.tree_builder_simulator.borrow_mut();
+                let mut simulator = self.tree_builder_simulator.lock().unwrap();
 
                 match *token {
                     TagTokenOutline::StartTag { name_hash, .. } => {
@@ -103,7 +99,7 @@ impl<S: LexemeSink> Lexer<S> {
             TreeBuilderFeedback::SwitchTextType(text_type) => self.set_last_text_type(text_type),
             TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => self.cdata_allowed = cdata_allowed,
             TreeBuilderFeedback::RequestLexeme(mut callback) => {
-                let feedback = callback(&mut self.tree_builder_simulator.borrow_mut(), lexeme);
+                let feedback = callback(&mut self.tree_builder_simulator.lock().unwrap(), lexeme);
 
                 self.handle_tree_builder_feedback(feedback, lexeme);
             }

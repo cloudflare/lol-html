@@ -13,9 +13,9 @@ use std::hash::Hash;
 use std::iter;
 
 /// An expression using only the tag name of an element.
-pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState, &LocalName) -> bool>;
+pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState, &LocalName) -> bool + Send>;
 /// An expression using the attributes of an element.
-pub type CompiledAttributeExpr = Box<dyn Fn(&SelectorState, &AttributeMatcher) -> bool>;
+pub type CompiledAttributeExpr = Box<dyn Fn(&SelectorState, &AttributeMatcher) -> bool + Send>;
 
 #[derive(Default)]
 struct ExprSet {
@@ -31,7 +31,7 @@ pub struct AttrExprOperands {
 
 impl Expr<OnTagNameExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &LocalName) -> bool + 'static>(
+    pub fn compile_expr<F: Fn(&SelectorState, &LocalName) -> bool + 'static + Send>(
         &self,
         f: F,
     ) -> CompiledLocalNameExpr {
@@ -92,7 +92,7 @@ impl Compilable for Expr<OnTagNameExpr> {
 
 impl Expr<OnAttributesExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &AttributeMatcher) -> bool + 'static>(
+    pub fn compile_expr<F: Fn(&SelectorState, &AttributeMatcher) -> bool + 'static + Send>(
         &self,
         f: F,
     ) -> CompiledAttributeExpr {

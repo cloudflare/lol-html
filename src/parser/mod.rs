@@ -6,21 +6,19 @@ mod tag_scanner;
 mod tree_builder_simulator;
 
 use self::lexer::Lexer;
-use self::state_machine::{ActionError, ParsingTermination, StateMachine};
-use self::tag_scanner::TagScanner;
-use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
-use crate::html::{LocalName, Namespace};
-use crate::rewriter::RewritingError;
-use cfg_if::cfg_if;
-use std::cell::RefCell;
-use std::rc::Rc;
-
 pub use self::lexer::{
     AttributeOutline, Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline,
     SharedAttributeBuffer, TagLexeme, TagTokenOutline,
 };
+use self::state_machine::{ActionError, ParsingTermination, StateMachine};
 pub use self::tag_scanner::TagHintSink;
+use self::tag_scanner::TagScanner;
 pub use self::tree_builder_simulator::ParsingAmbiguityError;
+use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
+use crate::html::{LocalName, Namespace};
+use crate::rewriter::RewritingError;
+use cfg_if::cfg_if;
+use std::sync::{Arc, Mutex};
 
 // NOTE: tag scanner can implicitly force parser to switch to
 // the lexer mode if it fails to get tree builder feedback. It's up
@@ -32,10 +30,10 @@ pub enum ParserDirective {
     Lex,
 }
 
-impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
+impl<S: LexemeSink> LexemeSink for Arc<Mutex<S>> {
     #[inline]
     fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError> {
-        self.borrow_mut().handle_tag(lexeme)
+        self.lock().unwrap().handle_tag(lexeme)
     }
 
     #[inline]
@@ -43,31 +41,31 @@ impl<S: LexemeSink> LexemeSink for Rc<RefCell<S>> {
         &mut self,
         lexeme: &NonTagContentLexeme,
     ) -> Result<(), RewritingError> {
-        self.borrow_mut().handle_non_tag_content(lexeme)
+        self.lock().unwrap().handle_non_tag_content(lexeme)
     }
 }
 
-impl<S: TagHintSink> TagHintSink for Rc<RefCell<S>> {
+impl<S: TagHintSink> TagHintSink for Arc<Mutex<S>> {
     #[inline]
     fn handle_start_tag_hint(
         &mut self,
         name: LocalName,
         ns: Namespace,
     ) -> Result<ParserDirective, RewritingError> {
-        self.borrow_mut().handle_start_tag_hint(name, ns)
+        self.lock().unwrap().handle_start_tag_hint(name, ns)
     }
 
     #[inline]
     fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, RewritingError> {
-        self.borrow_mut().handle_end_tag_hint(name)
+        self.lock().unwrap().handle_end_tag_hint(name)
     }
 }
 
 pub trait ParserOutputSink: LexemeSink + TagHintSink {}
 
 pub struct Parser<S: ParserOutputSink> {
-    lexer: Lexer<Rc<RefCell<S>>>,
-    tag_scanner: TagScanner<Rc<RefCell<S>>>,
+    lexer: Lexer<Arc<Mutex<S>>>,
+    tag_scanner: TagScanner<Arc<Mutex<S>>>,
     current_directive: ParserDirective,
 }
 
@@ -85,17 +83,17 @@ macro_rules! with_current_sm {
 
 impl<S: ParserOutputSink> Parser<S> {
     pub fn new(
-        output_sink: &Rc<RefCell<S>>,
+        output_sink: &Arc<Mutex<S>>,
         initial_directive: ParserDirective,
         strict: bool,
     ) -> Self {
-        let tree_builder_simulator = Rc::new(RefCell::new(TreeBuilderSimulator::new(strict)));
+        let tree_builder_simulator = Arc::new(Mutex::new(TreeBuilderSimulator::new(strict)));
 
         Parser {
-            lexer: Lexer::new(Rc::clone(output_sink), Rc::clone(&tree_builder_simulator)),
+            lexer: Lexer::new(Arc::clone(output_sink), Arc::clone(&tree_builder_simulator)),
             tag_scanner: TagScanner::new(
-                Rc::clone(output_sink),
-                Rc::clone(&tree_builder_simulator),
+                Arc::clone(output_sink),
+                Arc::clone(&tree_builder_simulator),
             ),
             current_directive: initial_directive,
         }

@@ -595,7 +595,7 @@ mod tests {
         html: &[u8],
         encoding: &'static Encoding,
         selector: &str,
-        mut handler: impl FnMut(&mut Element),
+        mut handler: impl FnMut(&mut Element) + Send,
     ) -> String {
         let mut handler_called = false;
 

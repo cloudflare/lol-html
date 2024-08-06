@@ -79,7 +79,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         } = lexeme.token_outline
         {
             self.last_start_tag_name_hash = name_hash;
-            *ns = self.tree_builder_simulator.borrow().current_ns();
+            *ns = self.tree_builder_simulator.lock().unwrap().current_ns();
         }
 
         match self
@@ -122,13 +122,13 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     #[inline]
     fn create_start_tag(&mut self, _input: &[u8]) {
-        self.attr_buffer.borrow_mut().clear();
+        self.attr_buffer.lock().unwrap().clear();
 
         self.current_tag_token = Some(StartTag {
             name: Range::default(),
             name_hash: LocalNameHash::new(),
             ns: Namespace::default(),
-            attributes: Rc::clone(&self.attr_buffer),
+            attributes: Arc::clone(&self.attr_buffer),
             self_closing: false,
         });
     }
@@ -295,7 +295,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     #[inline]
     fn finish_attr(&mut self, _input: &[u8]) {
         if let Some(attr) = self.current_attr.take() {
-            self.attr_buffer.borrow_mut().push(attr);
+            self.attr_buffer.lock().unwrap().push(attr);
         }
     }
 

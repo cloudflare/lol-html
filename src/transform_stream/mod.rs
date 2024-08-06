@@ -1,16 +1,14 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
+pub use self::dispatcher::{
+    AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
+};
 use crate::base::SharedEncoding;
 use crate::memory::{Arena, SharedMemoryLimiter};
 use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
 use crate::rewriter::RewritingError;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-pub use self::dispatcher::{
-    AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
-};
+use std::sync::{Arc, Mutex};
 
 pub struct TransformStreamSettings<C, O>
 where
@@ -30,7 +28,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    dispatcher: Rc<RefCell<Dispatcher<C, O>>>,
+    dispatcher: Arc<Mutex<Dispatcher<C, O>>>,
     parser: Parser<Dispatcher<C, O>>,
     buffer: Arena,
     has_buffered_data: bool,
@@ -52,7 +50,7 @@ where
             ParserDirective::Lex
         };
 
-        let dispatcher = Rc::new(RefCell::new(Dispatcher::new(
+        let dispatcher = Arc::new(Mutex::new(Dispatcher::new(
             settings.transform_controller,
             settings.output_sink,
             settings.encoding,
@@ -111,7 +109,8 @@ where
         let consumed_byte_count = self.parser.parse(chunk, false)?;
 
         self.dispatcher
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .flush_remaining_input(chunk, consumed_byte_count);
 
         if consumed_byte_count < chunk.len() {
@@ -135,7 +134,7 @@ where
         trace!(@chunk chunk);
 
         self.parser.parse(chunk, true)?;
-        self.dispatcher.borrow_mut().finish(chunk)
+        self.dispatcher.lock().unwrap().finish(chunk)
     }
 
     #[cfg(feature = "integration_test")]

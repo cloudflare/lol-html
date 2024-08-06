@@ -57,7 +57,7 @@ impl Align for TagTokenOutline {
                 name, attributes, ..
             } => {
                 name.align(offset);
-                attributes.borrow_mut().align(offset);
+                attributes.lock().unwrap().align(offset);
             }
             TagTokenOutline::EndTag { name, .. } => name.align(offset),
         }

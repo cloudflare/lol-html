@@ -17,7 +17,7 @@ use mime::Mime;
 use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt::{self, Debug};
-use std::rc::Rc;
+use std::sync::Arc;
 use thiserror::Error;
 
 pub use self::settings::*;
@@ -198,7 +198,7 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
             Some(SelectorMatchingVm::new(
                 selectors_ast,
                 settings.encoding.into(),
-                Rc::clone(&memory_limiter),
+                Arc::clone(&memory_limiter),
                 settings.enable_esi_tags,
             ))
         } else {
@@ -344,9 +344,8 @@ mod tests {
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
     use encoding_rs::Encoding;
     use itertools::Itertools;
-    use std::cell::RefCell;
     use std::convert::TryInto;
-    use std::rc::Rc;
+    use std::sync::Mutex;
 
     fn write_chunks<O: OutputSink>(
         mut rewriter: HtmlRewriter<O>,
@@ -371,6 +370,23 @@ mod tests {
         rewriter.end().unwrap();
 
         out
+    }
+
+    // WIP! statis assert
+    #[test]
+    fn foobar() {
+        struct Foo {}
+        impl OutputSink for Foo {
+            fn handle_chunk(&mut self, _: &[u8]) {}
+        }
+
+        fn is_send<T: Send>() {}
+
+        is_send::<HtmlRewriter<Foo>>();
+
+        fn is_sync<T: Sync>() {}
+
+        is_sync::<HtmlRewriter<Foo>>();
     }
 
     #[test]
@@ -573,15 +589,15 @@ mod tests {
 
     #[test]
     fn handler_invocation_order() {
-        let handlers_executed = Rc::new(RefCell::new(Vec::default()));
+        let handlers_executed = Arc::new(Mutex::new(Vec::default()));
 
         macro_rules! create_handlers {
             ($sel:expr, $idx:expr) => {
                 element!($sel, {
-                    let handlers_executed = Rc::clone(&handlers_executed);
+                    let handlers_executed = std::sync::Arc::clone(&handlers_executed);
 
                     move |_| {
-                        handlers_executed.borrow_mut().push($idx);
+                        handlers_executed.lock().unwrap().push($idx);
                         Ok(())
                     }
                 })
@@ -603,7 +619,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(*handlers_executed.borrow(), vec![0, 1, 2, 3, 4]);
+        assert_eq!(*handlers_executed.lock().unwrap(), vec![0, 1, 2, 3, 4]);
     }
 
     #[test]

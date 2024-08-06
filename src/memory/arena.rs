@@ -10,7 +10,7 @@ pub struct Arena {
 
 impl Arena {
     pub fn new(limiter: SharedMemoryLimiter, preallocated_size: usize) -> Self {
-        limiter.borrow_mut().preallocate(preallocated_size);
+        limiter.lock().unwrap().preallocate(preallocated_size);
 
         Arena {
             limiter,
@@ -27,7 +27,7 @@ impl Arena {
 
             // NOTE: approximate usage, as `Vec::reserve_exact` doesn't
             // give guarantees about exact capacity value :).
-            self.limiter.borrow_mut().increase_usage(additional)?;
+            self.limiter.lock().unwrap().increase_usage(additional)?;
 
             // NOTE: with wicely choosen preallocated size this branch should be
             // executed quite rarely. We can't afford to use double capacity
@@ -60,24 +60,24 @@ impl Arena {
 mod tests {
     use super::super::limiter::MemoryLimiter;
     use super::*;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     #[test]
     fn append() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut arena = Arena::new(Rc::clone(&limiter), 2);
+        let mut arena = Arena::new(Arc::clone(&limiter), 2);
 
         arena.append(&[1, 2]).unwrap();
         assert_eq!(arena.bytes(), &[1, 2]);
-        assert_eq!(limiter.borrow().current_usage(), 2);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 2);
 
         arena.append(&[3, 4]).unwrap();
         assert_eq!(arena.bytes(), &[1, 2, 3, 4]);
-        assert_eq!(limiter.borrow().current_usage(), 4);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 4);
 
         arena.append(&[5, 6, 7, 8, 9, 10]).unwrap();
         assert_eq!(arena.bytes(), &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-        assert_eq!(limiter.borrow().current_usage(), 10);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 10);
 
         let err = arena.append(&[11]).unwrap_err();
 
@@ -87,23 +87,23 @@ mod tests {
     #[test]
     fn init_with() {
         let limiter = MemoryLimiter::new_shared(5);
-        let mut arena = Arena::new(Rc::clone(&limiter), 0);
+        let mut arena = Arena::new(Arc::clone(&limiter), 0);
 
         arena.init_with(&[1]).unwrap();
         assert_eq!(arena.bytes(), &[1]);
-        assert_eq!(limiter.borrow().current_usage(), 1);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 1);
 
         arena.append(&[1, 2]).unwrap();
         assert_eq!(arena.bytes(), &[1, 1, 2]);
-        assert_eq!(limiter.borrow().current_usage(), 3);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 3);
 
         arena.init_with(&[1, 2, 3]).unwrap();
         assert_eq!(arena.bytes(), &[1, 2, 3]);
-        assert_eq!(limiter.borrow().current_usage(), 3);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 3);
 
         arena.init_with(&[]).unwrap();
         assert_eq!(arena.bytes(), &[]);
-        assert_eq!(limiter.borrow().current_usage(), 3);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 3);
 
         let err = arena.init_with(&[1, 2, 3, 4, 5, 6, 7]).unwrap_err();
 
@@ -113,24 +113,24 @@ mod tests {
     #[test]
     fn shift() {
         let limiter = MemoryLimiter::new_shared(10);
-        let mut arena = Arena::new(Rc::clone(&limiter), 0);
+        let mut arena = Arena::new(Arc::clone(&limiter), 0);
 
         arena.append(&[0, 1, 2, 3]).unwrap();
         arena.shift(2);
         assert_eq!(arena.bytes(), &[2, 3]);
-        assert_eq!(limiter.borrow().current_usage(), 4);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 4);
 
         arena.append(&[0, 1]).unwrap();
         assert_eq!(arena.bytes(), &[2, 3, 0, 1]);
-        assert_eq!(limiter.borrow().current_usage(), 4);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 4);
 
         arena.shift(3);
         assert_eq!(arena.bytes(), &[1]);
-        assert_eq!(limiter.borrow().current_usage(), 4);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 4);
 
         arena.append(&[2, 3, 4, 5]).unwrap();
         arena.shift(1);
         assert_eq!(arena.bytes(), &[2, 3, 4, 5]);
-        assert_eq!(limiter.borrow().current_usage(), 5);
+        assert_eq!(limiter.lock().unwrap().current_usage(), 5);
     }
 }

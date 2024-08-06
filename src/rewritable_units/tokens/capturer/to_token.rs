@@ -2,7 +2,7 @@ use super::*;
 use crate::html::TextType;
 use crate::parser::{NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, TagTokenOutline};
 use encoding_rs::Encoding;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub enum ToTokenResult<'i> {
     Token(Box<Token<'i>>),
@@ -44,7 +44,7 @@ impl ToToken for TagLexeme<'_> {
 
                 StartTag::new_token(
                     self.part(name),
-                    Attributes::new(self.input(), Rc::clone(attributes), encoding),
+                    Attributes::new(self.input(), Arc::clone(attributes), encoding),
                     ns,
                     self_closing,
                     self.raw(),

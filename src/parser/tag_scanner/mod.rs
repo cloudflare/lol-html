@@ -9,9 +9,8 @@ use crate::parser::{
     ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback, TreeBuilderSimulator,
 };
 use crate::rewriter::RewritingError;
-use std::cell::RefCell;
 use std::cmp::min;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 pub trait TagHintSink {
     fn handle_start_tag_hint(
@@ -49,16 +48,13 @@ pub struct TagScanner<S: TagHintSink> {
     tag_hint_sink: S,
     state: State<S>,
     closing_quote: u8,
-    tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
+    tree_builder_simulator: Arc<Mutex<TreeBuilderSimulator>>,
     pending_text_type_change: Option<TextType>,
     last_text_type: TextType,
 }
 
 impl<S: TagHintSink> TagScanner<S> {
-    pub fn new(
-        tag_hint_sink: S,
-        tree_builder_simulator: Rc<RefCell<TreeBuilderSimulator>>,
-    ) -> Self {
+    pub fn new(tag_hint_sink: S, tree_builder_simulator: Arc<Mutex<TreeBuilderSimulator>>) -> Self {
         TagScanner {
             next_pos: 0,
             is_last_input: false,
@@ -99,7 +95,7 @@ impl<S: TagHintSink> TagScanner<S> {
         } else {
             self.last_start_tag_name_hash = self.tag_name_hash;
 
-            let ns = self.tree_builder_simulator.borrow_mut().current_ns();
+            let ns = self.tree_builder_simulator.lock().unwrap().current_ns();
 
             self.tag_hint_sink.handle_start_tag_hint(name, ns)
         }
@@ -109,7 +105,7 @@ impl<S: TagHintSink> TagScanner<S> {
     fn try_apply_tree_builder_feedback(
         &mut self,
     ) -> Result<Option<TreeBuilderFeedback>, ParsingAmbiguityError> {
-        let mut tree_builder_simulator = self.tree_builder_simulator.borrow_mut();
+        let mut tree_builder_simulator = self.tree_builder_simulator.lock().unwrap();
 
         let feedback = if self.is_in_end_tag {
             tree_builder_simulator.get_feedback_for_end_tag(self.tag_name_hash)
