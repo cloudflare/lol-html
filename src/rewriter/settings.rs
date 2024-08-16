@@ -418,7 +418,7 @@ impl Default for MemorySettings {
     fn default() -> Self {
         MemorySettings {
             preallocated_parsing_buffer_size: 1024,
-            max_allowed_memory_usage: std::usize::MAX,
+            max_allowed_memory_usage: usize::MAX,
         }
     }
 }
