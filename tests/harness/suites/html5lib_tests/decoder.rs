@@ -92,11 +92,8 @@ impl<'a> Decoder<'a> {
                 if m.0 != 0 {
                     if c != ';' && self.entities == Entities::Attribute {
                         if let Some(&c) = self.chars.peek() {
-                            match c {
-                                'A'..='Z' | 'a'..='z' | '0'..='9' | '=' => {
-                                    continue;
-                                }
-                                _ => {}
+                            if matches!(c, 'A'..='Z' | 'a'..='z' | '0'..='9' | '=') {
+                                continue;
                             }
                         }
                     }
