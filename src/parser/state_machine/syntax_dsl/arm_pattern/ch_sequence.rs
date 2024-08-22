@@ -53,7 +53,7 @@ macro_rules! ch_sequence_arm_pattern {
     // Match block expansion
     //--------------------------------------------------------------------
     ( @match_block
-        | [$self:tt, $input:ident, $ch:ident] |> $exp_ch:expr, $body:tt, $($case_mod:ident)*
+        | [$self:tt, $ctx:tt, $input:ident, $ch:ident] |> $exp_ch:expr, $body:tt, $($case_mod:ident)*
     ) => {
         match $ch {
             Some(ch) if ch_sequence_arm_pattern!(@cmp_exp ch, $exp_ch $(, $case_mod)*) => {
@@ -68,13 +68,13 @@ macro_rules! ch_sequence_arm_pattern {
 
     // Expand check for the first character
     //--------------------------------------------------------------------
-    ( @first | [$self:tt, $input:ident, $ch:ident] |>
+    ( @first | [$self:tt, $ctx:tt, $input:ident, $ch:ident] |>
         [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {
         $self.enter_ch_sequence_matching();
-        ch_sequence_arm_pattern!(@match_block |[$self, $input, $ch]|> $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block |[$self, $ctx, $input, $ch]|> $exp_ch, {
             ch_sequence_arm_pattern!(
-                @iter |[$self, $input, $ch]|> 1, [ $($rest_chs)* ], $actions, $($case_mod)*
+                @iter |[$self, $ctx, $input, $ch]|> 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
         }, $($case_mod)*);
     };
@@ -82,28 +82,28 @@ macro_rules! ch_sequence_arm_pattern {
 
     // Recursively expand checks for the remaining characters
     //--------------------------------------------------------------------
-    ( @iter | [$self:tt, $input:ident, $ch:ident] |>
+    ( @iter | [$self:tt, $ctx:tt, $input:ident, $ch:ident] |>
         $depth:expr, [ $exp_ch:expr, $($rest_chs:tt)* ], $actions:tt, $($case_mod:ident)*
     ) => {{
         let ch = $self.lookahead($input, $depth);
 
-        ch_sequence_arm_pattern!(@match_block |[$self, $input, ch]|> $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block |[$self, $ctx, $input, ch]|> $exp_ch, {
             ch_sequence_arm_pattern!(
-                @iter |[$self, $input, $ch]|> $depth + 1, [ $($rest_chs)* ], $actions, $($case_mod)*
+                @iter |[$self, $ctx, $input, $ch]|> $depth + 1, [ $($rest_chs)* ], $actions, $($case_mod)*
             );
         }, $($case_mod)*);
     }};
 
     // NOTE: end of recursion
-    ( @iter | [$self:tt, $input:ident, $ch:ident] |>
+    ( @iter | [$self:tt, $ctx:tt, $input:ident, $ch:ident] |>
         $depth:expr, [$exp_ch:expr], ( $($actions:tt)* ), $($case_mod:ident)*
     ) => {{
         let ch = $self.lookahead($input, $depth);
 
-        ch_sequence_arm_pattern!(@match_block |[$self, $input, ch]|> $exp_ch, {
+        ch_sequence_arm_pattern!(@match_block |[$self, $ctx, $input, ch]|> $exp_ch, {
             $self.consume_several($depth);
             $self.leave_ch_sequence_matching();
-            action_list!(|$self, $input|> $($actions)*);
+            action_list!(|$self, $ctx, $input|> $($actions)*);
 
             // NOTE: this may be unreachable on expansion, e.g. if
             // we have state transition in the action list.

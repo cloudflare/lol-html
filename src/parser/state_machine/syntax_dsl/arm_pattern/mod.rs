@@ -16,21 +16,21 @@ macro_rules! arm_pattern {
         );
     };
 
-    ( | [ [$self:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $ctx:tt, $input_chunk:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         closing_quote => $actions:tt
     ) => {
-        state_body!(@callback | [ [$self, $input_chunk, $ch], $($rest_cb_args)+ ] |>
+        state_body!(@callback | [ [$self, $ctx, $input_chunk, $ch], $($rest_cb_args)+ ] |>
             Some(ch) if ch == $self.closing_quote() => $actions
         );
     };
 
 
-    ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $ctx:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         eoc => ( $($actions:tt)* )
     ) => {
-        state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
+        state_body!(@callback | [ [$self, $ctx, $input, $ch], $($rest_cb_args)+ ] |>
             None if !$self.is_last_input() => ({
-                action_list!(|$self, $input|> $($actions)* );
+                action_list!(|$self, $ctx, $input|> $($actions)* );
 
                 return $self.break_on_end_of_input($input);
             })
@@ -41,13 +41,13 @@ macro_rules! arm_pattern {
     // so it's safe to break parsing loop here, since we don't have any input left
     // to parse. We execute EOF actions only if it's a last input, otherwise we just
     // break the parsing loop if it hasn't been done by the explicit EOC arm.
-    ( | [ [$self:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
+    ( | [ [$self:tt, $ctx:tt, $input:ident, $ch:ident ], $($rest_cb_args:tt)+ ] |>
         eof => ( $($actions:tt)* )
     ) => {
-        state_body!(@callback | [ [$self, $input, $ch], $($rest_cb_args)+ ] |>
+        state_body!(@callback | [ [$self, $ctx, $input, $ch], $($rest_cb_args)+ ] |>
             None => ({
                 if $self.is_last_input() {
-                    action_list!(|$self, $input|> $($actions)* );
+                    action_list!(|$self, $ctx, $input|> $($actions)* );
                 }
 
                 return $self.break_on_end_of_input($input);
