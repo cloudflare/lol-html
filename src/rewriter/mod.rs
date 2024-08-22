@@ -7,8 +7,7 @@ mod settings;
 use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::*;
 use crate::base::SharedEncoding;
-use crate::memory::MemoryLimitExceededError;
-use crate::memory::MemoryLimiter;
+use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};
 use crate::parser::ParsingAmbiguityError;
 use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
@@ -17,7 +16,6 @@ use mime::Mime;
 use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt::{self, Debug};
-use std::rc::Rc;
 use thiserror::Error;
 
 pub use self::settings::*;
@@ -192,13 +190,13 @@ impl<'h, O: OutputSink> HtmlRewriter<'h, O> {
         }
 
         let memory_limiter =
-            MemoryLimiter::new_shared(settings.memory_settings.max_allowed_memory_usage);
+            SharedMemoryLimiter::new(settings.memory_settings.max_allowed_memory_usage);
 
         let selector_matching_vm = if has_selectors {
             Some(SelectorMatchingVm::new(
                 selectors_ast,
                 settings.encoding.into(),
-                Rc::clone(&memory_limiter),
+                memory_limiter.clone(),
                 settings.enable_esi_tags,
             ))
         } else {
@@ -578,7 +576,7 @@ mod tests {
         macro_rules! create_handlers {
             ($sel:expr, $idx:expr) => {
                 element!($sel, {
-                    let handlers_executed = Rc::clone(&handlers_executed);
+                    let handlers_executed = ::std::rc::Rc::clone(&handlers_executed);
 
                     move |_| {
                         handlers_executed.borrow_mut().push($idx);
