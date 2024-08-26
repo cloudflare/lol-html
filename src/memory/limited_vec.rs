@@ -21,7 +21,7 @@ impl<T> LimitedVec<T> {
     }
 
     pub fn push(&mut self, element: T) -> Result<(), MemoryLimitExceededError> {
-        self.limiter.borrow_mut().increase_usage(size_of::<T>())?;
+        self.limiter.increase_usage(size_of::<T>())?;
         self.vec.push(element);
         Ok(())
     }
@@ -64,9 +64,7 @@ impl<T> LimitedVec<T> {
             Unbounded => self.len(),
         };
 
-        self.limiter
-            .borrow_mut()
-            .decrease_usage(size_of::<T>() * (end - start));
+        self.limiter.decrease_usage(size_of::<T>() * (end - start));
 
         self.vec.drain(range)
     }
@@ -91,43 +89,40 @@ impl<T> Index<usize> for LimitedVec<T> {
 
 impl<T> Drop for LimitedVec<T> {
     fn drop(&mut self) {
-        self.limiter
-            .borrow_mut()
-            .decrease_usage(size_of::<T>() * self.vec.len());
+        self.limiter.decrease_usage(size_of::<T>() * self.vec.len());
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::MemoryLimiter;
+    use super::super::SharedMemoryLimiter;
     use super::*;
-    use std::rc::Rc;
 
     #[test]
     fn current_usage() {
         {
-            let limiter = MemoryLimiter::new_shared(10);
-            let mut vec_u8: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+            let limiter = SharedMemoryLimiter::new(10);
+            let mut vec_u8: LimitedVec<u8> = LimitedVec::new(limiter.clone());
 
             vec_u8.push(1).unwrap();
             vec_u8.push(2).unwrap();
-            assert_eq!(limiter.borrow().current_usage(), 2);
+            assert_eq!(limiter.current_usage(), 2);
         }
 
         {
-            let limiter = MemoryLimiter::new_shared(10);
-            let mut vec_u32: LimitedVec<u32> = LimitedVec::new(Rc::clone(&limiter));
+            let limiter = SharedMemoryLimiter::new(10);
+            let mut vec_u32: LimitedVec<u32> = LimitedVec::new(limiter.clone());
 
             vec_u32.push(1).unwrap();
             vec_u32.push(2).unwrap();
-            assert_eq!(limiter.borrow().current_usage(), 8);
+            assert_eq!(limiter.current_usage(), 8);
         }
     }
 
     #[test]
     fn max_limit() {
-        let limiter = MemoryLimiter::new_shared(2);
-        let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+        let limiter = SharedMemoryLimiter::new(2);
+        let mut vector: LimitedVec<u8> = LimitedVec::new(limiter.clone());
 
         vector.push(1).unwrap();
         vector.push(2).unwrap();
@@ -139,38 +134,38 @@ mod tests {
 
     #[test]
     fn drop() {
-        let limiter = MemoryLimiter::new_shared(1);
+        let limiter = SharedMemoryLimiter::new(1);
 
         {
-            let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+            let mut vector: LimitedVec<u8> = LimitedVec::new(limiter.clone());
 
             vector.push(1).unwrap();
-            assert_eq!(limiter.borrow().current_usage(), 1);
+            assert_eq!(limiter.current_usage(), 1);
         }
 
-        assert_eq!(limiter.borrow().current_usage(), 0);
+        assert_eq!(limiter.current_usage(), 0);
     }
 
     #[test]
     fn drain() {
-        let limiter = MemoryLimiter::new_shared(10);
-        let mut vector: LimitedVec<u8> = LimitedVec::new(Rc::clone(&limiter));
+        let limiter = SharedMemoryLimiter::new(10);
+        let mut vector: LimitedVec<u8> = LimitedVec::new(limiter.clone());
 
         vector.push(1).unwrap();
         vector.push(2).unwrap();
         vector.push(3).unwrap();
-        assert_eq!(limiter.borrow().current_usage(), 3);
+        assert_eq!(limiter.current_usage(), 3);
 
         vector.drain(0..3);
-        assert_eq!(limiter.borrow().current_usage(), 0);
+        assert_eq!(limiter.current_usage(), 0);
 
         vector.push(1).unwrap();
         vector.push(2).unwrap();
         vector.push(3).unwrap();
         vector.push(4).unwrap();
-        assert_eq!(limiter.borrow().current_usage(), 4);
+        assert_eq!(limiter.current_usage(), 4);
 
         vector.drain(1..=2);
-        assert_eq!(limiter.borrow().current_usage(), 2);
+        assert_eq!(limiter.current_usage(), 2);
     }
 }

@@ -315,7 +315,7 @@ impl<E: ElementData> Stack<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::MemoryLimiter;
+    use crate::memory::SharedMemoryLimiter;
     use encoding_rs::UTF_8;
 
     #[derive(Default)]
@@ -344,7 +344,7 @@ mod tests {
     #[test]
     #[allow(clippy::reversed_empty_ranges)]
     fn hereditary_jumps_flag() {
-        let mut stack = Stack::new(MemoryLimiter::new_shared(2048), false);
+        let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
 
         stack.push_item(item("item1", 0)).unwrap();
 
@@ -372,7 +372,7 @@ mod tests {
     fn pop_up_to() {
         macro_rules! assert_pop_result {
             ($up_to:expr, $expected_unmatched:expr, $expected_items:expr) => {{
-                let mut stack = Stack::new(MemoryLimiter::new_shared(2048), false);
+                let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
 
                 stack.push_item(item("html", 0)).unwrap();
                 stack.push_item(item("body", 1)).unwrap();
@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn pop_up_to_on_empty_stack() {
-        let mut stack = Stack::new(MemoryLimiter::new_shared(2048), false);
+        let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
         let mut handler_called = false;
 
         stack.pop_up_to(local_name("div"), |_: TestElementData| {

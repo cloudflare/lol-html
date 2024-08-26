@@ -549,7 +549,7 @@ mod tests {
     use crate::base::SharedEncoding;
     use crate::errors::RewritingError;
     use crate::html::Namespace;
-    use crate::memory::MemoryLimiter;
+    use crate::memory::SharedMemoryLimiter;
     use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
     use crate::rewriter::AsciiCompatibleEncoding;
     use crate::transform_stream::{
@@ -632,7 +632,7 @@ mod tests {
             output_sink: |_: &[u8]| {},
             preallocated_parsing_buffer_size: 0,
             encoding: SharedEncoding::new(AsciiCompatibleEncoding::new(encoding).unwrap()),
-            memory_limiter: MemoryLimiter::new_shared(2048),
+            memory_limiter: SharedMemoryLimiter::new(2048),
             strict: true,
         });
 
@@ -667,7 +667,7 @@ mod tests {
                 ast.add_selector(&selector.parse().unwrap(), i);
             }
 
-            let memory_limiter = MemoryLimiter::new_shared(2048);
+            let memory_limiter = SharedMemoryLimiter::new(2048);
             let enable_esi_tags = false;
             let vm: SelectorMatchingVm<TestElementData> =
                 SelectorMatchingVm::new(ast, UTF_8, memory_limiter, enable_esi_tags);

@@ -4,4 +4,4 @@ mod limiter;
 
 pub use arena::Arena;
 pub use limited_vec::LimitedVec;
-pub use limiter::{MemoryLimitExceededError, MemoryLimiter, SharedMemoryLimiter};
+pub use limiter::{MemoryLimitExceededError, SharedMemoryLimiter};

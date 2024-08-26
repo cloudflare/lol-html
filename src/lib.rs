@@ -168,7 +168,7 @@ cfg_if! {
             EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
         };
 
-        pub use self::memory::MemoryLimiter;
+        pub use self::memory::SharedMemoryLimiter;
         pub use self::html::{LocalName, LocalNameHash, Tag, Namespace};
     } else {
         mod selectors_vm;

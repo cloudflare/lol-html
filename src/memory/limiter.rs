@@ -1,8 +1,6 @@
-use std::cell::RefCell;
+use std::cell::Cell;
 use std::rc::Rc;
 use thiserror::Error;
-
-pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
 
 /// An error that occures when rewriter exceedes the memory limit specified in the
 /// [`MemorySettings`].
@@ -12,30 +10,33 @@ pub type SharedMemoryLimiter = Rc<RefCell<MemoryLimiter>>;
 #[error("The memory limit has been exceeded.")]
 pub struct MemoryLimitExceededError;
 
-#[derive(Debug)]
-pub struct MemoryLimiter {
-    current_usage: usize,
+#[derive(Debug, Clone)]
+pub struct SharedMemoryLimiter {
+    current_usage: Rc<Cell<usize>>,
     max: usize,
 }
 
-impl MemoryLimiter {
-    pub fn new_shared(max: usize) -> SharedMemoryLimiter {
-        Rc::new(RefCell::new(MemoryLimiter {
+impl SharedMemoryLimiter {
+    pub fn new(max: usize) -> SharedMemoryLimiter {
+        SharedMemoryLimiter {
+            current_usage: Rc::new(Cell::new(0)),
             max,
-            current_usage: 0,
-        }))
+        }
     }
 
     #[cfg(test)]
     pub fn current_usage(&self) -> usize {
-        self.current_usage
+        self.current_usage.get()
     }
 
     #[inline]
-    pub fn increase_usage(&mut self, byte_count: usize) -> Result<(), MemoryLimitExceededError> {
-        self.current_usage += byte_count;
+    pub fn increase_usage(&self, byte_count: usize) -> Result<(), MemoryLimitExceededError> {
+        let previous_usage = self.current_usage.get();
+        let current_usage = previous_usage + byte_count;
 
-        if self.current_usage > self.max {
+        self.current_usage.set(current_usage);
+
+        if current_usage > self.max {
             Err(MemoryLimitExceededError)
         } else {
             Ok(())
@@ -43,15 +44,18 @@ impl MemoryLimiter {
     }
 
     #[inline]
-    pub fn preallocate(&mut self, byte_count: usize) {
+    pub fn preallocate(&self, byte_count: usize) {
         self.increase_usage(byte_count).expect(
             "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`.",
         );
     }
 
     #[inline]
-    pub fn decrease_usage(&mut self, byte_count: usize) {
-        self.current_usage -= byte_count;
+    pub fn decrease_usage(&self, byte_count: usize) {
+        let previous_usage = self.current_usage.get();
+        let current_usage = previous_usage - byte_count;
+
+        self.current_usage.set(current_usage);
     }
 }
 
@@ -61,8 +65,7 @@ mod tests {
 
     #[test]
     fn current_usage() {
-        let limiter = MemoryLimiter::new_shared(10);
-        let mut limiter = limiter.borrow_mut();
+        let limiter = SharedMemoryLimiter::new(10);
 
         assert_eq!(limiter.current_usage(), 0);
 
@@ -85,8 +88,7 @@ mod tests {
         expected = "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`."
     )]
     fn preallocate() {
-        let limiter = MemoryLimiter::new_shared(10);
-        let mut limiter = limiter.borrow_mut();
+        let limiter = SharedMemoryLimiter::new(10);
 
         limiter.preallocate(8);
         assert_eq!(limiter.current_usage(), 8);

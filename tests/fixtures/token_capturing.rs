@@ -4,7 +4,7 @@ use lol_html::errors::RewritingError;
 use lol_html::html_content::{DocumentEnd, TextType};
 use lol_html::test_utils::Output;
 use lol_html::{
-    LocalName, LocalNameHash, MemoryLimiter, Namespace, SharedEncoding, StartTagHandlingResult,
+    LocalName, LocalNameHash, SharedMemoryLimiter, Namespace, SharedEncoding, StartTagHandlingResult,
     Token, TokenCaptureFlags, TransformController, TransformStream, TransformStreamSettings,
 };
 
@@ -96,7 +96,7 @@ pub fn parse(
 
     let mut output = Output::new(encoding.into());
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
-    let memory_limiter = MemoryLimiter::new_shared(2048);
+    let memory_limiter = SharedMemoryLimiter::new(2048);
 
     let mut transform_stream = TransformStream::new(TransformStreamSettings {
         transform_controller,
