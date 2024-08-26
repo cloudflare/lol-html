@@ -1,6 +1,6 @@
 use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
-use crate::parser::SharedAttributeBuffer;
+use crate::parser::AttributeBuffer;
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct AttributeOutline {
@@ -24,7 +24,7 @@ pub enum TagTokenOutline {
         name: Range,
         name_hash: LocalNameHash,
         ns: Namespace,
-        attributes: SharedAttributeBuffer,
+        attributes: AttributeBuffer,
         self_closing: bool,
     },
 
@@ -57,7 +57,7 @@ impl Align for TagTokenOutline {
                 name, attributes, ..
             } => {
                 name.align(offset);
-                attributes.borrow_mut().align(offset);
+                attributes.as_mut_slice().align(offset);
             }
             TagTokenOutline::EndTag { name, .. } => name.align(offset),
         }

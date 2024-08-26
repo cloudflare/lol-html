@@ -1,21 +1,19 @@
-use super::*;
 use crate::base::{Bytes, Range, SharedEncoding};
 use crate::html::{LocalName, Namespace};
 use crate::parser::{
-    Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink, TagHintSink,
-    TagLexeme, TagTokenOutline,
+    AttributeBuffer, Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink,
+    TagHintSink, TagLexeme, TagTokenOutline,
 };
 use crate::rewritable_units::{
     DocumentEnd, Serialize, ToToken, Token, TokenCaptureFlags, TokenCapturer, TokenCapturerEvent,
 };
 use crate::rewriter::RewritingError;
-use std::rc::Rc;
 
 use TagTokenOutline::*;
 
 pub struct AuxStartTagInfo<'i> {
     pub input: &'i Bytes<'i>,
-    pub attr_buffer: SharedAttributeBuffer,
+    pub attr_buffer: &'i AttributeBuffer,
     pub self_closing: bool,
 }
 
@@ -189,7 +187,7 @@ where
                     &mut self.transform_controller,
                     AuxStartTagInfo {
                         input,
-                        attr_buffer: Rc::clone($attributes),
+                        attr_buffer: $attributes,
                         self_closing: $self_closing,
                     },
                 )
@@ -204,7 +202,9 @@ where
                     ref attributes,
                     self_closing,
                     ..
-                } => get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing),
+                } => {
+                    get_flags_from_aux_info_res!(aux_info_req, &attributes, self_closing)
+                }
                 _ => unreachable!("Tag should be a start tag at this point"),
             },
 
@@ -223,7 +223,7 @@ where
                     match self.transform_controller.handle_start_tag(name, ns) {
                         Ok(flags) => Ok(flags),
                         Err(DispatcherError::InfoRequest(aux_info_req)) => {
-                            get_flags_from_aux_info_res!(aux_info_req, attributes, self_closing)
+                            get_flags_from_aux_info_res!(aux_info_req, &attributes, self_closing)
                         }
                         Err(DispatcherError::RewritingError(e)) => Err(e),
                     }
