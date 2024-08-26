@@ -167,7 +167,7 @@ impl<'i> StartTag<'i> {
     }
 
     #[cfg(test)]
-    pub fn raw_attributes(&self) -> (&'i Bytes<'i>, crate::parser::SharedAttributeBuffer) {
+    pub fn raw_attributes(&self) -> (&'i Bytes<'i>, &'i crate::parser::AttributeBuffer) {
         self.attributes.raw_attributes()
     }
 }

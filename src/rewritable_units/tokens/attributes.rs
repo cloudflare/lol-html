@@ -1,5 +1,5 @@
 use crate::base::Bytes;
-use crate::parser::SharedAttributeBuffer;
+use crate::parser::AttributeBuffer;
 use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
 use lazycell::LazyCell;
@@ -139,7 +139,7 @@ impl Debug for Attribute<'_> {
 
 pub struct Attributes<'i> {
     input: &'i Bytes<'i>,
-    attribute_buffer: SharedAttributeBuffer,
+    attribute_buffer: &'i AttributeBuffer,
     items: LazyCell<Vec<Attribute<'i>>>,
     encoding: &'static Encoding,
 }
@@ -147,7 +147,7 @@ pub struct Attributes<'i> {
 impl<'i> Attributes<'i> {
     pub(super) fn new(
         input: &'i Bytes<'i>,
-        attribute_buffer: SharedAttributeBuffer,
+        attribute_buffer: &'i AttributeBuffer,
         encoding: &'static Encoding,
     ) -> Self {
         Attributes {
@@ -196,7 +196,6 @@ impl<'i> Attributes<'i> {
 
     fn init_items(&self) -> Vec<Attribute<'i>> {
         self.attribute_buffer
-            .borrow()
             .iter()
             .map(|a| {
                 Attribute::new(
@@ -227,8 +226,8 @@ impl<'i> Attributes<'i> {
     }
 
     #[cfg(test)]
-    pub fn raw_attributes(&self) -> (&'i Bytes<'i>, SharedAttributeBuffer) {
-        (self.input, std::rc::Rc::clone(&self.attribute_buffer))
+    pub fn raw_attributes(&self) -> (&'i Bytes<'i>, &'i AttributeBuffer) {
+        (self.input, self.attribute_buffer)
     }
 }
 

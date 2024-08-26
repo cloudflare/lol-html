@@ -3,7 +3,7 @@ mod dispatcher;
 use self::dispatcher::Dispatcher;
 use crate::base::SharedEncoding;
 use crate::memory::{Arena, SharedMemoryLimiter};
-use crate::parser::{Parser, ParserDirective, SharedAttributeBuffer};
+use crate::parser::{Parser, ParserDirective};
 use crate::rewriter::RewritingError;
 
 pub use self::dispatcher::{
