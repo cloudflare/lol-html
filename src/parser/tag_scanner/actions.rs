@@ -1,48 +1,51 @@
 use super::*;
 use crate::parser::state_machine::{ActionError, ActionResult, StateMachineActions};
+use crate::parser::ParserContext;
 
 impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
+    type Context = ParserContext<S>;
+
     impl_common_sm_actions!();
 
     #[inline]
-    fn create_start_tag(&mut self, _input: &[u8]) {
+    fn create_start_tag(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
         self.tag_name_start = self.pos();
         self.tag_name_hash = LocalNameHash::new();
     }
 
     #[inline]
-    fn create_end_tag(&mut self, _input: &[u8]) {
+    fn create_end_tag(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
         self.tag_name_start = self.pos();
         self.tag_name_hash = LocalNameHash::new();
         self.is_in_end_tag = true;
     }
 
     #[inline]
-    fn mark_tag_start(&mut self, _input: &[u8]) {
+    fn mark_tag_start(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
         self.tag_start = Some(self.pos());
     }
 
     #[inline]
-    fn unmark_tag_start(&mut self, _input: &[u8]) {
+    fn unmark_tag_start(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
         self.tag_start = None;
     }
 
     #[inline]
-    fn update_tag_name_hash(&mut self, input: &[u8]) {
+    fn update_tag_name_hash(&mut self, _context: &mut ParserContext<S>, input: &[u8]) {
         if let Some(ch) = input.get(self.pos()).copied() {
             self.tag_name_hash.update(ch);
         }
     }
 
     #[inline]
-    fn finish_tag_name(&mut self, input: &[u8]) -> ActionResult {
+    fn finish_tag_name(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
         let tag_start = self
             .tag_start
             .take()
             .expect("Tag start should be set at this point");
 
         let unhandled_feedback = self
-            .try_apply_tree_builder_feedback()
+            .try_apply_tree_builder_feedback(context)
             .map_err(ActionError::from)?;
 
         let is_in_end_tag = self.is_in_end_tag;
@@ -58,7 +61,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
         }
 
         match self
-            .emit_tag_hint(input, is_in_end_tag)
+            .emit_tag_hint(context, input, is_in_end_tag)
             .map_err(ActionError::RewritingError)?
         {
             ParserDirective::WherePossibleScanForTagsOnly => Ok(()),
@@ -71,7 +74,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     }
 
     #[inline]
-    fn emit_tag(&mut self, _input: &[u8]) -> ActionResult {
+    fn emit_tag(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) -> ActionResult {
         // NOTE: exit from any non-initial text parsing mode always happens on tag emission
         // (except for CDATA, but there is a special action to take care of it).
         let text_type = self
@@ -110,7 +113,12 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     );
 
     #[inline]
-    fn shift_comment_text_end_by(&mut self, _input: &[u8], _offset: usize) {
+    fn shift_comment_text_end_by(
+        &mut self,
+        _context: &mut ParserContext<S>,
+        _input: &[u8],
+        _offset: usize,
+    ) {
         trace!(@noop);
     }
 }
