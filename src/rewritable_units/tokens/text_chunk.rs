@@ -297,7 +297,7 @@ mod tests {
     fn rewrite_text_chunk(
         html: &[u8],
         encoding: &'static Encoding,
-        mut handler: impl FnMut(&mut TextChunk),
+        mut handler: impl FnMut(&mut TextChunk) + Send,
     ) -> String {
         let mut handler_called = false;
 

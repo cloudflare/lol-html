@@ -10,17 +10,17 @@ pub type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
 /// Handler for the [document type declaration].
 ///
 /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
-pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + 'h>;
+pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + Send + 'h>;
 /// Handler for HTML comments.
-pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>;
+pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + Send + 'h>;
 /// Handler for text chunks present the HTML.
-pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;
+pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + Send + 'h>;
 /// Handler for elements matched by a selector.
-pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + 'h>;
+pub type ElementHandler<'h> = Box<dyn FnMut(&mut Element) -> HandlerResult + Send + 'h>;
 /// Handler for an end tag.
-pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + 'h>;
+pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + Send + 'h>;
 /// Handler for the document end, which is called after the last chunk is processed.
-pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + 'h>;
+pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + Send + 'h>;
 
 /// Specifies element content handlers associated with a selector.
 #[derive(Default)]
@@ -36,7 +36,10 @@ pub struct ElementContentHandlers<'h> {
 impl<'h> ElementContentHandlers<'h> {
     /// Sets a handler for elements matched by a selector.
     #[inline]
-    pub fn element(mut self, handler: impl FnMut(&mut Element) -> HandlerResult + 'h) -> Self {
+    pub fn element(
+        mut self,
+        handler: impl FnMut(&mut Element) -> HandlerResult + Send + 'h,
+    ) -> Self {
         self.element = Some(Box::new(handler));
 
         self
@@ -44,7 +47,10 @@ impl<'h> ElementContentHandlers<'h> {
 
     /// Sets a handler for HTML comments in the inner content of elements matched by a selector.
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + 'h) -> Self {
+    pub fn comments(
+        mut self,
+        handler: impl FnMut(&mut Comment) -> HandlerResult + Send + 'h,
+    ) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
@@ -52,7 +58,10 @@ impl<'h> ElementContentHandlers<'h> {
 
     /// Sets a handler for text chunks in the inner content of elements matched by a selector.
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + 'h) -> Self {
+    pub fn text(
+        mut self,
+        handler: impl FnMut(&mut TextChunk) -> HandlerResult + Send + 'h,
+    ) -> Self {
         self.text = Some(Box::new(handler));
 
         self
@@ -91,7 +100,10 @@ impl<'h> DocumentContentHandlers<'h> {
     ///
     /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
     #[inline]
-    pub fn doctype(mut self, handler: impl FnMut(&mut Doctype) -> HandlerResult + 'h) -> Self {
+    pub fn doctype(
+        mut self,
+        handler: impl FnMut(&mut Doctype) -> HandlerResult + Send + 'h,
+    ) -> Self {
         self.doctype = Some(Box::new(handler));
 
         self
@@ -99,7 +111,10 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for all HTML comments present in the input HTML markup.
     #[inline]
-    pub fn comments(mut self, handler: impl FnMut(&mut Comment) -> HandlerResult + 'h) -> Self {
+    pub fn comments(
+        mut self,
+        handler: impl FnMut(&mut Comment) -> HandlerResult + Send + 'h,
+    ) -> Self {
         self.comments = Some(Box::new(handler));
 
         self
@@ -107,7 +122,10 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for all text chunks present in the input HTML markup.
     #[inline]
-    pub fn text(mut self, handler: impl FnMut(&mut TextChunk) -> HandlerResult + 'h) -> Self {
+    pub fn text(
+        mut self,
+        handler: impl FnMut(&mut TextChunk) -> HandlerResult + Send + 'h,
+    ) -> Self {
         self.text = Some(Box::new(handler));
 
         self
@@ -115,7 +133,10 @@ impl<'h> DocumentContentHandlers<'h> {
 
     /// Sets a handler for the document end, which is called after the last chunk is processed.
     #[inline]
-    pub fn end(mut self, handler: impl FnMut(&mut DocumentEnd) -> HandlerResult + 'h) -> Self {
+    pub fn end(
+        mut self,
+        handler: impl FnMut(&mut DocumentEnd) -> HandlerResult + Send + 'h,
+    ) -> Self {
         self.end = Some(Box::new(handler));
 
         self

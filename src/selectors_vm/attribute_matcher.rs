@@ -1,7 +1,7 @@
 use super::compiler::AttrExprOperands;
 use crate::base::Bytes;
 use crate::html::Namespace;
-use crate::parser::{AttributeOutline, SharedAttributeBuffer};
+use crate::parser::{AttributeBuffer, AttributeOutline};
 use encoding_rs::UTF_8;
 use lazy_static::lazy_static;
 use lazycell::LazyCell;
@@ -22,7 +22,7 @@ type MemoizedAttrValue<'i> = LazyCell<Option<Bytes<'i>>>;
 
 pub struct AttributeMatcher<'i> {
     input: &'i Bytes<'i>,
-    attributes: SharedAttributeBuffer,
+    attributes: &'i AttributeBuffer,
     id: MemoizedAttrValue<'i>,
     class: MemoizedAttrValue<'i>,
     is_html_element: bool,
@@ -30,7 +30,7 @@ pub struct AttributeMatcher<'i> {
 
 impl<'i> AttributeMatcher<'i> {
     #[inline]
-    pub fn new(input: &'i Bytes<'i>, attributes: SharedAttributeBuffer, ns: Namespace) -> Self {
+    pub fn new(input: &'i Bytes<'i>, attributes: &'i AttributeBuffer, ns: Namespace) -> Self {
         AttributeMatcher {
             input,
             attributes,
@@ -43,7 +43,6 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     fn find(&self, lowercased_name: &Bytes) -> Option<AttributeOutline> {
         self.attributes
-            .borrow()
             .iter()
             .find(|a| {
                 if lowercased_name.len() != a.name.end - a.name.start {

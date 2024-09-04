@@ -55,7 +55,7 @@ impl From<AsciiCompatibleEncoding> for &'static Encoding {
     }
 }
 
-impl std::convert::TryFrom<&'static Encoding> for AsciiCompatibleEncoding {
+impl TryFrom<&'static Encoding> for AsciiCompatibleEncoding {
     type Error = ();
 
     fn try_from(enc: &'static Encoding) -> Result<Self, ()> {
@@ -342,9 +342,14 @@ mod tests {
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
     use encoding_rs::Encoding;
     use itertools::Itertools;
-    use std::cell::RefCell;
+    use static_assertions::assert_impl_all;
     use std::convert::TryInto;
-    use std::rc::Rc;
+    use std::sync::{Arc, Mutex};
+
+    // Assert that HtmlRewriter is `Send`.
+    // WIP! static assertions
+    assert_impl_all!(HtmlRewriter<'_, Box<dyn FnMut(&[u8]) + Send>>: Send);
+    // assert_impl_all!(HtmlRewriteController<'_>: Send, Sync);
 
     fn write_chunks<O: OutputSink>(
         mut rewriter: HtmlRewriter<O>,
@@ -571,15 +576,15 @@ mod tests {
 
     #[test]
     fn handler_invocation_order() {
-        let handlers_executed = Rc::new(RefCell::new(Vec::default()));
+        let handlers_executed = Arc::new(Mutex::new(Vec::default()));
 
         macro_rules! create_handlers {
             ($sel:expr, $idx:expr) => {
                 element!($sel, {
-                    let handlers_executed = ::std::rc::Rc::clone(&handlers_executed);
+                    let handlers_executed = ::std::sync::Arc::clone(&handlers_executed);
 
                     move |_| {
-                        handlers_executed.borrow_mut().push($idx);
+                        handlers_executed.lock().unwrap().push($idx);
                         Ok(())
                     }
                 })
@@ -601,7 +606,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(*handlers_executed.borrow(), vec![0, 1, 2, 3, 4]);
+        assert_eq!(*handlers_executed.lock().unwrap(), vec![0, 1, 2, 3, 4]);
     }
 
     #[test]

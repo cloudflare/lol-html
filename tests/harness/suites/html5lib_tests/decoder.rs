@@ -91,10 +91,8 @@ impl<'a> Decoder<'a> {
                 self.chars.next();
                 if m.0 != 0 {
                     if c != ';' && self.entities == Entities::Attribute {
-                        if let Some(&c) = self.chars.peek() {
-                            if matches!(c, 'A'..='Z' | 'a'..='z' | '0'..='9' | '=') {
-                                continue;
-                            }
+                        if let Some('A'..='Z' | 'a'..='z' | '0'..='9' | '=') = self.chars.peek() {
+                            continue;
                         }
                     }
                     name_match = (m.0, m.1, name_buf.len());

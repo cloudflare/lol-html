@@ -7,8 +7,8 @@ mod tree_builder_simulator;
 
 use self::lexer::Lexer;
 pub use self::lexer::{
-    AttributeOutline, Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline,
-    SharedAttributeBuffer, TagLexeme, TagTokenOutline,
+    AttributeBuffer, AttributeOutline, Lexeme, LexemeSink, NonTagContentLexeme,
+    NonTagContentTokenOutline, TagLexeme, TagTokenOutline,
 };
 use self::state_machine::{ActionError, ParsingTermination, StateMachine};
 pub use self::tag_scanner::TagHintSink;

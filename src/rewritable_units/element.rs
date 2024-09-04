@@ -495,18 +495,18 @@ impl<'r, 't> Element<'r, 't> {
     /// ```
     /// use lol_html::html_content::ContentType;
     /// use lol_html::{element, rewrite_str, text, RewriteStrSettings};
-    /// let buffer = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    /// let buffer = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     /// let html = rewrite_str(
     ///     "<span>Short</span><span><b>13</b> characters</span>",
     ///     RewriteStrSettings {
     ///         element_content_handlers: vec![
     ///             element!("span", |el| {
     ///                 // Truncate string for each new span.
-    ///                 buffer.borrow_mut().clear();
+    ///                 buffer.lock().unwrap().clear();
     ///                 let buffer = buffer.clone();
     ///                 if let Some(handlers) = el.end_tag_handlers() {
     ///                     handlers.push(Box::new(move |end| {
-    ///                         let s = buffer.borrow();
+    ///                         let s = buffer.lock().unwrap();
     ///                         if s.len() == 13 {
     ///                             // add text before the end tag
     ///                             end.before("!", ContentType::Text);
@@ -523,7 +523,7 @@ impl<'r, 't> Element<'r, 't> {
     ///             }),
     ///             text!("span", |t| {
     ///                 // Save the text contents for the end tag handler.
-    ///                 buffer.borrow_mut().push_str(t.as_str());
+    ///                 buffer.lock().unwrap().push_str(t.as_str());
     ///                 Ok(())
     ///             }),
     ///         ],
@@ -595,7 +595,7 @@ mod tests {
         html: &[u8],
         encoding: &'static Encoding,
         selector: &str,
-        mut handler: impl FnMut(&mut Element),
+        mut handler: impl FnMut(&mut Element) + Send,
     ) -> String {
         let mut handler_called = false;
 
