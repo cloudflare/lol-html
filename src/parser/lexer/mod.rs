@@ -4,6 +4,7 @@ mod actions;
 mod conditions;
 mod lexeme;
 
+pub use self::lexeme::*;
 use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
@@ -11,12 +12,6 @@ use crate::parser::state_machine::{
 };
 use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback};
 use crate::rewriter::RewritingError;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-pub use self::lexeme::*;
-
-const DEFAULT_ATTR_BUFFER_CAPACITY: usize = 256;
 
 pub trait LexemeSink {
     fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError>;
@@ -27,7 +22,8 @@ pub trait LexemeSink {
 }
 
 pub type State<S> = fn(&mut Lexer<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;
-pub type SharedAttributeBuffer = Rc<RefCell<Vec<AttributeOutline>>>;
+
+pub type AttributeBuffer = Vec<AttributeOutline>;
 
 pub struct Lexer<S: LexemeSink> {
     next_pos: usize,
@@ -42,7 +38,6 @@ pub struct Lexer<S: LexemeSink> {
     current_attr: Option<AttributeOutline>,
     last_start_tag_name_hash: LocalNameHash,
     closing_quote: u8,
-    attr_buffer: SharedAttributeBuffer,
     last_text_type: TextType,
     feedback_directive: FeedbackDirective,
 }
@@ -62,9 +57,6 @@ impl<S: LexemeSink> Lexer<S> {
             current_attr: None,
             last_start_tag_name_hash: LocalNameHash::default(),
             closing_quote: b'"',
-            attr_buffer: Rc::new(RefCell::new(Vec::with_capacity(
-                DEFAULT_ATTR_BUFFER_CAPACITY,
-            ))),
             last_text_type: TextType::Data,
             feedback_directive: FeedbackDirective::None,
         }

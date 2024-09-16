@@ -136,13 +136,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     #[inline]
     fn create_start_tag(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
-        self.attr_buffer.borrow_mut().clear();
-
         self.current_tag_token = Some(StartTag {
             name: Range::default(),
             name_hash: LocalNameHash::new(),
             ns: Namespace::default(),
-            attributes: Rc::clone(&self.attr_buffer),
+            attributes: Vec::new(),
             self_closing: false,
         });
     }
@@ -314,7 +312,9 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     #[inline]
     fn finish_attr(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
         if let Some(attr) = self.current_attr.take() {
-            self.attr_buffer.borrow_mut().push(attr);
+            if let Some(StartTag { attributes, .. }) = self.current_tag_token.as_mut() {
+                attributes.push(attr);
+            }
         }
     }
 

@@ -250,7 +250,7 @@ impl TreeBuilderSimulator {
             // to decide on foreign context exit
             return request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag { ref attributes, .. } => {
-                    for attr in attributes.borrow().iter() {
+                    for attr in attributes.iter() {
                         let name = lexeme.part(attr.name);
 
                         if eq_case_insensitive(&name, b"color")
@@ -279,7 +279,7 @@ impl TreeBuilderSimulator {
                     let name = lexeme.part(name);
 
                     if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
-                        for attr in attributes.borrow().iter() {
+                        for attr in attributes.iter() {
                             let name = lexeme.part(attr.name);
                             let value = lexeme.part(attr.value);
 
