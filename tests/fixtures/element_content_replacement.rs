@@ -31,7 +31,7 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
                         })
                     ],
                     encoding,
-                    ..Settings::default()
+                    ..Settings::new()
                 },
                 |c: &[u8]| output.push(c)
             );

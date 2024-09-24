@@ -68,7 +68,7 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
                         })
                     ],
                     encoding,
-                    ..Settings::default()
+                    ..Settings::new()
                 },
                 |c: &[u8]| output.push(c)
             );

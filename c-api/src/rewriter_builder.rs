@@ -26,7 +26,7 @@ impl<F> ExternHandler<F> {
 }
 
 macro_rules! add_handler {
-    ($handlers:ident, $self:ident.$ty:ident) => {{
+    ($handlers:ident, $el_ty:ident, $self:ident.$ty:ident) => {{
         if let Some(handler) = $self.$ty.func {
             // NOTE: the closure actually holds a reference to the content
             // handler object, but since we pass the object to the C side this
@@ -41,7 +41,7 @@ macro_rules! add_handler {
 
             $handlers =
                 $handlers.$ty(
-                    move |arg: &mut _| match unsafe { handler(arg, user_data) } {
+                    move |arg: &mut $el_ty| match unsafe { handler(arg, user_data) } {
                         RewriterDirective::Continue => Ok(()),
                         RewriterDirective::Stop => Err("The rewriter has been stopped.".into()),
                     },
@@ -61,10 +61,10 @@ impl ExternDocumentContentHandlers {
     pub fn as_safe_document_content_handlers(&self) -> DocumentContentHandlers {
         let mut handlers = DocumentContentHandlers::default();
 
-        add_handler!(handlers, self.doctype);
-        add_handler!(handlers, self.comments);
-        add_handler!(handlers, self.text);
-        add_handler!(handlers, self.end);
+        add_handler!(handlers, Doctype, self.doctype);
+        add_handler!(handlers, Comment, self.comments);
+        add_handler!(handlers, TextChunk, self.text);
+        add_handler!(handlers, DocumentEnd, self.end);
 
         handlers
     }
@@ -80,9 +80,9 @@ impl ExternElementContentHandlers {
     pub fn as_safe_element_content_handlers(&self) -> ElementContentHandlers {
         let mut handlers = ElementContentHandlers::default();
 
-        add_handler!(handlers, self.element);
-        add_handler!(handlers, self.comments);
-        add_handler!(handlers, self.text);
+        add_handler!(handlers, Element, self.element);
+        add_handler!(handlers, Comment, self.comments);
+        add_handler!(handlers, TextChunk, self.text);
 
         handlers
     }

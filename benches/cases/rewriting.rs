@@ -13,7 +13,7 @@ define_group!(
 
                     Ok(())
                 })],
-                ..Settings::default()
+                ..Settings::new()
             }
         ),
         (
@@ -24,7 +24,7 @@ define_group!(
 
                     Ok(())
                 })],
-                ..Settings::default()
+                ..Settings::new()
             }
         )
     ]

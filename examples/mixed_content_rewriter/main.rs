@@ -37,7 +37,7 @@ fn main() {
                     }
                 ),
             ],
-            ..Settings::default()
+            ..Settings::new()
         },
         output_sink,
     );

@@ -42,7 +42,7 @@ use std::fmt::{self, Debug};
 ///                     Ok(())
 ///                 })
 ///             ],
-///             ..Settings::default()
+///             ..Settings::new()
 ///         },
 ///         |_:&[u8]| {}
 ///     );
@@ -131,7 +131,7 @@ impl<'i> TextChunk<'i> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     /// ```
@@ -171,7 +171,7 @@ impl<'i> TextChunk<'i> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -205,7 +205,7 @@ impl<'i> TextChunk<'i> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///
@@ -239,7 +239,7 @@ impl<'i> TextChunk<'i> {
     ///                 Ok(())
     ///             })
     ///         ],
-    ///         ..RewriteStrSettings::default()
+    ///         ..RewriteStrSettings::new()
     ///     }
     /// ).unwrap();
     ///

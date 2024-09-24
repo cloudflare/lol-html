@@ -1,5 +1,5 @@
 use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
-use super::RewritingError;
+use super::{HandlerTypes, RewritingError};
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
@@ -22,15 +22,15 @@ impl ElementData for ElementDescriptor {
     }
 }
 
-pub struct HtmlRewriteController<'h> {
-    handlers_dispatcher: ContentHandlersDispatcher<'h>,
+pub struct HtmlRewriteController<'h, H: HandlerTypes> {
+    handlers_dispatcher: ContentHandlersDispatcher<'h, H>,
     selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
 }
 
-impl<'h> HtmlRewriteController<'h> {
+impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
     #[inline]
     pub fn new(
-        handlers_dispatcher: ContentHandlersDispatcher<'h>,
+        handlers_dispatcher: ContentHandlersDispatcher<'h, H>,
         selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
     ) -> Self {
         HtmlRewriteController {
@@ -40,7 +40,7 @@ impl<'h> HtmlRewriteController<'h> {
     }
 }
 
-impl<'h> HtmlRewriteController<'h> {
+impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
     #[inline]
     fn respond_to_aux_info_request(
         aux_info_req: AuxStartTagInfoRequest<ElementDescriptor, SelectorHandlersLocator>,
@@ -65,7 +65,7 @@ impl<'h> HtmlRewriteController<'h> {
     }
 }
 
-impl TransformController for HtmlRewriteController<'_> {
+impl<'h, H: HandlerTypes> TransformController for HtmlRewriteController<'h, H> {
     #[inline]
     fn initial_capture_flags(&self) -> TokenCaptureFlags {
         self.get_capture_flags()

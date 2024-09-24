@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(())
                 })
             ],
-            ..Settings::default()
+            ..Settings::new()
         },
         |c: &[u8]| output.extend_from_slice(c)
     );

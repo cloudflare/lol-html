@@ -3,7 +3,7 @@ use lol_html::*;
 define_group!(
     "Parsing",
     [
-        ("Tag scanner", Settings::default()),
+        ("Tag scanner", Settings::new()),
         (
             "Lexer",
             // NOTE: this switches parser to the lexer mode and doesn't
@@ -11,7 +11,7 @@ define_group!(
             // we can get relatively fair comparison.
             Settings {
                 document_content_handlers: vec![doctype!(noop_handler!())],
-                ..Settings::default()
+                ..Settings::new()
             }
         ),
         (
@@ -23,7 +23,7 @@ define_group!(
             // incoming chunks to produce correct text chunk rewritable units.
             Settings {
                 document_content_handlers: vec![doc_text!(noop_handler!())],
-                ..Settings::default()
+                ..Settings::new()
             }
         )
     ]

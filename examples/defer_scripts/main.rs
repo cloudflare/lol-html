@@ -21,7 +21,7 @@ fn main() {
                     Ok(())
                 }
             )],
-            ..Settings::default()
+            ..Settings::new()
         },
         output_sink,
     );

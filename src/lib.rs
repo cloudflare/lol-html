@@ -6,7 +6,7 @@
 //!
 //! The crate serves as a back-end for the HTML rewriting functionality of [Cloudflare Workers], but
 //! can be used as a standalone library with the convenient API for a wide variety of HTML
-//! rewriting/analyzis tasks.
+//! rewriting/analysis tasks.
 //!
 //! The crate provides two main API entry points:
 //!
@@ -37,11 +37,47 @@ use cfg_if::cfg_if;
 
 pub use self::rewriter::{
     rewrite_str, AsciiCompatibleEncoding, CommentHandler, DoctypeHandler, DocumentContentHandlers,
-    ElementContentHandlers, ElementHandler, EndHandler, EndTagHandler, HandlerResult, HtmlRewriter,
-    MemorySettings, RewriteStrSettings, Settings, TextHandler,
+    ElementContentHandlers, ElementHandler, EndHandler, EndTagHandler, HandlerResult, HandlerTypes,
+    HtmlRewriter, LocalHandlerTypes, MemorySettings, RewriteStrSettings, Settings, TextHandler,
 };
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
+
+/// These module contains types to work with [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+pub mod send {
+    use crate::rewriter::{
+        CommentHandlerSend, DoctypeHandlerSend, ElementHandlerSend, EndHandlerSend,
+        EndTagHandlerSend, SendHandlerTypes, TextHandlerSend,
+    };
+
+    /// An [`HtmlRewriter`](crate::HtmlRewriter) that implements [`Send`].
+    pub type HtmlRewriter<'h, O> = crate::HtmlRewriter<'h, O, SendHandlerTypes>;
+    /// [`Settings`](crate::Settings) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type Settings<'h, 's> = crate::Settings<'h, 's, SendHandlerTypes>;
+    /// [`RewriteStrSettings`](crate::RewriteStrSettings) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type RewriteStrSettings<'h, 's> = crate::RewriteStrSettings<'h, 's, SendHandlerTypes>;
+
+    /// [`ElementContentHandlers`](crate::ElementContentHandlers) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type ElementContentHandlers<'h> = crate::ElementContentHandlers<'h, SendHandlerTypes>;
+    /// [`DocumentContentHandlers`](crate::DocumentContentHandlers) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type DocumentContentHandlers<'h> = crate::DocumentContentHandlers<'h, SendHandlerTypes>;
+
+    /// [`CommentHandler`](crate::CommentHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type CommentHandler<'h> = CommentHandlerSend<'h>;
+    /// [`DoctypeHandler`](crate::DoctypeHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type DoctypeHandler<'h> = DoctypeHandlerSend<'h>;
+    /// [`ElementHandler`](crate::ElementHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type ElementHandler<'h> = ElementHandlerSend<'h>;
+    /// [`EndHandler`](crate::EndHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type EndHandler<'h> = EndHandlerSend<'h>;
+    /// [`EndTagHandler`](crate::EndTagHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type EndTagHandler<'h> = EndTagHandlerSend<'h>;
+    /// [`TextHandler`](crate::TextHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type TextHandler<'h> = TextHandlerSend<'h>;
+
+    /// [`Element`](crate::Element) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    pub type Element<'r, 't> = crate::rewritable_units::Element<'r, 't, SendHandlerTypes>;
+}
 
 /// The errors that can be produced by the crate's API.
 pub mod errors {

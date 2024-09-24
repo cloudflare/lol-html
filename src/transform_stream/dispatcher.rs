@@ -17,8 +17,9 @@ pub struct AuxStartTagInfo<'i> {
     pub self_closing: bool,
 }
 
-type AuxStartTagInfoRequest<C> =
-    Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError>>;
+type AuxStartTagInfoRequest<C> = Box<
+    dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError> + Send,
+>;
 
 pub enum DispatcherError<C> {
     InfoRequest(AuxStartTagInfoRequest<C>),
