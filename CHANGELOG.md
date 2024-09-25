@@ -1,6 +1,12 @@
 # Changelog
 
+## v2.0.0
+
+- Added the ability for the rewriter to be [`Send`](https://doc.rust-lang.org/std/marker/trait.Send.html).
+  The `send` module contains the utilities for that.
+
 ## v1.2.1
+
 - Remove unmaintained `safemem` dependency.
 
 ## v1.2.0
