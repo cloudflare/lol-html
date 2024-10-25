@@ -1,4 +1,5 @@
 use crate::base::Bytes;
+use crate::errors::RewritingError;
 use crate::parser::AttributeBuffer;
 use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
@@ -126,7 +127,7 @@ impl<'i> Attribute<'i> {
 
 impl Serialize for &Attribute<'_> {
     #[inline]
-    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         match self.raw.as_ref() {
             Some(raw) => output_handler(raw),
             None => {
@@ -136,6 +137,7 @@ impl Serialize for &Attribute<'_> {
                 output_handler(b"\"");
             }
         }
+        Ok(())
     }
 }
 
@@ -256,17 +258,18 @@ impl<'i> Deref for Attributes<'i> {
 
 impl Serialize for &Attributes<'_> {
     #[inline]
-    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if !self.is_empty() {
             let last = self.len() - 1;
 
             for (idx, attr) in self.iter().enumerate() {
-                attr.into_bytes(output_handler);
+                attr.into_bytes(output_handler)?;
 
                 if idx != last {
                     output_handler(b" ");
                 }
             }
         }
+        Ok(())
     }
 }

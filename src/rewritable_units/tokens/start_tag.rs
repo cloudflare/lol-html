@@ -1,6 +1,7 @@
 use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
 use crate::base::Bytes;
+use crate::errors::RewritingError;
 use crate::html::Namespace;
 use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
@@ -142,14 +143,17 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn serialize_from_parts(
+        &self,
+        output_handler: &mut dyn FnMut(&[u8]),
+    ) -> Result<(), RewritingError> {
         output_handler(b"<");
         output_handler(&self.name);
 
         if !self.attributes.is_empty() {
             output_handler(b" ");
 
-            self.attributes.into_bytes(output_handler);
+            self.attributes.into_bytes(output_handler)?;
 
             // NOTE: attributes can be modified the way that
             // last attribute has an unquoted value. We always
@@ -166,6 +170,7 @@ impl<'i> StartTag<'i> {
         } else {
             output_handler(b">");
         }
+        Ok(())
     }
 
     #[cfg(test)]
