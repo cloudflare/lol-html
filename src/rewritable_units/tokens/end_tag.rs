@@ -1,5 +1,6 @@
 use super::{Mutations, Token};
 use crate::base::Bytes;
+use crate::errors::RewritingError;
 use crate::rewritable_units::ContentType;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -99,10 +100,14 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn serialize_from_parts(
+        &self,
+        output_handler: &mut dyn FnMut(&[u8]),
+    ) -> Result<(), RewritingError> {
         output_handler(b"</");
         output_handler(&self.name);
         output_handler(b">");
+        Ok(())
     }
 }
 
