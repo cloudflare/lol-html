@@ -9,14 +9,14 @@ pub use self::capturer::*;
 
 // Pub only for integration tests
 pub trait Serialize {
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8]));
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8]));
 }
 
 macro_rules! impl_serialize {
     ($Token:ident) => {
         impl crate::rewritable_units::Serialize for $Token<'_> {
             #[inline]
-            fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+            fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) {
                 let Mutations {
                     content_before,
                     replacement,
@@ -70,13 +70,13 @@ pub enum Token<'i> {
 
 impl Serialize for Token<'_> {
     #[inline]
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) {
         match self {
-            Token::TextChunk(t) => t.to_bytes(output_handler),
-            Token::Comment(t) => t.to_bytes(output_handler),
-            Token::StartTag(t) => t.to_bytes(output_handler),
-            Token::EndTag(t) => t.to_bytes(output_handler),
-            Token::Doctype(t) => t.to_bytes(output_handler),
+            Token::TextChunk(t) => t.into_bytes(output_handler),
+            Token::Comment(t) => t.into_bytes(output_handler),
+            Token::StartTag(t) => t.into_bytes(output_handler),
+            Token::EndTag(t) => t.into_bytes(output_handler),
+            Token::Doctype(t) => t.into_bytes(output_handler),
         }
     }
 }
