@@ -64,6 +64,12 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
+    pub fn split_at(&self, pos: usize) -> (Bytes<'_>, Bytes<'_>) {
+        let (before, after) = self.0.split_at(pos);
+        (Bytes::from(before), Bytes::from(after))
+    }
+
+    #[inline]
     pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes> {
         range.map(|range| self.slice(range))
     }

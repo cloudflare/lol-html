@@ -47,11 +47,11 @@ cfg_if! {
                 println!("{:#?}", $bookmark);
                 println!("Parser directive: `{:#?}`", $parser_directive);
 
-                let mut chunk_str = Bytes::from($chunk).as_debug_string();
+                // as_debug_string() is UTF-8, and the position for the input encoding is not guaranteed to match it
+                let chunk = Bytes::from($chunk);
+                let (before, after) = chunk.split_at($bookmark.pos);
 
-                chunk_str.insert_str($bookmark.pos, "|*|");
-
-                println!("Bookmark start: `{}`", chunk_str);
+                println!("Bookmark start: `{}|*|{}`", before.as_debug_string(), after.as_debug_string());
                 println!();
             };
 
