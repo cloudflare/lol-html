@@ -149,7 +149,7 @@ impl<'i> StartTag<'i> {
         if !self.attributes.is_empty() {
             output_handler(b" ");
 
-            self.attributes.to_bytes(output_handler);
+            self.attributes.into_bytes(output_handler);
 
             // NOTE: attributes can be modified the way that
             // last attribute has an unquoted value. We always

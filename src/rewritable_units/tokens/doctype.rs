@@ -112,9 +112,9 @@ impl<'i> Doctype<'i> {
 
 impl_user_data!(Doctype<'_>);
 
-impl Serialize for Doctype<'_> {
+impl Serialize for &Doctype<'_> {
     #[inline]
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) {
         if !self.removed() {
             output_handler(&self.raw);
         }
