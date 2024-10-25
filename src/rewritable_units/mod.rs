@@ -2,7 +2,8 @@ use std::any::Any;
 
 pub use self::document_end::*;
 pub use self::element::*;
-pub use self::mutations::{ContentType, Mutations};
+pub use self::mutations::ContentType;
+pub(crate) use self::mutations::{Mutations, StringChunk};
 pub use self::tokens::*;
 
 /// Data that can be attached to a rewritable unit by a user and shared between content handler
