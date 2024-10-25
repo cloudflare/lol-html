@@ -2,6 +2,7 @@ use super::{Mutations, Token};
 use crate::base::Bytes;
 use crate::errors::RewritingError;
 use crate::html::TextType;
+use crate::html_content::ContentType;
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::borrow::Cow;
@@ -184,8 +185,10 @@ impl<'i> TextChunk<'i> {
     /// assert_eq!(html, r#"<div><!-- 42 -->Hello world</div>"#);
     /// ```
     #[inline]
-    pub fn before(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.before(content, content_type);
+    pub fn before(&mut self, content: &str, content_type: ContentType) {
+        self.mutations
+            .content_before
+            .push_back((content, content_type).into());
     }
 
     /// Inserts `content` after the text chunk.
@@ -218,8 +221,10 @@ impl<'i> TextChunk<'i> {
     /// assert_eq!(html, r#"<div>FooQuxBar</div>"#);
     /// ```
     #[inline]
-    pub fn after(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.after(content, content_type);
+    pub fn after(&mut self, content: &str, content_type: ContentType) {
+        self.mutations
+            .content_after
+            .push_front((content, content_type).into());
     }
 
     /// Replaces the text chunk with the `content`.
@@ -252,8 +257,8 @@ impl<'i> TextChunk<'i> {
     /// assert_eq!(html, r#"<div>Qux</div>"#);
     /// ```
     #[inline]
-    pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.replace(content, content_type);
+    pub fn replace(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.replace((content, content_type).into());
     }
 
     /// Removes the text chunk.

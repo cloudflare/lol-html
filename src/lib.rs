@@ -206,7 +206,7 @@ cfg_if! {
         };
 
         pub use self::rewritable_units::{
-            EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
+            EndTag, Serialize, StartTag, Token, TokenCaptureFlags,
         };
 
         pub use self::memory::SharedMemoryLimiter;

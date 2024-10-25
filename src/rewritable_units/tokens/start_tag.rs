@@ -3,7 +3,7 @@ use super::{Mutations, Serialize, Token};
 use crate::base::Bytes;
 use crate::errors::RewritingError;
 use crate::html::Namespace;
-use crate::rewritable_units::ContentType;
+use crate::html_content::ContentType;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -112,7 +112,9 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method append `content` to the previously inserted content.
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.before(content, content_type);
+        self.mutations
+            .content_before
+            .push_back((content, content_type).into());
     }
 
     /// Inserts `content` after the start tag.
@@ -120,7 +122,9 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method prepend `content` to the previously inserted content.
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.after(content, content_type);
+        self.mutations
+            .content_after
+            .push_front((content, content_type).into());
     }
 
     /// Replaces the start tag with `content`.
@@ -128,7 +132,7 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method overwrite previous replacement content.
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.replace(content, content_type);
+        self.mutations.replace((content, content_type).into());
     }
 
     /// Removes the start tag.

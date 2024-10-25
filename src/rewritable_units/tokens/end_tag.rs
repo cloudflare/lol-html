@@ -1,7 +1,7 @@
 use super::{Mutations, Token};
 use crate::base::Bytes;
 use crate::errors::RewritingError;
-use crate::rewritable_units::ContentType;
+use crate::html_content::ContentType;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -69,7 +69,9 @@ impl<'i> EndTag<'i> {
     /// Consequent calls to the method append `content` to the previously inserted content.
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.before(content, content_type);
+        self.mutations
+            .content_before
+            .push_back((content, content_type).into());
     }
 
     /// Inserts `content` after the end tag.
@@ -77,7 +79,9 @@ impl<'i> EndTag<'i> {
     /// Consequent calls to the method prepend `content` to the previously inserted content.
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.after(content, content_type);
+        self.mutations
+            .content_after
+            .push_front((content, content_type).into());
     }
 
     /// Replaces the end tag with `content`.
@@ -85,7 +89,7 @@ impl<'i> EndTag<'i> {
     /// Consequent calls to the method overwrite previous replacement content.
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.replace(content, content_type);
+        self.mutations.replace((content, content_type).into());
     }
 
     /// Removes the end tag.

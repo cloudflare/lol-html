@@ -16,33 +16,29 @@ pub trait Serialize {
 macro_rules! impl_serialize {
     ($Token:ident) => {
         impl crate::rewritable_units::Serialize for $Token<'_> {
-            #[inline(always)]
+            #[inline]
             fn into_bytes(
-                self,
+                mut self,
                 output_handler: &mut dyn FnMut(&[u8]),
-            ) -> Result<(), RewritingError> {
-                let Mutations {
-                    content_before,
-                    replacement,
-                    content_after,
-                    removed,
-                    ..
-                } = &self.mutations;
+            ) -> Result<(), crate::errors::RewritingError> {
+                let content_before = ::std::mem::take(&mut self.mutations.content_before);
+                content_before
+                    .into_bytes(self.mutations.encoding, output_handler)
+                    .map_err(crate::errors::RewritingError::ContentHandlerError)?;
 
-                if !content_before.is_empty() {
-                    output_handler(content_before);
+                if !self.mutations.removed {
+                    self.serialize_self(encoder.output_handler())?;
+                } else {
+                    self.mutations
+                        .replacement
+                        .into_bytes(self.mutations.encoding, output_handler)
+                        .map_err(crate::errors::RewritingError::ContentHandlerError)?;
                 }
 
-                if !removed {
-                    self.serialize_self(output_handler)?;
-                } else if !replacement.is_empty() {
-                    output_handler(replacement);
-                }
-
-                if !content_after.is_empty() {
-                    output_handler(content_after);
-                }
-                Ok(())
+                self.mutations
+                    .content_after
+                    .into_bytes(self.mutations.encoding, output_handler)
+                    .map_err(crate::errors::RewritingError::ContentHandlerError)
             }
         }
     };
