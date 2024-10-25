@@ -1,4 +1,5 @@
 use crate::base::Bytes;
+use crate::errors::RewritingError;
 use crate::rewritable_units::{Serialize, Token};
 use encoding_rs::Encoding;
 use std::any::Any;
@@ -114,10 +115,11 @@ impl_user_data!(Doctype<'_>);
 
 impl Serialize for &Doctype<'_> {
     #[inline]
-    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if !self.removed() {
             output_handler(&self.raw);
         }
+        Ok(())
     }
 }
 

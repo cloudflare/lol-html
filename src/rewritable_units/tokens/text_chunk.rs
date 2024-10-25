@@ -1,5 +1,6 @@
 use super::{Mutations, Token};
 use crate::base::Bytes;
+use crate::errors::RewritingError;
 use crate::html::TextType;
 use encoding_rs::Encoding;
 use std::any::Any;
@@ -275,10 +276,14 @@ impl<'i> TextChunk<'i> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn serialize_from_parts(
+        &self,
+        output_handler: &mut dyn FnMut(&[u8]),
+    ) -> Result<(), RewritingError> {
         if !self.text.is_empty() {
             output_handler(&Bytes::from_str(&self.text, self.encoding));
         }
+        Ok(())
     }
 }
 
