@@ -95,7 +95,7 @@ impl PartialEq<Tag> for LocalNameHash {
     }
 }
 
-/// LocalName is used for the comparison of tag names.
+/// `LocalName` is used for the comparison of tag names.
 /// In the majority of cases it will be represented as a hash, however for long
 /// non-standard tag names it fallsback to the Name representation.
 #[derive(Clone, Debug, Eq, Hash)]

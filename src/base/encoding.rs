@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 /// This serves as a map from integer to [`Encoding`], which allows more efficient
-/// sets/gets of the [SharedEncoding].
+/// sets/gets of the [`SharedEncoding`].
 static ALL_ENCODINGS: [&Encoding; 228] = [
     &encoding_rs::WINDOWS_1252_INIT,
     &encoding_rs::ISO_8859_2_INIT,
@@ -247,9 +247,9 @@ fn encoding_to_index(encoding: AsciiCompatibleEncoding) -> usize {
 
 /// A charset encoding that can be shared and modified.
 ///
-/// This is, for instance, used to adapt the charset dynamically in a [crate::HtmlRewriter] if it
+/// This is, for instance, used to adapt the charset dynamically in a [`crate::HtmlRewriter`] if it
 /// encounters a `meta` tag that specifies the charset (that behavior is dependent on
-/// [crate::Settings::adjust_charset_on_meta_tag]).
+/// [`crate::Settings::adjust_charset_on_meta_tag`]).
 #[derive(Clone)]
 pub struct SharedEncoding {
     encoding: Arc<AtomicUsize>,

@@ -43,7 +43,7 @@ pub use self::rewriter::{
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
 
-/// These module contains types to work with [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+/// These module contains types to work with [`Send`]able [`HtmlRewriter`]s.
 pub mod send {
     use crate::rewriter::{
         CommentHandlerSend, DoctypeHandlerSend, ElementHandlerSend, EndHandlerSend,
@@ -75,7 +75,7 @@ pub mod send {
     /// [`TextHandler`](crate::TextHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type TextHandler<'h> = TextHandlerSend<'h>;
 
-    /// [`Element`](crate::Element) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    /// [`Element`](crate::rewritable_units::Element) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type Element<'r, 't> = crate::rewritable_units::Element<'r, 't, SendHandlerTypes>;
 }
 
