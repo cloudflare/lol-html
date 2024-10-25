@@ -9,15 +9,7 @@ documentation = "https://docs.rs/lol-html"
 categories = ["parser-implementations", "web-programming"]
 keywords = ["html", "css-selectors", "parser", "rewriter", "streaming"]
 readme = "README.md"
-include = [
-    "/Cargo.toml",
-    "/LICENSE",
-    "/README.md",
-    "/src",
-    "/tests",
-    "/media",
-    "/benches"
-]
+include = ["/Cargo.toml", "/LICENSE", "/README.md", "/media", "/src"]
 autotests = false
 edition = "2021"
 
