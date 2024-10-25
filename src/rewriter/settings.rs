@@ -242,11 +242,11 @@ impl<'h, F: FnOnce(&mut DocumentEnd) -> HandlerResult + Send + 'h> IntoHandler<E
 
 /// Specifies element content handlers associated with a selector.
 pub struct ElementContentHandlers<'h, H: HandlerTypes = LocalHandlerTypes> {
-    /// Element handler. See [H::ElementHandler].
+    /// Element handler. See [`HandlerTypes::ElementHandler`].
     pub element: Option<H::ElementHandler<'h>>,
-    /// Comment handler. See [H::CommentHandler].
+    /// Comment handler. See [`HandlerTypes::CommentHandler`].
     pub comments: Option<H::CommentHandler<'h>>,
-    /// Text handler. See [H::TextHandler].
+    /// Text handler. See [`HandlerTypes::TextHandler`].
     pub text: Option<H::TextHandler<'h>>,
 }
 
@@ -302,13 +302,13 @@ impl<'h, H: HandlerTypes> ElementContentHandlers<'h, H> {
 /// </html>
 /// ```
 pub struct DocumentContentHandlers<'h, H: HandlerTypes = LocalHandlerTypes> {
-    /// Doctype handler. See [H::DoctypeHandler].
+    /// Doctype handler. See [`HandlerTypes::DoctypeHandler`].
     pub doctype: Option<H::DoctypeHandler<'h>>,
-    /// Comment handler. See [H::CommentHandler].
+    /// Comment handler. See [`HandlerTypes::CommentHandler`].
     pub comments: Option<H::CommentHandler<'h>>,
-    /// Text handler. See [H::TextHandler].
+    /// Text handler. See [`HandlerTypes::TextHandler`].
     pub text: Option<H::TextHandler<'h>>,
-    /// End handler. See [H::EndHandler].
+    /// End handler. See [`HandlerTypes::EndHandler`].
     pub end: Option<H::EndHandler<'h>>,
 }
 

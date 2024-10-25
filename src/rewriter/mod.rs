@@ -23,7 +23,7 @@ use thiserror::Error;
 /// This is an encoding known to be ASCII-compatible.
 ///
 /// Non-ASCII-compatible encodings (`UTF-16LE`, `UTF-16BE`, `ISO-2022-JP` and
-/// `replacement`) are not supported by lol_html.
+/// `replacement`) are not supported by `lol_html`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct AsciiCompatibleEncoding(&'static Encoding);
 
