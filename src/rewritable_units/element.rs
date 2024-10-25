@@ -1,4 +1,4 @@
-use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag};
+use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag, StringChunk};
 use crate::base::Bytes;
 use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
 use encoding_rs::Encoding;
@@ -89,7 +89,9 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     #[inline]
     fn remove_content(&mut self) {
         self.start_tag.mutations.content_after.clear();
-        self.end_tag_mutations_mut().content_before.clear();
+        if let Some(end) = &mut self.end_tag_mutations {
+            end.content_before.clear();
+        }
         self.should_remove_content = true;
     }
 
@@ -232,7 +234,10 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.mutations.before(content, content_type);
+        self.start_tag
+            .mutations
+            .content_before
+            .push_back((content, content_type).into());
     }
 
     /// Inserts `content` after the element.
@@ -265,11 +270,16 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
+        self.after_chunk((content, content_type).into());
+    }
+
+    fn after_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
-            self.end_tag_mutations_mut().after(content, content_type);
+            &mut self.end_tag_mutations_mut().content_after
         } else {
-            self.start_tag.mutations.after(content, content_type);
+            &mut self.start_tag.mutations.content_after
         }
+        .push_front(chunk);
     }
 
     /// Prepends `content` to the element's inner content, i.e. inserts content right after
@@ -309,8 +319,12 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn prepend(&mut self, content: &str, content_type: ContentType) {
+        self.prepend_chunk((content, content_type).into());
+    }
+
+    fn prepend_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
-            self.start_tag.mutations.after(content, content_type);
+            self.start_tag.mutations.content_after.push_front(chunk);
         }
     }
 
@@ -351,8 +365,12 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
+        self.append_chunk((content, content_type).into());
+    }
+
+    fn append_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
-            self.end_tag_mutations_mut().before(content, content_type);
+            self.end_tag_mutations_mut().content_before.push_back(chunk);
         }
     }
 
@@ -392,9 +410,13 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
+        self.set_inner_content_chunk((content, content_type).into());
+    }
+
+    fn set_inner_content_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
             self.remove_content();
-            self.start_tag.mutations.after(content, content_type);
+            self.start_tag.mutations.content_after.push_front(chunk);
         }
     }
 
@@ -427,7 +449,11 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.mutations.replace(content, content_type);
+        self.replace_chunk((content, content_type).into());
+    }
+
+    fn replace_chunk(&mut self, chunk: StringChunk) {
+        self.start_tag.mutations.replace(chunk);
 
         if self.can_have_content {
             self.remove_content();

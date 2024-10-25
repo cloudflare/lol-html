@@ -16,32 +16,31 @@ macro_rules! impl_serialize {
     ($Token:ident) => {
         impl crate::rewritable_units::Serialize for $Token<'_> {
             #[inline]
-            fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
-                let Mutations {
-                    content_before,
-                    replacement,
-                    content_after,
-                    removed,
-                    ..
-                } = &self.mutations;
+            fn into_bytes(
+                mut self,
+                output_handler: &mut dyn FnMut(&[u8]),
+            ) -> Result<(), crate::errors::RewritingError> {
+                let content_before = ::std::mem::take(&mut self.mutations.content_before);
+                content_before
+                    .into_bytes(self.mutations.encoding, output_handler)
+                    .map_err(crate::errors::RewritingError::ContentHandlerError)?;
 
-                if !content_before.is_empty() {
-                    output_handler(content_before);
-                }
-
-                if !removed {
+                if !self.mutations.removed {
                     match self.raw() {
                         Some(raw) => output_handler(raw),
                         None => self.serialize_from_parts(output_handler)?,
                     }
-                } else if !replacement.is_empty() {
-                    output_handler(replacement);
+                } else {
+                    self.mutations
+                        .replacement
+                        .into_bytes(self.mutations.encoding, output_handler)
+                        .map_err(crate::errors::RewritingError::ContentHandlerError)?;
                 }
 
-                if !content_after.is_empty() {
-                    output_handler(content_after);
-                }
-                Ok(())
+                self.mutations
+                    .content_after
+                    .into_bytes(self.mutations.encoding, output_handler)
+                    .map_err(crate::errors::RewritingError::ContentHandlerError)
             }
         }
     };

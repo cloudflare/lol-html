@@ -106,7 +106,9 @@ impl<'i> Comment<'i> {
     /// ```
     #[inline]
     pub fn before(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.before(content, content_type);
+        self.mutations
+            .content_before
+            .push_back((content, content_type).into());
     }
 
     /// Inserts `content` after the comment.
@@ -138,7 +140,9 @@ impl<'i> Comment<'i> {
     /// ```
     #[inline]
     pub fn after(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.after(content, content_type);
+        self.mutations
+            .content_after
+            .push_front((content, content_type).into());
     }
 
     /// Replaces the comment with the `content`.
@@ -170,7 +174,7 @@ impl<'i> Comment<'i> {
     /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.replace(content, content_type);
+        self.mutations.replace((content, content_type).into());
     }
 
     /// Removes the comment.
