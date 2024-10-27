@@ -175,6 +175,7 @@ impl<'i> StartTag<'i> {
 impl_serialize!(StartTag);
 
 impl Debug for StartTag<'_> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("StartTag")
             .field("name", &self.name())

@@ -198,6 +198,7 @@ impl_serialize!(Comment);
 impl_user_data!(Comment<'_>);
 
 impl Debug for Comment<'_> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Comment")
             .field("text", &self.text())

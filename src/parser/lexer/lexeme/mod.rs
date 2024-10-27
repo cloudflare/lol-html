@@ -55,6 +55,7 @@ impl<'i, T> Lexeme<'i, T> {
 }
 
 impl<T: Debug> Debug for Lexeme<'_, T> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // as_debug_string() is UTF-8, and the range for the input encoding is not guaranteed to match it
         let (before_raw, rest) = self.input.split_at(self.raw_range.start);

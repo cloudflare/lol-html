@@ -77,6 +77,7 @@ impl AttributeComparisonExpr {
 }
 
 impl Debug for AttributeComparisonExpr {
+    #[cold]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("AttributeExpr")
             .field("name", &self.name)

@@ -279,6 +279,7 @@ impl_serialize!(TextChunk);
 impl_user_data!(TextChunk<'_>);
 
 impl Debug for TextChunk<'_> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("TextChunk")
             .field("text", &self.as_str())

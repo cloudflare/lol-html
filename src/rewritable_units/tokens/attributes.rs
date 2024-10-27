@@ -129,6 +129,7 @@ impl Serialize for Attribute<'_> {
 }
 
 impl Debug for Attribute<'_> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Attribute")
             .field("name", &self.name())

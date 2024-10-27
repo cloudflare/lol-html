@@ -576,6 +576,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 impl_user_data!(Element<'_, '_>);
 
 impl<H: HandlerTypes> Debug for Element<'_, '_, H> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Element")
             .field("tag_name", &self.tag_name())
