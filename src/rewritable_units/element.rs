@@ -61,14 +61,15 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     }
 
     fn tag_name_bytes_from_str(&self, name: &str) -> Result<Bytes<'static>, TagNameError> {
-        match name.chars().next() {
+        match name.as_bytes().first() {
             Some(ch) if !ch.is_ascii_alphabetic() => Err(TagNameError::InvalidFirstCharacter),
             Some(_) => {
-                if let Some(ch) = name
-                    .chars()
-                    .find(|&ch| matches!(ch, ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>'))
+                if let Some(ch) =
+                    name.as_bytes().iter().copied().find(|&ch| {
+                        matches!(ch, b' ' | b'\n' | b'\r' | b'\t' | b'\x0C' | b'/' | b'>')
+                    })
                 {
-                    Err(TagNameError::ForbiddenCharacter(ch))
+                    Err(TagNameError::ForbiddenCharacter(ch as char))
                 } else {
                     // NOTE: if character can't be represented in the given
                     // encoding then encoding_rs replaces it with a numeric
