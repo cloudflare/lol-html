@@ -57,11 +57,13 @@ impl<'i> Attribute<'i> {
     ) -> Result<Bytes<'static>, AttributeNameError> {
         if name.is_empty() {
             Err(AttributeNameError::Empty)
-        } else if let Some(ch) = name
-            .chars()
-            .find(|&ch| matches!(ch, ' ' | '\n' | '\r' | '\t' | '\x0C' | '/' | '>' | '='))
-        {
-            Err(AttributeNameError::ForbiddenCharacter(ch))
+        } else if let Some(ch) = name.as_bytes().iter().copied().find(|&ch| {
+            matches!(
+                ch,
+                b' ' | b'\n' | b'\r' | b'\t' | b'\x0C' | b'/' | b'>' | b'='
+            )
+        }) {
+            Err(AttributeNameError::ForbiddenCharacter(ch as char))
         } else {
             // NOTE: if character can't be represented in the given
             // encoding then encoding_rs replaces it with a numeric
