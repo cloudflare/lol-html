@@ -43,13 +43,15 @@ pub struct Parser<S: ParserOutputSink> {
 }
 
 impl<S: ParserOutputSink> Parser<S> {
+    #[inline]
+    #[must_use]
     pub fn new(output_sink: S, initial_directive: ParserDirective, strict: bool) -> Self {
         let context = ParserContext {
             output_sink,
             tree_builder_simulator: TreeBuilderSimulator::new(strict),
         };
 
-        Parser {
+        Self {
             lexer: Lexer::new(),
             tag_scanner: TagScanner::new(),
             current_directive: initial_directive,

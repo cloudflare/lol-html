@@ -15,6 +15,8 @@ pub struct DocumentEnd<'a> {
 }
 
 impl<'a> DocumentEnd<'a> {
+    #[inline]
+    #[must_use]
     pub(crate) fn new(output_sink: &'a mut dyn OutputSink, encoding: &'static Encoding) -> Self {
         DocumentEnd {
             output_sink,
@@ -49,7 +51,7 @@ impl<'a> DocumentEnd<'a> {
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
         content_to_bytes(content, content_type, self.encoding, &mut |c: &[u8]| {
-            self.output_sink.handle_chunk(c)
+            self.output_sink.handle_chunk(c);
         });
     }
 }
@@ -91,7 +93,7 @@ mod tests {
             end.append("<div></div>", ContentType::Html);
         });
 
-        assert_eq!(output, "<div></div>")
+        assert_eq!(output, "<div></div>");
     }
 
     #[test]

@@ -17,7 +17,7 @@ use self::ambiguity_guard::AmbiguityGuard;
 use crate::base::Bytes;
 use crate::html::{LocalNameHash, Namespace, Tag, TextType};
 use crate::parser::{TagLexeme, TagTokenOutline};
-use TagTokenOutline::*;
+use TagTokenOutline::{EndTag, StartTag};
 
 pub use self::ambiguity_guard::ParsingAmbiguityError;
 
@@ -37,7 +37,7 @@ pub enum TreeBuilderFeedback {
 impl From<TextType> for TreeBuilderFeedback {
     #[inline]
     fn from(text_type: TextType) -> Self {
-        TreeBuilderFeedback::SwitchTextType(text_type)
+        Self::SwitchTextType(text_type)
     }
 }
 
@@ -120,8 +120,10 @@ pub struct TreeBuilderSimulator {
 }
 
 impl TreeBuilderSimulator {
+    #[inline]
+    #[must_use]
     pub fn new(strict: bool) -> Self {
-        let mut simulator = TreeBuilderSimulator {
+        let mut simulator = Self {
             ns_stack: Vec::with_capacity(DEFAULT_NS_STACK_CAPACITY),
             current_ns: Namespace::Html,
             ambiguity_guard: AmbiguityGuard::default(),
@@ -252,7 +254,7 @@ impl TreeBuilderSimulator {
             // to decide on foreign context exit
             return request_lexeme(|this, lexeme| {
                 expect_tag!(lexeme, StartTag { ref attributes, .. } => {
-                    for attr in attributes.iter() {
+                    for attr in attributes {
                         let name = lexeme.part(attr.name);
 
                         if eq_case_insensitive(&name, b"color")
@@ -281,7 +283,7 @@ impl TreeBuilderSimulator {
                     let name = lexeme.part(name);
 
                     if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
-                        for attr in attributes.iter() {
+                        for attr in attributes {
                             let name = lexeme.part(attr.name);
                             let value = lexeme.part(attr.value);
 

@@ -14,7 +14,7 @@ lazy_static! {
 }
 
 #[inline]
-fn is_attr_whitespace(b: u8) -> bool {
+const fn is_attr_whitespace(b: u8) -> bool {
     b == b' ' || b == b'\n' || b == b'\r' || b == b'\t' || b == b'\x0c'
 }
 
@@ -30,6 +30,7 @@ pub struct AttributeMatcher<'i> {
 
 impl<'i> AttributeMatcher<'i> {
     #[inline]
+    #[must_use]
     pub fn new(input: &'i Bytes<'i>, attributes: &'i AttributeBuffer, ns: Namespace) -> Self {
         AttributeMatcher {
             input,
@@ -59,7 +60,7 @@ impl<'i> AttributeMatcher<'i> {
 
                 true
             })
-            .cloned()
+            .copied()
     }
 
     #[inline]
@@ -69,11 +70,13 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
+    #[must_use]
     pub fn has_attribute(&self, lowercased_name: &Bytes) -> bool {
         self.find(lowercased_name).is_some()
     }
 
     #[inline]
+    #[must_use]
     pub fn has_id(&self, id: &Bytes) -> bool {
         match self.id.borrow_with(|| self.get_value(&ID_ATTR)) {
             Some(actual_id) => actual_id == id,
@@ -82,6 +85,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
+    #[must_use]
     pub fn has_class(&self, class_name: &Bytes) -> bool {
         match self.class.borrow_with(|| self.get_value(&CLASS_ATTR)) {
             Some(class) => class
@@ -93,10 +97,7 @@ impl<'i> AttributeMatcher<'i> {
 
     #[inline]
     fn value_matches(&self, name: &Bytes, matcher: impl Fn(Bytes) -> bool) -> bool {
-        match self.get_value(name) {
-            Some(value) => matcher(value),
-            None => false,
-        }
+        self.get_value(name).is_some_and(matcher)
     }
 
     #[inline]
@@ -176,9 +177,8 @@ impl<'i> AttributeMatcher<'i> {
                 .case_sensitivity
                 .to_unconditional(self.is_html_element);
 
-            let (first_byte, rest) = match operand.value.split_first() {
-                Some((&f, r)) => (f, r),
-                None => return false,
+            let Some((&first_byte, rest)) = operand.value.split_first() else {
+                return false;
             };
 
             let first_byte_searcher: Box<dyn Fn(_) -> _> = match case_sensitivity {

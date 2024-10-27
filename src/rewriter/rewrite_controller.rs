@@ -81,7 +81,7 @@ impl<'h, H: HandlerTypes> TransformController for HtmlRewriteController<'h, H> {
                 let mut match_handler = |m| self.handlers_dispatcher.start_matching(m);
 
                 match vm.exec_for_start_tag(local_name, ns, &mut match_handler) {
-                    Ok(_) => Ok(self.get_capture_flags()),
+                    Ok(()) => Ok(self.get_capture_flags()),
                     Err(VmError::InfoRequest(req)) => Self::respond_to_aux_info_request(req),
                     Err(VmError::MemoryLimitExceeded(e)) => Err(DispatcherError::RewritingError(
                         RewritingError::MemoryLimitExceeded(e),

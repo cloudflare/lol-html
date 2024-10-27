@@ -53,13 +53,13 @@ impl Align for TagTokenOutline {
     #[inline]
     fn align(&mut self, offset: usize) {
         match self {
-            TagTokenOutline::StartTag {
+            Self::StartTag {
                 name, attributes, ..
             } => {
                 name.align(offset);
                 attributes.as_mut_slice().align(offset);
             }
-            TagTokenOutline::EndTag { name, .. } => name.align(offset),
+            Self::EndTag { name, .. } => name.align(offset),
         }
     }
 }
@@ -68,8 +68,8 @@ impl Align for NonTagContentTokenOutline {
     #[inline]
     fn align(&mut self, offset: usize) {
         match self {
-            NonTagContentTokenOutline::Comment(text) => text.align(offset),
-            NonTagContentTokenOutline::Doctype {
+            Self::Comment(text) => text.align(offset),
+            Self::Doctype {
                 name,
                 public_id,
                 system_id,

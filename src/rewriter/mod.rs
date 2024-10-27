@@ -29,6 +29,7 @@ pub struct AsciiCompatibleEncoding(&'static Encoding);
 
 impl AsciiCompatibleEncoding {
     /// Returns `Some` if `Encoding` is ascii-compatible, or `None` otherwise.
+    #[must_use]
     pub fn new(encoding: &'static Encoding) -> Option<Self> {
         if encoding.is_ascii_compatible() {
             Some(Self(encoding))
@@ -37,14 +38,15 @@ impl AsciiCompatibleEncoding {
         }
     }
 
-    fn from_mimetype(mime: &Mime) -> Option<AsciiCompatibleEncoding> {
+    fn from_mimetype(mime: &Mime) -> Option<Self> {
         mime.get_param("charset")
             .and_then(|cs| Encoding::for_label_no_replacement(cs.as_str().as_bytes()))
-            .and_then(AsciiCompatibleEncoding::new)
+            .and_then(Self::new)
     }
 
     /// Returns the most commonly used UTF-8 encoding.
-    pub fn utf_8() -> AsciiCompatibleEncoding {
+    #[must_use]
+    pub fn utf_8() -> Self {
         Self(encoding_rs::UTF_8)
     }
 }
@@ -279,7 +281,7 @@ fn handler_adjust_charset_on_meta_tag<'h, H: HandlerTypes>(
             .and_then(AsciiCompatibleEncoding::from_mimetype);
 
         if let Some(charset) = attr_charset.or(attr_http_equiv) {
-            encoding.set(charset)
+            encoding.set(charset);
         }
 
         Ok(())
@@ -455,7 +457,7 @@ mod tests {
 
     #[test]
     fn doctype_info() {
-        for &enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for &enc in &ASCII_COMPATIBLE_ENCODINGS {
             let mut doctypes = Vec::default();
 
             {
@@ -502,7 +504,7 @@ mod tests {
 
     #[test]
     fn rewrite_start_tags() {
-        for &enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for &enc in &ASCII_COMPATIBLE_ENCODINGS {
             let actual: String = {
                 let mut output = Output::new(enc);
 
@@ -553,7 +555,7 @@ mod tests {
 
     #[test]
     fn rewrite_document_content() {
-        for &enc in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for &enc in &ASCII_COMPATIBLE_ENCODINGS {
             let actual: String = {
                 let mut output = Output::new(enc);
 
@@ -685,7 +687,7 @@ mod tests {
                 .as_bytes()
                 .to_vec(),
             vec![0xd5, 0xec, 0xb3, 0xcb, 0xdc],
-            r#"!</body></html>"#.as_bytes().to_vec(),
+            br"!</body></html>".to_vec(),
         ]
         .into_iter()
         .concat();
@@ -739,7 +741,7 @@ mod tests {
         let html: Vec<u8> = [
             r#"<meta http-equiv="content-type" content="text/html; charset=windows-1251"><html><head></head><body>I love "#.as_bytes().to_vec(),
             vec![0xd5, 0xec, 0xb3, 0xcb, 0xdc],
-            r#"!</body></html>"#.as_bytes().to_vec(),
+            br"!</body></html>".to_vec(),
         ].into_iter().concat();
 
         let expected: Vec<u8> = html
@@ -860,9 +862,9 @@ mod tests {
 
                 let mut err = None;
 
-                for chunk in chunks.iter() {
+                for chunk in &chunks {
                     match rewriter.write(chunk.as_bytes()) {
-                        Ok(_) => (),
+                        Ok(()) => (),
                         Err(e) => {
                             err = Some(e);
                             break;
@@ -872,7 +874,7 @@ mod tests {
 
                 if err.is_none() {
                     match rewriter.end() {
-                        Ok(_) => (),
+                        Ok(()) => (),
                         Err(e) => err = Some(e),
                     }
                 }

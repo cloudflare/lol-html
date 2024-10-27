@@ -1,3 +1,5 @@
+#![allow(clippy::needless_pass_by_value)]
+
 mod ast;
 mod attribute_matcher;
 mod compiler;
@@ -95,7 +97,7 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
         branch: &ExecutionBranch<E::MatchPayload>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        for &payload in branch.matched_payload.iter() {
+        for &payload in &branch.matched_payload {
             let element_payload = self.stack_item.element_data.matched_payload_mut();
 
             if !element_payload.contains(&payload) {
@@ -149,6 +151,7 @@ where
     E: ElementData + Send,
 {
     #[inline]
+    #[must_use]
     pub fn new(
         ast: Ast<E::MatchPayload>,
         encoding: &'static Encoding,
@@ -158,7 +161,7 @@ where
         let program = Compiler::new(encoding).compile(ast);
         let enable_nth_of_type = program.enable_nth_of_type;
 
-        SelectorMatchingVm {
+        Self {
             program,
             enable_esi_tags,
             stack: Stack::new(memory_limiter, enable_nth_of_type),
@@ -395,7 +398,7 @@ where
                         recovery_point: addr - start + 1,
                     });
                 }
-                _ => (),
+                TryExecResult::Fail => (),
             }
         }
 
@@ -580,6 +583,35 @@ mod tests {
         }
     }
 
+    pub struct TestTransformController<T: FnMut(&mut Token)>(T);
+
+    impl<T: FnMut(&mut Token)> TransformController for TestTransformController<T> {
+        fn initial_capture_flags(&self) -> TokenCaptureFlags {
+            TokenCaptureFlags::all()
+        }
+
+        fn handle_start_tag(&mut self, _: LocalName, _: Namespace) -> StartTagHandlingResult<Self> {
+            Ok(TokenCaptureFlags::NEXT_START_TAG)
+        }
+
+        fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
+            TokenCaptureFlags::all()
+        }
+
+        fn handle_end(&mut self, _: &mut DocumentEnd) -> Result<(), RewritingError> {
+            Ok(())
+        }
+
+        fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
+            (self.0)(token);
+            Ok(())
+        }
+
+        fn should_emit_content(&self) -> bool {
+            true
+        }
+    }
+
     pub fn test_with_token(
         html: &str,
         encoding: &'static Encoding,
@@ -596,39 +628,6 @@ mod tests {
         // how our own code works with non-ASCII characters.
         if has_unmappable_characters {
             return;
-        }
-
-        pub struct TestTransformController<T: FnMut(&mut Token)>(T);
-
-        impl<T: FnMut(&mut Token)> TransformController for TestTransformController<T> {
-            fn initial_capture_flags(&self) -> TokenCaptureFlags {
-                TokenCaptureFlags::all()
-            }
-
-            fn handle_start_tag(
-                &mut self,
-                _: LocalName,
-                _: Namespace,
-            ) -> StartTagHandlingResult<Self> {
-                Ok(TokenCaptureFlags::NEXT_START_TAG)
-            }
-
-            fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
-                TokenCaptureFlags::all()
-            }
-
-            fn handle_end(&mut self, _: &mut DocumentEnd) -> Result<(), RewritingError> {
-                Ok(())
-            }
-
-            fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
-                (self.0)(token);
-                Ok(())
-            }
-
-            fn should_emit_content(&self) -> bool {
-                true
-            }
         }
 
         let mut transform_stream = TransformStream::new(TransformStreamSettings {

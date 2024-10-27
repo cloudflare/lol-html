@@ -33,6 +33,7 @@ pub enum PseudoElementStub {}
 
 impl ToCss for PseudoElementStub {
     fn to_css<W: fmt::Write>(&self, _dest: &mut W) -> fmt::Result {
+        #[allow(clippy::uninhabited_references)]
         match *self {}
     }
 }
@@ -48,20 +49,24 @@ impl NonTSPseudoClass for NonTSPseudoClassStub {
     type Impl = SelectorImplDescriptor;
 
     fn is_active_or_hover(&self) -> bool {
+        #[allow(clippy::uninhabited_references)]
         match *self {}
     }
 
     fn is_user_action_state(&self) -> bool {
+        #[allow(clippy::uninhabited_references)]
         match *self {}
     }
 
     fn has_zero_specificity(&self) -> bool {
+        #[allow(clippy::uninhabited_references)]
         match *self {}
     }
 }
 
 impl ToCss for NonTSPseudoClassStub {
     fn to_css<W: fmt::Write>(&self, _dest: &mut W) -> fmt::Result {
+        #[allow(clippy::uninhabited_references)]
         match *self {}
     }
 }
@@ -134,7 +139,7 @@ impl SelectorsParser {
     fn validate(
         selector_list: SelectorList<SelectorImplDescriptor>,
     ) -> Result<SelectorList<SelectorImplDescriptor>, SelectorError> {
-        for selector in selector_list.0.iter() {
+        for selector in &selector_list.0 {
             for component in selector.iter_raw_match_order() {
                 Self::validate_component(component)?;
             }
@@ -214,6 +219,6 @@ impl FromStr for Selector {
 
     #[inline]
     fn from_str(selector: &str) -> Result<Self, Self::Err> {
-        Ok(Selector(SelectorsParser::parse(selector)?))
+        Ok(Self(SelectorsParser::parse(selector)?))
     }
 }

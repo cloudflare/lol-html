@@ -22,7 +22,7 @@ struct HandlerVec<H> {
 
 impl<H> Default for HandlerVec<H> {
     fn default() -> Self {
-        HandlerVec {
+        Self {
             items: Vec::default(),
             user_count: 0,
         }
@@ -68,7 +68,7 @@ impl<H> HandlerVec<H> {
         &mut self,
         mut cb: impl FnMut(&mut H) -> HandlerResult,
     ) -> HandlerResult {
-        for item in self.items.iter_mut() {
+        for item in &mut self.items {
             if item.user_count > 0 {
                 cb(&mut item.handler)?;
             }
@@ -82,7 +82,7 @@ impl<H> HandlerVec<H> {
         &mut self,
         mut cb: impl FnMut(&mut H) -> HandlerResult,
     ) -> HandlerResult {
-        for item in self.items.iter_mut() {
+        for item in &mut self.items {
             if item.user_count > 0 {
                 cb(&mut item.handler)?;
                 self.user_count -= item.user_count;

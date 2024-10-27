@@ -15,6 +15,7 @@ struct Anchor<'r> {
 }
 
 impl<'r> Anchor<'r> {
+    #[inline]
     pub fn new(poisoned: Rc<Cell<bool>>) -> Self {
         Anchor {
             poisoned,

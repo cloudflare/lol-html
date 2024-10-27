@@ -13,8 +13,8 @@ pub struct LimitedVec<T> {
 }
 
 impl<T> LimitedVec<T> {
-    pub fn new(limiter: SharedMemoryLimiter) -> Self {
-        LimitedVec {
+    pub const fn new(limiter: SharedMemoryLimiter) -> Self {
+        Self {
             vec: vec![],
             limiter,
         }
@@ -122,7 +122,7 @@ mod tests {
     #[test]
     fn max_limit() {
         let limiter = SharedMemoryLimiter::new(2);
-        let mut vector: LimitedVec<u8> = LimitedVec::new(limiter.clone());
+        let mut vector: LimitedVec<u8> = LimitedVec::new(limiter);
 
         vector.push(1).unwrap();
         vector.push(2).unwrap();

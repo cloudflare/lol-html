@@ -22,8 +22,10 @@ pub struct TextDecoder {
 }
 
 impl TextDecoder {
+    #[inline]
+    #[must_use]
     pub fn new(encoding: SharedEncoding) -> Self {
-        TextDecoder {
+        Self {
             encoding,
             pending_text_streaming_decoder: None,
             // TODO make adjustable

@@ -14,16 +14,19 @@ pub struct NthChild {
 impl NthChild {
     /// A first child with a step of 0 and an offset of 1
     #[inline]
-    pub fn first() -> Self {
+    #[must_use]
+    pub const fn first() -> Self {
         Self::new(0, 1)
     }
 
     #[inline]
-    pub fn new(step: i32, offset: i32) -> Self {
+    #[must_use]
+    pub const fn new(step: i32, offset: i32) -> Self {
         Self { step, offset }
     }
 
-    pub fn has_index(self, index: i32) -> bool {
+    #[must_use]
+    pub const fn has_index(self, index: i32) -> bool {
         let Self { offset, step } = self;
         // wrap to prevent panic/abort. we won't wrap around anyway, even with a
         // max offset value (i32::MAX) since index is always more than 0
@@ -61,7 +64,8 @@ pub struct AttributeComparisonExpr {
 
 impl AttributeComparisonExpr {
     #[inline]
-    pub fn new(
+    #[must_use]
+    pub const fn new(
         name: String,
         value: String,
         case_sensitivity: ParsedCaseSensitivity,
@@ -119,17 +123,15 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
     #[inline]
     fn from(component: &Component<SelectorImplDescriptor>) -> Self {
         match component {
-            Component::LocalName(n) => {
-                Condition::OnTagName(OnTagNameExpr::LocalName(n.name.to_owned()))
-            }
+            Component::LocalName(n) => Self::OnTagName(OnTagNameExpr::LocalName(n.name.clone())),
             Component::ExplicitUniversalType | Component::ExplicitAnyNamespace => {
-                Condition::OnTagName(OnTagNameExpr::ExplicitAny)
+                Self::OnTagName(OnTagNameExpr::ExplicitAny)
             }
-            Component::ExplicitNoNamespace => Condition::OnTagName(OnTagNameExpr::Unmatchable),
-            Component::ID(id) => Condition::OnAttributes(OnAttributesExpr::Id(id.to_owned())),
-            Component::Class(c) => Condition::OnAttributes(OnAttributesExpr::Class(c.to_owned())),
+            Component::ExplicitNoNamespace => Self::OnTagName(OnTagNameExpr::Unmatchable),
+            Component::ID(id) => Self::OnAttributes(OnAttributesExpr::Id(id.to_owned())),
+            Component::Class(c) => Self::OnAttributes(OnAttributesExpr::Class(c.to_owned())),
             Component::AttributeInNoNamespaceExists { local_name, .. } => {
-                Condition::OnAttributes(OnAttributesExpr::AttributeExists(local_name.to_owned()))
+                Self::OnAttributes(OnAttributesExpr::AttributeExists(local_name.to_owned()))
             }
             &Component::AttributeInNoNamespace {
                 ref local_name,
@@ -139,9 +141,9 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                 never_matches,
             } => {
                 if never_matches {
-                    Condition::OnTagName(OnTagNameExpr::Unmatchable)
+                    Self::OnTagName(OnTagNameExpr::Unmatchable)
                 } else {
-                    Condition::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(
+                    Self::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(
                         AttributeComparisonExpr::new(
                             local_name.to_owned(),
                             value.to_owned(),
@@ -151,17 +153,13 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                     ))
                 }
             }
-            Component::FirstChild => {
-                Condition::OnTagName(OnTagNameExpr::NthChild(NthChild::first()))
-            }
+            Component::FirstChild => Self::OnTagName(OnTagNameExpr::NthChild(NthChild::first())),
             &Component::NthChild(a, b) => {
-                Condition::OnTagName(OnTagNameExpr::NthChild(NthChild::new(a, b)))
+                Self::OnTagName(OnTagNameExpr::NthChild(NthChild::new(a, b)))
             }
-            Component::FirstOfType => {
-                Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::first()))
-            }
+            Component::FirstOfType => Self::OnTagName(OnTagNameExpr::NthOfType(NthChild::first())),
             &Component::NthOfType(a, b) => {
-                Condition::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(a, b)))
+                Self::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(a, b)))
             }
             // NOTE: the rest of the components are explicit namespace or
             // pseudo class-related. Ideally none of them should appear in
@@ -188,8 +186,8 @@ where
     E: PartialEq + Eq + Debug,
 {
     #[inline]
-    fn new(simple_expr: E, negation: bool) -> Self {
-        Expr {
+    const fn new(simple_expr: E, negation: bool) -> Self {
+        Self {
             simple_expr,
             negation,
         }
@@ -207,7 +205,7 @@ fn add_expr_to_list<E>(list: &mut Vec<Expr<E>>, expr: E, negation: bool)
 where
     E: PartialEq + Eq + Debug,
 {
-    list.push(Expr::new(expr, negation))
+    list.push(Expr::new(expr, negation));
 }
 
 impl Predicate {
@@ -236,7 +234,7 @@ where
     P: Hash + Eq,
 {
     fn new(predicate: Predicate) -> Self {
-        AstNode {
+        Self {
             predicate,
             children: Vec::default(),
             descendants: Vec::default(),
@@ -265,19 +263,17 @@ where
         branches: &mut Vec<AstNode<P>>,
         cumulative_node_count: &mut usize,
     ) -> usize {
-        match branches
+        branches
             .iter()
             .enumerate()
             .find(|(_, n)| n.predicate == predicate)
-        {
-            Some((i, _)) => i,
-            None => {
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| {
                 branches.push(AstNode::new(predicate));
                 *cumulative_node_count += 1;
 
                 branches.len() - 1
-            }
-        }
+            })
     }
 
     pub fn add_selector(&mut self, selector: &Selector, payload: P) {
@@ -308,7 +304,7 @@ where
                         ),
                     },
                     Component::Negation(c) => {
-                        c.iter().for_each(|c| predicate.add_component(c, true))
+                        c.iter().for_each(|c| predicate.add_component(c, true));
                     }
                     _ => predicate.add_component(component, false),
                 }
@@ -333,6 +329,7 @@ mod tests {
         };
     }
 
+    #[track_caller]
     fn assert_ast(selectors: &[&str], expected: Ast<usize>) {
         let mut ast = Ast::default();
 
@@ -343,13 +340,14 @@ mod tests {
         assert_eq!(ast, expected);
     }
 
+    #[track_caller]
     fn assert_err(selector: &str, expected_err: SelectorError) {
         assert_eq!(selector.parse::<Selector>().unwrap_err(), expected_err);
     }
 
     #[test]
     fn simple_non_attr_expression() {
-        vec![
+        for (selector, expected) in [
             (
                 "*",
                 Expr {
@@ -378,9 +376,7 @@ mod tests {
                     negation: true,
                 },
             ),
-        ]
-        .into_iter()
-        .for_each(|(selector, expected)| {
+        ] {
             assert_ast(
                 &[selector],
                 Ast {
@@ -396,12 +392,12 @@ mod tests {
                     cumulative_node_count: 1,
                 },
             );
-        });
+        }
     }
 
     #[test]
     fn simple_attr_expression() {
-        vec![
+        for (selector, expected) in [
             (
                 "#foo",
                 Expr {
@@ -521,9 +517,7 @@ mod tests {
                     negation: true,
                 },
             ),
-        ]
-        .into_iter()
-        .for_each(|(selector, expected)| {
+        ] {
             assert_ast(
                 &[selector],
                 Ast {
@@ -539,7 +533,7 @@ mod tests {
                     cumulative_node_count: 1,
                 },
             );
-        });
+        }
     }
 
     #[test]
@@ -667,7 +661,7 @@ mod tests {
                 }],
                 cumulative_node_count: 5,
             },
-        )
+        );
     }
 
     #[test]

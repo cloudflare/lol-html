@@ -17,8 +17,9 @@ pub struct SharedMemoryLimiter {
 }
 
 impl SharedMemoryLimiter {
-    pub fn new(max: usize) -> SharedMemoryLimiter {
-        SharedMemoryLimiter {
+    #[must_use]
+    pub fn new(max: usize) -> Self {
+        Self {
             current_usage: Arc::new(AtomicUsize::new(0)),
             max,
         }

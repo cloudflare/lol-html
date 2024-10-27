@@ -20,6 +20,8 @@ pub struct StartTag<'i> {
 }
 
 impl<'i> StartTag<'i> {
+    #[inline]
+    #[must_use]
     pub(super) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
@@ -41,7 +43,7 @@ impl<'i> StartTag<'i> {
 
     #[inline]
     #[doc(hidden)]
-    pub fn encoding(&self) -> &'static Encoding {
+    pub const fn encoding(&self) -> &'static Encoding {
         self.encoding
     }
 
@@ -135,7 +137,7 @@ impl<'i> StartTag<'i> {
     }
 
     #[inline]
-    fn raw(&self) -> Option<&Bytes> {
+    const fn raw(&self) -> Option<&Bytes> {
         self.raw.as_ref()
     }
 

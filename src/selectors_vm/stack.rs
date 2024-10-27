@@ -56,7 +56,8 @@ pub struct ChildCounter {
 
 impl ChildCounter {
     #[inline]
-    pub fn new_and_inc() -> Self {
+    #[must_use]
+    pub const fn new_and_inc() -> Self {
         Self { cumulative: 1 }
     }
 
@@ -66,7 +67,8 @@ impl ChildCounter {
     }
 
     #[inline]
-    pub fn is_nth(&self, nth: NthChild) -> bool {
+    #[must_use]
+    pub const fn is_nth(&self, nth: NthChild) -> bool {
         nth.has_index(self.cumulative)
     }
 }
@@ -176,6 +178,7 @@ pub struct StackItem<'i, E: ElementData> {
 
 impl<'i, E: ElementData> StackItem<'i, E> {
     #[inline]
+    #[must_use]
     pub fn new(local_name: LocalName<'i>) -> Self {
         StackItem {
             local_name,
@@ -212,7 +215,7 @@ pub struct Stack<E: ElementData> {
 
 impl<E: ElementData> Stack<E> {
     pub fn new(memory_limiter: SharedMemoryLimiter, enable_nth_of_type: bool) -> Self {
-        Stack {
+        Self {
             root_child_counter: Default::default(),
             typed_child_counters: if enable_nth_of_type {
                 Some(Default::default())
@@ -236,6 +239,7 @@ impl<E: ElementData> Stack<E> {
         }
     }
 
+    #[must_use]
     pub fn build_state<'a, 'i>(&'a self, name: &LocalName<'i>) -> SelectorState<'i>
     where
         'a: 'i, // 'a outlives 'i, required to downcast 'a lifetimes into 'i
@@ -254,6 +258,7 @@ impl<E: ElementData> Stack<E> {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_stack_directive(
         item: &StackItem<E>,
         ns: Namespace,
@@ -277,16 +282,17 @@ impl<E: ElementData> Stack<E> {
             .rposition(|item| item.local_name == local_name);
         if let Some(index) = pop_to_index {
             if let Some(c) = self.typed_child_counters.as_mut() {
-                c.pop_to(index)
+                c.pop_to(index);
             }
             self.items
                 .drain(index..)
                 .map(|i| i.element_data)
-                .for_each(popped_element_data_handler)
+                .for_each(popped_element_data_handler);
         }
     }
 
     #[inline]
+    #[must_use]
     pub fn items(&self) -> &[StackItem<E>] {
         &self.items
     }

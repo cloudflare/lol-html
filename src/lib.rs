@@ -16,7 +16,8 @@
 //! [Cloudflare Workers]: https://www.cloudflare.com/en-gb/products/cloudflare-workers/
 //! [`HtmlRewriter`]: struct.HtmlRewriter.html
 //! [`rewrite_str`]: fn.rewrite_str.html
-
+#![allow(clippy::default_trait_access)]
+#![allow(clippy::module_name_repetitions)]
 #![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
 
 #[macro_use]
@@ -151,8 +152,9 @@ pub mod test_utils {
     }
 
     impl Output {
+        #[must_use]
         pub fn new(encoding: &'static Encoding) -> Self {
-            Output {
+            Self {
                 bytes: Vec::default(),
                 encoding,
                 finalizing_chunk_received: false,
@@ -174,7 +176,7 @@ pub mod test_utils {
     }
 
     impl From<Output> for String {
-        fn from(output: Output) -> String {
+        fn from(output: Output) -> Self {
             assert!(
                 output.finalizing_chunk_received,
                 "Finalizing chunk for the output hasn't been received."

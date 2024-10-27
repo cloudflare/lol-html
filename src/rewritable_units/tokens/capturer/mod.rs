@@ -29,15 +29,17 @@ pub enum TokenCapturerEvent<'i> {
 
 type CapturerEventHandler<'h> = &'h mut dyn FnMut(TokenCapturerEvent) -> Result<(), RewritingError>;
 
-pub struct TokenCapturer {
+pub(crate) struct TokenCapturer {
     encoding: SharedEncoding,
     text_decoder: TextDecoder,
     capture_flags: TokenCaptureFlags,
 }
 
 impl TokenCapturer {
+    #[inline]
+    #[must_use]
     pub fn new(capture_flags: TokenCaptureFlags, encoding: SharedEncoding) -> Self {
-        TokenCapturer {
+        Self {
             encoding: SharedEncoding::clone(&encoding),
             text_decoder: TextDecoder::new(encoding),
             capture_flags,
@@ -45,7 +47,8 @@ impl TokenCapturer {
     }
 
     #[inline]
-    pub fn has_captures(&self) -> bool {
+    #[must_use]
+    pub const fn has_captures(&self) -> bool {
         !self.capture_flags.is_empty()
     }
 

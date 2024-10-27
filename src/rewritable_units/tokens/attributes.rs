@@ -41,6 +41,8 @@ pub struct Attribute<'i> {
 }
 
 impl<'i> Attribute<'i> {
+    #[inline]
+    #[must_use]
     fn new(name: Bytes<'i>, value: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
         Attribute {
             name,
@@ -69,10 +71,9 @@ impl<'i> Attribute<'i> {
             // encoding then encoding_rs replaces it with a numeric
             // character reference. Character references are not
             // supported in attribute names, so we need to bail.
-            match Bytes::from_str_without_replacements(name, encoding) {
-                Ok(name) => Ok(name.into_owned()),
-                Err(_) => Err(AttributeNameError::UnencodableCharacter),
-            }
+            Bytes::from_str_without_replacements(name, encoding)
+                .map_err(|_| AttributeNameError::UnencodableCharacter)
+                .map(Bytes::into_owned)
         }
     }
 
@@ -92,18 +93,21 @@ impl<'i> Attribute<'i> {
 
     /// Returns the name of the attribute.
     #[inline]
+    #[must_use]
     pub fn name(&self) -> String {
         self.name.as_lowercase_string(self.encoding)
     }
 
     /// Returns the name of the attribute, preserving its case.
     #[inline]
+    #[must_use]
     pub fn name_preserve_case(&self) -> String {
         self.name.as_string(self.encoding)
     }
 
     /// Returns the value of the attribute.
     #[inline]
+    #[must_use]
     pub fn value(&self) -> String {
         self.value.as_string(self.encoding)
     }
@@ -148,6 +152,8 @@ pub struct Attributes<'i> {
 }
 
 impl<'i> Attributes<'i> {
+    #[inline]
+    #[must_use]
     pub(super) fn new(
         input: &'i Bytes<'i>,
         attribute_buffer: &'i AttributeBuffer,
