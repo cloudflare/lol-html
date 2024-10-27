@@ -67,6 +67,8 @@ pub struct TextChunk<'i> {
 }
 
 impl<'i> TextChunk<'i> {
+    #[inline]
+    #[must_use]
     pub(super) fn new_token(
         text: &'i str,
         text_type: TextType,
@@ -85,6 +87,7 @@ impl<'i> TextChunk<'i> {
 
     /// Returns the textual content of the chunk.
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.text
     }
@@ -136,6 +139,7 @@ impl<'i> TextChunk<'i> {
     /// ).unwrap();
     /// ```
     #[inline]
+    #[must_use]
     pub fn text_type(&self) -> TextType {
         self.text_type
     }
@@ -144,6 +148,7 @@ impl<'i> TextChunk<'i> {
     ///
     /// Note that last chunk can have empty textual content.
     #[inline]
+    #[must_use]
     pub fn last_in_text_node(&self) -> bool {
         self.last_in_text_node
     }
@@ -258,12 +263,14 @@ impl<'i> TextChunk<'i> {
 
     /// Returns `true` if the text chunk has been replaced or removed.
     #[inline]
+    #[must_use]
     pub fn removed(&self) -> bool {
         self.mutations.removed()
     }
 
     #[inline]
-    fn raw(&self) -> Option<&Bytes> {
+    #[allow(clippy::unused_self)]
+    const fn raw(&self) -> Option<&Bytes> {
         None
     }
 
@@ -335,7 +342,7 @@ mod tests {
     fn in_place_text_modifications() {
         use super::super::Token;
 
-        let encoding = Encoding::for_label_no_replacement("utf-8".as_bytes()).unwrap();
+        let encoding = Encoding::for_label_no_replacement(b"utf-8").unwrap();
         let Token::TextChunk(mut chunk) =
             TextChunk::new_token("original text", TextType::PlainText, true, encoding)
         else {

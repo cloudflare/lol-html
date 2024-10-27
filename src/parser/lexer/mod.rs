@@ -43,15 +43,17 @@ pub struct Lexer<S: LexemeSink> {
 }
 
 impl<S: LexemeSink> Lexer<S> {
+    #[inline]
+    #[must_use]
     pub fn new() -> Self {
-        Lexer {
+        Self {
             next_pos: 0,
             is_last_input: false,
             lexeme_start: 0,
             token_part_start: 0,
             is_state_enter: true,
             cdata_allowed: false,
-            state: Lexer::data_state,
+            state: Self::data_state,
             current_tag_token: None,
             current_non_tag_content_token: None,
             current_attr: None,
@@ -133,8 +135,9 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
+    #[must_use]
     fn create_lexeme_with_raw<'i, T>(
-        &mut self,
+        &self,
         input: &'i [u8],
         token: T,
         raw_end: usize,
@@ -150,22 +153,16 @@ impl<S: LexemeSink> Lexer<S> {
     }
 
     #[inline]
-    fn create_lexeme_with_raw_inclusive<'i, T>(
-        &mut self,
-        input: &'i [u8],
-        token: T,
-    ) -> Lexeme<'i, T> {
+    #[must_use]
+    fn create_lexeme_with_raw_inclusive<'i, T>(&self, input: &'i [u8], token: T) -> Lexeme<'i, T> {
         let raw_end = self.pos() + 1;
 
         self.create_lexeme_with_raw(input, token, raw_end)
     }
 
     #[inline]
-    fn create_lexeme_with_raw_exclusive<'i, T>(
-        &mut self,
-        input: &'i [u8],
-        token: T,
-    ) -> Lexeme<'i, T> {
+    #[must_use]
+    fn create_lexeme_with_raw_exclusive<'i, T>(&self, input: &'i [u8], token: T) -> Lexeme<'i, T> {
         let raw_end = self.pos();
 
         self.create_lexeme_with_raw(input, token, raw_end)

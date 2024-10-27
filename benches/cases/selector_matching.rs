@@ -1,4 +1,4 @@
-use lol_html::*;
+use lol_html::{element, Settings};
 
 define_group!(
     "Selector matching",

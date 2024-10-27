@@ -12,7 +12,7 @@ impl Arena {
     pub fn new(limiter: SharedMemoryLimiter, preallocated_size: usize) -> Self {
         limiter.preallocate(preallocated_size);
 
-        Arena {
+        Self {
             limiter,
             data: Vec::with_capacity(preallocated_size),
         }

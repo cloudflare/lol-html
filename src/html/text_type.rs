@@ -41,8 +41,9 @@ impl TextType {
     ///
     /// [HTML entities]: https://developer.mozilla.org/en-US/docs/Glossary/Entity
     #[inline]
+    #[must_use]
     pub fn allows_html_entities(self) -> bool {
-        self == TextType::Data || self == TextType::RCData
+        self == Self::Data || self == Self::RCData
     }
 }
 

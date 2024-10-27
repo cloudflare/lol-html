@@ -138,7 +138,7 @@ pub struct AmbiguityGuard {
 
 impl Default for AmbiguityGuard {
     fn default() -> Self {
-        AmbiguityGuard {
+        Self {
             state: State::Default,
         }
     }
@@ -180,7 +180,7 @@ impl AmbiguityGuard {
             State::InOrAfterFrameset => {
                 // NOTE: <noframes> is allowed in and after <frameset>.
                 if tag_name != Tag::Noframes {
-                    assert_not_ambigious_text_type_switch(tag_name)?
+                    assert_not_ambigious_text_type_switch(tag_name)?;
                 }
             }
         }

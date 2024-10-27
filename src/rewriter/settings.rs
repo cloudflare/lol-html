@@ -66,7 +66,7 @@ impl HandlerTypes for LocalHandlerTypes {
     }
 
     fn new_element_handler<'h>(
-        handler: impl IntoHandler<ElementHandlerSend<'h, LocalHandlerTypes>>,
+        handler: impl IntoHandler<ElementHandlerSend<'h, Self>>,
     ) -> Self::ElementHandler<'h> {
         handler.into_handler()
     }
@@ -88,7 +88,7 @@ impl HandlerTypes for SendHandlerTypes {
     type DoctypeHandler<'h> = DoctypeHandlerSend<'h>;
     type CommentHandler<'h> = CommentHandlerSend<'h>;
     type TextHandler<'h> = TextHandlerSend<'h>;
-    type ElementHandler<'h> = ElementHandlerSend<'h, SendHandlerTypes>;
+    type ElementHandler<'h> = ElementHandlerSend<'h, Self>;
     type EndTagHandler<'h> = EndTagHandlerSend<'h>;
     type EndHandler<'h> = EndHandlerSend<'h>;
 
@@ -99,7 +99,7 @@ impl HandlerTypes for SendHandlerTypes {
     }
 
     fn new_element_handler<'h>(
-        handler: impl IntoHandler<ElementHandlerSend<'h, SendHandlerTypes>>,
+        handler: impl IntoHandler<ElementHandlerSend<'h, Self>>,
     ) -> Self::ElementHandler<'h> {
         handler.into_handler()
     }
@@ -263,6 +263,7 @@ impl<'h, H: HandlerTypes> Default for ElementContentHandlers<'h, H> {
 impl<'h, H: HandlerTypes> ElementContentHandlers<'h, H> {
     /// Sets a handler for elements matched by a selector.
     #[inline]
+    #[must_use]
     pub fn element(mut self, handler: impl IntoHandler<H::ElementHandler<'h>>) -> Self {
         self.element = Some(handler.into_handler());
 
@@ -271,6 +272,7 @@ impl<'h, H: HandlerTypes> ElementContentHandlers<'h, H> {
 
     /// Sets a handler for HTML comments in the inner content of elements matched by a selector.
     #[inline]
+    #[must_use]
     pub fn comments(mut self, handler: impl IntoHandler<H::CommentHandler<'h>>) -> Self {
         self.comments = Some(handler.into_handler());
 
@@ -279,6 +281,7 @@ impl<'h, H: HandlerTypes> ElementContentHandlers<'h, H> {
 
     /// Sets a handler for text chunks in the inner content of elements matched by a selector.
     #[inline]
+    #[must_use]
     pub fn text(mut self, handler: impl IntoHandler<H::TextHandler<'h>>) -> Self {
         self.text = Some(handler.into_handler());
 
@@ -328,6 +331,7 @@ impl<'h, H: HandlerTypes> DocumentContentHandlers<'h, H> {
     ///
     /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
     #[inline]
+    #[must_use]
     pub fn doctype(mut self, handler: impl IntoHandler<H::DoctypeHandler<'h>>) -> Self {
         self.doctype = Some(handler.into_handler());
 
@@ -336,6 +340,7 @@ impl<'h, H: HandlerTypes> DocumentContentHandlers<'h, H> {
 
     /// Sets a handler for all HTML comments present in the input HTML markup.
     #[inline]
+    #[must_use]
     pub fn comments(mut self, handler: impl IntoHandler<H::CommentHandler<'h>>) -> Self {
         self.comments = Some(handler.into_handler());
 
@@ -344,6 +349,7 @@ impl<'h, H: HandlerTypes> DocumentContentHandlers<'h, H> {
 
     /// Sets a handler for all text chunks present in the input HTML markup.
     #[inline]
+    #[must_use]
     pub fn text(mut self, handler: impl IntoHandler<H::TextHandler<'h>>) -> Self {
         self.text = Some(handler.into_handler());
 
@@ -352,6 +358,7 @@ impl<'h, H: HandlerTypes> DocumentContentHandlers<'h, H> {
 
     /// Sets a handler for the document end, which is called after the last chunk is processed.
     #[inline]
+    #[must_use]
     pub fn end(mut self, handler: impl IntoHandler<H::EndHandler<'h>>) -> Self {
         self.end = Some(handler.into_handler());
 
@@ -399,7 +406,7 @@ macro_rules! element {
     ($selector:expr, $handler:expr) => {{
         // Without this rust won't be able to always infer the type of the handler.
         #[inline(always)]
-        fn type_hint<'h, T, H: $crate::HandlerTypes>(h: T) -> T
+        const fn type_hint<'h, T, H: $crate::HandlerTypes>(h: T) -> T
         where
             T: FnMut(&mut $crate::html_content::Element<'_, '_, H>) -> $crate::HandlerResult + 'h,
         {
@@ -481,7 +488,7 @@ macro_rules! comments {
     ($selector:expr, $handler:expr) => {{
         // Without this rust won't be able to always infer the type of the handler.
         #[inline(always)]
-        fn type_hint<T>(h: T) -> T
+        const fn type_hint<T>(h: T) -> T
         where
             T: FnMut(&mut $crate::html_content::Comment) -> $crate::HandlerResult,
         {
@@ -528,7 +535,7 @@ macro_rules! doctype {
     ($handler:expr) => {{
         // Without this rust won't be able to always infer the type of the handler.
         #[inline(always)]
-        fn type_hint<T>(h: T) -> T
+        const fn type_hint<T>(h: T) -> T
         where
             T: FnMut(&mut $crate::html_content::Doctype) -> $crate::HandlerResult,
         {
@@ -569,7 +576,7 @@ macro_rules! doc_text {
     ($handler:expr) => {{
         // Without this rust won't be able to always infer the type of the handler.
         #[inline(always)]
-        fn type_hint<T>(h: T) -> T
+        const fn type_hint<T>(h: T) -> T
         where
             T: FnMut(&mut $crate::html_content::TextChunk) -> $crate::HandlerResult,
         {
@@ -608,7 +615,7 @@ macro_rules! doc_comments {
     ($handler:expr) => {{
         // Without this rust won't be able to always infer the type of the handler.
         #[inline(always)]
-        fn type_hint<T>(h: T) -> T
+        const fn type_hint<T>(h: T) -> T
         where
             T: FnMut(&mut $crate::html_content::Comment) -> $crate::HandlerResult,
         {
@@ -656,7 +663,7 @@ macro_rules! end {
     ($handler:expr) => {{
         // Without this rust won't be able to always infer the type of the handler.
         #[inline(always)]
-        fn type_hint<T>(h: T) -> T
+        const fn type_hint<T>(h: T) -> T
         where
             T: FnOnce(&mut $crate::html_content::DocumentEnd) -> $crate::HandlerResult,
         {
@@ -716,7 +723,7 @@ pub struct MemorySettings {
 impl Default for MemorySettings {
     #[inline]
     fn default() -> Self {
-        MemorySettings {
+        Self {
             preallocated_parsing_buffer_size: 1024,
             max_allowed_memory_usage: usize::MAX,
         }
@@ -725,8 +732,9 @@ impl Default for MemorySettings {
 
 impl MemorySettings {
     /// Create a new [`MemorySettings`] with default values.
-    pub fn new() -> MemorySettings {
-        MemorySettings::default()
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -885,6 +893,7 @@ impl Default for Settings<'_, '_, LocalHandlerTypes> {
 impl Settings<'_, '_, LocalHandlerTypes> {
     /// Creates [`Settings`] for non-[`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self::new_for_handler_types()
     }
@@ -893,6 +902,7 @@ impl Settings<'_, '_, LocalHandlerTypes> {
 impl Settings<'_, '_, SendHandlerTypes> {
     /// Creates [`Settings`] for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     #[inline]
+    #[must_use]
     pub fn new_send() -> Self {
         Self::new_for_handler_types()
     }
@@ -901,6 +911,7 @@ impl Settings<'_, '_, SendHandlerTypes> {
 impl<H: HandlerTypes> Settings<'_, '_, H> {
     /// Creates [`Settings`].
     #[inline]
+    #[must_use]
     pub fn new_for_handler_types() -> Self {
         Settings {
             element_content_handlers: vec![],
@@ -1039,7 +1050,8 @@ impl Default for RewriteStrSettings<'_, '_, LocalHandlerTypes> {
 impl RewriteStrSettings<'_, '_, LocalHandlerTypes> {
     /// Creates [`Settings`] for non-[`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     #[inline]
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self::new_for_handler_types()
     }
 }
@@ -1047,7 +1059,8 @@ impl RewriteStrSettings<'_, '_, LocalHandlerTypes> {
 impl RewriteStrSettings<'_, '_, SendHandlerTypes> {
     /// Creates [`Settings`] for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     #[inline]
-    pub fn new_send() -> Self {
+    #[must_use]
+    pub const fn new_send() -> Self {
         Self::new_for_handler_types()
     }
 }
@@ -1055,7 +1068,8 @@ impl RewriteStrSettings<'_, '_, SendHandlerTypes> {
 impl<H: HandlerTypes> RewriteStrSettings<'_, '_, H> {
     /// Creates [`RewriteStrSettings`].
     #[inline]
-    pub fn new_for_handler_types() -> Self {
+    #[must_use]
+    pub const fn new_for_handler_types() -> Self {
         RewriteStrSettings {
             element_content_handlers: vec![],
             document_content_handlers: vec![],

@@ -50,7 +50,7 @@ pub struct TagScanner<S: TagHintSink> {
 
 impl<S: TagHintSink> TagScanner<S> {
     pub fn new() -> Self {
-        TagScanner {
+        Self {
             next_pos: 0,
             is_last_input: false,
             tag_start: None,
@@ -61,7 +61,7 @@ impl<S: TagHintSink> TagScanner<S> {
             last_start_tag_name_hash: LocalNameHash::default(),
             is_state_enter: true,
             cdata_allowed: false,
-            state: TagScanner::data_state,
+            state: Self::data_state,
             closing_quote: b'"',
             pending_text_type_change: None,
             last_text_type: TextType::Data,
@@ -128,12 +128,14 @@ impl<S: TagHintSink> TagScanner<S> {
 
     #[inline]
     fn take_feedback_directive(&mut self) -> FeedbackDirective {
-        match self.pending_text_type_change.take() {
-            Some(text_type) => FeedbackDirective::ApplyUnhandledFeedback(
-                TreeBuilderFeedback::SwitchTextType(text_type),
-            ),
-            None => FeedbackDirective::Skip,
-        }
+        self.pending_text_type_change
+            .take()
+            .map(|text_type| {
+                FeedbackDirective::ApplyUnhandledFeedback(TreeBuilderFeedback::SwitchTextType(
+                    text_type,
+                ))
+            })
+            .unwrap_or(FeedbackDirective::Skip)
     }
 }
 

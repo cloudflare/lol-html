@@ -61,7 +61,7 @@ where
 
         let parser = Parser::new(dispatcher, initial_parser_directive, settings.strict);
 
-        TransformStream {
+        Self {
             parser,
             buffer,
             has_buffered_data: false,

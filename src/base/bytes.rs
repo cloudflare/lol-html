@@ -180,6 +180,7 @@ impl Debug for Bytes<'_> {
 impl Deref for Bytes<'_> {
     type Target = [u8];
 
+    #[inline]
     fn deref(&self) -> &[u8] {
         &self.0
     }

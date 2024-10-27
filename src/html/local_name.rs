@@ -30,12 +30,14 @@ pub struct LocalNameHash(Option<u64>);
 
 impl LocalNameHash {
     #[inline]
-    pub fn new() -> Self {
-        LocalNameHash(Some(0))
+    #[must_use]
+    pub const fn new() -> Self {
+        Self(Some(0))
     }
 
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.0.is_none()
     }
 
@@ -75,7 +77,7 @@ impl LocalNameHash {
 impl From<&str> for LocalNameHash {
     #[inline]
     fn from(string: &str) -> Self {
-        let mut hash = LocalNameHash::new();
+        let mut hash = Self::new();
 
         for ch in string.bytes() {
             hash.update(ch);
@@ -106,6 +108,7 @@ pub enum LocalName<'i> {
 
 impl<'i> LocalName<'i> {
     #[inline]
+    #[must_use]
     pub fn new(input: &'i Bytes<'i>, range: Range, hash: LocalNameHash) -> Self {
         if hash.is_empty() {
             LocalName::Bytes(input.slice(range))
@@ -115,6 +118,7 @@ impl<'i> LocalName<'i> {
     }
 
     #[inline]
+    #[must_use]
     pub fn into_owned(self) -> LocalName<'static> {
         match self {
             LocalName::Bytes(b) => LocalName::Bytes(b.into_owned()),
@@ -142,7 +146,7 @@ impl PartialEq<Tag> for LocalName<'_> {
     fn eq(&self, tag: &Tag) -> bool {
         match self {
             LocalName::Hash(h) => h == tag,
-            _ => false,
+            LocalName::Bytes(_) => false,
         }
     }
 }
@@ -150,7 +154,7 @@ impl PartialEq<Tag> for LocalName<'_> {
 impl PartialEq<LocalName<'_>> for LocalName<'_> {
     #[inline]
     fn eq(&self, other: &LocalName<'_>) -> bool {
-        use LocalName::*;
+        use LocalName::{Bytes, Hash};
 
         match (self, other) {
             (Hash(s), Hash(o)) => s == o,

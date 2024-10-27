@@ -8,8 +8,8 @@ pub enum Namespace {
 
 impl Namespace {
     #[inline]
-    pub fn uri(self) -> &'static str {
-        use Namespace::*;
+    pub const fn uri(self) -> &'static str {
+        use Namespace::{Html, MathML, Svg};
 
         // NOTE: https://infra.spec.whatwg.org/#namespaces
         match self {

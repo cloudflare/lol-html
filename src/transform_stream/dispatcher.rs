@@ -9,7 +9,7 @@ use crate::rewritable_units::{
 };
 use crate::rewriter::RewritingError;
 
-use TagTokenOutline::*;
+use TagTokenOutline::{EndTag, StartTag};
 
 pub struct AuxStartTagInfo<'i> {
     pub input: &'i Bytes<'i>,
@@ -81,7 +81,7 @@ where
     pub fn new(transform_controller: C, output_sink: O, encoding: SharedEncoding) -> Self {
         let initial_capture_flags = transform_controller.initial_capture_flags();
 
-        Dispatcher {
+        Self {
             transform_controller,
             output_sink,
             remaining_content_start: 0,
@@ -168,7 +168,7 @@ where
     }
 
     #[inline]
-    fn get_next_parser_directive(&self) -> ParserDirective {
+    const fn get_next_parser_directive(&self) -> ParserDirective {
         if self.token_capturer.has_captures() {
             ParserDirective::Lex
         } else {

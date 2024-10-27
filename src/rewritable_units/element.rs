@@ -45,6 +45,8 @@ pub struct Element<'r, 't, H: HandlerTypes = LocalHandlerTypes> {
 }
 
 impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
+    #[inline]
+    #[must_use]
     pub(crate) fn new(start_tag: &'r mut StartTag<'t>, can_have_content: bool) -> Self {
         let encoding = start_tag.encoding();
 
@@ -75,10 +77,9 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
                     // encoding then encoding_rs replaces it with a numeric
                     // character reference. Character references are not
                     // supported in tag names, so we need to bail.
-                    match Bytes::from_str_without_replacements(name, self.encoding) {
-                        Ok(name) => Ok(name.into_owned()),
-                        Err(_) => Err(TagNameError::UnencodableCharacter),
-                    }
+                    Bytes::from_str_without_replacements(name, self.encoding)
+                        .map_err(|_| TagNameError::UnencodableCharacter)
+                        .map(Bytes::into_owned)
                 }
             }
             None => Err(TagNameError::Empty),
@@ -102,12 +103,14 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     /// Returns the tag name of the element.
     #[inline]
+    #[must_use]
     pub fn tag_name(&self) -> String {
         self.start_tag.name()
     }
 
     /// Returns the tag name of the element, preserving its case.
     #[inline]
+    #[must_use]
     pub fn tag_name_preserve_case(&self) -> String {
         self.start_tag.name_preserve_case()
     }
@@ -128,6 +131,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     /// Whether the element is explicitly self-closing, e.g. `<foo />`.
     #[inline]
+    #[must_use]
     pub fn is_self_closing(&self) -> bool {
         self.start_tag.self_closing()
     }
@@ -136,6 +140,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// element](https://html.spec.whatwg.org/multipage/syntax.html#void-elements) or has a
     /// self-closing tag (eg, `<foo />`).
     #[inline]
+    #[must_use]
     pub fn can_have_content(&self) -> bool {
         self.can_have_content
     }
@@ -144,12 +149,14 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     /// [namespace URI]: https://developer.mozilla.org/en-US/docs/Web/API/Element/namespaceURI
     #[inline]
+    #[must_use]
     pub fn namespace_uri(&self) -> &'static str {
         self.start_tag.namespace_uri()
     }
 
     /// Returns an immutable collection of element's attributes.
     #[inline]
+    #[must_use]
     pub fn attributes(&self) -> &[Attribute<'t>] {
         self.start_tag.attributes()
     }
@@ -158,6 +165,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     /// Returns `None` if the element doesn't have an attribute with the `name`.
     #[inline]
+    #[must_use]
     pub fn get_attribute(&self, name: &str) -> Option<String> {
         let name = name.to_ascii_lowercase();
 
@@ -172,6 +180,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     /// Returns `true` if the element has an attribute with `name`.
     #[inline]
+    #[must_use]
     pub fn has_attribute(&self, name: &str) -> bool {
         let name = name.to_ascii_lowercase();
 
@@ -471,6 +480,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     /// Returns `true` if the element has been removed or replaced with some content.
     #[inline]
+    #[must_use]
     pub fn removed(&self) -> bool {
         self.start_tag.mutations.removed()
     }
@@ -640,7 +650,7 @@ mod tests {
     fn forbidden_characters_in_tag_name() {
         rewrite_element(b"<div>", UTF_8, "div", |el| {
             for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>'] {
-                let err = el.set_tag_name(&format!("foo{}bar", ch)).unwrap_err();
+                let err = el.set_tag_name(&format!("foo{ch}bar")).unwrap_err();
 
                 assert_eq!(err, TagNameError::ForbiddenCharacter(ch));
             }
@@ -702,7 +712,7 @@ mod tests {
     fn forbidden_characters_in_attr_name() {
         rewrite_element(b"<div>", UTF_8, "div", |el| {
             for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>', '='] {
-                let err = el.set_attribute(&format!("foo{}bar", ch), "").unwrap_err();
+                let err = el.set_attribute(&format!("foo{ch}bar"), "").unwrap_err();
 
                 assert_eq!(err, AttributeNameError::ForbiddenCharacter(ch));
             }
@@ -1085,7 +1095,7 @@ mod tests {
             }));
         };
 
-        let res = rewrite_element("<div>foo</div>".as_bytes(), UTF_8, "div", handler);
+        let res = rewrite_element(b"<div>foo</div>", UTF_8, "div", handler);
 
         assert_eq!(res, "<div>fooXY</div>");
     }
@@ -1188,7 +1198,7 @@ mod tests {
                 el.remove_attribute("a1");
             });
 
-            assert_eq!(output, r#"<img/>"#);
+            assert_eq!(output, r"<img/>");
         }
 
         #[test]

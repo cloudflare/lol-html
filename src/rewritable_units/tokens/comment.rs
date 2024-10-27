@@ -31,6 +31,8 @@ pub struct Comment<'i> {
 }
 
 impl<'i> Comment<'i> {
+    #[inline]
+    #[must_use]
     pub(super) fn new_token(
         text: Bytes<'i>,
         raw: Bytes<'i>,
@@ -47,6 +49,7 @@ impl<'i> Comment<'i> {
 
     /// Returns the text of the comment.
     #[inline]
+    #[must_use]
     pub fn text(&self) -> String {
         self.text.as_string(self.encoding)
     }
@@ -177,12 +180,13 @@ impl<'i> Comment<'i> {
 
     /// Returns `true` if the comment has been replaced or removed.
     #[inline]
+    #[must_use]
     pub fn removed(&self) -> bool {
         self.mutations.removed()
     }
 
     #[inline]
-    fn raw(&self) -> Option<&Bytes> {
+    const fn raw(&self) -> Option<&Bytes> {
         self.raw.as_ref()
     }
 

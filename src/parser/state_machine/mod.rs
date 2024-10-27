@@ -18,8 +18,8 @@ pub enum FeedbackDirective {
 
 impl FeedbackDirective {
     #[inline]
-    pub fn take(&mut self) -> FeedbackDirective {
-        mem::replace(self, FeedbackDirective::None)
+    pub fn take(&mut self) -> Self {
+        mem::replace(self, Self::None)
     }
 }
 
@@ -30,9 +30,9 @@ impl Debug for FeedbackDirective {
             f,
             "{}",
             match self {
-                FeedbackDirective::ApplyUnhandledFeedback(_) => "ApplyPendingFeedback",
-                FeedbackDirective::Skip => "Skip",
-                FeedbackDirective::None => "None",
+                Self::ApplyUnhandledFeedback(_) => "ApplyPendingFeedback",
+                Self::Skip => "Skip",
+                Self::None => "None",
             }
         )
     }
@@ -56,7 +56,7 @@ pub enum ActionError {
 impl From<ParsingAmbiguityError> for ActionError {
     #[cold]
     fn from(err: ParsingAmbiguityError) -> Self {
-        ActionError::RewritingError(RewritingError::ParsingAmbiguity(err))
+        Self::RewritingError(RewritingError::ParsingAmbiguity(err))
     }
 }
 
@@ -218,7 +218,7 @@ pub trait StateMachine: StateMachineActions + StateMachineConditions {
         let consumed_byte_count = self.get_consumed_byte_count(input);
 
         if !self.is_last_input() {
-            self.adjust_for_next_input()
+            self.adjust_for_next_input();
         }
 
         self.set_pos(self.pos() - consumed_byte_count);

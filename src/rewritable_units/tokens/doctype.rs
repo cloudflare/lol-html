@@ -43,6 +43,8 @@ pub struct Doctype<'i> {
 }
 
 impl<'i> Doctype<'i> {
+    #[inline]
+    #[must_use]
     pub(super) fn new_token(
         name: Option<Bytes<'i>>,
         public_id: Option<Bytes<'i>>,
@@ -66,6 +68,7 @@ impl<'i> Doctype<'i> {
 
     /// The name of the doctype.
     #[inline]
+    #[must_use]
     pub fn name(&self) -> Option<String> {
         self.name
             .as_ref()
@@ -74,12 +77,14 @@ impl<'i> Doctype<'i> {
 
     /// The public identifier of the doctype.
     #[inline]
+    #[must_use]
     pub fn public_id(&self) -> Option<String> {
         self.public_id.as_ref().map(|i| i.as_string(self.encoding))
     }
 
     /// The system identifier of the doctype.
     #[inline]
+    #[must_use]
     pub fn system_id(&self) -> Option<String> {
         self.system_id.as_ref().map(|i| i.as_string(self.encoding))
     }
@@ -93,11 +98,12 @@ impl<'i> Doctype<'i> {
     /// Removes the doctype.
     #[inline]
     pub fn remove(&mut self) {
-        self.removed = true
+        self.removed = true;
     }
 
     /// Returns `true` if the doctype has been replaced or removed.
     #[inline]
+    #[must_use]
     pub fn removed(&self) -> bool {
         self.removed
     }

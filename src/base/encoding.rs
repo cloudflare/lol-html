@@ -256,12 +256,14 @@ pub struct SharedEncoding {
 }
 
 impl SharedEncoding {
-    pub fn new(encoding: AsciiCompatibleEncoding) -> SharedEncoding {
-        SharedEncoding {
+    #[must_use]
+    pub fn new(encoding: AsciiCompatibleEncoding) -> Self {
+        Self {
             encoding: Arc::new(AtomicUsize::new(encoding_to_index(encoding))),
         }
     }
 
+    #[must_use]
     pub fn get(&self) -> &'static Encoding {
         let encoding = self.encoding.load(Ordering::Relaxed);
         ALL_ENCODINGS[encoding]

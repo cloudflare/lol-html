@@ -15,6 +15,8 @@ pub struct EndTag<'i> {
 }
 
 impl<'i> EndTag<'i> {
+    #[inline]
+    #[must_use]
     pub(super) fn new_token(
         name: Bytes<'i>,
         raw: Bytes<'i>,
@@ -30,12 +32,14 @@ impl<'i> EndTag<'i> {
 
     /// Returns the name of the tag.
     #[inline]
+    #[must_use]
     pub fn name(&self) -> String {
         self.name.as_lowercase_string(self.encoding)
     }
 
     /// Returns the name of the tag, preserving its case.
     #[inline]
+    #[must_use]
     pub fn name_preserve_case(&self) -> String {
         self.name.as_string(self.encoding)
     }
@@ -50,7 +54,7 @@ impl<'i> EndTag<'i> {
     /// Sets the name of the tag by encoding the given string.
     #[inline]
     pub fn set_name_str(&mut self, name: String) {
-        self.set_name(Bytes::from_string(name, self.encoding))
+        self.set_name(Bytes::from_string(name, self.encoding));
     }
 
     /// Inserts `content` before the end tag.
@@ -84,7 +88,7 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
-    fn raw(&self) -> Option<&Bytes> {
+    const fn raw(&self) -> Option<&Bytes> {
         self.raw.as_ref()
     }
 

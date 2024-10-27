@@ -2,7 +2,7 @@ use super::*;
 use crate::parser::state_machine::StateMachineActions;
 
 use NonTagContentTokenOutline::*;
-use TagTokenOutline::*;
+use TagTokenOutline::{EndTag, StartTag};
 
 // NOTE: use macro instead of the function to make borrow
 // checker happy with range construction inside match arm
@@ -233,8 +233,8 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     #[inline]
     fn finish_tag_name(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) -> ActionResult {
         match self.current_tag_token {
-            Some(StartTag { ref mut name, .. }) | Some(EndTag { ref mut name, .. }) => {
-                *name = get_token_part_range!(self)
+            Some(StartTag { ref mut name, .. } | EndTag { ref mut name, .. }) => {
+                *name = get_token_part_range!(self);
             }
             _ => unreachable!("Tag should exist at this point"),
         }
@@ -246,12 +246,14 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     fn update_tag_name_hash(&mut self, _context: &mut ParserContext<S>, input: &[u8]) {
         if let Some(ch) = input.get(self.pos()).copied() {
             match self.current_tag_token {
-                Some(StartTag {
-                    ref mut name_hash, ..
-                })
-                | Some(EndTag {
-                    ref mut name_hash, ..
-                }) => name_hash.update(ch),
+                Some(
+                    StartTag {
+                        ref mut name_hash, ..
+                    }
+                    | EndTag {
+                        ref mut name_hash, ..
+                    },
+                ) => name_hash.update(ch),
                 _ => unreachable!("Tag should exist at this point"),
             }
         }

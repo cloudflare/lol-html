@@ -197,8 +197,9 @@ impl<P: 'static> Compiler<P>
 where
     P: PartialEq + Eq + Copy + Debug + Hash,
 {
+    #[must_use]
     pub fn new(encoding: &'static Encoding) -> Self {
-        Compiler {
+        Self {
             encoding,
             instructions: Default::default(),
             free_space_start: 0,
@@ -288,6 +289,7 @@ where
         addr_range
     }
 
+    #[must_use]
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
         let mut enable_nth_of_type = false;
         self.instructions = iter::repeat_with(|| None)
@@ -370,7 +372,7 @@ mod tests {
         vec![
             (selector.to_string(), test_cases.to_owned()),
             (
-                format!(":not({})", selector),
+                format!(":not({selector})"),
                 test_cases
                     .iter()
                     .map(|(input, should_match)| (*input, !should_match))
@@ -403,7 +405,7 @@ mod tests {
         encoding: &'static Encoding,
         action: impl Fn(&str, &T, &SelectorState, LocalName, AttributeMatcher),
     ) {
-        for (input, matching_data) in test_cases.iter() {
+        for (input, matching_data) in test_cases {
             with_start_tag(input, encoding, |local_name, attr_matcher| {
                 let counter = Default::default();
                 let state = SelectorState {
@@ -481,7 +483,7 @@ mod tests {
         encoding: &'static Encoding,
         test_cases: &[(&str, bool)],
     ) {
-        for (selector, test_cases) in with_negated(selector, test_cases).iter() {
+        for (selector, test_cases) in &with_negated(selector, test_cases) {
             assert_attr_expr_matches(selector, encoding, test_cases);
         }
     }
@@ -599,7 +601,7 @@ mod tests {
 
     #[test]
     fn compiled_non_attr_expression() {
-        for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for encoding in &ASCII_COMPATIBLE_ENCODINGS {
             assert_non_attr_expr_matches_and_negation_reverses_match(
                 "*",
                 encoding,
@@ -665,7 +667,7 @@ mod tests {
 
     #[test]
     fn compiled_attr_expression() {
-        for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for encoding in &ASCII_COMPATIBLE_ENCODINGS {
             assert_attr_expr_matches_and_negation_reverses_match(
                 "#foo⾕",
                 encoding,
@@ -884,7 +886,7 @@ mod tests {
 
     #[test]
     fn generic_expressions() {
-        for encoding in ASCII_COMPATIBLE_ENCODINGS.iter() {
+        for encoding in &ASCII_COMPATIBLE_ENCODINGS {
             assert_generic_expr_matches(
                 r#"div#foo1.c1.c2[foo3੦][foo2$="bar"]"#,
                 encoding,
@@ -914,7 +916,7 @@ mod tests {
             );
 
             assert_generic_expr_matches(
-                r#"some-thing[lang|=en]"#,
+                r"some-thing[lang|=en]",
                 encoding,
                 &[
                     ("<some-thing lang='en-GB'", true),
