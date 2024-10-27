@@ -255,6 +255,7 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
 // `.unwrap()` and `.expect()` methods available on Result
 // returned by the `HtmlRewriterBuilder.build()` method.
 impl<'h, O: OutputSink, H: HandlerTypes> Debug for HtmlRewriter<'h, O, H> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "HtmlRewriter")
     }

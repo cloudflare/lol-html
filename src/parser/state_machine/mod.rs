@@ -24,6 +24,7 @@ impl FeedbackDirective {
 }
 
 impl Debug for FeedbackDirective {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -53,7 +54,7 @@ pub enum ActionError {
 }
 
 impl From<ParsingAmbiguityError> for ActionError {
-    #[inline]
+    #[cold]
     fn from(err: ParsingAmbiguityError) -> Self {
         ActionError::RewritingError(RewritingError::ParsingAmbiguity(err))
     }

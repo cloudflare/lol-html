@@ -72,6 +72,7 @@ pub struct ParsingAmbiguityError {
 }
 
 impl Display for ParsingAmbiguityError {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -96,7 +97,7 @@ impl Display for ParsingAmbiguityError {
 // tag name hashes and the corresponding tag name strings.
 macro_rules! create_assert_for_tags {
     ( $($tag:ident),+ ) => {
-        #[inline]
+        #[cold]
         fn tag_hash_to_string(tag_name: LocalNameHash) -> String {
             match tag_name {
                 $(t if t == Tag::$tag => stringify!($tag).to_string().to_lowercase(),)+

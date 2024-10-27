@@ -99,6 +99,7 @@ impl<'i> EndTag<'i> {
 impl_serialize!(EndTag);
 
 impl Debug for EndTag<'_> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("EndTag")
             .field("name", &self.name())

@@ -115,6 +115,7 @@ impl Serialize for Doctype<'_> {
 }
 
 impl Debug for Doctype<'_> {
+    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Doctype")
             .field("name", &self.name())
