@@ -1,5 +1,8 @@
 //! The test runner for the C API tests.
 
+// ensure it's linked
+use lolhtml as _;
+
 extern "C" {
     fn run_tests() -> i32;
 }
