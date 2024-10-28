@@ -15,7 +15,7 @@ jobs:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - name: Install Rust
@@ -24,7 +24,7 @@ jobs:
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
       - name: Cache cargo index and registry
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           key: immutable # this will always be hit because it's a constant
           path: |
@@ -35,7 +35,7 @@ jobs:
       - name: Fetch dependencies
         run: cargo fetch
       - name: Cache target directory
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: target
           key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
@@ -45,7 +45,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Install Rust (rustup)
       run: rustup update stable --no-self-update && rustup default stable
       shell: bash
@@ -55,7 +55,7 @@ jobs:
     name: Check code format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install Rust (rustup)
         run: |
           rustup update stable --no-self-update && rustup default stable
