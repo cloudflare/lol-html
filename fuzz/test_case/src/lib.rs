@@ -2,11 +2,8 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-extern crate encoding_rs;
-extern crate lol_html;
-extern crate rand;
-
-extern crate libc;
+// make it link
+use lolhtml as _;
 
 use libc::{c_char, c_void, size_t};
 use rand::Rng;
