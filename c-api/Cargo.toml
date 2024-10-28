@@ -12,9 +12,6 @@ lol_html = { path = "../" }
 libc = "0"
 thiserror = "1"
 
-[build-dependencies]
-cc = "1.0.46"
-
 [profile.release]
 panic = "abort"
 lto = true
