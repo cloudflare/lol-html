@@ -11,7 +11,7 @@ use crate::rewriter::RewritingError;
 
 use TagTokenOutline::{EndTag, StartTag};
 
-pub struct AuxStartTagInfo<'i> {
+pub(crate) struct AuxStartTagInfo<'i> {
     pub input: &'i Bytes<'i>,
     pub attr_buffer: &'i AttributeBuffer,
     pub self_closing: bool,
@@ -21,13 +21,17 @@ type AuxStartTagInfoRequest<C> = Box<
     dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError> + Send,
 >;
 
+// Pub only for integration tests
+#[allow(private_interfaces)]
 pub enum DispatcherError<C> {
     InfoRequest(AuxStartTagInfoRequest<C>),
     RewritingError(RewritingError),
 }
 
+// Pub only for integration tests
 pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherError<C>>;
 
+// Pub only for integration tests
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
     fn handle_start_tag(
@@ -62,6 +66,7 @@ impl<F: FnMut(&[u8])> OutputSink for F {
     }
 }
 
+// Pub only for integration tests
 pub struct Dispatcher<C, O>
 where
     C: TransformController,

@@ -3,7 +3,7 @@ use crate::html::TextType;
 use crate::parser::{NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, TagTokenOutline};
 use encoding_rs::Encoding;
 
-pub enum ToTokenResult<'i> {
+pub(crate) enum ToTokenResult<'i> {
     Token(Box<Token<'i>>),
     Text(TextType),
     None,
@@ -16,7 +16,7 @@ impl<'i> From<Token<'i>> for ToTokenResult<'i> {
     }
 }
 
-pub trait ToToken {
+pub(crate) trait ToToken {
     fn to_token(
         &self,
         capture_flags: &mut TokenCaptureFlags,

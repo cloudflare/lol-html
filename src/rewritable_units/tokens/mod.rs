@@ -7,6 +7,7 @@ pub(super) use self::attributes::Attributes;
 pub use self::attributes::{Attribute, AttributeNameError};
 pub use self::capturer::*;
 
+// Pub only for integration tests
 pub trait Serialize {
     fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8]));
 }
@@ -57,6 +58,7 @@ pub use self::end_tag::EndTag;
 pub use self::start_tag::StartTag;
 pub use self::text_chunk::TextChunk;
 
+// Pub only for integration tests
 #[derive(Debug)]
 pub enum Token<'i> {
     TextChunk(TextChunk<'i>),

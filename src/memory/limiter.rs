@@ -10,6 +10,7 @@ use thiserror::Error;
 #[error("The memory limit has been exceeded.")]
 pub struct MemoryLimitExceededError;
 
+// Pub only for integration tests
 #[derive(Debug, Clone)]
 pub struct SharedMemoryLimiter {
     current_usage: Arc<AtomicUsize>,

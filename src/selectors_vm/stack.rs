@@ -37,20 +37,20 @@ fn is_void_element(local_name: &LocalName<'_>, enable_esi_tags: bool) -> bool {
     false
 }
 
-pub trait ElementData: Default + 'static {
+pub(crate) trait ElementData: Default + 'static {
     type MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static;
 
     fn matched_payload_mut(&mut self) -> &mut HashSet<Self::MatchPayload>;
 }
 
-pub enum StackDirective {
+pub(crate) enum StackDirective {
     Push,
     PushIfNotSelfClosing,
     PopImmediately,
 }
 
 #[derive(Default)]
-pub struct ChildCounter {
+pub(crate) struct ChildCounter {
     cumulative: i32,
 }
 
@@ -100,7 +100,7 @@ impl CounterList {
 
 #[derive(Default)]
 /// A more efficient counter that only requires one owned local name to track counters across multiple stack frames
-pub struct TypedChildCounterMap(HashMap<LocalName<'static>, CounterList>);
+pub(crate) struct TypedChildCounterMap(HashMap<LocalName<'static>, CounterList>);
 
 impl TypedChildCounterMap {
     fn hash_name(&self, name: &LocalName<'_>) -> u64 {
@@ -166,7 +166,7 @@ impl TypedChildCounterMap {
     }
 }
 
-pub struct StackItem<'i, E: ElementData> {
+pub(crate) struct StackItem<'i, E: ElementData> {
     pub local_name: LocalName<'i>,
     pub element_data: E,
     pub jumps: Vec<AddressRange>,
@@ -205,7 +205,7 @@ impl<'i, E: ElementData> StackItem<'i, E> {
     }
 }
 
-pub struct Stack<E: ElementData> {
+pub(crate) struct Stack<E: ElementData> {
     /// A counter for root elements
     root_child_counter: ChildCounter,
     /// A typed counter for all elements on all frames. This is optional to indicate if types are actually being counted.

@@ -3,7 +3,7 @@ use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::AttributeBuffer;
 
 #[derive(Debug, Default, Copy, Clone)]
-pub struct AttributeOutline {
+pub(crate) struct AttributeOutline {
     pub name: Range,
     pub value: Range,
     pub raw_range: Range,
@@ -19,7 +19,7 @@ impl Align for AttributeOutline {
 }
 
 #[derive(Debug)]
-pub enum TagTokenOutline {
+pub(crate) enum TagTokenOutline {
     StartTag {
         name: Range,
         name_hash: LocalNameHash,
@@ -35,7 +35,7 @@ pub enum TagTokenOutline {
 }
 
 #[derive(Debug)]
-pub enum NonTagContentTokenOutline {
+pub(crate) enum NonTagContentTokenOutline {
     Text(TextType),
     Comment(Range),
 

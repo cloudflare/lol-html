@@ -7,7 +7,7 @@ use crate::transform_stream::*;
 use hashbrown::HashSet;
 
 #[derive(Default)]
-pub struct ElementDescriptor {
+pub(crate) struct ElementDescriptor {
     pub matched_content_handlers: HashSet<SelectorHandlersLocator>,
     pub end_tag_handler_idx: Option<usize>,
     pub remove_content: bool,
@@ -22,14 +22,14 @@ impl ElementData for ElementDescriptor {
     }
 }
 
-pub struct HtmlRewriteController<'h, H: HandlerTypes> {
+pub(crate) struct HtmlRewriteController<'h, H: HandlerTypes> {
     handlers_dispatcher: ContentHandlersDispatcher<'h, H>,
     selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
 }
 
 impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
     #[inline]
-    pub fn new(
+    pub(crate) const fn new(
         handlers_dispatcher: ContentHandlersDispatcher<'h, H>,
         selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
     ) -> Self {

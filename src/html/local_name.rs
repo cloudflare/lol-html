@@ -25,6 +25,8 @@ use encoding_rs::Encoding;
 // for digits, but considering that tag name can't start with a digit
 // we are safe here, since we'll just get first character shifted left
 // by zeroes as repetitave 1 digits get added to the hash.
+//
+// Pub only for integration tests
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Default, Hash)]
 pub struct LocalNameHash(Option<u64>);
 
@@ -109,7 +111,7 @@ pub enum LocalName<'i> {
 impl<'i> LocalName<'i> {
     #[inline]
     #[must_use]
-    pub fn new(input: &'i Bytes<'i>, range: Range, hash: LocalNameHash) -> Self {
+    pub(crate) fn new(input: &'i Bytes<'i>, range: Range, hash: LocalNameHash) -> Self {
         if hash.is_empty() {
             LocalName::Bytes(input.slice(range))
         } else {

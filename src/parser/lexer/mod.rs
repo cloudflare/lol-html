@@ -4,7 +4,7 @@ mod actions;
 mod conditions;
 mod lexeme;
 
-pub use self::lexeme::*;
+pub(crate) use self::lexeme::*;
 use crate::base::{Align, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
@@ -13,7 +13,7 @@ use crate::parser::state_machine::{
 use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback};
 use crate::rewriter::RewritingError;
 
-pub trait LexemeSink {
+pub(crate) trait LexemeSink {
     fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> Result<ParserDirective, RewritingError>;
     fn handle_non_tag_content(
         &mut self,
@@ -21,11 +21,11 @@ pub trait LexemeSink {
     ) -> Result<(), RewritingError>;
 }
 
-pub type State<S> = fn(&mut Lexer<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;
+pub(crate) type State<S> = fn(&mut Lexer<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;
 
-pub type AttributeBuffer = Vec<AttributeOutline>;
+pub(crate) type AttributeBuffer = Vec<AttributeOutline>;
 
-pub struct Lexer<S: LexemeSink> {
+pub(crate) struct Lexer<S> {
     next_pos: usize,
     is_last_input: bool,
     lexeme_start: usize,

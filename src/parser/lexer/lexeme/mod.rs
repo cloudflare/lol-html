@@ -3,9 +3,9 @@ mod token_outline;
 use crate::base::{Bytes, Range};
 use std::fmt::{self, Debug};
 
-pub use self::token_outline::*;
+pub(crate) use self::token_outline::*;
 
-pub struct Lexeme<'i, T> {
+pub(crate) struct Lexeme<'i, T> {
     input: Bytes<'i>,
     raw_range: Range,
     pub(super) token_outline: T,
@@ -15,7 +15,7 @@ pub type TagLexeme<'i> = Lexeme<'i, TagTokenOutline>;
 pub type NonTagContentLexeme<'i> = Lexeme<'i, Option<NonTagContentTokenOutline>>;
 
 impl<'i, T> Lexeme<'i, T> {
-    pub fn new(input: Bytes<'i>, token_outline: T, raw_range: Range) -> Self {
+    pub const fn new(input: Bytes<'i>, token_outline: T, raw_range: Range) -> Self {
         Lexeme {
             input,
             raw_range,
@@ -24,17 +24,17 @@ impl<'i, T> Lexeme<'i, T> {
     }
 
     #[inline]
-    pub fn input(&self) -> &Bytes<'i> {
+    pub const fn input(&self) -> &Bytes<'i> {
         &self.input
     }
 
     #[inline]
-    pub fn token_outline(&self) -> &T {
+    pub const fn token_outline(&self) -> &T {
         &self.token_outline
     }
 
     #[inline]
-    pub fn raw_range(&self) -> Range {
+    pub const fn raw_range(&self) -> Range {
         self.raw_range
     }
 

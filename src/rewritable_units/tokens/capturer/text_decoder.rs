@@ -14,7 +14,7 @@ macro_rules! emit {
     }};
 }
 
-pub struct TextDecoder {
+pub(crate) struct TextDecoder {
     encoding: SharedEncoding,
     pending_text_streaming_decoder: Option<Decoder>,
     text_buffer: String,
