@@ -82,6 +82,8 @@ impl HandlerTypes for LocalHandlerTypes {
     }
 }
 
+/// Marker type for sendable handlers. Use aliases from the `send` module.
+#[doc(hidden)]
 pub struct SendHandlerTypes {}
 
 impl HandlerTypes for SendHandlerTypes {
@@ -150,6 +152,8 @@ pub type EndTagHandlerSend<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResul
 /// Handler for the document end that are [`Send`]able. This is called after the last chunk is processed.
 pub type EndHandlerSend<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>;
 
+/// Trait that allows closures to be used as handlers
+#[doc(hidden)]
 pub trait IntoHandler<T> {
     fn into_handler(self) -> T;
 }

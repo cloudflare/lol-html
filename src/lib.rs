@@ -48,8 +48,9 @@ pub use self::transform_stream::OutputSink;
 pub mod send {
     use crate::rewriter::{
         CommentHandlerSend, DoctypeHandlerSend, ElementHandlerSend, EndHandlerSend,
-        EndTagHandlerSend, SendHandlerTypes, TextHandlerSend,
+        EndTagHandlerSend, TextHandlerSend,
     };
+    pub use crate::rewriter::{IntoHandler, SendHandlerTypes};
 
     /// An [`HtmlRewriter`](crate::HtmlRewriter) that implements [`Send`].
     pub type HtmlRewriter<'h, O> = crate::HtmlRewriter<'h, O, SendHandlerTypes>;

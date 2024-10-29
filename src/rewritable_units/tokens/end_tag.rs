@@ -44,9 +44,15 @@ impl<'i> EndTag<'i> {
         self.name.as_string(self.encoding)
     }
 
-    /// Sets the name of the tag.
     #[inline]
+    #[doc(hidden)]
+    #[deprecated(note = "use set_name_str")]
     pub fn set_name(&mut self, name: Bytes<'static>) {
+        self.set_name_raw(name);
+    }
+
+    /// Sets the name of the tag.
+    pub(crate) fn set_name_raw(&mut self, name: Bytes<'static>) {
         self.name = name;
         self.raw = None;
     }
@@ -54,7 +60,7 @@ impl<'i> EndTag<'i> {
     /// Sets the name of the tag by encoding the given string.
     #[inline]
     pub fn set_name_str(&mut self, name: String) {
-        self.set_name(Bytes::from_string(name, self.encoding));
+        self.set_name_raw(Bytes::from_string(name, self.encoding));
     }
 
     /// Inserts `content` before the end tag.
