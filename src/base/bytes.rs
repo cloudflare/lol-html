@@ -8,10 +8,12 @@ use std::str;
 
 /// An error used to indicate that an encoded string has replacements and can't be converted losslessly.
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(unnameable_types)] // accidentally exposed via `tag.set_name()`
 pub struct HasReplacementsError;
 
 /// A thin wrapper around either byte slice or owned bytes with some handy APIs attached
 #[derive(Clone, PartialEq, Eq, Hash)]
+#[allow(unnameable_types)] // accidentally exposed via `tag.set_name()`
 pub struct Bytes<'b>(Cow<'b, [u8]>);
 
 impl<'b> Bytes<'b> {
@@ -59,7 +61,7 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub fn slice(&self, range: Range) -> Bytes<'_> {
+    pub(crate) fn slice(&self, range: Range) -> Bytes<'_> {
         self.0[range.start..range.end].into()
     }
 
@@ -70,7 +72,7 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes<'_>> {
+    pub(crate) fn opt_slice(&self, range: Option<Range>) -> Option<Bytes<'_>> {
         range.map(|range| self.slice(range))
     }
 

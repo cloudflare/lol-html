@@ -566,7 +566,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
                 0,
                 H::new_end_tag_handler(|end_tag: &mut EndTag<'_>| {
                     if let Some(name) = modified_end_tag_name {
-                        end_tag.set_name(name);
+                        end_tag.set_name_raw(name);
                     }
 
                     if let Some(mutations) = end_tag_mutations {
