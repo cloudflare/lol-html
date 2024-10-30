@@ -9,7 +9,7 @@ use std::fmt::Debug;
 use std::hash::{BuildHasher, Hash};
 
 #[inline]
-fn is_void_element(local_name: &LocalName, enable_esi_tags: bool) -> bool {
+fn is_void_element(local_name: &LocalName<'_>, enable_esi_tags: bool) -> bool {
     // NOTE: fast path for the most commonly used elements
     if tag_is_one_of!(*local_name, [Div, A, Span, Li]) {
         return false;
@@ -103,12 +103,12 @@ impl CounterList {
 pub struct TypedChildCounterMap(HashMap<LocalName<'static>, CounterList>);
 
 impl TypedChildCounterMap {
-    fn hash_name(&self, name: &LocalName) -> u64 {
+    fn hash_name(&self, name: &LocalName<'_>) -> u64 {
         self.0.hasher().hash_one(name)
     }
 
     /// Adds a seen child to the map. The index is the level of the item
-    pub fn add_child(&mut self, name: &LocalName, index: usize) {
+    pub fn add_child(&mut self, name: &LocalName<'_>, index: usize) {
         let hash = self.hash_name(name);
         let entry = self.0.raw_entry_mut().from_hash(hash, |n| name == n);
         match entry {
@@ -261,7 +261,7 @@ impl<E: ElementData> Stack<E> {
     #[inline]
     #[must_use]
     pub fn get_stack_directive(
-        item: &StackItem<E>,
+        item: &StackItem<'_, E>,
         ns: Namespace,
         enable_esi_tags: bool,
     ) -> StackDirective {
@@ -276,7 +276,11 @@ impl<E: ElementData> Stack<E> {
         }
     }
 
-    pub fn pop_up_to(&mut self, local_name: LocalName, popped_element_data_handler: impl FnMut(E)) {
+    pub fn pop_up_to(
+        &mut self,
+        local_name: LocalName<'_>,
+        popped_element_data_handler: impl FnMut(E),
+    ) {
         let pop_to_index = self
             .items
             .iter()
@@ -294,7 +298,7 @@ impl<E: ElementData> Stack<E> {
 
     #[inline]
     #[must_use]
-    pub fn items(&self) -> &[StackItem<E>] {
+    pub fn items(&self) -> &[StackItem<'_, E>] {
         &self.items
     }
 

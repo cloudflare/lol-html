@@ -228,7 +228,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 
     pub fn handle_start_tag(
         &mut self,
-        start_tag: &mut StartTag,
+        start_tag: &mut StartTag<'_>,
         current_element_data: Option<&mut ElementDescriptor>,
     ) -> HandlerResult {
         if self.matched_elements_with_removed_content > 0 {
@@ -260,7 +260,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 
     pub fn handle_token(
         &mut self,
-        token: &mut Token,
+        token: &mut Token<'_>,
         current_element_data: Option<&mut ElementDescriptor>,
     ) -> HandlerResult {
         match token {
@@ -274,7 +274,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
         }
     }
 
-    pub fn handle_end(&mut self, document_end: &mut DocumentEnd) -> HandlerResult {
+    pub fn handle_end(&mut self, document_end: &mut DocumentEnd<'_>) -> HandlerResult {
         self.end_handlers
             .do_for_each_active_and_remove(|h| h(document_end))
     }

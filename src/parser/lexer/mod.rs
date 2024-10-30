@@ -14,10 +14,10 @@ use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeB
 use crate::rewriter::RewritingError;
 
 pub trait LexemeSink {
-    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError>;
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> Result<ParserDirective, RewritingError>;
     fn handle_non_tag_content(
         &mut self,
-        lexeme: &NonTagContentLexeme,
+        lexeme: &NonTagContentLexeme<'_>,
     ) -> Result<(), RewritingError>;
 }
 
@@ -91,7 +91,7 @@ impl<S: LexemeSink> Lexer<S> {
         &mut self,
         context: &mut ParserContext<S>,
         feedback: TreeBuilderFeedback,
-        lexeme: &TagLexeme,
+        lexeme: &TagLexeme<'_>,
     ) {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => self.set_last_text_type(text_type),
@@ -109,7 +109,7 @@ impl<S: LexemeSink> Lexer<S> {
     fn emit_lexeme(
         &mut self,
         context: &mut ParserContext<S>,
-        lexeme: &NonTagContentLexeme,
+        lexeme: &NonTagContentLexeme<'_>,
     ) -> ActionResult {
         trace!(@output lexeme);
 
@@ -125,7 +125,7 @@ impl<S: LexemeSink> Lexer<S> {
     fn emit_tag_lexeme(
         &mut self,
         context: &mut ParserContext<S>,
-        lexeme: &TagLexeme,
+        lexeme: &TagLexeme<'_>,
     ) -> Result<ParserDirective, RewritingError> {
         trace!(@output lexeme);
 

@@ -123,7 +123,7 @@ impl Serialize for Doctype<'_> {
 
 impl Debug for Doctype<'_> {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Doctype")
             .field("name", &self.name())
             .field("public_id", &self.public_id())
@@ -144,7 +144,7 @@ mod tests {
     fn rewrite_doctype(
         html: &[u8],
         encoding: &'static Encoding,
-        mut handler: impl FnMut(&mut Doctype),
+        mut handler: impl FnMut(&mut Doctype<'_>),
     ) -> String {
         let mut handler_called = false;
 

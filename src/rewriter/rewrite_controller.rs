@@ -73,7 +73,7 @@ impl<'h, H: HandlerTypes> TransformController for HtmlRewriteController<'h, H> {
 
     fn handle_start_tag(
         &mut self,
-        local_name: LocalName,
+        local_name: LocalName<'_>,
         ns: Namespace,
     ) -> StartTagHandlingResult<Self> {
         match self.selector_matching_vm {
@@ -94,7 +94,7 @@ impl<'h, H: HandlerTypes> TransformController for HtmlRewriteController<'h, H> {
         }
     }
 
-    fn handle_end_tag(&mut self, local_name: LocalName) -> TokenCaptureFlags {
+    fn handle_end_tag(&mut self, local_name: LocalName<'_>) -> TokenCaptureFlags {
         if let Some(ref mut vm) = self.selector_matching_vm {
             vm.exec_for_end_tag(local_name, |elem_desc| {
                 self.handlers_dispatcher.stop_matching(elem_desc);
@@ -105,7 +105,7 @@ impl<'h, H: HandlerTypes> TransformController for HtmlRewriteController<'h, H> {
     }
 
     #[inline]
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
+    fn handle_token(&mut self, token: &mut Token<'_>) -> Result<(), RewritingError> {
         let current_element_data = self
             .selector_matching_vm
             .as_mut()
@@ -116,7 +116,7 @@ impl<'h, H: HandlerTypes> TransformController for HtmlRewriteController<'h, H> {
             .map_err(RewritingError::ContentHandlerError)
     }
 
-    fn handle_end(&mut self, document_end: &mut DocumentEnd) -> Result<(), RewritingError> {
+    fn handle_end(&mut self, document_end: &mut DocumentEnd<'_>) -> Result<(), RewritingError> {
         self.handlers_dispatcher
             .handle_end(document_end)
             .map_err(RewritingError::ContentHandlerError)

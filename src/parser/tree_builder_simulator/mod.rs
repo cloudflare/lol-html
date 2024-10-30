@@ -29,7 +29,7 @@ pub enum TreeBuilderFeedback {
     SetAllowCdata(bool),
     #[allow(clippy::type_complexity)]
     RequestLexeme(
-        Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback + Send>,
+        Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback + Send>,
     ),
     None,
 }
@@ -43,7 +43,9 @@ impl From<TextType> for TreeBuilderFeedback {
 
 #[inline]
 fn request_lexeme(
-    callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme) -> TreeBuilderFeedback + 'static + Send,
+    callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback
+        + 'static
+        + Send,
 ) -> TreeBuilderFeedback {
     TreeBuilderFeedback::RequestLexeme(Box::new(callback))
 }
@@ -58,7 +60,7 @@ macro_rules! expect_tag {
 }
 
 #[inline]
-fn eq_case_insensitive(actual: &Bytes, expected: &[u8]) -> bool {
+fn eq_case_insensitive(actual: &Bytes<'_>, expected: &[u8]) -> bool {
     if actual.len() != expected.len() {
         return false;
     }

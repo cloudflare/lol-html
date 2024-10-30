@@ -1,4 +1,3 @@
-
 use lol_html::selectors_vm::Ast;
 use std::env::args;
 

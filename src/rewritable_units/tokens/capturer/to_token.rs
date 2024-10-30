@@ -21,7 +21,7 @@ pub trait ToToken {
         &self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult;
+    ) -> ToTokenResult<'_>;
 }
 
 impl ToToken for TagLexeme<'_> {
@@ -29,7 +29,7 @@ impl ToToken for TagLexeme<'_> {
         &self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult {
+    ) -> ToTokenResult<'_> {
         match *self.token_outline() {
             TagTokenOutline::StartTag {
                 name,
@@ -70,7 +70,7 @@ impl ToToken for NonTagContentLexeme<'_> {
         &self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult {
+    ) -> ToTokenResult<'_> {
         match *self.token_outline() {
             Some(NonTagContentTokenOutline::Text(text_type)) => ToTokenResult::Text(text_type),
             Some(NonTagContentTokenOutline::Comment(text))

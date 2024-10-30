@@ -42,7 +42,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    fn find(&self, lowercased_name: &Bytes) -> Option<AttributeOutline> {
+    fn find(&self, lowercased_name: &Bytes<'_>) -> Option<AttributeOutline> {
         self.attributes
             .iter()
             .find(|a| {
@@ -64,20 +64,20 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    fn get_value(&self, lowercased_name: &Bytes) -> Option<Bytes<'i>> {
+    fn get_value(&self, lowercased_name: &Bytes<'_>) -> Option<Bytes<'i>> {
         self.find(lowercased_name)
             .map(|a| self.input.slice(a.value))
     }
 
     #[inline]
     #[must_use]
-    pub fn has_attribute(&self, lowercased_name: &Bytes) -> bool {
+    pub fn has_attribute(&self, lowercased_name: &Bytes<'_>) -> bool {
         self.find(lowercased_name).is_some()
     }
 
     #[inline]
     #[must_use]
-    pub fn has_id(&self, id: &Bytes) -> bool {
+    pub fn has_id(&self, id: &Bytes<'_>) -> bool {
         match self.id.borrow_with(|| self.get_value(&ID_ATTR)) {
             Some(actual_id) => actual_id == id,
             None => false,
@@ -86,7 +86,7 @@ impl<'i> AttributeMatcher<'i> {
 
     #[inline]
     #[must_use]
-    pub fn has_class(&self, class_name: &Bytes) -> bool {
+    pub fn has_class(&self, class_name: &Bytes<'_>) -> bool {
         match self.class.borrow_with(|| self.get_value(&CLASS_ATTR)) {
             Some(class) => class
                 .split(|&b| is_attr_whitespace(b))
@@ -96,7 +96,7 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    fn value_matches(&self, name: &Bytes, matcher: impl Fn(Bytes) -> bool) -> bool {
+    fn value_matches(&self, name: &Bytes<'_>, matcher: impl Fn(Bytes<'_>) -> bool) -> bool {
         self.get_value(name).is_some_and(matcher)
     }
 

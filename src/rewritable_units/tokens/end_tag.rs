@@ -88,7 +88,7 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
-    const fn raw(&self) -> Option<&Bytes> {
+    const fn raw(&self) -> Option<&Bytes<'_>> {
         self.raw.as_ref()
     }
 
@@ -104,7 +104,7 @@ impl_serialize!(EndTag);
 
 impl Debug for EndTag<'_> {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EndTag")
             .field("name", &self.name())
             .finish()

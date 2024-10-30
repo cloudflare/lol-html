@@ -1,8 +1,8 @@
+use encoding_rs::UTF_8;
+use getopts::{Matches, Options};
 use lol_html::errors::*;
 use lol_html::html_content::*;
 use lol_html::*;
-use encoding_rs::UTF_8;
-use getopts::{Matches, Options};
 use std::env::args;
 
 fn parse_options() -> Option<Matches> {
@@ -68,11 +68,11 @@ impl TransformController for TraceTransformController {
         self.capture_flags
     }
 
-    fn handle_start_tag(&mut self, _: LocalName, _: Namespace) -> StartTagHandlingResult<Self> {
+    fn handle_start_tag(&mut self, _: LocalName<'_>, _: Namespace) -> StartTagHandlingResult<Self> {
         Ok(self.capture_flags)
     }
 
-    fn handle_end_tag(&mut self, _: LocalName) -> TokenCaptureFlags {
+    fn handle_end_tag(&mut self, _: LocalName<'_>) -> TokenCaptureFlags {
         self.capture_flags
     }
 

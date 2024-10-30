@@ -258,7 +258,7 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
 // returned by the `HtmlRewriterBuilder.build()` method.
 impl<'h, O: OutputSink, H: HandlerTypes> Debug for HtmlRewriter<'h, O, H> {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "HtmlRewriter")
     }
 }
@@ -359,7 +359,7 @@ mod tests {
     assert_impl_all!(crate::send::HtmlRewriter<'_, Box<dyn FnMut(&[u8]) + Send>>: Send);
 
     fn write_chunks<O: OutputSink>(
-        mut rewriter: HtmlRewriter<O>,
+        mut rewriter: HtmlRewriter<'_, O>,
         encoding: &'static Encoding,
         chunks: &[&str],
     ) {
@@ -372,7 +372,7 @@ mod tests {
         rewriter.end().unwrap();
     }
 
-    fn rewrite_html_bytes(html: &[u8], settings: Settings) -> Vec<u8> {
+    fn rewrite_html_bytes(html: &[u8], settings: Settings<'_, '_>) -> Vec<u8> {
         let mut out: Vec<u8> = Vec::with_capacity(html.len());
 
         let mut rewriter = HtmlRewriter::new(settings, |c: &[u8]| out.extend_from_slice(c));
@@ -675,7 +675,7 @@ mod tests {
         use crate::html_content::{ContentType, TextChunk};
 
         let enthusiastic_text_handler = || {
-            doc_text!(move |text: &mut TextChunk| {
+            doc_text!(move |text: &mut TextChunk<'_>| {
                 let new_text = text.as_str().replace('!', "!!!");
                 text.replace(&new_text, ContentType::Text);
                 Ok(())
@@ -731,7 +731,7 @@ mod tests {
         use crate::html_content::{ContentType, TextChunk};
 
         let enthusiastic_text_handler = || {
-            doc_text!(move |text: &mut TextChunk| {
+            doc_text!(move |text: &mut TextChunk<'_>| {
                 let new_text = text.as_str().replace('!', "!!!");
                 text.replace(&new_text, ContentType::Text);
                 Ok(())
@@ -904,21 +904,21 @@ mod tests {
 
             assert_err(
                 ElementContentHandlers::default()
-                    .element(|_: &mut Element<_>| Err("Error in element handler".into())),
+                    .element(|_: &mut Element<'_, '_, _>| Err("Error in element handler".into())),
                 DocumentContentHandlers::default(),
                 "Error in element handler",
             );
 
             assert_err(
                 ElementContentHandlers::default()
-                    .comments(|_: &mut Comment| Err("Error in element comment handler".into())),
+                    .comments(|_: &mut Comment<'_>| Err("Error in element comment handler".into())),
                 DocumentContentHandlers::default(),
                 "Error in element comment handler",
             );
 
             assert_err(
                 ElementContentHandlers::default()
-                    .text(|_: &mut TextChunk| Err("Error in element text handler".into())),
+                    .text(|_: &mut TextChunk<'_>| Err("Error in element text handler".into())),
                 DocumentContentHandlers::default(),
                 "Error in element text handler",
             );

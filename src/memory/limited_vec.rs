@@ -46,7 +46,7 @@ impl<T> LimitedVec<T> {
 
     /// Creates a draining iterator that removes the specified range in the
     /// vector and yields the removed items.
-    pub fn drain<R>(&mut self, range: R) -> Drain<T>
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
     where
         R: RangeBounds<usize>,
     {

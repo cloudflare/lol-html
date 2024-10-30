@@ -60,7 +60,7 @@ pub enum SelectorError {
 
 impl From<SelectorParseError<'_>> for SelectorError {
     #[cold]
-    fn from(err: SelectorParseError) -> Self {
+    fn from(err: SelectorParseError<'_>) -> Self {
         // NOTE: always use explicit variants in this match, so we
         // get compile-time error if new error types were added to
         // the parser.
