@@ -56,3 +56,16 @@ static_assertions = "1.1.0"
 rand = "0.8.5"
 rustc-test = "0.3.1"
 itertools = "0.10.1"
+
+[lints.rust]
+keyword_idents = { level = "deny", priority = 1 }
+for_loops_over_fallibles = "deny"
+unit_bindings = "deny"
+absolute_paths_not_starting_with_crate = "warn"
+elided_lifetimes_in_paths = "warn"
+macro_use_extern_crate = "warn"
+meta_variable_misuse = "warn"
+redundant_lifetimes = "warn"
+trivial_numeric_casts = "warn"
+unnameable_types = "warn"
+unused_qualifications = "warn"
