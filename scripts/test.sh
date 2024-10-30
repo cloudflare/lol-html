@@ -7,7 +7,7 @@ cargo clippy --features=integration_test --all-targets -- -Dwarnings
 cargo test --features=integration_test "$@"
 
 echo "=== Running C API tests... ==="
-prove -e 'cargo' run ::  --manifest-path=./c-api/tests/Cargo.toml
+prove -e 'cargo' run ::  --manifest-path=./c-api/c-tests/Cargo.toml
 
 echo "=== Building fuzzing test case code to ensure that it uses current API... ==="
 (cd fuzz/test_case && cargo check)
