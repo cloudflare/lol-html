@@ -21,15 +21,13 @@ macro_rules! assert_not_null {
 // name to the null pointer assertion.
 macro_rules! to_ref {
     ($ptr:ident) => {{
-        assert_not_null!($ptr);
-        unsafe { &*$ptr }
+        unsafe { $ptr.as_ref().expect(concat!(stringify!($var), " is NULL")) }
     }};
 }
 
 macro_rules! to_ref_mut {
     ($ptr:ident) => {{
-        assert_not_null!($ptr);
-        unsafe { &mut *$ptr }
+        unsafe { $ptr.as_mut().expect(concat!(stringify!($var), " is NULL")) }
     }};
 }
 
