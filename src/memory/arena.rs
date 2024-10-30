@@ -101,7 +101,7 @@ mod tests {
         assert_eq!(limiter.current_usage(), 3);
 
         arena.init_with(&[]).unwrap();
-        assert_eq!(arena.bytes(), &[]);
+        assert!(arena.bytes().is_empty());
         assert_eq!(limiter.current_usage(), 3);
 
         let err = arena.init_with(&[1, 2, 3, 4, 5, 6, 7]).unwrap_err();

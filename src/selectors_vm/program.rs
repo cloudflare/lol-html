@@ -46,8 +46,8 @@ where
 {
     pub fn try_exec_without_attrs<'i>(
         &'i self,
-        state: &SelectorState,
-        local_name: &LocalName,
+        state: &SelectorState<'_>,
+        local_name: &LocalName<'_>,
     ) -> TryExecResult<'i, P> {
         if self.local_name_exprs.iter().all(|e| e(state, local_name)) {
             if self.attribute_exprs.is_empty() {
@@ -62,8 +62,8 @@ where
 
     pub fn complete_exec_with_attrs<'i>(
         &'i self,
-        state: &SelectorState,
-        attr_matcher: &AttributeMatcher,
+        state: &SelectorState<'_>,
+        attr_matcher: &AttributeMatcher<'_>,
     ) -> Option<&'i ExecutionBranch<P>> {
         if self.attribute_exprs.iter().all(|e| e(state, attr_matcher)) {
             Some(&self.associated_branch)
@@ -74,9 +74,9 @@ where
 
     pub fn exec<'i>(
         &'i self,
-        state: &SelectorState,
-        local_name: &LocalName,
-        attr_matcher: &AttributeMatcher,
+        state: &SelectorState<'_>,
+        local_name: &LocalName<'_>,
+        attr_matcher: &AttributeMatcher<'_>,
     ) -> Option<&'i ExecutionBranch<P>> {
         let is_match = self.local_name_exprs.iter().all(|e| e(state, local_name))
             && self.attribute_exprs.iter().all(|e| e(state, attr_matcher));

@@ -27,7 +27,8 @@ pub enum TokenCapturerEvent<'i> {
     TokenProduced(Box<Token<'i>>),
 }
 
-type CapturerEventHandler<'h> = &'h mut dyn FnMut(TokenCapturerEvent) -> Result<(), RewritingError>;
+type CapturerEventHandler<'h> =
+    &'h mut dyn FnMut(TokenCapturerEvent<'_>) -> Result<(), RewritingError>;
 
 pub(crate) struct TokenCapturer {
     encoding: SharedEncoding,
@@ -60,7 +61,7 @@ impl TokenCapturer {
     #[inline]
     pub fn flush_pending_text(
         &mut self,
-        event_handler: CapturerEventHandler,
+        event_handler: CapturerEventHandler<'_>,
     ) -> Result<(), RewritingError> {
         self.text_decoder.flush_pending(event_handler)
     }
@@ -68,7 +69,7 @@ impl TokenCapturer {
     pub fn feed<'i, T>(
         &mut self,
         lexeme: &Lexeme<'i, T>,
-        mut event_handler: impl FnMut(TokenCapturerEvent) -> Result<(), RewritingError>,
+        mut event_handler: impl FnMut(TokenCapturerEvent<'_>) -> Result<(), RewritingError>,
     ) -> Result<(), RewritingError>
     where
         Lexeme<'i, T>: ToToken,

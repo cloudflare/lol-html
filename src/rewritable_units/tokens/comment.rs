@@ -186,7 +186,7 @@ impl<'i> Comment<'i> {
     }
 
     #[inline]
-    const fn raw(&self) -> Option<&Bytes> {
+    const fn raw(&self) -> Option<&Bytes<'_>> {
         self.raw.as_ref()
     }
 
@@ -203,7 +203,7 @@ impl_user_data!(Comment<'_>);
 
 impl Debug for Comment<'_> {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Comment")
             .field("text", &self.text())
             .finish()
@@ -221,7 +221,7 @@ mod tests {
     fn rewrite_comment(
         html: &[u8],
         encoding: &'static Encoding,
-        mut handler: impl FnMut(&mut Comment),
+        mut handler: impl FnMut(&mut Comment<'_>),
     ) -> String {
         let mut handler_called = false;
 

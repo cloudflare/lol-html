@@ -73,7 +73,7 @@ pub struct ParsingAmbiguityError {
 
 impl Display for ParsingAmbiguityError {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             concat!(

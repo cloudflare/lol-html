@@ -270,7 +270,7 @@ impl<'i> TextChunk<'i> {
 
     #[inline]
     #[allow(clippy::unused_self)]
-    const fn raw(&self) -> Option<&Bytes> {
+    const fn raw(&self) -> Option<&Bytes<'_>> {
         None
     }
 
@@ -287,7 +287,7 @@ impl_user_data!(TextChunk<'_>);
 
 impl Debug for TextChunk<'_> {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TextChunk")
             .field("text", &self.as_str())
             .field("last_in_text_node", &self.last_in_text_node())
@@ -305,7 +305,7 @@ mod tests {
     fn rewrite_text_chunk(
         html: &[u8],
         encoding: &'static Encoding,
-        mut handler: impl FnMut(&mut TextChunk),
+        mut handler: impl FnMut(&mut TextChunk<'_>),
     ) -> String {
         let mut handler_called = false;
 

@@ -3,7 +3,7 @@ use lol_html::{element, HtmlRewriter, Settings};
 use std::io;
 use std::io::prelude::*;
 
-fn rewrite_url_in_attr(el: &mut Element, attr_name: &str) {
+fn rewrite_url_in_attr(el: &mut Element<'_, '_>, attr_name: &str) {
     let attr = el
         .get_attribute(attr_name)
         .unwrap()

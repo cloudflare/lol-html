@@ -564,7 +564,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         {
             end_tag_handlers.insert(
                 0,
-                H::new_end_tag_handler(|end_tag: &mut EndTag| {
+                H::new_end_tag_handler(|end_tag: &mut EndTag<'_>| {
                     if let Some(name) = modified_end_tag_name {
                         end_tag.set_name(name);
                     }
@@ -588,7 +588,7 @@ impl_user_data!(Element<'_, '_>);
 
 impl<H: HandlerTypes> Debug for Element<'_, '_, H> {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Element")
             .field("tag_name", &self.tag_name())
             .field("attributes", &self.attributes())
@@ -608,7 +608,7 @@ mod tests {
         html: &[u8],
         encoding: &'static Encoding,
         selector: &str,
-        mut handler: impl FnMut(&mut Element),
+        mut handler: impl FnMut(&mut Element<'_, '_>),
     ) -> String {
         let mut handler_called = false;
 
@@ -1083,7 +1083,7 @@ mod tests {
 
     #[test]
     fn on_end_tag_handlers() {
-        let handler = |el: &mut Element| {
+        let handler = |el: &mut Element<'_, '_>| {
             el.end_tag_handlers().unwrap().push(Box::new(move |end| {
                 end.before("X", ContentType::Html);
                 Ok(())

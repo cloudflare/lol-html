@@ -11,17 +11,17 @@ use std::error::Error;
 /// non-[`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
 pub trait HandlerTypes: Sized {
     /// Handler type for [`Doctype`].
-    type DoctypeHandler<'h>: FnMut(&mut Doctype) -> HandlerResult + 'h;
+    type DoctypeHandler<'h>: FnMut(&mut Doctype<'_>) -> HandlerResult + 'h;
     /// Handler type for [`Comment`].
-    type CommentHandler<'h>: FnMut(&mut Comment) -> HandlerResult + 'h;
+    type CommentHandler<'h>: FnMut(&mut Comment<'_>) -> HandlerResult + 'h;
     /// Handler type for [`TextChunk`].
-    type TextHandler<'h>: FnMut(&mut TextChunk) -> HandlerResult + 'h;
+    type TextHandler<'h>: FnMut(&mut TextChunk<'_>) -> HandlerResult + 'h;
     /// Handler type for [`Element`].
     type ElementHandler<'h>: FnMut(&mut Element<'_, '_, Self>) -> HandlerResult + 'h;
     /// Handler type for [`EndTag`].
-    type EndTagHandler<'h>: FnOnce(&mut EndTag) -> HandlerResult + 'h;
+    type EndTagHandler<'h>: FnOnce(&mut EndTag<'_>) -> HandlerResult + 'h;
     /// Handler type for [`DocumentEnd`].
-    type EndHandler<'h>: FnOnce(&mut DocumentEnd) -> HandlerResult + 'h;
+    type EndHandler<'h>: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'h;
 
     // Inside the HTML rewriter we need to create handlers, and they need to be the most constrained
     // possible version of a handler (i.e. if we have `Send` and non-`Send` handlers we need to
@@ -72,7 +72,7 @@ impl HandlerTypes for LocalHandlerTypes {
     }
 
     fn combine_handlers(handlers: Vec<Self::EndTagHandler<'_>>) -> Self::EndTagHandler<'_> {
-        Box::new(move |end_tag: &mut EndTag| {
+        Box::new(move |end_tag: &mut EndTag<'_>| {
             for handler in handlers {
                 handler(end_tag)?;
             }
@@ -105,7 +105,7 @@ impl HandlerTypes for SendHandlerTypes {
     }
 
     fn combine_handlers(handlers: Vec<Self::EndTagHandler<'_>>) -> Self::EndTagHandler<'_> {
-        Box::new(move |end_tag: &mut EndTag| {
+        Box::new(move |end_tag: &mut EndTag<'_>| {
             for handler in handlers {
                 handler(end_tag)?;
             }
@@ -121,52 +121,52 @@ pub type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
 /// Handler for the [document type declaration].
 ///
 /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
-pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + 'h>;
+pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype<'_>) -> HandlerResult + 'h>;
 /// Handler for HTML comments.
-pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + 'h>;
+pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment<'_>) -> HandlerResult + 'h>;
 /// Handler for text chunks present the HTML.
-pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + 'h>;
+pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk<'_>) -> HandlerResult + 'h>;
 /// Handler for elements matched by a selector.
 pub type ElementHandler<'h> =
     Box<dyn FnMut(&mut Element<'_, '_, LocalHandlerTypes>) -> HandlerResult + 'h>;
 /// Handler for end tags.
-pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + 'h>;
+pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResult + 'h>;
 /// Handler for the document end. This is called after the last chunk is processed.
-pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + 'h>;
+pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'h>;
 
 /// Handler for the [document type declaration] that are [`Send`]able.
 ///
 /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
-pub type DoctypeHandlerSend<'h> = Box<dyn FnMut(&mut Doctype) -> HandlerResult + Send + 'h>;
+pub type DoctypeHandlerSend<'h> = Box<dyn FnMut(&mut Doctype<'_>) -> HandlerResult + Send + 'h>;
 /// Handler for HTML comments that are [`Send`]able.
-pub type CommentHandlerSend<'h> = Box<dyn FnMut(&mut Comment) -> HandlerResult + Send + 'h>;
+pub type CommentHandlerSend<'h> = Box<dyn FnMut(&mut Comment<'_>) -> HandlerResult + Send + 'h>;
 /// Handler for text chunks present the HTML that are [`Send`]able.
-pub type TextHandlerSend<'h> = Box<dyn FnMut(&mut TextChunk) -> HandlerResult + Send + 'h>;
+pub type TextHandlerSend<'h> = Box<dyn FnMut(&mut TextChunk<'_>) -> HandlerResult + Send + 'h>;
 /// Handler for elements matched by a selector that are [`Send`]able.
 pub type ElementHandlerSend<'h, H = SendHandlerTypes> =
     Box<dyn FnMut(&mut Element<'_, '_, H>) -> HandlerResult + Send + 'h>;
 /// Handler for end tags that are [`Send`]able.
-pub type EndTagHandlerSend<'h> = Box<dyn FnOnce(&mut EndTag) -> HandlerResult + Send + 'h>;
+pub type EndTagHandlerSend<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResult + Send + 'h>;
 /// Handler for the document end that are [`Send`]able. This is called after the last chunk is processed.
-pub type EndHandlerSend<'h> = Box<dyn FnOnce(&mut DocumentEnd) -> HandlerResult + Send + 'h>;
+pub type EndHandlerSend<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>;
 
 pub trait IntoHandler<T> {
     fn into_handler(self) -> T;
 }
 
-impl<'h, F: FnMut(&mut Doctype) -> HandlerResult + 'h> IntoHandler<DoctypeHandler<'h>> for F {
+impl<'h, F: FnMut(&mut Doctype<'_>) -> HandlerResult + 'h> IntoHandler<DoctypeHandler<'h>> for F {
     fn into_handler(self) -> DoctypeHandler<'h> {
         Box::new(self)
     }
 }
 
-impl<'h, F: FnMut(&mut Comment) -> HandlerResult + 'h> IntoHandler<CommentHandler<'h>> for F {
+impl<'h, F: FnMut(&mut Comment<'_>) -> HandlerResult + 'h> IntoHandler<CommentHandler<'h>> for F {
     fn into_handler(self) -> CommentHandler<'h> {
         Box::new(self)
     }
 }
 
-impl<'h, F: FnMut(&mut TextChunk) -> HandlerResult + 'h> IntoHandler<TextHandler<'h>> for F {
+impl<'h, F: FnMut(&mut TextChunk<'_>) -> HandlerResult + 'h> IntoHandler<TextHandler<'h>> for F {
     fn into_handler(self) -> TextHandler<'h> {
         Box::new(self)
     }
@@ -180,35 +180,35 @@ impl<'h, F: FnMut(&mut Element<'_, '_, LocalHandlerTypes>) -> HandlerResult + 'h
     }
 }
 
-impl<'h, F: FnOnce(&mut EndTag) -> HandlerResult + 'h> IntoHandler<EndTagHandler<'h>> for F {
+impl<'h, F: FnOnce(&mut EndTag<'_>) -> HandlerResult + 'h> IntoHandler<EndTagHandler<'h>> for F {
     fn into_handler(self) -> EndTagHandler<'h> {
         Box::new(self)
     }
 }
 
-impl<'h, F: FnOnce(&mut DocumentEnd) -> HandlerResult + 'h> IntoHandler<EndHandler<'h>> for F {
+impl<'h, F: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'h> IntoHandler<EndHandler<'h>> for F {
     fn into_handler(self) -> EndHandler<'h> {
         Box::new(self)
     }
 }
 
-impl<'h, F: FnMut(&mut Doctype) -> HandlerResult + Send + 'h> IntoHandler<DoctypeHandlerSend<'h>>
-    for F
+impl<'h, F: FnMut(&mut Doctype<'_>) -> HandlerResult + Send + 'h>
+    IntoHandler<DoctypeHandlerSend<'h>> for F
 {
     fn into_handler(self) -> DoctypeHandlerSend<'h> {
         Box::new(self)
     }
 }
 
-impl<'h, F: FnMut(&mut Comment) -> HandlerResult + Send + 'h> IntoHandler<CommentHandlerSend<'h>>
-    for F
+impl<'h, F: FnMut(&mut Comment<'_>) -> HandlerResult + Send + 'h>
+    IntoHandler<CommentHandlerSend<'h>> for F
 {
     fn into_handler(self) -> CommentHandlerSend<'h> {
         Box::new(self)
     }
 }
 
-impl<'h, F: FnMut(&mut TextChunk) -> HandlerResult + Send + 'h> IntoHandler<TextHandlerSend<'h>>
+impl<'h, F: FnMut(&mut TextChunk<'_>) -> HandlerResult + Send + 'h> IntoHandler<TextHandlerSend<'h>>
     for F
 {
     fn into_handler(self) -> TextHandlerSend<'h> {
@@ -224,7 +224,7 @@ impl<'h, H: HandlerTypes, F: FnMut(&mut Element<'_, '_, H>) -> HandlerResult + S
     }
 }
 
-impl<'h, F: FnOnce(&mut EndTag) -> HandlerResult + Send + 'h> IntoHandler<EndTagHandlerSend<'h>>
+impl<'h, F: FnOnce(&mut EndTag<'_>) -> HandlerResult + Send + 'h> IntoHandler<EndTagHandlerSend<'h>>
     for F
 {
     fn into_handler(self) -> EndTagHandlerSend<'h> {
@@ -232,8 +232,8 @@ impl<'h, F: FnOnce(&mut EndTag) -> HandlerResult + Send + 'h> IntoHandler<EndTag
     }
 }
 
-impl<'h, F: FnOnce(&mut DocumentEnd) -> HandlerResult + Send + 'h> IntoHandler<EndHandlerSend<'h>>
-    for F
+impl<'h, F: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>
+    IntoHandler<EndHandlerSend<'h>> for F
 {
     fn into_handler(self) -> EndHandlerSend<'h> {
         Box::new(self)
@@ -490,7 +490,7 @@ macro_rules! comments {
         #[inline(always)]
         const fn type_hint<T>(h: T) -> T
         where
-            T: FnMut(&mut $crate::html_content::Comment) -> $crate::HandlerResult,
+            T: FnMut(&mut $crate::html_content::Comment<'_>) -> $crate::HandlerResult,
         {
             h
         }
@@ -537,7 +537,7 @@ macro_rules! doctype {
         #[inline(always)]
         const fn type_hint<T>(h: T) -> T
         where
-            T: FnMut(&mut $crate::html_content::Doctype) -> $crate::HandlerResult,
+            T: FnMut(&mut $crate::html_content::Doctype<'_>) -> $crate::HandlerResult,
         {
             h
         }
@@ -578,7 +578,7 @@ macro_rules! doc_text {
         #[inline(always)]
         const fn type_hint<T>(h: T) -> T
         where
-            T: FnMut(&mut $crate::html_content::TextChunk) -> $crate::HandlerResult,
+            T: FnMut(&mut $crate::html_content::TextChunk<'_>) -> $crate::HandlerResult,
         {
             h
         }
@@ -617,7 +617,7 @@ macro_rules! doc_comments {
         #[inline(always)]
         const fn type_hint<T>(h: T) -> T
         where
-            T: FnMut(&mut $crate::html_content::Comment) -> $crate::HandlerResult,
+            T: FnMut(&mut $crate::html_content::Comment<'_>) -> $crate::HandlerResult,
         {
             h
         }
@@ -665,7 +665,7 @@ macro_rules! end {
         #[inline(always)]
         const fn type_hint<T>(h: T) -> T
         where
-            T: FnOnce(&mut $crate::html_content::DocumentEnd) -> $crate::HandlerResult,
+            T: FnOnce(&mut $crate::html_content::DocumentEnd<'_>) -> $crate::HandlerResult,
         {
             h
         }

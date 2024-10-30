@@ -59,7 +59,7 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub fn slice(&self, range: Range) -> Bytes {
+    pub fn slice(&self, range: Range) -> Bytes<'_> {
         self.0[range.start..range.end].into()
     }
 
@@ -70,7 +70,7 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes> {
+    pub fn opt_slice(&self, range: Option<Range>) -> Option<Bytes<'_>> {
         range.map(|range| self.slice(range))
     }
 
@@ -172,7 +172,7 @@ impl<'b> From<&'b [u8]> for Bytes<'b> {
 
 impl Debug for Bytes<'_> {
     #[cold]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "`{}`", self.as_debug_string())
     }
 }

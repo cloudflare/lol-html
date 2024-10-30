@@ -12,10 +12,13 @@ use std::cmp::min;
 pub trait TagHintSink {
     fn handle_start_tag_hint(
         &mut self,
-        name: LocalName,
+        name: LocalName<'_>,
         ns: Namespace,
     ) -> Result<ParserDirective, RewritingError>;
-    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, RewritingError>;
+    fn handle_end_tag_hint(
+        &mut self,
+        name: LocalName<'_>,
+    ) -> Result<ParserDirective, RewritingError>;
 }
 
 pub type State<S> = fn(&mut TagScanner<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;

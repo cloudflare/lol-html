@@ -30,10 +30,14 @@ pub type StartTagHandlingResult<C> = Result<TokenCaptureFlags, DispatcherError<C
 
 pub trait TransformController: Sized {
     fn initial_capture_flags(&self) -> TokenCaptureFlags;
-    fn handle_start_tag(&mut self, name: LocalName, ns: Namespace) -> StartTagHandlingResult<Self>;
-    fn handle_end_tag(&mut self, name: LocalName) -> TokenCaptureFlags;
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError>;
-    fn handle_end(&mut self, document_end: &mut DocumentEnd) -> Result<(), RewritingError>;
+    fn handle_start_tag(
+        &mut self,
+        name: LocalName<'_>,
+        ns: Namespace,
+    ) -> StartTagHandlingResult<Self>;
+    fn handle_end_tag(&mut self, name: LocalName<'_>) -> TokenCaptureFlags;
+    fn handle_token(&mut self, token: &mut Token<'_>) -> Result<(), RewritingError>;
+    fn handle_end(&mut self, document_end: &mut DocumentEnd<'_>) -> Result<(), RewritingError>;
     fn should_emit_content(&self) -> bool;
 }
 
@@ -178,7 +182,7 @@ where
 
     fn adjust_capture_flags_for_tag_lexeme(
         &mut self,
-        lexeme: &TagLexeme,
+        lexeme: &TagLexeme<'_>,
     ) -> Result<(), RewritingError> {
         let input = lexeme.input();
 
@@ -290,7 +294,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_tag(&mut self, lexeme: &TagLexeme) -> Result<ParserDirective, RewritingError> {
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> Result<ParserDirective, RewritingError> {
         // NOTE: flush pending text before reporting tag to the transform controller.
         // Otherwise, transform controller can enable or disable text handlers too early.
         // In case of start tag, newly matched element text handlers
@@ -304,7 +308,7 @@ where
             self.adjust_capture_flags_for_tag_lexeme(lexeme)?;
         }
 
-        if let TagTokenOutline::EndTag { .. } = lexeme.token_outline() {
+        if let EndTag { .. } = lexeme.token_outline() {
             if self.should_stop_removing_element_content() {
                 self.emission_enabled = true;
                 self.remaining_content_start = lexeme.raw_range().start;
@@ -320,7 +324,7 @@ where
     #[inline]
     fn handle_non_tag_content(
         &mut self,
-        lexeme: &NonTagContentLexeme,
+        lexeme: &NonTagContentLexeme<'_>,
     ) -> Result<(), RewritingError> {
         self.try_produce_token_from_lexeme(lexeme)
     }
@@ -333,7 +337,7 @@ where
 {
     fn handle_start_tag_hint(
         &mut self,
-        name: LocalName,
+        name: LocalName<'_>,
         ns: Namespace,
     ) -> Result<ParserDirective, RewritingError> {
         match self.transform_controller.handle_start_tag(name, ns) {
@@ -350,7 +354,10 @@ where
         }
     }
 
-    fn handle_end_tag_hint(&mut self, name: LocalName) -> Result<ParserDirective, RewritingError> {
+    fn handle_end_tag_hint(
+        &mut self,
+        name: LocalName<'_>,
+    ) -> Result<ParserDirective, RewritingError> {
         self.flush_pending_captured_text()?;
 
         let mut flags = self.transform_controller.handle_end_tag(name);

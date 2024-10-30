@@ -13,9 +13,10 @@ use std::hash::Hash;
 use std::iter;
 
 /// An expression using only the tag name of an element.
-pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState, &LocalName) -> bool + Send>;
+pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState<'_>, &LocalName<'_>) -> bool + Send>;
 /// An expression using the attributes of an element.
-pub type CompiledAttributeExpr = Box<dyn Fn(&SelectorState, &AttributeMatcher) -> bool + Send>;
+pub type CompiledAttributeExpr =
+    Box<dyn Fn(&SelectorState<'_>, &AttributeMatcher<'_>) -> bool + Send>;
 
 #[derive(Default)]
 struct ExprSet {
@@ -31,7 +32,7 @@ pub struct AttrExprOperands {
 
 impl Expr<OnTagNameExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &LocalName) -> bool + Send + 'static>(
+    pub fn compile_expr<F: Fn(&SelectorState<'_>, &LocalName<'_>) -> bool + Send + 'static>(
         &self,
         f: F,
     ) -> CompiledLocalNameExpr {
@@ -92,7 +93,9 @@ impl Compilable for Expr<OnTagNameExpr> {
 
 impl Expr<OnAttributesExpr> {
     #[inline]
-    pub fn compile_expr<F: Fn(&SelectorState, &AttributeMatcher) -> bool + Send + 'static>(
+    pub fn compile_expr<
+        F: Fn(&SelectorState<'_>, &AttributeMatcher<'_>) -> bool + Send + 'static,
+    >(
         &self,
         f: F,
     ) -> CompiledAttributeExpr {
@@ -384,7 +387,7 @@ mod tests {
     fn with_start_tag(
         html: &str,
         encoding: &'static Encoding,
-        mut action: impl FnMut(LocalName, AttributeMatcher),
+        mut action: impl FnMut(LocalName<'_>, AttributeMatcher<'_>),
     ) {
         test_with_token(html, encoding, |t| match t {
             Token::StartTag(t) => {
@@ -403,7 +406,7 @@ mod tests {
     fn for_each_test_case<T>(
         test_cases: &[(&str, T)],
         encoding: &'static Encoding,
-        action: impl Fn(&str, &T, &SelectorState, LocalName, AttributeMatcher),
+        action: impl Fn(&str, &T, &SelectorState<'_>, LocalName<'_>, AttributeMatcher<'_>),
     ) {
         for (input, matching_data) in test_cases {
             with_start_tag(input, encoding, |local_name, attr_matcher| {

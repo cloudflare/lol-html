@@ -37,7 +37,7 @@ impl TextDecoder {
     #[inline]
     pub fn flush_pending(
         &mut self,
-        event_handler: CapturerEventHandler,
+        event_handler: CapturerEventHandler<'_>,
     ) -> Result<(), RewritingError> {
         if self.pending_text_streaming_decoder.is_some() {
             self.decode_with_streaming_decoder(&[], true, event_handler)?;
@@ -50,7 +50,7 @@ impl TextDecoder {
         &mut self,
         raw: &[u8],
         last: bool,
-        event_handler: CapturerEventHandler,
+        event_handler: CapturerEventHandler<'_>,
     ) -> Result<(), RewritingError> {
         let encoding = self.encoding.get();
         let buffer = self.text_buffer.as_mut_str();
@@ -83,7 +83,7 @@ impl TextDecoder {
         &mut self,
         raw: &[u8],
         text_type: TextType,
-        event_handler: CapturerEventHandler,
+        event_handler: CapturerEventHandler<'_>,
     ) -> Result<(), RewritingError> {
         self.last_text_type = text_type;
         self.decode_with_streaming_decoder(raw, false, event_handler)
