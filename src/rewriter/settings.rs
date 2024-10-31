@@ -82,7 +82,7 @@ impl HandlerTypes for LocalHandlerTypes {
     }
 }
 
-/// Marker type for sendable handlers. Use aliases from the `send` module.
+/// Marker type for sendable handlers. Use aliases from the [`send`](crate::send) module.
 #[doc(hidden)]
 pub struct SendHandlerTypes {}
 
