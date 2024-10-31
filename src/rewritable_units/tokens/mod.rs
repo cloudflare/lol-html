@@ -20,26 +20,30 @@ macro_rules! impl_serialize {
                 mut self,
                 output_handler: &mut dyn FnMut(&[u8]),
             ) -> Result<(), crate::errors::RewritingError> {
+                let mut encoder = crate::rewritable_units::text_encoder::StreamingHandlerSink::new(
+                    self.mutations.encoding,
+                    output_handler,
+                );
                 let content_before = ::std::mem::take(&mut self.mutations.content_before);
                 content_before
-                    .into_bytes(self.mutations.encoding, output_handler)
+                    .encode(&mut encoder)
                     .map_err(crate::errors::RewritingError::ContentHandlerError)?;
 
                 if !self.mutations.removed {
                     match self.raw() {
-                        Some(raw) => output_handler(raw),
-                        None => self.serialize_from_parts(output_handler)?,
+                        Some(raw) => (encoder.output_handler())(&raw),
+                        None => self.serialize_from_parts(encoder.output_handler())?,
                     }
                 } else {
                     self.mutations
                         .replacement
-                        .into_bytes(self.mutations.encoding, output_handler)
+                        .encode(&mut encoder)
                         .map_err(crate::errors::RewritingError::ContentHandlerError)?;
                 }
 
                 self.mutations
                     .content_after
-                    .into_bytes(self.mutations.encoding, output_handler)
+                    .encode(&mut encoder)
                     .map_err(crate::errors::RewritingError::ContentHandlerError)
             }
         }
