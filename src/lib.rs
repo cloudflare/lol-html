@@ -86,7 +86,9 @@ pub mod send {
 pub mod errors {
     pub use super::memory::MemoryLimitExceededError;
     pub use super::parser::ParsingAmbiguityError;
-    pub use super::rewritable_units::{AttributeNameError, CommentTextError, TagNameError};
+    pub use super::rewritable_units::{
+        AttributeNameError, CommentTextError, TagNameError, Utf8Error,
+    };
     pub use super::rewriter::RewritingError;
     pub use super::selectors_vm::SelectorError;
 }
@@ -95,7 +97,7 @@ pub mod errors {
 pub mod html_content {
     pub use super::rewritable_units::{
         Attribute, Comment, ContentType, Doctype, DocumentEnd, Element, EndTag, StartTag,
-        TextChunk, UserData,
+        StreamingHandler, StreamingHandlerSink, TextChunk, UserData,
     };
 
     pub use super::html::TextType;

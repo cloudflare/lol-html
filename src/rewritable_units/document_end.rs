@@ -1,5 +1,4 @@
-use super::text_encoder::StreamingHandlerSink;
-use super::ContentType;
+use super::{ContentType, StreamingHandlerSink};
 use encoding_rs::Encoding;
 
 use crate::transform_stream::OutputSink;
@@ -53,7 +52,7 @@ impl<'a> DocumentEnd<'a> {
         StreamingHandlerSink::new(self.encoding, &mut |c| {
             self.output_sink.handle_chunk(c);
         })
-        .write_str_chunk(content, content_type);
+        .write_str(content, content_type);
     }
 }
 
