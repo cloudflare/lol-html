@@ -10,8 +10,8 @@ impl TextChunkContent {
     fn new(chunk: &TextChunk) -> Self {
         let content = chunk.as_str();
 
-        TextChunkContent {
-            data: content.as_ptr() as *const c_char,
+        Self {
+            data: content.as_ptr().cast::<c_char>(),
             len: content.len(),
         }
     }

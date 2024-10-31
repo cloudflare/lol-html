@@ -8,6 +8,7 @@ pub enum Namespace {
 
 impl Namespace {
     #[inline]
+    #[must_use]
     pub const fn uri(self) -> &'static str {
         use Namespace::{Html, MathML, Svg};
 

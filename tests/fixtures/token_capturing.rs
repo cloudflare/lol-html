@@ -178,7 +178,7 @@ impl TokenCapturingTests {
             TokenCaptureFlags::empty(),
         ]
         .iter()
-        .cloned()
+        .copied()
         .for_each(|capture_flags| {
             let mut expected_tokens = filter_tokens(&test.expected_tokens, capture_flags);
             let mut token_list = TestTokenList::default();

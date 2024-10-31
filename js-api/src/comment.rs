@@ -11,6 +11,6 @@ impl_mutations!(Comment);
 impl Comment {
     #[wasm_bindgen(method, getter)]
     pub fn text(&self) -> JsResult<String> {
-        self.0.get().map(|c| c.text().into())
+        self.0.get().map(|c| c.text())
     }
 }

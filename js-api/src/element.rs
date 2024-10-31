@@ -11,7 +11,7 @@ pub struct Attribute {
 
 impl From<&NativeAttribute<'_>> for Attribute {
     fn from(native: &NativeAttribute) -> Self {
-        Attribute {
+        Self {
             name: native.name(),
             value: native.value(),
         }

@@ -55,7 +55,7 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
                         self_closing: tag.self_closing,
                     },
                     TagKind::EndTag => TestToken::EndTag { name },
-                })
+                });
             }
             Token::CommentToken(ref s) => {
                 self.tokens.push(TestToken::Comment(s.to_string()));
@@ -74,7 +74,7 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
     }
 
     fn end(&mut self) {
-        self.inner.end()
+        self.inner.end();
     }
 
     fn adjusted_current_node_present_but_not_in_html_namespace(&self) -> bool {

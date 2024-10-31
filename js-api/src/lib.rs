@@ -43,7 +43,7 @@ struct NativeRefWrap<R> {
 
 impl<R> NativeRefWrap<R> {
     pub fn wrap<I>(inner: &mut I) -> (Self, Anchor) {
-        let wrap = NativeRefWrap {
+        let wrap = Self {
             inner_ptr: unsafe { mem::transmute(inner) },
             poisoned: Rc::new(Cell::new(false)),
         };

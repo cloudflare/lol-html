@@ -116,7 +116,7 @@ cfg_if! {
             pub fn switch_text_type(&mut self, text_type: TextType) {
                 match self.current_directive {
                     ParserDirective::WherePossibleScanForTagsOnly => {
-                        self.tag_scanner.switch_text_type(text_type)
+                        self.tag_scanner.switch_text_type(text_type);
                     }
                     ParserDirective::Lex => self.lexer.switch_text_type(text_type),
                 }
@@ -125,7 +125,7 @@ cfg_if! {
             pub fn set_last_start_tag_name_hash(&mut self, name_hash: LocalNameHash) {
                 match self.current_directive {
                     ParserDirective::WherePossibleScanForTagsOnly => {
-                        self.tag_scanner.set_last_start_tag_name_hash(name_hash)
+                        self.tag_scanner.set_last_start_tag_name_hash(name_hash);
                     }
                     ParserDirective::Lex => self.lexer.set_last_start_tag_name_hash(name_hash),
                 }

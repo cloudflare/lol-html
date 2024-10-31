@@ -40,7 +40,7 @@ macro_rules! action_list {
     //--------------------------------------------------------------------
     ( @state_enter | $self:tt, $ctx:tt, $input:ident |> $($actions:tt)+ ) => {
         if $self.is_state_enter() {
-            action_list!(|$self, $ctx, $input|> $($actions)*);
+            action_list!(|$self, $ctx, $input|> $($actions)+);
             $self.set_is_state_enter(false);
         }
     };

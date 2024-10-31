@@ -26,6 +26,7 @@ impl SharedMemoryLimiter {
     }
 
     #[cfg(test)]
+    #[must_use]
     pub fn current_usage(&self) -> usize {
         self.current_usage.load(Ordering::Relaxed)
     }

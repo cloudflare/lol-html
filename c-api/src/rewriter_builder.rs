@@ -20,8 +20,8 @@ struct ExternHandler<F> {
 }
 
 impl<F> ExternHandler<F> {
-    fn new(func: Option<F>, user_data: *mut c_void) -> Self {
-        ExternHandler { func, user_data }
+    const fn new(func: Option<F>, user_data: *mut c_void) -> Self {
+        Self { func, user_data }
     }
 }
 

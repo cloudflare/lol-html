@@ -6,9 +6,9 @@ fn data_dir_path(path: &str) -> String {
 }
 
 fn for_each_test_file(path: &str, handler: &mut dyn FnMut(BufReader<File>)) {
-    glob::glob(&data_dir_path(path)).unwrap().for_each(|path| {
+    for path in glob::glob(&data_dir_path(path)).unwrap() {
         handler(BufReader::new(File::open(path.unwrap()).unwrap()));
-    });
+    }
 }
 
 fn get_test_file_reader(path: &str) -> BufReader<File> {

@@ -50,20 +50,20 @@ impl TextType {
 cfg_if! {
     if #[cfg(feature = "integration_test")] {
         impl TextType {
-            pub fn should_replace_unsafe_null_in_text(self) -> bool {
-                self != TextType::Data && self != TextType::CDataSection
+            #[must_use] pub fn should_replace_unsafe_null_in_text(self) -> bool {
+                self != Self::Data && self != Self::CDataSection
             }
         }
 
         impl<'s> From<&'s str> for TextType {
             fn from(text_type: &'s str) -> Self {
                 match text_type {
-                    "Data state" => TextType::Data,
-                    "PLAINTEXT state" => TextType::PlainText,
-                    "RCDATA state" => TextType::RCData,
-                    "RAWTEXT state" => TextType::RawText,
-                    "Script data state" => TextType::ScriptData,
-                    "CDATA section state" => TextType::CDataSection,
+                    "Data state" => Self::Data,
+                    "PLAINTEXT state" => Self::PlainText,
+                    "RCDATA state" => Self::RCData,
+                    "RAWTEXT state" => Self::RawText,
+                    "Script data state" => Self::ScriptData,
+                    "CDATA section state" => Self::CDataSection,
                     _ => panic!("Unknown text type"),
                 }
             }

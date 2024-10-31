@@ -9,8 +9,9 @@ pub struct Str {
 }
 
 impl Str {
+    #[must_use]
     pub fn new(string: String) -> Self {
-        Str {
+        Self {
             len: string.len(),
             data: Box::into_raw(string.into_boxed_str()) as *const c_char,
         }
@@ -20,6 +21,7 @@ impl Str {
     /// Convert an `Option<String>` to a C-style string.
     ///
     /// If `string` is `None`, `data` will be set to `NULL`.
+    #[must_use]
     pub fn from_opt(string: Option<String>) -> Self {
         match string {
             Some(string) => Self::new(string),
@@ -36,7 +38,7 @@ impl Drop for Str {
         if self.data == ptr::null() {
             return;
         }
-        let bytes = unsafe { slice::from_raw_parts_mut(self.data as *mut c_char, self.len) };
+        let bytes = unsafe { slice::from_raw_parts_mut(self.data.cast_mut(), self.len) };
 
         drop(unsafe { Box::from_raw(bytes) });
     }

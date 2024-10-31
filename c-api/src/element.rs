@@ -61,8 +61,8 @@ pub extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_attributes_iterator_next<'r, 't>(
-    iterator: *mut Iter<'r, Attribute<'t>>,
+pub extern "C" fn lol_html_attributes_iterator_next<'t>(
+    iterator: *mut Iter<'_, Attribute<'t>>,
 ) -> *const Attribute<'t> {
     let iterator = to_ref_mut!(iterator);
 
