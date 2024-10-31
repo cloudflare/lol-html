@@ -3,9 +3,6 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(feature="integration_test")] {
         #[macro_use]
-        extern crate serde_derive;
-
-        #[macro_use]
         mod harness;
 
         mod fixtures;

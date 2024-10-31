@@ -40,7 +40,7 @@ macro_rules! expect {
     };
 }
 
-type TokenHandler<'h> = Box<dyn FnMut(&mut Token) + 'h>;
+type TokenHandler<'h> = Box<dyn FnMut(&mut Token<'_>) + 'h>;
 
 pub struct TestTransformController<'h> {
     token_handler: TokenHandler<'h>,
@@ -68,13 +68,13 @@ impl TransformController for TestTransformController<'_> {
         self.capture_flags
     }
 
-    fn handle_token(&mut self, token: &mut Token) -> Result<(), RewritingError> {
+    fn handle_token(&mut self, token: &mut Token<'_>) -> Result<(), RewritingError> {
         (self.token_handler)(token);
 
         Ok(())
     }
 
-    fn handle_end(&mut self, _: &mut DocumentEnd) -> Result<(), RewritingError> {
+    fn handle_end(&mut self, _: &mut DocumentEnd<'_>) -> Result<(), RewritingError> {
         Ok(())
     }
 
@@ -88,7 +88,7 @@ pub fn parse(
     capture_flags: TokenCaptureFlags,
     initial_text_type: TextType,
     last_start_tag_name_hash: LocalNameHash,
-    token_handler: TokenHandler,
+    token_handler: TokenHandler<'_>,
 ) -> Result<String, RewritingError> {
     let encoding = input
         .encoding()

@@ -3,6 +3,7 @@ use crate::harness::Input;
 use hashbrown::HashMap;
 use lol_html::test_utils::ASCII_COMPATIBLE_ENCODINGS;
 use lol_html::Selector;
+use serde_derive::Deserialize;
 use serde_json::{self, from_reader};
 use std::io::prelude::*;
 
