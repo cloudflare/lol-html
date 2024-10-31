@@ -31,17 +31,12 @@ impl AsciiCompatibleEncoding {
     /// Returns `Some` if `Encoding` is ascii-compatible, or `None` otherwise.
     #[must_use]
     pub fn new(encoding: &'static Encoding) -> Option<Self> {
-        if encoding.is_ascii_compatible() {
-            Some(Self(encoding))
-        } else {
-            None
-        }
+        encoding.is_ascii_compatible().then_some(Self(encoding))
     }
 
     fn from_mimetype(mime: &Mime) -> Option<Self> {
-        mime.get_param("charset")
-            .and_then(|cs| Encoding::for_label_no_replacement(cs.as_str().as_bytes()))
-            .and_then(Self::new)
+        let cs = mime.get_param("charset")?;
+        Self::new(Encoding::for_label_no_replacement(cs.as_str().as_bytes())?)
     }
 
     /// Returns the most commonly used UTF-8 encoding.
