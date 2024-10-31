@@ -3,6 +3,7 @@ use super::Unescape;
 use hashbrown::HashMap;
 use lol_html::Token;
 use serde::de::{Deserialize, Deserializer, Error as DeError};
+use serde_derive::Deserialize;
 use serde_json::error::Error;
 use std::fmt::{self, Formatter};
 use std::iter::FromIterator;
@@ -18,6 +19,7 @@ enum TokenKind {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[allow(unnameable_types)]
 pub enum TestToken {
     Text(String),
 
@@ -51,7 +53,7 @@ impl<'de> Deserialize<'de> for TestToken {
         impl<'de> ::serde::de::Visitor<'de> for Visitor {
             type Value = TestToken;
 
-            fn expecting(&self, f: &mut Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("['TokenKind', ...]")
             }
 
@@ -163,13 +165,14 @@ impl Unescape for TestToken {
 }
 
 #[derive(Debug, Default)]
+#[allow(unnameable_types)]
 pub struct TestTokenList {
     tokens: Vec<TestToken>,
     handled_text_decoding_until: usize,
 }
 
 impl TestTokenList {
-    pub fn push(&mut self, token: &Token) {
+    pub fn push(&mut self, token: &Token<'_>) {
         match token {
             Token::TextChunk(t) => {
                 let text = t.as_str();

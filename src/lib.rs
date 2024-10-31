@@ -19,6 +19,7 @@
 #![allow(clippy::default_trait_access)]
 #![allow(clippy::module_name_repetitions)]
 #![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
+#![cfg_attr(any(feature = "integration_test", test), allow(unnameable_types))]
 
 #[macro_use]
 mod base;

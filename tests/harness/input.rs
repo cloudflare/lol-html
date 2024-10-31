@@ -101,7 +101,7 @@ impl<'de> Deserialize<'de> for Input {
         impl<'de> Visitor<'de> for StringVisitor {
             type Value = Input;
 
-            fn expecting(&self, f: &mut Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a string")
             }
 

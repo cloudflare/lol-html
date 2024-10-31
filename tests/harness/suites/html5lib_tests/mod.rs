@@ -7,6 +7,7 @@ pub use self::unescape::Unescape;
 use super::for_each_test_file;
 use crate::harness::Input;
 use lol_html::test_utils::ASCII_COMPATIBLE_ENCODINGS;
+use serde_derive::Deserialize;
 use serde_json::{self, from_reader};
 use std::fmt::Write;
 
@@ -75,7 +76,7 @@ pub fn get_test_cases() -> Vec<TestCase> {
         tests.extend(from_reader::<_, Suite>(file).unwrap().tests);
     });
 
-    tests.append(&mut self::feedback_tests::get_test_cases());
+    tests.append(&mut feedback_tests::get_test_cases());
 
     let tests = tests
         .iter_mut()
