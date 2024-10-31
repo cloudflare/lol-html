@@ -11,7 +11,8 @@ use std::ffi::{CStr, CString};
 
 use encoding_rs::*;
 use lol_html::html_content::ContentType;
-use lol_html::{comments, doc_comments, doc_text, element, text, HtmlRewriter, MemorySettings, Settings};
+use lol_html::{comments, doc_comments, doc_text, element, streaming, text};
+use lol_html::{HtmlRewriter, MemorySettings, Settings};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -111,10 +112,12 @@ fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) {
                         &format!("<!--[/ELEMENT('{selector}')]-->"),
                         ContentType::Html,
                     );
-                    el.set_inner_content(
-                        &format!("<!--Replaced ({selector}) -->"),
-                        ContentType::Html,
-                    );
+
+                    let replaced = format!("<!--Replaced ({selector}) -->");
+                    el.streaming_set_inner_content(streaming!(move |sink| {
+                        sink.write_str(&replaced, ContentType::Html);
+                        Ok(())
+                    }));
 
                     Ok(())
                 }),

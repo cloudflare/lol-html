@@ -96,7 +96,7 @@ pub mod errors {
 pub mod html_content {
     pub use super::rewritable_units::{
         Attribute, Comment, ContentType, Doctype, DocumentEnd, Element, EndTag, StartTag,
-        TextChunk, UserData,
+        StreamingHandler, StreamingHandlerSink, TextChunk, UserData,
     };
 
     pub use super::html::TextType;
