@@ -153,3 +153,31 @@ impl TextEncoder {
         }
     }
 }
+
+#[test]
+fn long_text() {
+    let mut written = 0;
+    let mut expected = 0;
+    let mut handler = |ch: &[u8]| {
+        assert!(
+            ch.iter().all(|&c| {
+                written += 1;
+                c == if 0 != written & 1 {
+                    177
+                } else {
+                    b'0' + ((written / 2 - 1) % 10) as u8
+                }
+            }),
+            "@{written} {ch:?}"
+        );
+    };
+    let mut t = StreamingHandlerSink::new(encoding_rs::ISO_8859_2, &mut handler);
+
+    let mut s = "ą0ą1ą2ą3ą4ą5ą6ą7ą8ą9".repeat(128);
+    while s.len() <= 1 << 17 {
+        s.push_str(&s.clone());
+        expected += s.chars().count();
+        t.write_str(&s, ContentType::Text);
+    }
+    assert_eq!(expected, written);
+}

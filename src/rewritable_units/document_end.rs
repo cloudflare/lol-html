@@ -1,5 +1,4 @@
-use super::text_encoder::StreamingHandlerSink;
-use super::ContentType;
+use super::{ContentType, StreamingHandlerSink};
 use encoding_rs::Encoding;
 
 use crate::transform_stream::OutputSink;

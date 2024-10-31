@@ -1,5 +1,6 @@
-use super::text_encoder::StreamingHandlerSink;
+use super::StreamingHandlerSink;
 use std::error::Error as StdError;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 
 type BoxResult = Result<(), Box<dyn StdError + Send + Sync>>;
 
@@ -92,6 +93,7 @@ impl From<(&str, ContentType)> for StringChunk {
 
 pub(crate) enum StringChunk {
     Buffer(Box<str>, ContentType),
+    Stream(Box<dyn StreamingHandler>),
 }
 
 #[derive(Default)]
@@ -126,8 +128,57 @@ impl DynamicString {
                 StringChunk::Buffer(content, content_type) => {
                     sink.write_str(&content, content_type);
                 }
+                StringChunk::Stream(handler) => {
+                    handler.write_all(sink)?;
+                }
             };
         }
         Ok(())
+    }
+}
+
+/// A callback used to write content asynchronously.
+pub trait StreamingHandler: Send {
+    /// This method is called only once, and is expected to write content
+    /// by calling the [`sink.write_str()`](StreamingHandlerSink::write_str) one or more times.
+    ///
+    /// Multiple calls to `sink.write_str()` append more content to the output.
+    ///
+    /// See [`StreamingHandlerSink`].
+    fn write_all(self: Box<Self>, sink: &mut StreamingHandlerSink<'_>) -> BoxResult;
+
+    // Safety: due to lack of Sync, this trait must not have `&self` methods
+}
+
+/// Avoid requring `StreamingHandler` to be `Sync`.
+/// It only has a method taking exclusive ownership, so there's no sharing possible.
+unsafe impl Sync for StringChunk {}
+impl RefUnwindSafe for StringChunk {}
+impl UnwindSafe for StringChunk {}
+
+impl<F> From<F> for Box<dyn StreamingHandler>
+where
+    F: FnOnce(&mut StreamingHandlerSink<'_>) -> BoxResult + Send + 'static,
+{
+    #[inline]
+    fn from(f: F) -> Self {
+        Box::new(f)
+    }
+}
+
+impl<F> StreamingHandler for F
+where
+    F: FnOnce(&mut StreamingHandlerSink<'_>) -> BoxResult + Send + 'static,
+{
+    #[inline]
+    fn write_all(self: Box<F>, sink: &mut StreamingHandlerSink<'_>) -> BoxResult {
+        (self)(sink)
+    }
+}
+
+impl From<Box<dyn StreamingHandler>> for StringChunk {
+    #[inline]
+    fn from(writer: Box<dyn StreamingHandler>) -> Self {
+        Self::Stream(writer)
     }
 }

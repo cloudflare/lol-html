@@ -3,7 +3,7 @@ use super::{Mutations, Serialize, Token};
 use crate::base::Bytes;
 use crate::errors::RewritingError;
 use crate::html::Namespace;
-use crate::html_content::ContentType;
+use crate::html_content::{ContentType, StreamingHandler};
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -137,6 +137,39 @@ impl<'i> StartTag<'i> {
         self.mutations
             .mutate()
             .replace((content, content_type).into());
+    }
+
+    /// Inserts content from a [`StreamingHandler`] before the start tag.
+    ///
+    /// Consequent calls to the method append to the previously inserted content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.mutations
+            .mutate()
+            .content_before
+            .push_back(string_writer.into());
+    }
+
+    /// Inserts content from a [`StreamingHandler`] after the start tag.
+    ///
+    /// Consequent calls to the method prepend to the previously inserted content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.mutations
+            .mutate()
+            .content_after
+            .push_front(string_writer.into());
+    }
+
+    /// Replaces the start tag with the content from a [`StreamingHandler`].
+    ///
+    /// Consequent calls to the method overwrite previous replacement content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.mutations.mutate().replace(string_writer.into());
     }
 
     /// Removes the start tag.

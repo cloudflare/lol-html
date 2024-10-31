@@ -503,6 +503,51 @@ macro_rules! comments {
     }};
 }
 
+/// A convenience macro to construct a `StreamingHandler` from a closure.
+///
+/// For use with [`Element::streaming_replace`], etc.
+///
+/// ```rust
+/// use lol_html::{element, streaming, RewriteStrSettings};
+/// use lol_html::html_content::ContentType;
+///
+/// RewriteStrSettings {
+///     element_content_handlers: vec![
+///         element!("div", |element| {
+///             element.streaming_replace(streaming!(|sink| {
+///                 sink.write_str("…", ContentType::Html);
+///                 sink.write_str("…", ContentType::Html);
+///                 Ok(())
+///             }));
+///             Ok(())
+///         })
+///     ],
+///     ..RewriteStrSettings::default()
+/// };
+/// ```
+
+#[macro_export(local_inner_macros)]
+macro_rules! streaming {
+    ($closure:expr) => {{
+        use ::std::error::Error;
+        use $crate::html_content::StreamingHandlerSink;
+        // Without this rust won't be able to always infer the type of the handler.
+        #[inline(always)]
+        const fn streaming_macro_type_hint<StreamingHandler>(
+            handler_closure: StreamingHandler,
+        ) -> StreamingHandler
+        where
+            StreamingHandler:
+                FnOnce(&mut StreamingHandlerSink<'_>) -> Result<(), Box<dyn Error + Send + Sync>> + 'static + Send,
+        {
+            handler_closure
+        }
+
+        Box::new(streaming_macro_type_hint($closure))
+            as Box<dyn $crate::html_content::StreamingHandler>
+    }};
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __document_content_handler {
