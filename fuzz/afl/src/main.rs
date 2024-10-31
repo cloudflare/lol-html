@@ -6,6 +6,6 @@ use test_case::run_rewriter;
 
 fn main() {
     fuzz!(|data: &[u8]| {
-      run_rewriter(data);
+        run_rewriter(data);
     });
 }

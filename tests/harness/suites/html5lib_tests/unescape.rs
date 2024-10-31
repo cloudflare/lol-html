@@ -8,7 +8,7 @@ pub trait Unescape {
 impl Unescape for String {
     // dummy but does the job
     fn unescape(&mut self) -> Result<(), Error> {
-        *self = parse_json(&format!(r#""{}""#, self))?;
+        *self = parse_json(&format!(r#""{self}""#))?;
         Ok(())
     }
 }

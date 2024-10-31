@@ -1,4 +1,5 @@
-#[macro_use] extern crate honggfuzz;
+#[macro_use]
+extern crate honggfuzz;
 extern crate test_case;
 
 use test_case::run_rewriter;

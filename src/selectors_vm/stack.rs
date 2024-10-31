@@ -87,7 +87,7 @@ struct CounterList {
 }
 
 impl CounterList {
-    pub fn new(start: usize) -> Self {
+    pub const fn new(start: usize) -> Self {
         Self {
             items: Vec::new(),
             current: CounterItem {
@@ -214,6 +214,7 @@ pub struct Stack<E: ElementData> {
 }
 
 impl<E: ElementData> Stack<E> {
+    #[must_use]
     pub fn new(memory_limiter: SharedMemoryLimiter, enable_nth_of_type: bool) -> Self {
         Self {
             root_child_counter: Default::default(),

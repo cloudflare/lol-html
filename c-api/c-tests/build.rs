@@ -1,7 +1,7 @@
 use glob::glob;
 use std::path::{Path, PathBuf};
 
-const CFLAGS: &'static [&str] = &[
+const CFLAGS: &[&str] = &[
     "-std=c99",
     "-pthread",
     "-Wcast-qual",
@@ -39,7 +39,7 @@ fn glob_c_files<P: AsRef<Path>>(dirname: P) -> Vec<PathBuf> {
             .unwrap_or(path)
             .to_str()
             .expect("non-ascii C source file");
-        println!("cargo:rerun-if-changed={}", relative_path);
+        println!("cargo:rerun-if-changed={relative_path}");
     })
     .collect::<Vec<_>>()
 }

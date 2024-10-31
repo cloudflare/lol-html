@@ -142,7 +142,7 @@ pub mod test_utils {
         X_USER_DEFINED,
     ];
 
-    pub static NON_ASCII_COMPATIBLE_ENCODINGS: [&encoding_rs::Encoding; 4] =
+    pub static NON_ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 4] =
         [UTF_16BE, UTF_16LE, ISO_2022_JP, REPLACEMENT];
 
     pub struct Output {

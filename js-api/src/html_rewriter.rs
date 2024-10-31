@@ -1,15 +1,12 @@
 use super::*;
 use js_sys::{Function as JsFunction, Uint8Array};
-use lol_html::{
-    DocumentContentHandlers, ElementContentHandlers, HtmlRewriter as NativeHTMLRewriter,
-    OutputSink, Selector,
-};
+use lol_html::{DocumentContentHandlers, ElementContentHandlers, OutputSink, Selector};
 
 struct JsOutputSink(JsFunction);
 
 impl JsOutputSink {
     fn new(func: &JsFunction) -> Self {
-        JsOutputSink(func.clone())
+        Self(func.clone())
     }
 }
 

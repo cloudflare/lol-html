@@ -32,7 +32,7 @@ fn parse_options() -> Option<Matches> {
             }
         }
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("{e}");
             None
         }
     };
@@ -52,8 +52,8 @@ struct TraceTransformController {
 }
 
 impl TraceTransformController {
-    pub fn new(tag_hint_mode: bool) -> Self {
-        TraceTransformController {
+    pub const fn new(tag_hint_mode: bool) -> Self {
+        Self {
             capture_flags: if tag_hint_mode {
                 TokenCaptureFlags::empty()
             } else {
@@ -109,7 +109,7 @@ fn main() {
 
     let parser = transform_stream.parser();
 
-    parser.switch_text_type(match matches.opt_str("t").as_ref().map(String::as_str) {
+    parser.switch_text_type(match matches.opt_str("t").as_deref() {
         None => TextType::Data,
         Some(state) => TextType::from(state),
     });

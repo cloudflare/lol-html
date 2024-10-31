@@ -127,15 +127,15 @@ impl<'de> Deserialize<'de> for TestToken {
 impl Unescape for TestToken {
     fn unescape(&mut self) -> Result<(), Error> {
         match *self {
-            TestToken::Text(ref mut s) | TestToken::Comment(ref mut s) => {
+            Self::Text(ref mut s) | Self::Comment(ref mut s) => {
                 s.unescape()?;
             }
 
-            TestToken::EndTag { ref mut name, .. } => {
+            Self::EndTag { ref mut name, .. } => {
                 name.unescape()?;
             }
 
-            TestToken::StartTag {
+            Self::StartTag {
                 ref mut name,
                 ref mut attributes,
                 ..
@@ -147,7 +147,7 @@ impl Unescape for TestToken {
                 }
             }
 
-            TestToken::Doctype {
+            Self::Doctype {
                 ref mut name,
                 ref mut public_id,
                 ref mut system_id,
@@ -226,7 +226,7 @@ impl TestTokenList {
 }
 
 impl From<TestTokenList> for Vec<TestToken> {
-    fn from(list: TestTokenList) -> Vec<TestToken> {
+    fn from(list: TestTokenList) -> Self {
         list.tokens
     }
 }

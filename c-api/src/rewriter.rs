@@ -20,7 +20,7 @@ impl ExternOutputSink {
         handler: unsafe extern "C" fn(*const c_char, size_t, *mut c_void),
         user_data: *mut c_void,
     ) -> Self {
-        ExternOutputSink { handler, user_data }
+        Self { handler, user_data }
     }
 }
 
@@ -28,7 +28,7 @@ impl OutputSink for ExternOutputSink {
     #[inline]
     fn handle_chunk(&mut self, chunk: &[u8]) {
         let chunk_len = chunk.len();
-        let chunk = chunk.as_ptr() as *const c_char;
+        let chunk = chunk.as_ptr().cast::<c_char>();
 
         unsafe { (self.handler)(chunk, chunk_len, self.user_data) };
     }
@@ -132,5 +132,5 @@ pub extern "C" fn lol_html_rewriter_free(rewriter: *mut HtmlRewriter) {
     // SAFETY: `to_box` includes a check that `rewriter` is non-null.
     // The caller is required to ensure that `rewriter` is aligned and that `free` has not been called before.
     // NOTE: if `end()` was called before, it is valid (but not recommended) to call `free()` more than once.
-    drop(to_box!(rewriter))
+    drop(to_box!(rewriter));
 }

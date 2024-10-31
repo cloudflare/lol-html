@@ -14,10 +14,10 @@ fn main() {
         .iter()
         .enumerate()
         .for_each(|(i, s)| {
-            let selector = s.parse().map_err(|e| format!("{}", e)).unwrap();
+            let selector = s.parse().map_err(|e| format!("{e}")).unwrap();
 
-            ast.add_selector(&selector, i)
+            ast.add_selector(&selector, i);
         });
 
-    println!("{:#?}", ast);
+    println!("{ast:#?}");
 }

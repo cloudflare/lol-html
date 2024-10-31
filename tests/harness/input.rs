@@ -18,7 +18,7 @@ pub struct Input {
 
 impl From<String> for Input {
     fn from(input: String) -> Self {
-        Input {
+        Self {
             input,
             chunks: Vec::default(),
             initialized: false,
@@ -72,7 +72,7 @@ impl Input {
         };
 
         if chunk_size > 0 {
-            self.chunks = bytes.chunks(chunk_size).map(|c| c.to_vec()).collect()
+            self.chunks = bytes.chunks(chunk_size).map(|c| c.to_vec()).collect();
         }
 
         Ok(chunk_size)
