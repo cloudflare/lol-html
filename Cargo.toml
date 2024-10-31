@@ -20,6 +20,7 @@ bench = false
 
 [features]
 debug_trace = []
+# Unstable: for internal use only
 integration_test = []
 
 [[test]]
