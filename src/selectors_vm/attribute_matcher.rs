@@ -50,10 +50,14 @@ impl<'i> AttributeMatcher<'i> {
                     return false;
                 }
 
-                let attr_name = self.input.slice(a.name);
+                let attr_name = &*self.input.slice(a.name);
 
-                for i in 0..attr_name.len() {
-                    if attr_name[i].to_ascii_lowercase() != lowercased_name[i] {
+                for (attr, wanted) in attr_name
+                    .iter()
+                    .copied()
+                    .zip(lowercased_name.iter().copied())
+                {
+                    if attr.to_ascii_lowercase() != wanted {
                         return false;
                     }
                 }
