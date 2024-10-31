@@ -156,6 +156,7 @@ pub mod test_utils {
 
     impl Output {
         #[must_use]
+        #[inline]
         pub fn new(encoding: &'static Encoding) -> Self {
             Self {
                 bytes: Vec::default(),
@@ -164,6 +165,8 @@ pub mod test_utils {
             }
         }
 
+        #[inline]
+        #[track_caller]
         pub fn push(&mut self, chunk: &[u8]) {
             if chunk.is_empty() {
                 self.finalizing_chunk_received = true;
@@ -179,6 +182,8 @@ pub mod test_utils {
     }
 
     impl From<Output> for String {
+        #[inline]
+        #[track_caller]
         fn from(output: Output) -> Self {
             assert!(
                 output.finalizing_chunk_received,

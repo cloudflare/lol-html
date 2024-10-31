@@ -1,4 +1,4 @@
-use crate::base::Bytes;
+use super::text_encoder::StreamingHandlerSink;
 use encoding_rs::Encoding;
 use std::error::Error as StdError;
 
@@ -14,26 +14,6 @@ pub enum ContentType {
     ///     - `>` will be replaced with `&gt;`
     ///     - `&` will be replaced with `&amp;`
     Text,
-}
-
-#[inline]
-pub(super) fn content_to_bytes(
-    content: &str,
-    content_type: ContentType,
-    encoding: &'static Encoding,
-    output_handler: &mut dyn FnMut(&[u8]),
-) {
-    let bytes = Bytes::from_str(content, encoding);
-
-    match content_type {
-        ContentType::Html => output_handler(&bytes),
-        ContentType::Text => bytes.replace_byte3(
-            (b'<', b"&lt;"),
-            (b'>', b"&gt;"),
-            (b'&', b"&amp;"),
-            &mut *output_handler,
-        ),
-    }
 }
 
 pub(crate) struct Mutations {
@@ -112,15 +92,11 @@ impl DynamicString {
         self.chunks.push(chunk);
     }
 
-    pub fn into_bytes(
-        self,
-        encoding: &'static Encoding,
-        output_handler: &mut dyn FnMut(&[u8]),
-    ) -> BoxResult {
+    pub fn encode(self, sink: &mut StreamingHandlerSink<'_>) -> BoxResult {
         for chunk in self.chunks {
             match chunk {
                 StringChunk::Buffer(content, content_type) => {
-                    content_to_bytes(&content, content_type, encoding, output_handler);
+                    sink.write_str(&content, content_type);
                 }
             };
         }

@@ -1,5 +1,6 @@
 use crate::base::Bytes;
 use crate::errors::RewritingError;
+use crate::html::escape_double_quotes_only;
 use crate::parser::AttributeBuffer;
 use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
@@ -133,7 +134,7 @@ impl Serialize for &Attribute<'_> {
         } else {
             output_handler(&self.name);
             output_handler(b"=\"");
-            self.value.replace_byte((b'"', b"&quot;"), output_handler);
+            escape_double_quotes_only(&self.value, output_handler);
             output_handler(b"\"");
         }
         Ok(())

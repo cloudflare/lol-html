@@ -84,6 +84,7 @@ mod mutations;
 
 mod document_end;
 mod element;
+mod text_encoder;
 mod tokens;
 
 #[cfg(test)]
