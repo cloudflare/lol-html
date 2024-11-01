@@ -17,10 +17,10 @@ impl Str {
         }
     }
 
-    #[inline]
     /// Convert an `Option<String>` to a C-style string.
     ///
     /// If `string` is `None`, `data` will be set to `NULL`.
+    #[inline]
     #[must_use]
     pub fn from_opt(string: Option<String>) -> Self {
         match string {
@@ -45,6 +45,6 @@ impl Drop for Str {
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_str_free(string: Str) {
+pub unsafe extern "C" fn lol_html_str_free(string: Str) {
     drop(string);
 }

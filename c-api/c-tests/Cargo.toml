@@ -9,7 +9,7 @@ publish = false
 
 [dependencies]
 lol_html = { path = "../../" }
-lolhtml = { path = "../" }
+lol_html_c_api = { path = "../" }
 libc = "0.2.139"
 
 [build-dependencies]
