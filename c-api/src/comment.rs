@@ -1,12 +1,12 @@
 use super::*;
 
 #[no_mangle]
-pub extern "C" fn lol_html_comment_text_get(comment: *const Comment) -> Str {
+pub unsafe extern "C" fn lol_html_comment_text_get(comment: *const Comment) -> Str {
     Str::new(to_ref!(comment).text())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_comment_text_set(
+pub unsafe extern "C" fn lol_html_comment_text_set(
     comment: *mut Comment,
     text: *const c_char,
     text_len: size_t,
@@ -31,11 +31,14 @@ impl_content_mutation_handlers! { comment: Comment [
 ] }
 
 #[no_mangle]
-pub extern "C" fn lol_html_comment_user_data_set(comment: *mut Comment, user_data: *mut c_void) {
+pub unsafe extern "C" fn lol_html_comment_user_data_set(
+    comment: *mut Comment,
+    user_data: *mut c_void,
+) {
     to_ref_mut!(comment).set_user_data(user_data);
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_comment_user_data_get(comment: *const Comment) -> *mut c_void {
+pub unsafe extern "C" fn lol_html_comment_user_data_get(comment: *const Comment) -> *mut c_void {
     get_user_data!(comment)
 }

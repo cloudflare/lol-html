@@ -2,21 +2,23 @@ use super::*;
 use std::slice::Iter;
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_tag_name_get(element: *const Element) -> Str {
+pub unsafe extern "C" fn lol_html_element_tag_name_get(element: *const Element) -> Str {
     let element = to_ref!(element);
 
     Str::new(element.tag_name())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_tag_name_get_preserve_case(element: *const Element) -> Str {
+pub unsafe extern "C" fn lol_html_element_tag_name_get_preserve_case(
+    element: *const Element,
+) -> Str {
     let element = to_ref!(element);
 
     Str::new(element.tag_name_preserve_case())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_tag_name_set(
+pub unsafe extern "C" fn lol_html_element_tag_name_set(
     element: *mut Element,
     name: *const c_char,
     name_len: size_t,
@@ -30,7 +32,7 @@ pub extern "C" fn lol_html_element_tag_name_set(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_namespace_uri_get(element: *mut Element) -> *const c_char {
+pub unsafe extern "C" fn lol_html_element_namespace_uri_get(element: *mut Element) -> *const c_char {
     let element = to_ref!(element);
 
     match element.namespace_uri() {
@@ -42,7 +44,7 @@ pub extern "C" fn lol_html_element_namespace_uri_get(element: *mut Element) -> *
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
+pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
     element: *const Element<'r, 't>,
 ) -> *mut Iter<'r, Attribute<'t>> {
     let attributes = to_ref!(element).attributes();
@@ -51,7 +53,7 @@ pub extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_attributes_iterator_next<'t>(
+pub unsafe extern "C" fn lol_html_attributes_iterator_next<'t>(
     iterator: *mut Iter<'_, Attribute<'t>>,
 ) -> *const Attribute<'t> {
     let iterator = to_ref_mut!(iterator);
@@ -63,33 +65,35 @@ pub extern "C" fn lol_html_attributes_iterator_next<'t>(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
+pub unsafe extern "C" fn lol_html_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
     drop(to_box!(iterator));
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute) -> Str {
+pub unsafe extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.name())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_attribute_name_get_preserve_case(attribute: *const Attribute) -> Str {
+pub unsafe extern "C" fn lol_html_attribute_name_get_preserve_case(
+    attribute: *const Attribute,
+) -> Str {
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.name_preserve_case())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_attribute_value_get(attribute: *const Attribute) -> Str {
+pub unsafe extern "C" fn lol_html_attribute_value_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
     Str::new(attribute.value())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_get_attribute(
+pub unsafe extern "C" fn lol_html_element_get_attribute(
     element: *const Element,
     name: *const c_char,
     name_len: size_t,
@@ -101,7 +105,7 @@ pub extern "C" fn lol_html_element_get_attribute(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_has_attribute(
+pub unsafe extern "C" fn lol_html_element_has_attribute(
     element: *const Element,
     name: *const c_char,
     name_len: size_t,
@@ -117,7 +121,7 @@ pub extern "C" fn lol_html_element_has_attribute(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_set_attribute(
+pub unsafe extern "C" fn lol_html_element_set_attribute(
     element: *mut Element,
     name: *const c_char,
     name_len: size_t,
@@ -134,7 +138,7 @@ pub extern "C" fn lol_html_element_set_attribute(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_remove_attribute(
+pub unsafe extern "C" fn lol_html_element_remove_attribute(
     element: *mut Element,
     name: *const c_char,
     name_len: size_t,
@@ -168,19 +172,22 @@ impl_content_mutation_handlers! { element: Element [
 ] }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_user_data_set(element: *mut Element, user_data: *mut c_void) {
+pub unsafe extern "C" fn lol_html_element_user_data_set(
+    element: *mut Element,
+    user_data: *mut c_void,
+) {
     to_ref_mut!(element).set_user_data(user_data);
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_user_data_get(element: *mut Element) -> *mut c_void {
+pub unsafe extern "C" fn lol_html_element_user_data_get(element: *mut Element) -> *mut c_void {
     get_user_data!(element)
 }
 
 type EndTagHandler = unsafe extern "C" fn(*mut EndTag, *mut c_void) -> RewriterDirective;
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_add_end_tag_handler(
+pub unsafe extern "C" fn lol_html_element_add_end_tag_handler(
     element: *mut Element,
     handler: EndTagHandler,
     user_data: *mut c_void,
@@ -202,7 +209,7 @@ pub extern "C" fn lol_html_element_add_end_tag_handler(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_clear_end_tag_handlers(element: *mut Element) {
+pub unsafe extern "C" fn lol_html_element_clear_end_tag_handlers(element: *mut Element) {
     let element = to_ref_mut!(element);
     if let Some(handlers) = element.end_tag_handlers() {
         handlers.clear();
@@ -220,19 +227,19 @@ impl_content_mutation_handlers! { end_tag: EndTag [
 ] }
 
 #[no_mangle]
-pub extern "C" fn lol_html_end_tag_name_get(end_tag: *mut EndTag) -> Str {
+pub unsafe extern "C" fn lol_html_end_tag_name_get(end_tag: *mut EndTag) -> Str {
     let tag = to_ref_mut!(end_tag);
     Str::new(tag.name())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_end_tag_name_get_preserve_case(end_tag: *mut EndTag) -> Str {
+pub unsafe extern "C" fn lol_html_end_tag_name_get_preserve_case(end_tag: *mut EndTag) -> Str {
     let tag = to_ref_mut!(end_tag);
     Str::new(tag.name_preserve_case())
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_end_tag_name_set(
+pub unsafe extern "C" fn lol_html_end_tag_name_set(
     end_tag: *mut EndTag,
     name: *const c_char,
     len: size_t,
