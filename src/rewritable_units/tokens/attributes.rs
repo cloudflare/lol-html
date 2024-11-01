@@ -1,4 +1,6 @@
 use crate::base::Bytes;
+use crate::errors::RewritingError;
+use crate::html::escape_double_quotes_only;
 use crate::parser::AttributeBuffer;
 use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
@@ -119,18 +121,19 @@ impl<'i> Attribute<'i> {
     }
 }
 
-impl Serialize for Attribute<'_> {
+impl Serialize for &Attribute<'_> {
     #[inline]
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         match self.raw.as_ref() {
             Some(raw) => output_handler(raw),
             None => {
                 output_handler(&self.name);
                 output_handler(b"=\"");
-                self.value.replace_byte((b'"', b"&quot;"), output_handler);
+                escape_double_quotes_only(&self.value, output_handler);
                 output_handler(b"\"");
             }
         }
+        Ok(())
     }
 }
 
@@ -249,19 +252,20 @@ impl<'i> Deref for Attributes<'i> {
     }
 }
 
-impl Serialize for Attributes<'_> {
+impl Serialize for &Attributes<'_> {
     #[inline]
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if !self.is_empty() {
             let last = self.len() - 1;
 
             for (idx, attr) in self.iter().enumerate() {
-                attr.to_bytes(output_handler);
+                attr.into_bytes(output_handler)?;
 
                 if idx != last {
                     output_handler(b" ");
                 }
             }
         }
+        Ok(())
     }
 }

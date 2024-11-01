@@ -1,4 +1,7 @@
-use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag};
+use super::{
+    Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag, StreamingHandler,
+    StringChunk,
+};
 use crate::base::Bytes;
 use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
 use encoding_rs::Encoding;
@@ -89,7 +92,9 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     #[inline]
     fn remove_content(&mut self) {
         self.start_tag.mutations.content_after.clear();
-        self.end_tag_mutations_mut().content_before.clear();
+        if let Some(end) = &mut self.end_tag_mutations {
+            end.content_before.clear();
+        }
         self.should_remove_content = true;
     }
 
@@ -232,7 +237,22 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.mutations.before(content, content_type);
+        self.start_tag
+            .mutations
+            .content_before
+            .push_back((content, content_type).into());
+    }
+
+    /// Inserts  content from a [`StreamingHandler`] before the element.
+    ///
+    /// Consequent calls to the method append to the previously inserted content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.start_tag
+            .mutations
+            .content_before
+            .push_back(string_writer.into());
     }
 
     /// Inserts `content` after the element.
@@ -265,11 +285,26 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
+        self.after_chunk((content, content_type).into());
+    }
+
+    fn after_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
-            self.end_tag_mutations_mut().after(content, content_type);
+            &mut self.end_tag_mutations_mut().content_after
         } else {
-            self.start_tag.mutations.after(content, content_type);
+            &mut self.start_tag.mutations.content_after
         }
+        .push_front(chunk);
+    }
+
+    /// Inserts content from a [`StreamingHandler`] after the element.
+    ///
+    /// Consequent calls to the method prepend to the previously inserted content.
+    ///
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.after_chunk(string_writer.into());
     }
 
     /// Prepends `content` to the element's inner content, i.e. inserts content right after
@@ -309,9 +344,27 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn prepend(&mut self, content: &str, content_type: ContentType) {
+        self.prepend_chunk((content, content_type).into());
+    }
+
+    fn prepend_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
-            self.start_tag.mutations.after(content, content_type);
+            self.start_tag.mutations.content_after.push_front(chunk);
         }
+    }
+
+    /// Prepends content from a [`StreamingHandler`] to the element's inner content,
+    /// i.e. inserts content right after the element's start tag.
+    ///
+    /// Consequent calls to the method prepend to the previously inserted content.
+    /// A call to the method doesn't make any effect if the element is an [empty element].
+    ///
+    /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    ///
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_prepend(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.prepend_chunk(string_writer.into());
     }
 
     /// Appends `content` to the element's inner content, i.e. inserts content right before
@@ -351,9 +404,26 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
+        self.append_chunk((content, content_type).into());
+    }
+
+    fn append_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
-            self.end_tag_mutations_mut().before(content, content_type);
+            self.end_tag_mutations_mut().content_before.push_back(chunk);
         }
+    }
+
+    /// Appends content from a [`StreamingHandler`] to the element's inner content,
+    /// i.e. inserts content right before the element's end tag.
+    ///
+    /// Consequent calls to the method append to the previously inserted content.
+    /// A call to the method doesn't make any effect if the element is an [empty element].
+    ///
+    /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_append(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.append_chunk(string_writer.into());
     }
 
     /// Replaces inner content of the element with `content`.
@@ -392,10 +462,27 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
+        self.set_inner_content_chunk((content, content_type).into());
+    }
+
+    fn set_inner_content_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
             self.remove_content();
-            self.start_tag.mutations.after(content, content_type);
+            self.start_tag.mutations.content_after.push_front(chunk);
         }
+    }
+
+    /// Replaces inner content of the element with content from a [`StreamingHandler`].
+    ///
+    /// Consequent calls to the method overwrite previously inserted content.
+    /// A call to the method doesn't make any effect if the element is an [empty element].
+    ///
+    /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    ///
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_set_inner_content(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.set_inner_content_chunk(string_writer.into());
     }
 
     /// Replaces the element and its inner content with `content`.
@@ -427,12 +514,26 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        self.start_tag.mutations.replace(content, content_type);
+        self.replace_chunk((content, content_type).into());
+    }
+
+    fn replace_chunk(&mut self, chunk: StringChunk) {
+        self.start_tag.mutations.replace(chunk);
 
         if self.can_have_content {
             self.remove_content();
             self.end_tag_mutations_mut().remove();
         }
+    }
+
+    /// Replaces the element and its inner content with content from a [`StreamingHandler`].
+    ///
+    /// Consequent calls to the method overwrite previously inserted content.
+    ///
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.replace_chunk(string_writer.into());
     }
 
     /// Removes the element and its inner content.
@@ -603,6 +704,7 @@ mod tests {
     use crate::rewritable_units::test_utils::*;
     use crate::*;
     use encoding_rs::{Encoding, EUC_JP, UTF_8};
+    use rewritable_units::StreamingHandlerSink;
 
     fn rewrite_element(
         html: &[u8],
@@ -625,7 +727,11 @@ mod tests {
                     el.before("[before: should be removed]", ContentType::Text);
                     el.after("[after: should be removed]", ContentType::Text);
                     el.append("[append: should be removed]", ContentType::Text);
-                    el.before("[before: should be removed]", ContentType::Text);
+                    el.streaming_before(Box::new(|sink: &mut StreamingHandlerSink<'_>| {
+                        sink.write_str("[before:", ContentType::Text);
+                        sink.write_str(" should be removed]", ContentType::Text);
+                        Ok(())
+                    }));
                     Ok(())
                 }),
             ],
@@ -927,7 +1033,10 @@ mod tests {
             encoded("<div><span>Hi<inner-remove-me>RemoveŴ</inner-remove-me></span></div>")
         {
             let output = rewrite_element(&html, enc, "span", |el| {
-                el.prepend("<prepended>", ContentType::Html);
+                el.streaming_prepend(streaming!(|s| {
+                    s.write_utf8_chunk(b"<prepended>", ContentType::Html)?;
+                    Ok(())
+                }));
                 el.append("<appended>", ContentType::Html);
                 el.set_inner_content("<imgŵ>", ContentType::Html);
                 el.set_inner_content("<imgŵ>", ContentType::Text);
@@ -1061,7 +1170,17 @@ mod tests {
     #[test]
     fn self_closing_element() {
         let output = rewrite_element(b"<svg><foo/>Hi</foo></svg>", UTF_8, "foo", |el| {
-            el.after("<!--after-->", ContentType::Html);
+            el.after("->", ContentType::Html);
+            el.streaming_after(streaming!(|sink| {
+                sink.write_str("er-", ContentType::Html);
+                Ok(())
+            }));
+            el.after("t", ContentType::Html);
+            el.streaming_after(streaming!(|sink| {
+                sink.write_str("af", ContentType::Html);
+                Ok(())
+            }));
+            el.after("<!--", ContentType::Html);
             el.set_tag_name("bar").unwrap();
         });
 

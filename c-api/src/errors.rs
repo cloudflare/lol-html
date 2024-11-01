@@ -11,3 +11,12 @@ pub extern "C" fn lol_html_take_last_error() -> Str {
 
     Str::from_opt(err.map(|e| e.to_string()))
 }
+
+#[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
+pub enum CStreamingHandlerError {
+    #[error("Not all fields of the struct were initialized")]
+    Uninitialized,
+
+    #[error("write_all_callback reported error: {0}")]
+    HandlerError(c_int),
+}

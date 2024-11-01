@@ -157,7 +157,7 @@ where
                     transform_controller.handle_token(&mut token)?;
 
                     if emission_enabled {
-                        token.to_bytes(&mut |c| output_sink.handle_chunk(c));
+                        token.into_bytes(&mut |c| output_sink.handle_chunk(c))?;
                     }
                 }
             }
@@ -273,7 +273,7 @@ where
                 transform_controller.handle_token(&mut token)?;
 
                 if emission_enabled {
-                    token.to_bytes(&mut |c| output_sink.handle_chunk(c));
+                    token.into_bytes(&mut |c| output_sink.handle_chunk(c))?;
                 }
             }
 

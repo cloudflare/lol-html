@@ -1,5 +1,7 @@
 use super::{Mutations, Token};
 use crate::base::Bytes;
+use crate::errors::RewritingError;
+use crate::html_content::StreamingHandler;
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
@@ -105,7 +107,19 @@ impl<'i> Comment<'i> {
     /// ```
     #[inline]
     pub fn before(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.before(content, content_type);
+        self.mutations
+            .content_before
+            .push_back((content, content_type).into());
+    }
+
+    /// Inserts content from a [`StreamingHandler`] before the comment.
+    ///
+    /// Consequent calls to the method append to the previously inserted content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    #[inline]
+    pub fn streaming_before(&mut self, handler: Box<dyn StreamingHandler>) {
+        self.mutations.content_before.push_back(handler.into());
     }
 
     /// Inserts `content` after the comment.
@@ -137,7 +151,19 @@ impl<'i> Comment<'i> {
     /// ```
     #[inline]
     pub fn after(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.after(content, content_type);
+        self.mutations
+            .content_after
+            .push_front((content, content_type).into());
+    }
+
+    /// Inserts content from a [`StreamingHandler`] after the comment.
+    ///
+    /// Consequent calls to the method prepend to the previously inserted content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    #[inline]
+    pub fn streaming_after(&mut self, handler: Box<dyn StreamingHandler>) {
+        self.mutations.content_after.push_front(handler.into());
     }
 
     /// Replaces the comment with the `content`.
@@ -169,7 +195,17 @@ impl<'i> Comment<'i> {
     /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.replace(content, content_type);
+        self.mutations.replace((content, content_type).into());
+    }
+
+    /// Replaces the comment with the content from a [`StreamingHandler`].
+    ///
+    /// Consequent calls to the method overwrite previous replacement content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    #[inline]
+    pub fn streaming_replace(&mut self, handler: Box<dyn StreamingHandler>) {
+        self.mutations.replace(handler.into());
     }
 
     /// Removes the comment.
@@ -191,10 +227,14 @@ impl<'i> Comment<'i> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn serialize_from_parts(
+        &self,
+        output_handler: &mut dyn FnMut(&[u8]),
+    ) -> Result<(), RewritingError> {
         output_handler(b"<!--");
         output_handler(&self.text);
         output_handler(b"-->");
+        Ok(())
     }
 }
 
@@ -329,7 +369,11 @@ mod tests {
                     assert!(c.removed());
 
                     c.before("<before>", ContentType::Html);
-                    c.after("<after>", ContentType::Html);
+                    c.streaming_after(Box::new(|s: &mut StreamingHandlerSink<'_>| {
+                        s.write_str("<af", ContentType::Html);
+                        s.write_str("ter>", ContentType::Html);
+                        Ok(())
+                    }));
                 },
                 "<before><after>"
             );
@@ -346,7 +390,11 @@ mod tests {
 
                     c.replace("<div></div>", ContentType::Html);
                     c.replace("<!--42-->", ContentType::Html);
-                    c.replace("<foo & bar>", ContentType::Text);
+                    c.streaming_replace(streaming!(|h| {
+                        h.write_str("<foo &", ContentType::Text);
+                        h.write_str(" bar>", ContentType::Text);
+                        Ok(())
+                    }));
 
                     assert!(c.removed());
                 },

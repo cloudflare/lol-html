@@ -86,7 +86,9 @@ pub mod send {
 pub mod errors {
     pub use super::memory::MemoryLimitExceededError;
     pub use super::parser::ParsingAmbiguityError;
-    pub use super::rewritable_units::{AttributeNameError, CommentTextError, TagNameError};
+    pub use super::rewritable_units::{
+        AttributeNameError, CommentTextError, TagNameError, Utf8Error,
+    };
     pub use super::rewriter::RewritingError;
     pub use super::selectors_vm::SelectorError;
 }
@@ -95,7 +97,7 @@ pub mod errors {
 pub mod html_content {
     pub use super::rewritable_units::{
         Attribute, Comment, ContentType, Doctype, DocumentEnd, Element, EndTag, StartTag,
-        TextChunk, UserData,
+        StreamingHandler, StreamingHandlerSink, TextChunk, UserData,
     };
 
     pub use super::html::TextType;
@@ -155,6 +157,7 @@ pub mod test_utils {
 
     impl Output {
         #[must_use]
+        #[inline]
         pub fn new(encoding: &'static Encoding) -> Self {
             Self {
                 bytes: Vec::default(),
@@ -163,6 +166,8 @@ pub mod test_utils {
             }
         }
 
+        #[inline]
+        #[track_caller]
         pub fn push(&mut self, chunk: &[u8]) {
             if chunk.is_empty() {
                 self.finalizing_chunk_received = true;
@@ -178,6 +183,8 @@ pub mod test_utils {
     }
 
     impl From<Output> for String {
+        #[inline]
+        #[track_caller]
         fn from(output: Output) -> Self {
             assert!(
                 output.finalizing_chunk_received,
@@ -205,7 +212,7 @@ cfg_if! {
         };
 
         pub use self::rewritable_units::{
-            EndTag, Serialize, StartTag, Token, TokenCaptureFlags, Mutations
+            EndTag, Serialize, StartTag, Token, TokenCaptureFlags,
         };
 
         pub use self::memory::SharedMemoryLimiter;

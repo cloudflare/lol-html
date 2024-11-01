@@ -2,44 +2,49 @@ mod attributes;
 mod capturer;
 
 use super::Mutations;
+use crate::errors::RewritingError;
 
 pub(super) use self::attributes::Attributes;
 pub use self::attributes::{Attribute, AttributeNameError};
 pub use self::capturer::*;
 
 pub trait Serialize {
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8]));
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError>;
 }
 
 macro_rules! impl_serialize {
     ($Token:ident) => {
         impl crate::rewritable_units::Serialize for $Token<'_> {
             #[inline]
-            fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
-                let Mutations {
-                    content_before,
-                    replacement,
-                    content_after,
-                    removed,
-                    ..
-                } = &self.mutations;
+            fn into_bytes(
+                mut self,
+                output_handler: &mut dyn FnMut(&[u8]),
+            ) -> Result<(), crate::errors::RewritingError> {
+                let mut encoder = crate::rewritable_units::text_encoder::StreamingHandlerSink::new(
+                    self.mutations.encoding,
+                    output_handler,
+                );
+                let content_before = ::std::mem::take(&mut self.mutations.content_before);
+                content_before
+                    .encode(&mut encoder)
+                    .map_err(crate::errors::RewritingError::ContentHandlerError)?;
 
-                if !content_before.is_empty() {
-                    output_handler(content_before);
-                }
-
-                if !removed {
+                if !self.mutations.removed {
                     match self.raw() {
-                        Some(raw) => output_handler(raw),
-                        None => self.serialize_from_parts(output_handler),
+                        Some(raw) => (encoder.output_handler())(&raw),
+                        None => self.serialize_from_parts(encoder.output_handler())?,
                     }
-                } else if !replacement.is_empty() {
-                    output_handler(replacement);
+                } else {
+                    self.mutations
+                        .replacement
+                        .encode(&mut encoder)
+                        .map_err(crate::errors::RewritingError::ContentHandlerError)?;
                 }
 
-                if !content_after.is_empty() {
-                    output_handler(content_after);
-                }
+                self.mutations
+                    .content_after
+                    .encode(&mut encoder)
+                    .map_err(crate::errors::RewritingError::ContentHandlerError)
             }
         }
     };
@@ -68,13 +73,13 @@ pub enum Token<'i> {
 
 impl Serialize for Token<'_> {
     #[inline]
-    fn to_bytes(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         match self {
-            Token::TextChunk(t) => t.to_bytes(output_handler),
-            Token::Comment(t) => t.to_bytes(output_handler),
-            Token::StartTag(t) => t.to_bytes(output_handler),
-            Token::EndTag(t) => t.to_bytes(output_handler),
-            Token::Doctype(t) => t.to_bytes(output_handler),
+            Token::TextChunk(t) => t.into_bytes(output_handler),
+            Token::Comment(t) => t.into_bytes(output_handler),
+            Token::StartTag(t) => t.into_bytes(output_handler),
+            Token::EndTag(t) => t.into_bytes(output_handler),
+            Token::Doctype(t) => t.into_bytes(output_handler),
         }
     }
 }

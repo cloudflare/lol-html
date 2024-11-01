@@ -1,5 +1,4 @@
-use super::mutations::content_to_bytes;
-use super::ContentType;
+use super::{ContentType, StreamingHandlerSink};
 use encoding_rs::Encoding;
 
 use crate::transform_stream::OutputSink;
@@ -50,9 +49,10 @@ impl<'a> DocumentEnd<'a> {
     /// ```
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
-        content_to_bytes(content, content_type, self.encoding, &mut |c: &[u8]| {
+        StreamingHandlerSink::new(self.encoding, &mut |c| {
             self.output_sink.handle_chunk(c);
-        });
+        })
+        .write_str(content, content_type);
     }
 }
 

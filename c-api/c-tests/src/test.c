@@ -16,5 +16,9 @@ int run_tests() {
     subtest("Element API", element_api_test);
     subtest("Document end API", document_end_api_test);
     subtest("Memory limiting", test_memory_limiting);
-    return done_testing();
+    int res = done_testing();
+    if (res) {
+        fprintf(stderr, "\nSome tests have failed\n");
+    }
+    return res;
 }

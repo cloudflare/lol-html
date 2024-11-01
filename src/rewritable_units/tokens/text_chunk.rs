@@ -1,6 +1,8 @@
 use super::{Mutations, Token};
 use crate::base::Bytes;
+use crate::errors::RewritingError;
 use crate::html::TextType;
+use crate::html_content::{ContentType, StreamingHandler};
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::borrow::Cow;
@@ -183,8 +185,10 @@ impl<'i> TextChunk<'i> {
     /// assert_eq!(html, r#"<div><!-- 42 -->Hello world</div>"#);
     /// ```
     #[inline]
-    pub fn before(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.before(content, content_type);
+    pub fn before(&mut self, content: &str, content_type: ContentType) {
+        self.mutations
+            .content_before
+            .push_back((content, content_type).into());
     }
 
     /// Inserts `content` after the text chunk.
@@ -217,8 +221,10 @@ impl<'i> TextChunk<'i> {
     /// assert_eq!(html, r#"<div>FooQuxBar</div>"#);
     /// ```
     #[inline]
-    pub fn after(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.after(content, content_type);
+    pub fn after(&mut self, content: &str, content_type: ContentType) {
+        self.mutations
+            .content_after
+            .push_front((content, content_type).into());
     }
 
     /// Replaces the text chunk with the `content`.
@@ -251,8 +257,39 @@ impl<'i> TextChunk<'i> {
     /// assert_eq!(html, r#"<div>Qux</div>"#);
     /// ```
     #[inline]
-    pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.replace(content, content_type);
+    pub fn replace(&mut self, content: &str, content_type: ContentType) {
+        self.mutations.replace((content, content_type).into());
+    }
+
+    /// Inserts content from a [`StreamingHandler`] before the text chunk.
+    ///
+    /// Consequent calls to the method append `content` to the previously inserted content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.mutations
+            .content_before
+            .push_back(string_writer.into());
+    }
+
+    /// Inserts content from a [`StreamingHandler`] after the text chunk.
+    ///
+    /// Consequent calls to the method prepend to the previously inserted content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.mutations
+            .content_after
+            .push_front(string_writer.into());
+    }
+
+    /// Replaces the text chunk with the content from a [`StreamingHandler`].
+    ///
+    /// Consequent calls to the method overwrite previous replacement content.
+    ///
+    /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.mutations.replace(string_writer.into());
     }
 
     /// Removes the text chunk.
@@ -275,10 +312,14 @@ impl<'i> TextChunk<'i> {
     }
 
     #[inline]
-    fn serialize_from_parts(&self, output_handler: &mut dyn FnMut(&[u8])) {
+    fn serialize_from_parts(
+        &self,
+        output_handler: &mut dyn FnMut(&[u8]),
+    ) -> Result<(), RewritingError> {
         if !self.text.is_empty() {
             output_handler(&Bytes::from_str(&self.text, self.encoding));
         }
+        Ok(())
     }
 }
 
