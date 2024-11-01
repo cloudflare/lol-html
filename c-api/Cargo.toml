@@ -1,5 +1,5 @@
 [package]
-name = "lolhtml"
+name = "lol_html_c_api"
 version = "1.1.2"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>", "Joshua Nelson <jnelson@cloudflare.com>"]
 edition = "2021"
@@ -17,4 +17,5 @@ panic = "abort"
 lto = true
 
 [lib]
+name = "lolhtml"
 crate-type = ["staticlib", "cdylib", "rlib"]
