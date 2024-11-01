@@ -18,7 +18,9 @@ impl TextChunkContent {
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_text_chunk_content_get(chunk: *mut TextChunk) -> TextChunkContent {
+pub unsafe extern "C" fn lol_html_text_chunk_content_get(
+    chunk: *mut TextChunk,
+) -> TextChunkContent {
     TextChunkContent::new(to_ref!(chunk))
 }
 
@@ -35,11 +37,14 @@ impl_content_mutation_handlers! { text_chunk: TextChunk [
 ] }
 
 #[no_mangle]
-pub extern "C" fn lol_html_text_chunk_user_data_set(chunk: *mut TextChunk, user_data: *mut c_void) {
+pub unsafe extern "C" fn lol_html_text_chunk_user_data_set(
+    chunk: *mut TextChunk,
+    user_data: *mut c_void,
+) {
     to_ref_mut!(chunk).set_user_data(user_data);
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_text_chunk_user_data_get(chunk: *const TextChunk) -> *mut c_void {
+pub unsafe extern "C" fn lol_html_text_chunk_user_data_get(chunk: *const TextChunk) -> *mut c_void {
     get_user_data!(chunk)
 }
