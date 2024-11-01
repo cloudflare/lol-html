@@ -266,7 +266,10 @@ static int loltest_write_all_callback_after(lol_html_streaming_sink_t *sink, voi
     const char *after = "&after";
     const char emoji[] = {0xf0,0x9f,0x98,0x82};
     return lol_html_streaming_sink_write_str(sink, after, strlen(after), false) ||
-        lol_html_streaming_sink_write_str(sink, emoji, 4, false);
+        lol_html_streaming_sink_write_utf8_chunk(sink, &emoji[0], 1, false) ||
+        lol_html_streaming_sink_write_utf8_chunk(sink, &emoji[1], 1, false) ||
+        lol_html_streaming_sink_write_utf8_chunk(sink, &emoji[2], 1, false) ||
+        lol_html_streaming_sink_write_utf8_chunk(sink, &emoji[3], 1, false);
 }
 
 static int loltest_write_all_callback_prepend(lol_html_streaming_sink_t *sink, void *user_data) {
@@ -275,8 +278,8 @@ static int loltest_write_all_callback_prepend(lol_html_streaming_sink_t *sink, v
 
     const char *prepend1 = "<!--pre";
     const char *prepend2 = "pend-->";
-    return lol_html_streaming_sink_write_str(sink, prepend1, strlen(prepend1), true) ||
-        lol_html_streaming_sink_write_str(sink, prepend2, strlen(prepend2), true);
+    return lol_html_streaming_sink_write_utf8_chunk(sink, prepend1, strlen(prepend1), true) ||
+        lol_html_streaming_sink_write_utf8_chunk(sink, prepend2, strlen(prepend2), true);
 }
 
 static int loltest_write_all_callback_append(lol_html_streaming_sink_t *sink, void *user_data) {

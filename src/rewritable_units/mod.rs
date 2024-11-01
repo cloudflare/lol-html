@@ -4,7 +4,7 @@ pub use self::document_end::*;
 pub use self::element::*;
 pub use self::mutations::{ContentType, StreamingHandler};
 pub(crate) use self::mutations::{Mutations, StringChunk};
-pub use self::text_encoder::StreamingHandlerSink;
+pub use self::text_encoder::{StreamingHandlerSink, Utf8Error};
 pub use self::tokens::*;
 
 /// Data that can be attached to a rewritable unit by a user and shared between content handler
