@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 lol_html = { path = "../../" }
-lolhtml = { path = "../../c-api" }
+lol_html_c_api = { path = "../../c-api" }
 encoding_rs = "0.8.13"
 libc = "0.2.61"
 rand = "0.8.4"
