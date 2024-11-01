@@ -19,45 +19,16 @@ pub extern "C" fn lol_html_comment_text_set(
     0
 }
 
-#[no_mangle]
-pub extern "C" fn lol_html_comment_before(
-    comment: *mut Comment,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { comment.before(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_comment_after(
-    comment: *mut Comment,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { comment.after(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_comment_replace(
-    comment: *mut Comment,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { comment.replace(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_comment_remove(comment: *mut Comment) {
-    to_ref_mut!(comment).remove();
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_comment_is_removed(comment: *const Comment) -> bool {
-    to_ref!(comment).removed()
-}
+impl_content_mutation_handlers! { comment: Comment [
+    lol_html_comment_before => before,
+    lol_html_comment_after => after,
+    lol_html_comment_replace => replace,
+    @VOID lol_html_comment_remove => remove,
+    @BOOL lol_html_comment_is_removed => removed,
+    @STREAM lol_html_comment_streaming_before => streaming_before,
+    @STREAM lol_html_comment_streaming_after => streaming_after,
+    @STREAM lol_html_comment_streaming_replace => streaming_replace,
+] }
 
 #[no_mangle]
 pub extern "C" fn lol_html_comment_user_data_set(comment: *mut Comment, user_data: *mut c_void) {
