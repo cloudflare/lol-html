@@ -30,16 +30,6 @@ pub extern "C" fn lol_html_element_tag_name_set(
 }
 
 #[no_mangle]
-pub extern "C" fn lol_html_element_is_self_closing(element: *mut Element) -> bool {
-    to_ref!(element).is_self_closing()
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_can_have_content(element: *mut Element) -> bool {
-    to_ref!(element).can_have_content()
-}
-
-#[no_mangle]
 pub extern "C" fn lol_html_element_namespace_uri_get(element: *mut Element) -> *const c_char {
     let element = to_ref!(element);
 
@@ -157,80 +147,25 @@ pub extern "C" fn lol_html_element_remove_attribute(
     0
 }
 
-#[no_mangle]
-pub extern "C" fn lol_html_element_before(
-    element: *mut Element,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { element.before(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_prepend(
-    element: *mut Element,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { element.prepend(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_append(
-    element: *mut Element,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { element.append(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_after(
-    element: *mut Element,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { element.after(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_set_inner_content(
-    element: *mut Element,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { element.set_inner_content(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_replace(
-    element: *mut Element,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { element.replace(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_remove(element: *mut Element) {
-    to_ref_mut!(element).remove();
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_remove_and_keep_content(element: *mut Element) {
-    to_ref_mut!(element).remove_and_keep_content();
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_element_is_removed(element: *mut Element) -> bool {
-    to_ref_mut!(element).removed()
-}
+impl_content_mutation_handlers! { element: Element [
+    lol_html_element_prepend => prepend,
+    lol_html_element_append => append,
+    lol_html_element_before => before,
+    lol_html_element_after => after,
+    lol_html_element_set_inner_content => set_inner_content,
+    lol_html_element_replace => replace,
+    @VOID lol_html_element_remove => remove,
+    @VOID lol_html_element_remove_and_keep_content => remove_and_keep_content,
+    @BOOL lol_html_element_is_removed => removed,
+    @BOOL lol_html_element_is_self_closing => is_self_closing,
+    @BOOL lol_html_element_can_have_content => can_have_content,
+    @STREAM lol_html_element_streaming_prepend => streaming_prepend,
+    @STREAM lol_html_element_streaming_append => streaming_append,
+    @STREAM lol_html_element_streaming_before => streaming_before,
+    @STREAM lol_html_element_streaming_after => streaming_after,
+    @STREAM lol_html_element_streaming_set_inner_content => streaming_set_inner_content,
+    @STREAM lol_html_element_streaming_replace => streaming_replace,
+] }
 
 #[no_mangle]
 pub extern "C" fn lol_html_element_user_data_set(element: *mut Element, user_data: *mut c_void) {
@@ -274,30 +209,15 @@ pub extern "C" fn lol_html_element_clear_end_tag_handlers(element: *mut Element)
     }
 }
 
-#[no_mangle]
-pub extern "C" fn lol_html_end_tag_before(
-    end_tag: *mut EndTag,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { end_tag.before(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_end_tag_after(
-    end_tag: *mut EndTag,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { end_tag.after(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_end_tag_remove(end_tag: *mut EndTag) {
-    to_ref_mut!(end_tag).remove();
-}
+impl_content_mutation_handlers! { end_tag: EndTag [
+    lol_html_end_tag_before => before,
+    lol_html_end_tag_after => after,
+    lol_html_end_tag_replace => replace,
+    @VOID lol_html_end_tag_remove => remove,
+    @STREAM lol_html_end_tag_streaming_before => streaming_before,
+    @STREAM lol_html_end_tag_streaming_after => streaming_after,
+    @STREAM lol_html_end_tag_streaming_replace => streaming_replace,
+] }
 
 #[no_mangle]
 pub extern "C" fn lol_html_end_tag_name_get(end_tag: *mut EndTag) -> Str {

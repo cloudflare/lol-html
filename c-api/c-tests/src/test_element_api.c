@@ -240,6 +240,114 @@ static void test_insert_content_around_element(lol_html_selector_t *selector, vo
 
 //-------------------------------------------------------------------------
 EXPECT_OUTPUT(
+    streaming_mutations_output_sink,
+    "&amp;before<div><!--prepend-->Hi<!--append--></div>&amp;after\xf0\x9f\x98\x82",
+    &EXPECTED_USER_DATA,
+    sizeof(EXPECTED_USER_DATA)
+);
+
+static void loltest_drop(void *user_data) {
+    int *drops = user_data;
+    (*drops)++;
+}
+
+static int loltest_write_all_callback_before(lol_html_streaming_sink_t *sink, void *user_data) {
+    int *counter = user_data;
+    ok(*counter >= 100 && *counter <= 103);
+
+    const char *before = "&before";
+    return lol_html_streaming_sink_write_str(sink, before, strlen(before), false);
+}
+
+static int loltest_write_all_callback_after(lol_html_streaming_sink_t *sink, void *user_data) {
+    int *counter = user_data;
+    ok(*counter >= 100 && *counter <= 103);
+
+    const char *after = "&after";
+    const char emoji[] = {0xf0,0x9f,0x98,0x82};
+    return lol_html_streaming_sink_write_str(sink, after, strlen(after), false) ||
+        lol_html_streaming_sink_write_str(sink, emoji, 4, false);
+}
+
+static int loltest_write_all_callback_prepend(lol_html_streaming_sink_t *sink, void *user_data) {
+    int *counter = user_data;
+    ok(*counter >= 100 && *counter <= 103);
+
+    const char *prepend1 = "<!--pre";
+    const char *prepend2 = "pend-->";
+    return lol_html_streaming_sink_write_str(sink, prepend1, strlen(prepend1), true) ||
+        lol_html_streaming_sink_write_str(sink, prepend2, strlen(prepend2), true);
+}
+
+static int loltest_write_all_callback_append(lol_html_streaming_sink_t *sink, void *user_data) {
+    int *counter = user_data;
+    ok(*counter >= 100 && *counter <= 103);
+
+    const char *append = "<!--append-->";
+    return lol_html_streaming_sink_write_str(sink, append, strlen(append), true);
+}
+
+static lol_html_rewriter_directive_t streaming_mutations_around_element(
+    lol_html_element_t *element,
+    void *user_data
+) {
+    note("Stream before/prepend");
+    ok(!lol_html_element_streaming_before(element, &(lol_html_streaming_handler_t){
+        .write_all_callback = loltest_write_all_callback_before,
+        .user_data = user_data,
+        .drop_callback = loltest_drop,
+    }));
+    ok(!lol_html_element_streaming_prepend(element, &(lol_html_streaming_handler_t){
+        .write_all_callback = loltest_write_all_callback_prepend,
+        .user_data = user_data,
+        // tests null drop callback
+    }));
+    note("Stream after/append");
+    ok(!lol_html_element_streaming_append(element, &(lol_html_streaming_handler_t){
+        .write_all_callback = loltest_write_all_callback_append,
+        .user_data = user_data,
+        .drop_callback = loltest_drop,
+    }));
+    ok(!lol_html_element_streaming_after(element, &(lol_html_streaming_handler_t){
+        .write_all_callback = loltest_write_all_callback_after,
+        .user_data = user_data,
+        .drop_callback = loltest_drop,
+    }));
+
+    return LOL_HTML_CONTINUE;
+}
+
+static void test_streaming_mutations_around_element(lol_html_selector_t *selector, void *user_data) {
+    UNUSED(user_data);
+    lol_html_rewriter_builder_t *builder = lol_html_rewriter_builder_new();
+
+    int drop_count = 100;
+
+    int err = lol_html_rewriter_builder_add_element_content_handlers(
+        builder,
+        selector,
+        &streaming_mutations_around_element,
+        &drop_count,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    ok(!err);
+
+    run_rewriter(
+        builder,
+        "<div>Hi</div>",
+        streaming_mutations_output_sink,
+        user_data
+    );
+
+    ok(drop_count == 103); // one has no drop callback on purpose
+}
+
+//-------------------------------------------------------------------------
+EXPECT_OUTPUT(
     set_element_inner_content_output_sink,
     "<div>hey &amp; ya</div>",
     &EXPECTED_USER_DATA,
@@ -706,6 +814,7 @@ void element_api_test() {
         test_iterate_attributes(selector, &user_data);
         test_get_and_modify_attributes(selector, &user_data);
         test_insert_content_around_element(selector, &user_data);
+        test_streaming_mutations_around_element(selector, &user_data);
 
         lol_html_selector_free(selector);
     }
