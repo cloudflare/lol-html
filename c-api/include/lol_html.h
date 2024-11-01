@@ -128,7 +128,7 @@ typedef struct lol_html_CStreamingHandler {
     void *user_data;
     // Called when the handler is supposed to produce its output. Return `0` for success.
     // The `sink` argument is guaranteed non-`NULL`. It is valid only for the duration of this call, and can only be used on the same thread.
-    // The sink is for [`lol_html_streaming_sink_write_str`].
+    // The sink is for [`lol_html_streaming_sink_write_str`] and [`lol_html_streaming_sink_write_utf8_chunk`].
     // `user_data` comes from this struct.
     //
     // `write_all_callback` must not be `NULL`.
@@ -1019,6 +1019,22 @@ int lol_html_streaming_sink_write_str(lol_html_streaming_sink_t *sink,
                                          size_t string_utf8_len,
                                          bool is_html);
 
+// [`StreamingHandlerSink::write_utf8_chunk`]
+//
+// Writes as much of the given UTF-8 fragment as possible, converting the encoding and HTML-escaping if `is_html` is `false`.
+//
+// The `bytes_utf8` doesn't need to be a complete UTF-8 string, as long as consecutive calls to this function create a valid UTF-8 string.
+// Any incomplete UTF-8 sequence at the end of the content is buffered and flushed as soon as it's completed.
+//
+// Other functions like [`lol_html_streaming_sink_write_str`] should not be called after a
+// `lol_html_streaming_sink_write_utf8_chunk` call with an incomplete UTF-8 sequence.
+//
+// Returns `0` on success, and `-1` if it wasn't valid UTF-8.
+// All pointers must be non-`NULL`.
+int lol_html_streaming_sink_write_utf8_chunk(lol_html_streaming_sink_t *sink,
+                                                const char *bytes_utf8,
+                                                size_t bytes_utf8_len,
+                                                bool is_html);
 
 #if defined(__cplusplus)
 }  // extern C

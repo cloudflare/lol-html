@@ -1215,7 +1215,7 @@ mod tests {
         {
             let output = rewrite_element(&html, enc, "span", |el| {
                 el.streaming_prepend(streaming!(|s| {
-                    s.write_str("<prepended>", ContentType::Html);
+                    s.write_utf8_chunk(b"<prepended>", ContentType::Html)?;
                     Ok(())
                 }));
                 el.append("<appended>", ContentType::Html);

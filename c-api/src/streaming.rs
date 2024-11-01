@@ -27,6 +27,37 @@ pub unsafe extern "C" fn lol_html_streaming_sink_write_str(
     0
 }
 
+/// [`StreamingHandlerSink::write_utf8_chunk`]
+///
+/// Writes as much of the given UTF-8 fragment as possible, converting the encoding and HTML-escaping if `is_html` is `false`.
+///
+/// The `bytes_utf8` doesn't need to be a complete UTF-8 string, as long as consecutive calls to this function create a valid UTF-8 string.
+/// Any incomplete UTF-8 sequence at the end of the content is buffered and flushed as soon as it's completed.
+///
+/// Other functions like [`lol_html_streaming_sink_write_str`] should not be called after a
+/// `lol_html_streaming_sink_write_utf8_chunk` call with an incomplete UTF-8 sequence.
+///
+/// Returns `0` on success, and `-1` if it wasn't valid UTF-8.
+/// All pointers must be non-`NULL`.
+#[no_mangle]
+pub unsafe extern "C" fn lol_html_streaming_sink_write_utf8_chunk(
+    sink: *mut CStreamingHandlerSink<'_>,
+    bytes_utf8: *const c_char,
+    bytes_utf8_len: size_t,
+    is_html: bool,
+) -> c_int {
+    let sink = to_ref_mut!(sink);
+    let content = to_bytes!(bytes_utf8, bytes_utf8_len);
+    let is_html = if is_html {
+        ContentType::Html
+    } else {
+        ContentType::Text
+    };
+
+    unwrap_or_ret_err_code! { sink.write_utf8_chunk(content, is_html) };
+    0
+}
+
 /// Safety: the user data and the callbacks must be safe to use from a different thread (e.g. can't rely on thread-local storage).
 /// It doesn't have to be `Sync`, it will be used only by one thread at a time.
 ///
@@ -37,7 +68,7 @@ pub struct CStreamingHandler {
     pub user_data: *mut c_void,
     /// Called when the handler is supposed to produce its output. Return `0` for success.
     /// The `sink` argument is guaranteed non-`NULL`. It is valid only for the duration of this call, and can only be used on the same thread.
-    /// The sink is for [`lol_html_streaming_sink_write_str`].
+    /// The sink is for [`lol_html_streaming_sink_write_str`] and [`lol_html_streaming_sink_write_utf8_chunk`].
     /// `user_data` comes from this struct.
     /// `write_all_callback` must not be `NULL`.
     pub write_all_callback: Option<
