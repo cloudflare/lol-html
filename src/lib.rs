@@ -18,6 +18,7 @@
 //! [`rewrite_str`]: fn.rewrite_str.html
 #![allow(clippy::default_trait_access)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::redundant_pub_crate)]
 #![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
 #![cfg_attr(any(feature = "integration_test", test), allow(unnameable_types))]
 

@@ -6,12 +6,12 @@ mod tag_scanner;
 mod tree_builder_simulator;
 
 use self::lexer::Lexer;
-pub use self::lexer::{
+pub(crate) use self::lexer::{
     AttributeBuffer, AttributeOutline, Lexeme, LexemeSink, NonTagContentLexeme,
     NonTagContentTokenOutline, TagLexeme, TagTokenOutline,
 };
 use self::state_machine::{ActionError, ParsingTermination, StateMachine};
-pub use self::tag_scanner::TagHintSink;
+pub(crate) use self::tag_scanner::TagHintSink;
 use self::tag_scanner::TagScanner;
 pub use self::tree_builder_simulator::ParsingAmbiguityError;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
@@ -23,25 +23,28 @@ use cfg_if::cfg_if;
 // to consumer to switch the parser back to the tag scan mode in
 // the tag handler.
 #[derive(Clone, Copy, Debug)]
-pub enum ParserDirective {
+pub(crate) enum ParserDirective {
     WherePossibleScanForTagsOnly,
     Lex,
 }
 
-pub struct ParserContext<S> {
+pub(crate) struct ParserContext<S> {
     output_sink: S,
     tree_builder_simulator: TreeBuilderSimulator,
 }
 
-pub trait ParserOutputSink: LexemeSink + TagHintSink {}
+pub(crate) trait ParserOutputSink: LexemeSink + TagHintSink {}
 
-pub struct Parser<S: ParserOutputSink> {
+// Pub only for integration tests
+pub struct Parser<S> {
     lexer: Lexer<S>,
     tag_scanner: TagScanner<S>,
     current_directive: ParserDirective,
     context: ParserContext<S>,
 }
 
+// public only for integration tests
+#[allow(private_bounds, private_interfaces)]
 impl<S: ParserOutputSink> Parser<S> {
     #[inline]
     #[must_use]
@@ -112,6 +115,7 @@ cfg_if! {
     if #[cfg(feature = "integration_test")] {
         use crate::html::{LocalNameHash, TextType};
 
+        #[allow(private_bounds)]
         impl<S: ParserOutputSink> Parser<S> {
             pub fn switch_text_type(&mut self, text_type: TextType) {
                 match self.current_directive {

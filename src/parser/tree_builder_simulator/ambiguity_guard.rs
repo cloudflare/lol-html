@@ -132,7 +132,7 @@ enum State {
     InOrAfterFrameset,
 }
 
-pub struct AmbiguityGuard {
+pub(crate) struct AmbiguityGuard {
     state: State,
 }
 

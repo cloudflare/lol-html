@@ -780,8 +780,8 @@ mod tests {
 
     mod fatal_errors {
         use super::*;
-        use crate::errors::MemoryLimitExceededError;
         use crate::html_content::Comment;
+        use crate::memory::MemoryLimitExceededError;
         use crate::rewritable_units::{Element, TextChunk};
 
         fn create_rewriter<O: OutputSink>(

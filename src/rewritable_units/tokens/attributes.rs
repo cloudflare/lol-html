@@ -43,7 +43,12 @@ pub struct Attribute<'i> {
 impl<'i> Attribute<'i> {
     #[inline]
     #[must_use]
-    fn new(name: Bytes<'i>, value: Bytes<'i>, raw: Bytes<'i>, encoding: &'static Encoding) -> Self {
+    const fn new(
+        name: Bytes<'i>,
+        value: Bytes<'i>,
+        raw: Bytes<'i>,
+        encoding: &'static Encoding,
+    ) -> Self {
         Attribute {
             name,
             value,
@@ -144,7 +149,7 @@ impl Debug for Attribute<'_> {
     }
 }
 
-pub struct Attributes<'i> {
+pub(crate) struct Attributes<'i> {
     input: &'i Bytes<'i>,
     attribute_buffer: &'i AttributeBuffer,
     items: LazyCell<Vec<Attribute<'i>>>,
@@ -235,7 +240,7 @@ impl<'i> Attributes<'i> {
     }
 
     #[cfg(test)]
-    pub fn raw_attributes(&self) -> (&'i Bytes<'i>, &'i AttributeBuffer) {
+    pub(crate) const fn raw_attributes(&self) -> (&'i Bytes<'i>, &'i AttributeBuffer) {
         (self.input, self.attribute_buffer)
     }
 }

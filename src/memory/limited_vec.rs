@@ -7,7 +7,7 @@ use std::vec::Drain;
 use super::{MemoryLimitExceededError, SharedMemoryLimiter};
 
 #[derive(Debug)]
-pub struct LimitedVec<T> {
+pub(crate) struct LimitedVec<T> {
     limiter: SharedMemoryLimiter,
     vec: Vec<T>,
 }

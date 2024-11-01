@@ -24,7 +24,7 @@ pub use self::ambiguity_guard::ParsingAmbiguityError;
 const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 
 #[must_use]
-pub enum TreeBuilderFeedback {
+pub(crate) enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
     #[allow(clippy::type_complexity)]
@@ -114,7 +114,7 @@ fn is_html_integration_point_in_svg(tag_name: LocalNameHash) -> bool {
 }
 
 // TODO limit ns stack
-pub struct TreeBuilderSimulator {
+pub(crate) struct TreeBuilderSimulator {
     ns_stack: Vec<Namespace>,
     current_ns: Namespace,
     ambiguity_guard: AmbiguityGuard,
@@ -173,7 +173,7 @@ impl TreeBuilderSimulator {
     }
 
     #[inline]
-    pub fn current_ns(&self) -> Namespace {
+    pub const fn current_ns(&self) -> Namespace {
         self.current_ns
     }
 

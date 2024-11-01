@@ -20,7 +20,7 @@ const fn is_attr_whitespace(b: u8) -> bool {
 
 type MemoizedAttrValue<'i> = LazyCell<Option<Bytes<'i>>>;
 
-pub struct AttributeMatcher<'i> {
+pub(crate) struct AttributeMatcher<'i> {
     input: &'i Bytes<'i>,
     attributes: &'i AttributeBuffer,
     id: MemoizedAttrValue<'i>,

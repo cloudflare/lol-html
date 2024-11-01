@@ -1,3 +1,4 @@
+// Pub only for integration tests
 #[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Namespace {
     #[default]

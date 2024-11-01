@@ -16,19 +16,19 @@ use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
 
 pub use self::ast::*;
-pub use self::attribute_matcher::AttributeMatcher;
-pub use self::compiler::Compiler;
+pub(crate) use self::attribute_matcher::AttributeMatcher;
+pub(crate) use self::compiler::Compiler;
 pub use self::error::SelectorError;
 pub use self::parser::Selector;
-pub use self::program::{ExecutionBranch, Program, TryExecResult};
-pub use self::stack::{ChildCounter, ElementData, Stack, StackItem};
+pub(crate) use self::program::{ExecutionBranch, Program, TryExecResult};
+pub(crate) use self::stack::{ChildCounter, ElementData, Stack, StackItem};
 
-pub struct MatchInfo<P> {
+pub(crate) struct MatchInfo<P> {
     pub payload: P,
     pub with_content: bool,
 }
 
-pub type AuxStartTagInfoRequest<E, P> = Box<
+pub(crate) type AuxStartTagInfoRequest<E, P> = Box<
     dyn FnOnce(
             &mut SelectorMatchingVm<E>,
             AuxStartTagInfo<'_>,
@@ -37,7 +37,7 @@ pub type AuxStartTagInfoRequest<E, P> = Box<
         + Send,
 >;
 
-pub enum VmError<E: ElementData, MatchPayload> {
+pub(crate) enum VmError<E: ElementData, MatchPayload> {
     InfoRequest(AuxStartTagInfoRequest<E, MatchPayload>),
     MemoryLimitExceeded(MemoryLimitExceededError),
 }
@@ -69,7 +69,7 @@ struct Bailout<T> {
 }
 
 /// A container for tracking state from various places on the stack.
-pub struct SelectorState<'i> {
+pub(crate) struct SelectorState<'i> {
     pub cumulative: &'i ChildCounter,
     pub typed: Option<&'i ChildCounter>,
 }
@@ -140,7 +140,7 @@ macro_rules! aux_info_request {
     };
 }
 
-pub struct SelectorMatchingVm<E: ElementData> {
+pub(crate) struct SelectorMatchingVm<E: ElementData> {
     program: Program<E::MatchPayload>,
     stack: Stack<E>,
     enable_esi_tags: bool,

@@ -1,5 +1,6 @@
 macro_rules! declare_tags {
     ($($name:ident = $val:expr),+) => {
+        // Pub only for integration tests
         #[repr(u64)]
         #[derive(Debug, Copy, Clone)]
         pub enum Tag {

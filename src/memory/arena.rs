@@ -3,7 +3,7 @@ use super::{MemoryLimitExceededError, SharedMemoryLimiter};
 /// Preallocated region of memory that can grow and never deallocates during the lifetime of
 /// the limiter.
 #[derive(Debug)]
-pub struct Arena {
+pub(crate) struct Arena {
     limiter: SharedMemoryLimiter,
     data: Vec<u8>,
 }

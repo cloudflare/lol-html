@@ -10,7 +10,7 @@ use crate::rewriter::RewritingError;
 use std::fmt::{self, Debug};
 use std::mem;
 
-pub enum FeedbackDirective {
+pub(crate) enum FeedbackDirective {
     ApplyUnhandledFeedback(TreeBuilderFeedback),
     Skip,
     None,
@@ -39,7 +39,7 @@ impl Debug for FeedbackDirective {
 }
 
 #[derive(Debug)]
-pub struct StateMachineBookmark {
+pub(crate) struct StateMachineBookmark {
     cdata_allowed: bool,
     text_type: TextType,
     last_start_tag_name_hash: LocalNameHash,
@@ -48,7 +48,7 @@ pub struct StateMachineBookmark {
     feedback_directive: FeedbackDirective,
 }
 
-pub enum ActionError {
+pub(crate) enum ActionError {
     RewritingError(RewritingError),
     ParserDirectiveChangeRequired(ParserDirective, StateMachineBookmark),
 }
@@ -72,7 +72,7 @@ pub type ActionResult = Result<(), ActionError>;
 pub type StateResult = Result<(), ParsingTermination>;
 pub type ParseResult = Result<Never, ParsingTermination>;
 
-pub trait StateMachineActions {
+pub(crate) trait StateMachineActions {
     type Context;
 
     fn emit_eof(&mut self, context: &mut Self::Context, input: &[u8]) -> ActionResult;
@@ -131,12 +131,12 @@ pub trait StateMachineActions {
     fn leave_cdata(&mut self, context: &mut Self::Context, input: &[u8]);
 }
 
-pub trait StateMachineConditions {
+pub(crate) trait StateMachineConditions {
     fn is_appropriate_end_tag(&self) -> bool;
     fn cdata_allowed(&self) -> bool;
 }
 
-pub trait StateMachine: StateMachineActions + StateMachineConditions {
+pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
     cdata_section_states_group!();
     data_states_group!();
     plaintext_states_group!();

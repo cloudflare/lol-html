@@ -1,4 +1,4 @@
-pub trait Align {
+pub(crate) trait Align {
     fn align(&mut self, offset: usize);
 }
 

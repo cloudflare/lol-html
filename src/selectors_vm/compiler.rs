@@ -24,7 +24,7 @@ struct ExprSet {
     pub attribute_exprs: Vec<CompiledAttributeExpr>,
 }
 
-pub struct AttrExprOperands {
+pub(crate) struct AttrExprOperands {
     pub name: Bytes<'static>,
     pub value: Bytes<'static>,
     pub case_sensitivity: ParsedCaseSensitivity,
@@ -187,7 +187,7 @@ impl Compilable for Expr<OnAttributesExpr> {
     }
 }
 
-pub struct Compiler<P>
+pub(crate) struct Compiler<P>
 where
     P: PartialEq + Eq + Copy + Debug + Hash,
 {

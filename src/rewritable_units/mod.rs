@@ -93,7 +93,7 @@ mod test_utils {
     use encoding_rs::Encoding;
     use std::borrow::Cow;
 
-    pub fn encoded(input: &str) -> Vec<(Vec<u8>, &'static Encoding)> {
+    pub(crate) fn encoded(input: &str) -> Vec<(Vec<u8>, &'static Encoding)> {
         ASCII_COMPATIBLE_ENCODINGS
             .iter()
             .filter_map(|enc| {
@@ -115,7 +115,7 @@ mod test_utils {
             .collect()
     }
 
-    pub fn rewrite_html<'h>(
+    pub(crate) fn rewrite_html<'h>(
         html: &[u8],
         encoding: &'static Encoding,
         element_content_handlers: Vec<(Cow<'_, Selector>, ElementContentHandlers<'h>)>,
