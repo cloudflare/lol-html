@@ -30,6 +30,7 @@ typedef struct lol_html_Element lol_html_element_t;
 typedef struct lol_html_AttributesIterator lol_html_attributes_iterator_t;
 typedef struct lol_html_Attribute lol_html_attribute_t;
 typedef struct lol_html_Selector lol_html_selector_t;
+typedef struct lol_html_CStreamingHandlerSink lol_html_streaming_sink_t;
 
 // Library-allocated UTF8 string fat pointer.
 //
@@ -115,6 +116,30 @@ typedef lol_html_rewriter_directive_t (*lol_html_end_tag_handler_t)(
     lol_html_end_tag_t *end_tag,
     void *user_data
 );
+
+// For use with streaming content handlers.
+//
+// Safety: the user data and the callbacks must be safe to use from a different thread (e.g. can't rely on thread-local storage).
+// It doesn't have to be `Sync`, it will be used only by one thread at a time.
+//
+// Handler functions copy this struct. It can (and should) be created on the stack.
+typedef struct lol_html_CStreamingHandler {
+    // Anything you like
+    void *user_data;
+    // Called when the handler is supposed to produce its output. Return `0` for success.
+    // The `sink` argument is guaranteed non-`NULL`. It is valid only for the duration of this call, and can only be used on the same thread.
+    // The sink is for [`lol_html_streaming_sink_write_str`].
+    // `user_data` comes from this struct.
+    //
+    // `write_all_callback` must not be `NULL`.
+    int (*write_all_callback)(lol_html_streaming_sink_t *sink, void *user_data);
+    // Called exactly once, after the last use of this handler.
+    // It may be `NULL`.
+    // `user_data` comes from this struct.
+    void (*drop_callback)(void *user_data);
+    // *Always* initialize to `NULL`.
+    void *reserved;
+} lol_html_streaming_handler_t;
 
 // Selector
 //---------------------------------------------------------------------
@@ -791,6 +816,209 @@ int lol_html_doc_end_append(
     size_t content_len,
     bool is_html
 );
+
+
+
+//[`Element::streaming_prepend`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`element`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_element_streaming_prepend(lol_html_element_t *element,
+                                       lol_html_streaming_handler_t *streaming_writer);
+
+//[`Element::streaming_append`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`element`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_element_streaming_append(lol_html_element_t *element,
+                                      lol_html_streaming_handler_t *streaming_writer);
+
+//[`Element::streaming_before`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`element`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_element_streaming_before(lol_html_element_t *element,
+                                      lol_html_streaming_handler_t *streaming_writer);
+
+//[`Element::streaming_after`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`element`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_element_streaming_after(lol_html_element_t *element,
+                                     lol_html_streaming_handler_t *streaming_writer);
+
+//[`Element::streaming_set_inner_content`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`element`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_element_streaming_set_inner_content(lol_html_element_t *element,
+                                                 lol_html_streaming_handler_t *streaming_writer);
+
+//[`Element::streaming_replace`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`element`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_element_streaming_replace(lol_html_element_t *element,
+                                       lol_html_streaming_handler_t *streaming_writer);
+
+//[`EndTag::streaming_before`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`end_tag`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_end_tag_streaming_before(lol_html_end_tag_t *end_tag,
+                                      lol_html_streaming_handler_t *streaming_writer);
+
+//[`EndTag::streaming_after`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`end_tag`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_end_tag_streaming_after(lol_html_end_tag_t *end_tag,
+                                     lol_html_streaming_handler_t *streaming_writer);
+
+//[`EndTag::streaming_replace`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`end_tag`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_end_tag_streaming_replace(lol_html_end_tag_t *end_tag,
+                                       lol_html_streaming_handler_t *streaming_writer);
+
+
+//[`TextChunk::streaming_before`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`text_chunk`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_text_chunk_streaming_before(lol_html_text_chunk_t *text_chunk,
+                                         lol_html_streaming_handler_t *streaming_writer);
+
+//[`TextChunk::streaming_after`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`text_chunk`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_text_chunk_streaming_after(lol_html_text_chunk_t *text_chunk,
+                                        lol_html_streaming_handler_t *streaming_writer);
+
+//[`TextChunk::streaming_replace`]
+//
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+//`text_chunk`
+// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+int lol_html_text_chunk_streaming_replace(lol_html_text_chunk_t *text_chunk,
+                                          lol_html_streaming_handler_t *streaming_writer);
+
+// Write another piece of UTF-8 data to the output. Returns `0` on success, and `-1` if it wasn't valid UTF-8.
+// All pointers must be non-NULL.
+int lol_html_streaming_sink_write_str(lol_html_streaming_sink_t *sink,
+                                         const char *string_utf8,
+                                         size_t string_utf8_len,
+                                         bool is_html);
+
 
 #if defined(__cplusplus)
 }  // extern C

@@ -22,50 +22,17 @@ pub extern "C" fn lol_html_text_chunk_content_get(chunk: *mut TextChunk) -> Text
     TextChunkContent::new(to_ref!(chunk))
 }
 
-#[no_mangle]
-pub extern "C" fn lol_html_text_chunk_is_last_in_text_node(chunk: *mut TextChunk) -> bool {
-    to_ref!(chunk).last_in_text_node()
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_text_chunk_before(
-    chunk: *mut TextChunk,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { chunk.before(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_text_chunk_after(
-    chunk: *mut TextChunk,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { chunk.after(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_text_chunk_replace(
-    chunk: *mut TextChunk,
-    content: *const c_char,
-    content_len: size_t,
-    is_html: bool,
-) -> c_int {
-    content_insertion_fn_body! { chunk.replace(content, content_len, is_html) }
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_text_chunk_remove(chunk: *mut TextChunk) {
-    to_ref_mut!(chunk).remove();
-}
-
-#[no_mangle]
-pub extern "C" fn lol_html_text_chunk_is_removed(chunk: *const TextChunk) -> bool {
-    to_ref!(chunk).removed()
-}
+impl_content_mutation_handlers! { text_chunk: TextChunk [
+    lol_html_text_chunk_before => before,
+    lol_html_text_chunk_after => after,
+    lol_html_text_chunk_replace => replace,
+    @VOID lol_html_text_chunk_remove => remove,
+    @BOOL lol_html_text_chunk_is_removed => removed,
+    @BOOL lol_html_text_chunk_is_last_in_text_node => last_in_text_node,
+    @STREAM lol_html_text_chunk_streaming_before => streaming_before,
+    @STREAM lol_html_text_chunk_streaming_after => streaming_after,
+    @STREAM lol_html_text_chunk_streaming_replace => streaming_replace,
+] }
 
 #[no_mangle]
 pub extern "C" fn lol_html_text_chunk_user_data_set(chunk: *mut TextChunk, user_data: *mut c_void) {
