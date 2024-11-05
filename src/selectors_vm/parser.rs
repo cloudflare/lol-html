@@ -9,7 +9,7 @@ use std::fmt;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SelectorImplDescriptor;
+pub(crate) struct SelectorImplDescriptor;
 
 impl SelectorImpl for SelectorImplDescriptor {
     type AttrValue = String;
@@ -29,7 +29,7 @@ impl SelectorImpl for SelectorImplDescriptor {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub enum PseudoElementStub {}
+pub(crate) enum PseudoElementStub {}
 
 impl ToCss for PseudoElementStub {
     fn to_css<W: fmt::Write>(&self, _dest: &mut W) -> fmt::Result {
@@ -43,7 +43,7 @@ impl PseudoElement for PseudoElementStub {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub enum NonTSPseudoClassStub {}
+pub(crate) enum NonTSPseudoClassStub {}
 
 impl NonTSPseudoClass for NonTSPseudoClassStub {
     type Impl = SelectorImplDescriptor;

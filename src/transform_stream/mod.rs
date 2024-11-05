@@ -1,14 +1,15 @@
 mod dispatcher;
 
 use self::dispatcher::Dispatcher;
-pub use self::dispatcher::{
-    AuxStartTagInfo, DispatcherError, OutputSink, StartTagHandlingResult, TransformController,
-};
+pub use self::dispatcher::OutputSink;
+pub(crate) use self::dispatcher::{AuxStartTagInfo, DispatcherError};
+pub use self::dispatcher::{StartTagHandlingResult, TransformController};
 use crate::base::SharedEncoding;
 use crate::memory::{Arena, SharedMemoryLimiter};
 use crate::parser::{Parser, ParserDirective};
 use crate::rewriter::RewritingError;
 
+// Pub only for integration tests
 pub struct TransformStreamSettings<C, O>
 where
     C: TransformController,
@@ -22,6 +23,7 @@ where
     pub strict: bool,
 }
 
+// Pub only for integration tests
 pub struct TransformStream<C, O>
 where
     C: TransformController,
@@ -134,6 +136,7 @@ where
     }
 
     #[cfg(feature = "integration_test")]
+    #[allow(private_interfaces)]
     pub fn parser(&mut self) -> &mut Parser<Dispatcher<C, O>> {
         &mut self.parser
     }

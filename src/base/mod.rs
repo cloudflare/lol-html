@@ -6,7 +6,7 @@ mod bytes;
 mod encoding;
 mod range;
 
-pub use self::align::Align;
-pub use self::bytes::{Bytes, HasReplacementsError};
+pub(crate) use self::align::Align;
+pub(crate) use self::bytes::{Bytes, HasReplacementsError};
 pub use self::encoding::SharedEncoding;
-pub use self::range::Range;
+pub(crate) use self::range::Range;

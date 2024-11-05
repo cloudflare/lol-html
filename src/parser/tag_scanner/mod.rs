@@ -9,7 +9,7 @@ use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeB
 use crate::rewriter::RewritingError;
 use std::cmp::min;
 
-pub trait TagHintSink {
+pub(crate) trait TagHintSink {
     fn handle_start_tag_hint(
         &mut self,
         name: LocalName<'_>,
@@ -21,7 +21,8 @@ pub trait TagHintSink {
     ) -> Result<ParserDirective, RewritingError>;
 }
 
-pub type State<S> = fn(&mut TagScanner<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;
+pub(crate) type State<S> =
+    fn(&mut TagScanner<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;
 
 /// Tag scanner skips the majority of lexer operations and, thus,
 /// is faster. It also has much less requirements for buffering which makes it more
@@ -34,7 +35,7 @@ pub type State<S> = fn(&mut TagScanner<S>, context: &mut ParserContext<S>, &[u8]
 /// of the input (e.g. `<div` will produce a tag preview, but not tag token). However,
 /// it's not a concern for our use case as no content will be erroneously captured
 /// in this case.
-pub struct TagScanner<S: TagHintSink> {
+pub(crate) struct TagScanner<S> {
     next_pos: usize,
     is_last_input: bool,
     tag_start: Option<usize>,

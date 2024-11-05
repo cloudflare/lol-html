@@ -6,10 +6,10 @@ use hashbrown::HashSet;
 use std::hash::Hash;
 use std::ops::Range;
 
-pub type AddressRange = Range<usize>;
+pub(crate) type AddressRange = Range<usize>;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct ExecutionBranch<P>
+pub(crate) struct ExecutionBranch<P>
 where
     P: Hash + Eq,
 {
@@ -19,7 +19,7 @@ where
 }
 
 /// The result of trying to execute an instruction without having parsed all attributes
-pub enum TryExecResult<'i, P>
+pub(crate) enum TryExecResult<'i, P>
 where
     P: Hash + Eq,
 {
@@ -31,7 +31,7 @@ where
     Fail,
 }
 
-pub struct Instruction<P>
+pub(crate) struct Instruction<P>
 where
     P: Hash + Eq,
 {
@@ -89,7 +89,7 @@ where
     }
 }
 
-pub struct Program<P>
+pub(crate) struct Program<P>
 where
     P: Hash + Eq,
 {

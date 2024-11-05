@@ -4,7 +4,7 @@ use crate::rewritable_units::{DocumentEnd, Element, StartTag, Token, TokenCaptur
 use crate::selectors_vm::MatchInfo;
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
-pub struct SelectorHandlersLocator {
+pub(crate) struct SelectorHandlersLocator {
     pub element_handler_idx: Option<usize>,
     pub comment_handler_idx: Option<usize>,
     pub text_handler_idx: Option<usize>,
@@ -59,7 +59,7 @@ impl<H> HandlerVec<H> {
     }
 
     #[inline]
-    pub fn has_active(&self) -> bool {
+    pub const fn has_active(&self) -> bool {
         self.user_count > 0
     }
 
@@ -112,7 +112,7 @@ impl<H> HandlerVec<H> {
     }
 }
 
-pub struct ContentHandlersDispatcher<'h, H: HandlerTypes> {
+pub(crate) struct ContentHandlersDispatcher<'h, H: HandlerTypes> {
     doctype_handlers: HandlerVec<H::DoctypeHandler<'h>>,
     comment_handlers: HandlerVec<H::CommentHandler<'h>>,
     text_handlers: HandlerVec<H::TextHandler<'h>>,
@@ -180,7 +180,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
     }
 
     #[inline]
-    pub fn has_matched_elements_with_removed_content(&self) -> bool {
+    pub const fn has_matched_elements_with_removed_content(&self) -> bool {
         self.matched_elements_with_removed_content > 0
     }
 

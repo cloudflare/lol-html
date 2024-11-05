@@ -8,7 +8,7 @@ use crate::parser::Lexeme;
 use crate::rewriter::RewritingError;
 use bitflags::bitflags;
 
-pub use self::to_token::{ToToken, ToTokenResult};
+pub(crate) use self::to_token::{ToToken, ToTokenResult};
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,7 +22,7 @@ bitflags! {
 }
 
 #[derive(Debug)]
-pub enum TokenCapturerEvent<'i> {
+pub(crate) enum TokenCapturerEvent<'i> {
     LexemeConsumed,
     TokenProduced(Box<Token<'i>>),
 }

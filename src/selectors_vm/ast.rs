@@ -6,7 +6,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub struct NthChild {
+pub(crate) struct NthChild {
     step: i32,
     offset: i32,
 }
@@ -46,7 +46,7 @@ impl NthChild {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum OnTagNameExpr {
+pub(crate) enum OnTagNameExpr {
     ExplicitAny,
     Unmatchable,
     LocalName(String),
@@ -55,7 +55,7 @@ pub enum OnTagNameExpr {
 }
 
 #[derive(Eq, PartialEq)]
-pub struct AttributeComparisonExpr {
+pub(crate) struct AttributeComparisonExpr {
     pub name: String,
     pub value: String,
     pub case_sensitivity: ParsedCaseSensitivity,
@@ -104,7 +104,7 @@ impl Debug for AttributeComparisonExpr {
 
 /// An attribute check when attributes are received and parsed.
 #[derive(PartialEq, Eq, Debug)]
-pub enum OnAttributesExpr {
+pub(crate) enum OnAttributesExpr {
     Id(String),
     Class(String),
     AttributeExists(String),
@@ -173,7 +173,7 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct Expr<E>
+pub(crate) struct Expr<E>
 where
     E: PartialEq + Eq + Debug,
 {
@@ -195,7 +195,7 @@ where
 }
 
 #[derive(PartialEq, Eq, Debug, Default)]
-pub struct Predicate {
+pub(crate) struct Predicate {
     pub on_tag_name_exprs: Vec<Expr<OnTagNameExpr>>,
     pub on_attr_exprs: Vec<Expr<OnAttributesExpr>>,
 }
@@ -219,7 +219,7 @@ impl Predicate {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct AstNode<P>
+pub(crate) struct AstNode<P>
 where
     P: Hash + Eq,
 {
@@ -243,14 +243,15 @@ where
     }
 }
 
+// exposed for selectors_ast tool
 #[derive(Default, PartialEq, Eq, Debug)]
 pub struct Ast<P>
 where
     P: PartialEq + Eq + Copy + Debug + Hash,
 {
-    pub root: Vec<AstNode<P>>,
+    pub(crate) root: Vec<AstNode<P>>,
     // NOTE: used to preallocate instruction vector during compilation.
-    pub cumulative_node_count: usize,
+    pub(crate) cumulative_node_count: usize,
 }
 
 impl<P> Ast<P>
