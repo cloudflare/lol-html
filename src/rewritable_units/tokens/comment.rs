@@ -43,7 +43,7 @@ impl<'i> Comment<'i> {
             text,
             raw: Some(raw),
             encoding,
-            mutations: Mutations::new(encoding),
+            mutations: Mutations::new(),
             user_data: Box::new(()),
         })
     }
@@ -107,6 +107,7 @@ impl<'i> Comment<'i> {
     #[inline]
     pub fn before(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
         self.mutations
+            .mutate()
             .content_before
             .push_back((content, content_type).into());
     }
@@ -141,6 +142,7 @@ impl<'i> Comment<'i> {
     #[inline]
     pub fn after(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
         self.mutations
+            .mutate()
             .content_after
             .push_front((content, content_type).into());
     }
@@ -174,13 +176,15 @@ impl<'i> Comment<'i> {
     /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
-        self.mutations.replace((content, content_type).into());
+        self.mutations
+            .mutate()
+            .replace((content, content_type).into());
     }
 
     /// Removes the comment.
     #[inline]
     pub fn remove(&mut self) {
-        self.mutations.remove();
+        self.mutations.mutate().remove();
     }
 
     /// Returns `true` if the comment has been replaced or removed.

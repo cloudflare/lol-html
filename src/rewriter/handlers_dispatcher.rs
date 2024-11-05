@@ -232,7 +232,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
         current_element_data: Option<&mut ElementDescriptor>,
     ) -> HandlerResult {
         if self.matched_elements_with_removed_content > 0 {
-            start_tag.mutations.remove();
+            start_tag.remove();
         }
 
         let mut element = Element::new(start_tag, self.next_element_can_have_content);

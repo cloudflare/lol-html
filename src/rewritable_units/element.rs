@@ -1,3 +1,4 @@
+use super::mutations::MutationsInner;
 use super::{Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag, StringChunk};
 use crate::base::Bytes;
 use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
@@ -88,19 +89,18 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     #[inline]
     fn remove_content(&mut self) {
-        self.start_tag.mutations.content_after.clear();
-        if let Some(end) = &mut self.end_tag_mutations {
+        self.start_tag.mutations.mutate().content_after.clear();
+        if let Some(end) = self.end_tag_mutations.as_mut().and_then(|m| m.if_mutated()) {
             end.content_before.clear();
         }
         self.should_remove_content = true;
     }
 
     #[inline]
-    fn end_tag_mutations_mut(&mut self) -> &mut Mutations {
-        let encoding = self.encoding;
-
+    fn end_tag_mutations_mut(&mut self) -> &mut MutationsInner {
         self.end_tag_mutations
-            .get_or_insert_with(|| Mutations::new(encoding))
+            .get_or_insert_with(Mutations::new)
+            .mutate()
     }
 
     /// Returns the tag name of the element.
@@ -236,6 +236,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.start_tag
             .mutations
+            .mutate()
             .content_before
             .push_back((content, content_type).into());
     }
@@ -277,7 +278,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         if self.can_have_content {
             &mut self.end_tag_mutations_mut().content_after
         } else {
-            &mut self.start_tag.mutations.content_after
+            &mut self.start_tag.mutations.mutate().content_after
         }
         .push_front(chunk);
     }
@@ -324,7 +325,11 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     fn prepend_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
-            self.start_tag.mutations.content_after.push_front(chunk);
+            self.start_tag
+                .mutations
+                .mutate()
+                .content_after
+                .push_front(chunk);
         }
     }
 
@@ -416,7 +421,11 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     fn set_inner_content_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
             self.remove_content();
-            self.start_tag.mutations.content_after.push_front(chunk);
+            self.start_tag
+                .mutations
+                .mutate()
+                .content_after
+                .push_front(chunk);
         }
     }
 
@@ -453,7 +462,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     }
 
     fn replace_chunk(&mut self, chunk: StringChunk) {
-        self.start_tag.mutations.replace(chunk);
+        self.start_tag.mutations.mutate().replace(chunk);
 
         if self.can_have_content {
             self.remove_content();
@@ -464,7 +473,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// Removes the element and its inner content.
     #[inline]
     pub fn remove(&mut self) {
-        self.start_tag.mutations.remove();
+        self.start_tag.mutations.mutate().remove();
 
         if self.can_have_content {
             self.remove_content();
@@ -497,7 +506,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn remove_and_keep_content(&mut self) {
-        self.start_tag.mutations.remove();
+        self.start_tag.remove();
 
         if self.can_have_content {
             self.end_tag_mutations_mut().remove();

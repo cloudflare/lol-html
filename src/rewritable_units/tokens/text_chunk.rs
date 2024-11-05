@@ -82,7 +82,7 @@ impl<'i> TextChunk<'i> {
             text_type,
             last_in_text_node,
             encoding,
-            mutations: Mutations::new(encoding),
+            mutations: Mutations::new(),
             user_data: Box::new(()),
         })
     }
@@ -187,6 +187,7 @@ impl<'i> TextChunk<'i> {
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.mutations
+            .mutate()
             .content_before
             .push_back((content, content_type).into());
     }
@@ -223,6 +224,7 @@ impl<'i> TextChunk<'i> {
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         self.mutations
+            .mutate()
             .content_after
             .push_front((content, content_type).into());
     }
@@ -258,13 +260,15 @@ impl<'i> TextChunk<'i> {
     /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.replace((content, content_type).into());
+        self.mutations
+            .mutate()
+            .replace((content, content_type).into());
     }
 
     /// Removes the text chunk.
     #[inline]
     pub fn remove(&mut self) {
-        self.mutations.remove();
+        self.mutations.mutate().remove();
     }
 
     /// Returns `true` if the text chunk has been replaced or removed.
