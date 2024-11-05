@@ -27,7 +27,7 @@ impl<'i> EndTag<'i> {
             name,
             raw: Some(raw),
             encoding,
-            mutations: Mutations::new(encoding),
+            mutations: Mutations::new(),
         })
     }
 
@@ -70,6 +70,7 @@ impl<'i> EndTag<'i> {
     #[inline]
     pub fn before(&mut self, content: &str, content_type: ContentType) {
         self.mutations
+            .mutate()
             .content_before
             .push_back((content, content_type).into());
     }
@@ -80,6 +81,7 @@ impl<'i> EndTag<'i> {
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
         self.mutations
+            .mutate()
             .content_after
             .push_front((content, content_type).into());
     }
@@ -89,13 +91,15 @@ impl<'i> EndTag<'i> {
     /// Consequent calls to the method overwrite previous replacement content.
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        self.mutations.replace((content, content_type).into());
+        self.mutations
+            .mutate()
+            .replace((content, content_type).into());
     }
 
     /// Removes the end tag.
     #[inline]
     pub fn remove(&mut self) {
-        self.mutations.remove();
+        self.mutations.mutate().remove();
     }
 
     #[inline]

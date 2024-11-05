@@ -1,5 +1,4 @@
 use super::text_encoder::StreamingHandlerSink;
-use encoding_rs::Encoding;
 use std::error::Error as StdError;
 
 type BoxResult = Result<(), Box<dyn StdError + Send + Sync>>;
@@ -16,27 +15,14 @@ pub enum ContentType {
     Text,
 }
 
-pub(crate) struct Mutations {
+pub(crate) struct MutationsInner {
     pub content_before: DynamicString,
     pub replacement: DynamicString,
     pub content_after: DynamicString,
     pub removed: bool,
-    pub encoding: &'static Encoding,
 }
 
-impl Mutations {
-    #[inline]
-    #[must_use]
-    pub const fn new(encoding: &'static Encoding) -> Self {
-        Self {
-            content_before: DynamicString::new(),
-            replacement: DynamicString::new(),
-            content_after: DynamicString::new(),
-            removed: false,
-            encoding,
-        }
-    }
-
+impl MutationsInner {
     #[inline]
     pub fn replace(&mut self, chunk: StringChunk) {
         self.remove();
@@ -48,10 +34,52 @@ impl Mutations {
     pub fn remove(&mut self) {
         self.removed = true;
     }
+}
+
+pub(crate) struct Mutations {
+    inner: Option<Box<MutationsInner>>,
+}
+
+impl Mutations {
+    #[inline]
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { inner: None }
+    }
 
     #[inline]
-    pub const fn removed(&self) -> bool {
-        self.removed
+    pub fn take(&mut self) -> Option<Box<MutationsInner>> {
+        self.inner.take()
+    }
+
+    #[inline]
+    pub fn if_mutated(&mut self) -> Option<&mut MutationsInner> {
+        self.inner.as_deref_mut()
+    }
+
+    #[inline]
+    pub fn mutate(&mut self) -> &mut MutationsInner {
+        #[inline(never)]
+        fn alloc_content(inner: &mut Option<Box<MutationsInner>>) -> &mut MutationsInner {
+            inner.get_or_insert_with(move || {
+                Box::new(MutationsInner {
+                    content_before: DynamicString::new(),
+                    replacement: DynamicString::new(),
+                    content_after: DynamicString::new(),
+                    removed: false,
+                })
+            })
+        }
+
+        match &mut self.inner {
+            Some(inner) => inner,
+            uninit => alloc_content(uninit),
+        }
+    }
+
+    #[inline]
+    pub fn removed(&self) -> bool {
+        self.inner.as_ref().is_some_and(|inner| inner.removed)
     }
 }
 

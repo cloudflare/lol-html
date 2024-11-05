@@ -22,27 +22,32 @@ macro_rules! impl_serialize {
                 output_handler: &mut dyn FnMut(&[u8]),
             ) -> Result<(), crate::errors::RewritingError> {
                 let mut encoder = crate::rewritable_units::text_encoder::StreamingHandlerSink::new(
-                    self.mutations.encoding,
+                    self.encoding,
                     output_handler,
                 );
-                let content_before = ::std::mem::take(&mut self.mutations.content_before);
-                content_before
-                    .encode(&mut encoder)
-                    .map_err(crate::errors::RewritingError::ContentHandlerError)?;
+                match self.mutations.take() {
+                    None => self.serialize_self(encoder.output_handler()),
+                    Some(mutations) => {
+                        mutations
+                            .content_before
+                            .encode(&mut encoder)
+                            .map_err(crate::errors::RewritingError::ContentHandlerError)?;
 
-                if !self.mutations.removed {
-                    self.serialize_self(encoder.output_handler())?;
-                } else {
-                    self.mutations
-                        .replacement
-                        .encode(&mut encoder)
-                        .map_err(crate::errors::RewritingError::ContentHandlerError)?;
+                        if !mutations.removed {
+                            self.serialize_self(encoder.output_handler())?;
+                        } else {
+                            mutations
+                                .replacement
+                                .encode(&mut encoder)
+                                .map_err(crate::errors::RewritingError::ContentHandlerError)?;
+                        }
+
+                        mutations
+                            .content_after
+                            .encode(&mut encoder)
+                            .map_err(crate::errors::RewritingError::ContentHandlerError)
+                    }
                 }
-
-                self.mutations
-                    .content_after
-                    .encode(&mut encoder)
-                    .map_err(crate::errors::RewritingError::ContentHandlerError)
             }
         }
     };
