@@ -16,8 +16,11 @@ pub trait Serialize {
 macro_rules! impl_serialize {
     ($Token:ident) => {
         impl crate::rewritable_units::Serialize for $Token<'_> {
-            #[inline]
-            fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+            #[inline(always)]
+            fn into_bytes(
+                self,
+                output_handler: &mut dyn FnMut(&[u8]),
+            ) -> Result<(), RewritingError> {
                 let Mutations {
                     content_before,
                     replacement,
@@ -31,10 +34,7 @@ macro_rules! impl_serialize {
                 }
 
                 if !removed {
-                    match self.raw() {
-                        Some(raw) => output_handler(raw),
-                        None => self.serialize_from_parts(output_handler)?,
-                    }
+                    self.serialize_self(output_handler)?;
                 } else if !replacement.is_empty() {
                     output_handler(replacement);
                 }
@@ -64,9 +64,9 @@ pub use self::text_chunk::TextChunk;
 #[derive(Debug)]
 pub enum Token<'i> {
     TextChunk(TextChunk<'i>),
-    Comment(Comment<'i>),
     StartTag(StartTag<'i>),
     EndTag(EndTag<'i>),
+    Comment(Comment<'i>),
     Doctype(Doctype<'i>),
 }
 
@@ -75,9 +75,9 @@ impl Serialize for Token<'_> {
     fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         match self {
             Token::TextChunk(t) => t.into_bytes(output_handler),
-            Token::Comment(t) => t.into_bytes(output_handler),
             Token::StartTag(t) => t.into_bytes(output_handler),
             Token::EndTag(t) => t.into_bytes(output_handler),
+            Token::Comment(t) => t.into_bytes(output_handler),
             Token::Doctype(t) => t.into_bytes(output_handler),
         }
     }

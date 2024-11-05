@@ -137,16 +137,12 @@ impl<'i> StartTag<'i> {
         self.mutations.remove();
     }
 
-    #[inline]
-    const fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
-    }
+    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+        if let Some(raw) = &self.raw {
+            output_handler(raw);
+            return Ok(());
+        }
 
-    #[inline]
-    fn serialize_from_parts(
-        &self,
-        output_handler: &mut dyn FnMut(&[u8]),
-    ) -> Result<(), RewritingError> {
         output_handler(b"<");
         output_handler(&self.name);
 

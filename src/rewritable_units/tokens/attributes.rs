@@ -128,14 +128,13 @@ impl<'i> Attribute<'i> {
 impl Serialize for &Attribute<'_> {
     #[inline]
     fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
-        match self.raw.as_ref() {
-            Some(raw) => output_handler(raw),
-            None => {
-                output_handler(&self.name);
-                output_handler(b"=\"");
-                self.value.replace_byte((b'"', b"&quot;"), output_handler);
-                output_handler(b"\"");
-            }
+        if let Some(raw) = self.raw.as_ref() {
+            output_handler(raw)
+        } else {
+            output_handler(&self.name);
+            output_handler(b"=\"");
+            self.value.replace_byte((b'"', b"&quot;"), output_handler);
+            output_handler(b"\"");
         }
         Ok(())
     }
