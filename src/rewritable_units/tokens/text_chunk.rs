@@ -270,16 +270,7 @@ impl<'i> TextChunk<'i> {
     }
 
     #[inline]
-    #[allow(clippy::unused_self)]
-    const fn raw(&self) -> Option<&Bytes<'_>> {
-        None
-    }
-
-    #[inline]
-    fn serialize_from_parts(
-        &self,
-        output_handler: &mut dyn FnMut(&[u8]),
-    ) -> Result<(), RewritingError> {
+    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if !self.text.is_empty() {
             output_handler(&Bytes::from_str(&self.text, self.encoding));
         }

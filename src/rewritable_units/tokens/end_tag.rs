@@ -95,18 +95,14 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
-    const fn raw(&self) -> Option<&Bytes<'_>> {
-        self.raw.as_ref()
-    }
-
-    #[inline]
-    fn serialize_from_parts(
-        &self,
-        output_handler: &mut dyn FnMut(&[u8]),
-    ) -> Result<(), RewritingError> {
-        output_handler(b"</");
-        output_handler(&self.name);
-        output_handler(b">");
+    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+        if let Some(raw) = &self.raw {
+            output_handler(raw);
+        } else {
+            output_handler(b"</");
+            output_handler(&self.name);
+            output_handler(b">");
+        }
         Ok(())
     }
 }
