@@ -45,10 +45,6 @@ pub enum SelectorError {
     #[error("Invalid or unescaped class name in selector.")]
     InvalidClassName,
 
-    /// An empty negation in the selector.
-    #[error("Empty negation in selector.")]
-    EmptyNegation,
-
     /// Unsupported combinator in the selector.
     #[error("Unsupported combinator `{0}` in selector.")]
     UnsupportedCombinator(char),
@@ -80,7 +76,7 @@ impl From<SelectorParseError<'_>> for SelectorError {
                 SelectorParseErrorKind::EmptySelector => Self::EmptySelector,
                 SelectorParseErrorKind::DanglingCombinator => Self::DanglingCombinator,
                 SelectorParseErrorKind::UnsupportedPseudoClassOrElement(_)
-                | SelectorParseErrorKind::PseudoElementInComplexSelector
+                | SelectorParseErrorKind::InvalidPseudoElementInsideWhere
                 | SelectorParseErrorKind::NonPseudoElementAfterSlotted
                 | SelectorParseErrorKind::InvalidPseudoElementAfterSlotted
                 | SelectorParseErrorKind::PseudoElementExpectedColon(_)
@@ -88,15 +84,12 @@ impl From<SelectorParseError<'_>> for SelectorError {
                 | SelectorParseErrorKind::NoIdentForPseudo(_)
                 // NOTE: according to the parser code this error occures only during
                 // the parsing of vendor-specific pseudo-classes.
-                | SelectorParseErrorKind::NonCompoundSelector
-                // NOTE: according to the parser code this error occures only during
-                // the parsing of the :slotted() pseudo-class.
-                | SelectorParseErrorKind::NonSimpleSelectorInNegation => {
+                | SelectorParseErrorKind::NonCompoundSelector => {
                     Self::UnsupportedPseudoClassOrElement
                 }
-                // NOTE: this is currently the only case in the parser code
-                // that triggers this error.
-                SelectorParseErrorKind::UnexpectedIdent(_) => Self::NestedNegation,
+                // NOTE: there are currently no cases in the parser code
+                // that trigger this error.
+                SelectorParseErrorKind::UnexpectedIdent(_) => unreachable!(),
                 SelectorParseErrorKind::ExpectedNamespace(_) => Self::NamespacedSelector,
                 SelectorParseErrorKind::ExplicitNamespaceUnexpectedToken(_) => {
                     Self::UnexpectedToken
@@ -108,7 +101,6 @@ impl From<SelectorParseError<'_>> for SelectorError {
                     Self::UnexpectedTokenInAttribute
                 }
                 SelectorParseErrorKind::ClassNeedsIdent(_) => Self::InvalidClassName,
-                SelectorParseErrorKind::EmptyNegation => Self::EmptyNegation,
                 SelectorParseErrorKind::InvalidState => panic!("invalid state"),
             },
         }
