@@ -46,6 +46,7 @@ mime = "0.3.16"
 
 [dev-dependencies]
 criterion = "0.5.1"
+clap = { version = "*", features = ["help"] } # for criterion <= v0.5.1
 glob = "0.3.0"
 html5ever = "0.26.0"
 markup5ever_rcdom = "0.2.0"
