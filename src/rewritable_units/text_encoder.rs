@@ -1,6 +1,6 @@
 use super::ContentType;
 use crate::html::escape_body_text;
-use encoding_rs::{CoderResult, Decoder, DecoderResult, Encoder, Encoding, UTF_8};
+use encoding_rs::{CoderResult, Encoder, Encoding, UTF_8};
 use thiserror::Error;
 
 /// Input contained non-UTF-8 byte sequence
@@ -16,7 +16,7 @@ pub struct Utf8Error;
 ///
 /// Argument to [`StreamingHandler::write_all()`](crate::html_content::StreamingHandler::write_all).
 pub struct StreamingHandlerSink<'output_handler> {
-    incomplete_utf8: Option<IncompleteUtf8Resync>,
+    incomplete_utf8: IncompleteUtf8Resync,
     inner: StreamingHandlerSinkInner<'output_handler>,
 }
 
@@ -44,7 +44,7 @@ impl<'output_handler> StreamingHandlerSink<'output_handler> {
         output_handler: &'output_handler mut dyn FnMut(&[u8]),
     ) -> Self {
         Self {
-            incomplete_utf8: None,
+            incomplete_utf8: IncompleteUtf8Resync::new(),
             inner: StreamingHandlerSinkInner {
                 non_utf8_encoder: (encoding != UTF_8).then(|| TextEncoder::new(encoding)),
                 output_handler,
@@ -57,11 +57,7 @@ impl<'output_handler> StreamingHandlerSink<'output_handler> {
     /// It may be called multiple times. The strings will be concatenated together.
     #[inline]
     pub fn write_str(&mut self, content: &str, content_type: ContentType) {
-        if self
-            .incomplete_utf8
-            .as_mut()
-            .is_some_and(|d| d.discard_incomplete())
-        {
+        if self.incomplete_utf8.discard_incomplete() {
             // too late to report the error to the caller of write_utf8_chunk
             self.inner.write_html("\u{FFFD}");
         }
@@ -85,11 +81,8 @@ impl<'output_handler> StreamingHandlerSink<'output_handler> {
         mut content: &[u8],
         content_type: ContentType,
     ) -> Result<(), Utf8Error> {
-        let decoder = self
-            .incomplete_utf8
-            .get_or_insert_with(IncompleteUtf8Resync::new);
         while !content.is_empty() {
-            let (valid_chunk, rest) = decoder.utf8_bytes_to_slice(content, false)?;
+            let (valid_chunk, rest) = self.incomplete_utf8.utf8_bytes_to_slice(content)?;
             content = rest;
             if !valid_chunk.is_empty() {
                 self.inner.write_str(valid_chunk, content_type);
@@ -212,52 +205,86 @@ impl TextEncoder {
     }
 }
 
+const fn is_continuation_byte(b: u8) -> bool {
+    (b >> 6) == 0b10
+}
+
+const fn utf8_width(b: u8) -> u8 {
+    b.leading_ones() as _
+}
+
 struct IncompleteUtf8Resync {
-    decoder: Decoder,
-    buffer: String,
+    bytes: [u8; 4],
+    len: u8,
 }
 
 impl IncompleteUtf8Resync {
     pub fn new() -> Self {
         Self {
-            decoder: UTF_8.new_decoder_without_bom_handling(),
-            buffer: "\0".repeat(1024),
+            bytes: [0; 4],
+            len: 0,
         }
     }
 
     pub fn utf8_bytes_to_slice<'buf, 'src: 'buf>(
         &'buf mut self,
-        content: &'src [u8],
-        is_last: bool,
+        mut content: &'src [u8],
     ) -> Result<(&'buf str, &'src [u8]), Utf8Error> {
-        let (result, read, written) =
-            self.decoder
-                .decode_to_str_without_replacement(content, &mut self.buffer, is_last);
+        if self.len > 0 {
+            let mut found_end_byte = false;
+            while let Some((&next_byte, rest)) = content.split_first() {
+                if is_continuation_byte(next_byte) {
+                    if let Some(buf) = self.bytes.get_mut(self.len as usize) {
+                        *buf = next_byte;
+                        self.len += 1;
+                        content = rest;
+                        continue;
+                    }
+                }
+                found_end_byte = true;
+                break;
+            }
 
-        match result {
-            DecoderResult::InputEmpty => {}
-            DecoderResult::OutputFull => {
-                if written == 0 {
-                    panic!("encoding_rs infinite loop"); // the buffer is always large enough
+            if found_end_byte || self.len >= utf8_width(self.bytes[0]) {
+                let char_buf = self.bytes.get(..self.len as usize).ok_or(Utf8Error)?;
+                self.len = 0;
+                std::str::from_utf8(char_buf)
+                    .map_err(|_| Utf8Error)
+                    .map(|ch| (ch, content))
+            } else {
+                debug_assert!(content.is_empty());
+                Ok(("", b""))
+            }
+        } else {
+            match std::str::from_utf8(content) {
+                Ok(src) => Ok((src, b"")),
+                // error_len means invalid bytes somewhere, not just incomplete 1-3 bytes at the end
+                Err(err) if err.error_len().is_some() => Err(Utf8Error),
+                Err(err) => {
+                    let (valid, invalid) = content
+                        .split_at_checked(err.valid_up_to())
+                        .ok_or(Utf8Error)?;
+                    self.bytes
+                        .get_mut(..invalid.len())
+                        .ok_or(Utf8Error)?
+                        .copy_from_slice(invalid);
+                    self.len = invalid.len() as _;
+                    // valid_up_to promises it is valid
+                    debug_assert!(std::str::from_utf8(valid).is_ok());
+                    let valid = unsafe { std::str::from_utf8_unchecked(valid) };
+                    Ok((valid, b""))
                 }
             }
-            DecoderResult::Malformed(_, _) => return Err(Utf8Error),
         }
-
-        let written = &self.buffer[..written];
-        let remaining = &content[read..];
-        Ok((written, remaining))
     }
 
     /// True if there were incomplete invalid bytes in the buffer
     pub fn discard_incomplete(&mut self) -> bool {
-        match self.utf8_bytes_to_slice(b"", true) {
-            Ok((valid_chunk, rest)) => {
-                debug_assert!(rest.is_empty());
-                debug_assert!(valid_chunk.is_empty()); // this can't happen in UTF-8 after empty write
-                false
-            }
-            Err(_) => true,
+        if self.len > 0 {
+            self.len = 0;
+            true
+        } else {
+            false
         }
     }
 }
@@ -282,6 +309,22 @@ fn utf8_fragments() {
             assert_eq!(String::from_utf8_lossy(&out), text, "{len}");
         }
     }
+}
+
+#[test]
+fn chars() {
+    let boundaries = "🐈°文字化けしない"
+        .as_bytes()
+        .iter()
+        .map(|&ch| {
+            if is_continuation_byte(ch) {
+                '.'
+            } else {
+                (b'0' + utf8_width(ch)) as char
+            }
+        })
+        .collect::<String>();
+    assert_eq!("4...2.3..3..3..3..3..3..3..", boundaries);
 }
 
 #[test]
