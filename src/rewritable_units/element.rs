@@ -647,6 +647,177 @@ mod tests {
     }
 
     #[test]
+    fn sanitizer_bypass1() {
+        let out = rewrite_element(
+            b"<math><style><img></style></math>
+             <textarea><!--</textarea><img>--></textarea>
+             <div><style><img></style></div>",
+            UTF_8,
+            "img",
+            |el| el.set_tag_name("TROUBLE").unwrap(),
+        );
+        assert_eq!(
+            out,
+            "<math><style><TROUBLE></style></math>
+             <textarea><!--</textarea><TROUBLE>--></textarea>
+             <div><style><img></style></div>"
+        );
+    }
+
+    #[test]
+    fn sanitizer_bypass2() {
+        let out = rewrite_element(
+            b"<svg><p><style><!--</style><img>--></style>
+            <math><p></p><style><!--</style><img src/onerror>--></style></math>",
+            UTF_8,
+            "img",
+            |el| el.set_tag_name("BINGO").unwrap(),
+        );
+        assert_eq!(
+            out,
+            "<svg><p><style><!--</style><BINGO>--></style>
+            <math><p></p><style><!--</style><BINGO src onerror>--></style></math>"
+        );
+    }
+
+    #[test]
+    fn noscript_mode() {
+        let out = rewrite_element(
+            br#"<noscript><p alt="</noscript><img>">"#,
+            UTF_8,
+            "img",
+            |el| el.set_tag_name("we-have-scripts").unwrap(),
+        );
+        assert_eq!(out, r#"<noscript><p alt="</noscript><we-have-scripts>">"#);
+    }
+
+    #[test]
+    fn parse_error_in_foreign_content() {
+        let out = rewrite_element(
+            br#"<svg></p><style><a id="</style><img>">"#,
+            UTF_8,
+            "img,a",
+            |el| el.set_tag_name("HIT").unwrap(),
+        );
+        assert_eq!(out, r#"<svg></p><style><a id="</style><HIT>">"#);
+    }
+
+    #[test]
+    fn parse_error_in_foreign_content2() {
+        let out = rewrite_element(
+            br#"<math><br><style><a id="</style><img>">
+            <math><font kolor/><style><a/></style><body><style><a/></style></math>
+            <math><font COLOR/><style><a/></style>"#,
+            UTF_8,
+            "img,a",
+            |el| el.set_tag_name("HIT").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<math><br><style><a id="</style><HIT>">
+            <math><font kolor/><style><HIT/></style><body><style><a/></style></math>
+            <math><font COLOR/><style><a/></style>"#
+        );
+    }
+
+    #[test]
+    fn nested_html_namespace() {
+        let out = rewrite_element(
+            br#"<math><mtext><br/></mtext><style><a id="</style><img>">"#,
+            UTF_8,
+            "img,a",
+            |el| el.set_tag_name("HIT").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<math><mtext><br/></mtext><style><HIT id="</style><img>">"#
+        );
+    }
+
+    #[test]
+    fn self_closing_script() {
+        let out = rewrite_element(
+            br#"<svG><sCript/><img></script></svg>"#,
+            UTF_8,
+            "img",
+            |el| el.set_tag_name("HIT").unwrap(),
+        );
+        assert_eq!(out, r#"<svG><sCript/><HIT></script></svg>"#);
+    }
+
+    #[test]
+    fn surprise_text_integration_point() {
+        let out = rewrite_element(
+            br#"<math><annotation-xml encoding="nope/html"><style><img></style></annotation-xml></math>
+            <math><annotation-xml encoding="text/HTML"><style><img></style></annotation-xml></math>"#,
+            UTF_8,
+            "img",
+            |el| el.set_tag_name("XML").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<math><annotation-xml encoding="nope/html"><style><XML></style></annotation-xml></math>
+            <math><annotation-xml encoding="text/HTML"><style><img></style></annotation-xml></math>"#
+        );
+    }
+
+    #[test]
+    fn foreignobject() {
+        let out = rewrite_element(
+            br#"<svg><annotation-xml><foreignobject><style><!--</style><p id="--><img>">"#,
+            UTF_8,
+            "p,img",
+            |el| el.set_tag_name("HIT").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<svg><annotation-xml><foreignobject><style><!--</style><HIT id="--><img>">"#
+        );
+    }
+
+    #[test]
+    fn foreignobject2() {
+        let out = rewrite_element(
+            br#"<svg><a><foreignobject><a><table><a></table><style><!--</style></svg><a id="-><img>">"#,
+            UTF_8,
+            "a,img",
+            |el| el.set_tag_name("A").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<svg><A><foreignobject><A><table><A></A><style><!--</style></A><A id="-><img>">"#
+        );
+    }
+
+    #[test]
+    fn math_parse_error() {
+        let out = rewrite_element(
+            br#"<math><p></p><style><!--</style><img src/onerror>--></style></math>"#,
+            UTF_8,
+            "a,img",
+            |el| el.set_tag_name("A").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<math><p></p><style><!--</style><A src onerror>--></style></math>"#
+        );
+    }
+
+    #[test]
+    fn roundtrip_impossible() {
+        let out = rewrite_element(
+            br#"<form><math><mtext></form><form><mglyph><style></math><img>"#,
+            UTF_8,
+            "style,img",
+            |el| el.set_tag_name("no-img-here").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<form><math><mtext></form><form><mglyph><no-img-here></math><img>"#
+        );
+    }
+
+    #[test]
     fn forbidden_characters_in_tag_name() {
         rewrite_element(b"<div>", UTF_8, "div", |el| {
             for &ch in &[' ', '\n', '\r', '\t', '\x0C', '/', '>'] {

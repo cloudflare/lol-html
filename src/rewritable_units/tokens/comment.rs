@@ -242,6 +242,27 @@ mod tests {
     }
 
     #[test]
+    fn sanitizer_bypass() {
+        // HTML allows comments to be closed in multiple invalid ways
+        let out = rewrite_comment(b"<!--><img> surprise-->", UTF_8, |c| {
+            c.set_text("comment closes early").unwrap();
+        });
+        assert_eq!("<!--comment closes early--><img> surprise-->", out);
+        let out = rewrite_comment(b"<!-- --!><p><!---></p>", UTF_8, |c| {
+            c.set_text("unusual ending").unwrap();
+        });
+        assert_eq!("<!--unusual ending--><p><!--unusual ending--></p>", out);
+    }
+
+    #[test]
+    fn sanitizer_bypass2() {
+        let out = rewrite_comment(b"<?xml >s<img src=x onerror=alert(1)> ?>", UTF_8, |c| {
+            c.set_text("pie is a lie!").unwrap()
+        });
+        assert_eq!("<!--pie is a lie!-->s<img src=x onerror=alert(1)> ?>", out);
+    }
+
+    #[test]
     fn comment_closing_sequence_in_text() {
         rewrite_comment(b"<!-- foo -->", UTF_8, |c| {
             let err = c.set_text("foo -- bar --> baz").unwrap_err();
