@@ -163,13 +163,27 @@ impl TreeBuilderSimulator {
 
         if self.current_ns == Namespace::Html {
             self.check_integration_point_exit(tag_name)
-        } else if self.current_ns == Namespace::Svg && tag_name == Tag::Svg
-            || self.current_ns == Namespace::MathML && tag_name == Tag::Math
-        {
+        } else if self.should_leave_ns(tag_name) {
             self.leave_ns()
         } else {
             TreeBuilderFeedback::None
         }
+    }
+
+    fn should_leave_ns(&self, tag_name: LocalNameHash) -> bool {
+        if self.current_ns == Namespace::Svg && tag_name == Tag::Svg
+            || self.current_ns == Namespace::MathML && tag_name == Tag::Math
+        {
+            return true;
+        }
+
+        if (self.current_ns == Namespace::Svg || self.current_ns == Namespace::MathML)
+            && tag_is_one_of!(tag_name, [P, Br])
+        {
+            // 13.2.6.5
+            return true;
+        }
+        false
     }
 
     #[inline]
