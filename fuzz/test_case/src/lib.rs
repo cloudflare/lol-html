@@ -55,6 +55,50 @@ static ASCII_COMPATIBLE_ENCODINGS: [&Encoding; 36] = [
     X_USER_DEFINED,
 ];
 
+static MARKUP: &[&str] = &[
+    "<",
+    "/>",
+    "</",
+    "\"",
+    "\'",
+    " = ",
+    "<p>",
+    "</p>",
+    "<br>",
+    "<svg>",
+    "</style>",
+    "</script>",
+    "<!-",
+    "<!--",
+    "->",
+    "--!>",
+    "-->",
+    " = \"",
+    "&&&&",
+    "&amp",
+    "&copy",
+    "&lt;",
+    "&#",
+    "<math>",
+    "<mi>",
+    "<link>",
+    "<body",
+    "<head",
+    ">>>",
+    "<p id=foo>",
+    "<p foo=x>",
+    "<p foo=bar>",
+    "<p",
+    "foo=BAR",
+    "<a",
+    "id=myid",
+    "class='warning ",
+    "class=\"",
+    "       ",
+    "\n\r\n\r\r\t",
+    "&quo",
+];
+
 static SUPPORTED_SELECTORS: [&str; 16] = [
     "*",
     "p",
@@ -76,7 +120,206 @@ static SUPPORTED_SELECTORS: [&str; 16] = [
 
 extern "C" fn empty_handler(_foo: *const c_char, _size: size_t, _boo: *mut c_void) {}
 
-pub fn run_rewriter(data: &[u8]) {
+fn get_byte(data: &mut &[u8]) -> u8 {
+    let Some((first, rest)) = (*data).split_at_checked(1) else {
+        return 1;
+    };
+    *data = rest;
+    first[0]
+}
+
+fn get_bytes<'b>(data: &mut &'b [u8], min_len: usize) -> &'b [u8] {
+    let len = min_len + get_byte(data) as usize;
+    let (slice, rest) = data.split_at(data.len().min(len));
+    *data = rest;
+    slice
+}
+
+fn get_string<'b>(data: &mut &'b [u8], min_len: usize) -> String {
+    let len = min_len + get_byte(data) as usize;
+    let (rest, slice) = data.split_at(data.len() - data.len().min(len));
+    *data = rest;
+    slice
+        .chunks(2)
+        .flat_map(|ch| {
+            let c1 = ch[0];
+            let c2 = ch.get(1).copied().unwrap_or(b'>');
+            if c1 > 0 && c1 < 128 {
+                [c1 as char, c2 as char].into_iter().take(2)
+            } else {
+                [
+                    char::from_u32(c1 as u32 + 333 * c2 as u32).unwrap_or('<'),
+                    ' ',
+                ]
+                .into_iter()
+                .take(1)
+            }
+        })
+        .collect()
+}
+
+pub fn run_rewriter(mut data: &[u8]) {
+    let settings = get_byte(&mut data);
+
+    let encoding =
+        ASCII_COMPATIBLE_ENCODINGS[(settings as usize / 5) % ASCII_COMPATIBLE_ENCODINGS.len()];
+
+    let mut rewriter = HtmlRewriter::new_send(
+        Settings {
+            enable_esi_tags: settings & 1 == 0,
+            element_content_handlers: (0..(get_byte(&mut data) % 7))
+                .map(|i| {
+                    let n = get_byte(&mut data) as usize;
+                    let m = get_byte(&mut data) as usize;
+                    let num_selectors = 1 + ((n / 13) % 5).min(i as usize);
+                    let selector = (0..num_selectors)
+                        .map(|n| SUPPORTED_SELECTORS[n % SUPPORTED_SELECTORS.len()])
+                        .collect::<Vec<_>>()
+                        .join([" > ", ",", " "][m % 3]);
+                    match n % 5 {
+                        0 => text!(selector, move |t| {
+                            for _ in 0..1+i {
+                                if m & 32 == 0 {
+                                    let s = get_string(&mut data, 1);
+                                    t.streaming_replace(streaming!(move |sink| {
+                                        for chunk in s.as_bytes().chunks(1+m) {
+                                            sink.write_utf8_chunk(chunk, ContentType::Html)?;
+                                        }
+                                        Ok(())
+                                    }));
+                                }
+                                if m & 16 == 0 {
+                                    t.replace(&get_string(&mut data, 1), ContentType::Html);
+                                }
+                                if m & 8 == 0 {
+                                    let s = get_string(&mut data, 1);
+                                    t.streaming_before(streaming!(move |sink| {
+                                        for chunk in s.as_bytes().chunks(1+m) {
+                                            sink.write_utf8_chunk(chunk, ContentType::Html)?;
+                                        }
+                                        Ok(())
+                                    }));
+                                }
+                                if m & 4 == 0 {
+                                    t.before(&get_string(&mut data, 1), ContentType::Html);
+                                }
+                                if m & 2 == 0 {
+                                    t.after(&get_string(&mut data, 10), ContentType::Html);
+                                }
+                            }
+                            Ok(())
+                        }),
+                        1 => comments!(selector, move |c| {
+                            if m & 32 == 0 {
+                                let s = get_string(&mut data, 1);
+                                c.streaming_replace(streaming!(move |sink| {
+                                    for chunk in s.as_bytes().chunks(1+m) {
+                                        sink.write_utf8_chunk(chunk, ContentType::Html)?;
+                                    }
+                                    Ok(())
+                                }));
+                            }
+                            if m & 16 == 0 {
+                                c.replace(&get_string(&mut data, 1), ContentType::Html);
+                            }
+                            if m & 8 == 0 {
+                                let s = get_string(&mut data, 1);
+                                c.streaming_before(streaming!(move |sink| {
+                                    for chunk in s.as_bytes().chunks(1+m) {
+                                        sink.write_utf8_chunk(chunk, ContentType::Html)?;
+                                    }
+                                    Ok(())
+                                }));
+                            }
+                            if m & 4 == 0 {
+                                c.before(&get_string(&mut data, 10), ContentType::Html);
+                            }
+                            if m & 2 == 0 {
+                                c.after(&get_string(&mut data, 1), ContentType::Html);
+                            }
+                            Ok(())
+                        }),
+                        _ => element!(selector, move |c| {
+                            for &b in get_bytes(&mut data, 1).iter().take(4) {
+                                let m = m ^ b as usize;
+                                if m & 128 == 0 {
+                                    let s = get_string(&mut data, 1);
+                                    c.streaming_append(streaming!(move |sink| {
+                                        for chunk in s.as_bytes().chunks(1+m) {
+                                            sink.write_utf8_chunk(chunk, ContentType::Html)?;
+                                        }
+                                        Ok(())
+                                    }));
+                                }
+                                if m & 64 == 0 {
+                                    c.prepend(&get_string(&mut data, 1), ContentType::Html);
+                                }
+                                if m & 32 == 0 {
+                                    let s = get_string(&mut data, 1);
+                                    c.streaming_replace(streaming!(move |sink| {
+                                        for chunk in s.as_bytes().chunks(1+m) {
+                                            sink.write_utf8_chunk(chunk, ContentType::Html)?;
+                                        }
+                                        Ok(())
+                                    }));
+                                }
+                                if m & 16 == 0 {
+                                    c.replace(&get_string(&mut data, 1), ContentType::Html);
+                                }
+                                if m & 8 == 0 {
+                                    let s = get_string(&mut data, 1);
+                                    c.streaming_before(streaming!(move |sink| {
+                                        for chunk in s.as_bytes().chunks(1+m) {
+                                            sink.write_utf8_chunk(chunk, ContentType::Html)?;
+                                        }
+                                        Ok(())
+                                    }));
+                                }
+                                if m & 4 == 0 {
+                                    c.before(&get_string(&mut data, 10), ContentType::Html);
+                                }
+                                if m & 2 == 0 {
+                                    c.after(&get_string(&mut data, 1), ContentType::Html);
+                                }
+                            }
+                            Ok(())
+                        }),
+                    }
+                })
+                .collect(),
+            document_content_handlers: (0..get_byte(&mut data) % 5).map(|i| {
+                    let s = get_string(&mut data, 1);
+                    if i & 1 == 0 {
+                        doc_comments!(move |c| {
+                            let _ = c.set_text(&s); // lots of reasons for random text to fail
+                            Ok(())
+                        })
+                    } else {
+                        doc_text!(move |t| {
+                            if t.last_in_text_node() {
+                                t.after(&s, ContentType::Text);
+                            }
+                            Ok(())
+                        })
+                    }
+                }).collect(),
+            encoding: encoding.try_into().unwrap(),
+            memory_settings: MemorySettings::new(),
+            strict: settings & 2 == 0,
+            adjust_charset_on_meta_tag: settings & 4 == 0,
+        },
+        |_: &[u8]| {},
+    );
+
+    for chunk in data.chunks(settings as usize / 7 + 13) {
+        rewriter.write(MARKUP[chunk[0] as usize % MARKUP.len()].as_bytes()).unwrap();
+        rewriter.write(chunk).unwrap();
+    }
+
+    rewriter.end().unwrap();
+}
+
+pub fn run_random_rewriter(data: &[u8]) {
     // fuzzing with randomly picked selector and encoding
     // works much faster (50 times) that iterating over all
     // selectors/encoding per single run. It's recommended
