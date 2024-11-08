@@ -266,21 +266,30 @@ impl<'h, O: OutputSink, H: HandlerTypes> Debug for HtmlRewriter<'h, O, H> {
 fn handler_adjust_charset_on_meta_tag<'h, H: HandlerTypes>(
     encoding: SharedEncoding,
 ) -> (Cow<'h, crate::Selector>, ElementContentHandlers<'h, H>) {
+    // HTML5 allows encoding to be set only once
+    let mut found = false;
+
     let handler = move |el: &mut Element<'_, '_, H>| {
-        let attr_charset = el
-            .get_attribute("charset")
-            .and_then(|cs| Encoding::for_label_no_replacement(cs.as_bytes()))
-            .and_then(AsciiCompatibleEncoding::new);
+        if found {
+            return Ok(());
+        }
 
-        let attr_http_equiv = el
-            .get_attribute("http-equiv")
-            .filter(|http_equiv| http_equiv.eq_ignore_ascii_case("Content-Type"))
-            .and_then(|_| el.get_attribute("content"))
-            .and_then(|ct| ct.parse::<Mime>().ok())
-            .as_ref()
-            .and_then(AsciiCompatibleEncoding::from_mimetype);
+        let charset = el.get_attribute("charset").and_then(|cs| {
+            AsciiCompatibleEncoding::new(Encoding::for_label_no_replacement(cs.as_bytes())?)
+        });
 
-        if let Some(charset) = attr_charset.or(attr_http_equiv) {
+        let charset = charset.or_else(|| {
+            el.get_attribute("http-equiv")
+                .filter(|http_equiv| http_equiv.eq_ignore_ascii_case("Content-Type"))
+                .and_then(|_| {
+                    AsciiCompatibleEncoding::from_mimetype(
+                        &el.get_attribute("content")?.parse::<Mime>().ok()?,
+                    )
+                })
+        });
+
+        if let Some(charset) = charset {
+            found = true;
             encoding.set(charset);
         }
 
@@ -739,10 +748,11 @@ mod tests {
         };
 
         let html: Vec<u8> = [
-            r#"<meta http-equiv="content-type" content="text/html; charset=windows-1251"><html><head></head><body>I love "#.as_bytes().to_vec(),
-            vec![0xd5, 0xec, 0xb3, 0xcb, 0xdc],
-            br"!</body></html>".to_vec(),
-        ].into_iter().concat();
+            r#"<meta http-equiv="conTent-type" content="text/html; charset=windows-1251"><html><head>"#.as_bytes(),
+            br#"<meta charset="utf-8"></head><body>I love "#, // second one should be ignored
+            &[0xd5, 0xec, 0xb3, 0xcb, 0xdc],
+            br"!</body></html>",
+        ].concat();
 
         let expected: Vec<u8> = html
             .iter()
