@@ -18,12 +18,13 @@ pub use self::text_type::TextType;
 pub(crate) fn escape_body_text(mut content: &str, output_handler: &mut impl FnMut(&str)) {
     loop {
         if let Some(pos) = memchr3(b'&', b'<', b'>', content.as_bytes()) {
-            let Some((chunk_before, (matched, rest))) = content
-                .split_at_checked(pos)
-                .and_then(|(before, rest)| Some((before, rest.split_at_checked(1)?)))
-            else {
+            let Some((chunk_before, rest)) = content.split_at_checked(pos) else {
                 return;
             };
+            let Some((matched, rest)) = rest.split_at_checked(1) else {
+                return;
+            };
+
             content = rest;
             let matched = matched.as_bytes()[0];
 
