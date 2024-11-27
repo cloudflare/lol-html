@@ -306,9 +306,8 @@ impl IncompleteUtf8Resync {
                         .ok_or(Utf8Error)?
                         .copy_from_slice(invalid);
                     self.char_len = invalid.len() as _;
-                    // valid_up_to promises it is valid
-                    debug_assert!(std::str::from_utf8(valid).is_ok());
-                    let valid = unsafe { std::str::from_utf8_unchecked(valid) };
+                    // valid_up_to promises it is always valid
+                    let valid = std::str::from_utf8(valid).map_err(|_| Utf8Error)?;
                     Ok((valid, b""))
                 }
             }

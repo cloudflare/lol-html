@@ -150,9 +150,6 @@ pub trait StreamingHandler: Send {
     // Safety: due to lack of Sync, this trait must not have `&self` methods
 }
 
-/// Avoid requring `StreamingHandler` to be `Sync`.
-/// It only has a method taking exclusive ownership, so there's no sharing possible.
-unsafe impl Sync for StringChunk {}
 impl RefUnwindSafe for StringChunk {}
 impl UnwindSafe for StringChunk {}
 
