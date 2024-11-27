@@ -16,6 +16,7 @@
 //! [Cloudflare Workers]: https://www.cloudflare.com/en-gb/products/cloudflare-workers/
 //! [`HtmlRewriter`]: struct.HtmlRewriter.html
 //! [`rewrite_str`]: fn.rewrite_str.html
+#![forbid(unsafe_code)]
 #![allow(clippy::default_trait_access)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::redundant_pub_crate)]
