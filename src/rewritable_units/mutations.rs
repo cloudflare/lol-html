@@ -86,7 +86,7 @@ impl Mutations {
 
 pub(crate) enum StringChunk {
     Buffer(Box<str>, ContentType),
-    Stream(Box<dyn StreamingHandler>),
+    Stream(Box<dyn StreamingHandler + Send>),
 }
 
 impl StringChunk {
@@ -137,7 +137,7 @@ impl DynamicString {
 }
 
 /// A callback used to write content asynchronously.
-pub trait StreamingHandler: Send {
+pub trait StreamingHandler {
     /// This method is called only once, and is expected to write content
     /// by calling the [`sink.write_str()`](StreamingHandlerSink::write_str) one or more times.
     ///
@@ -152,7 +152,7 @@ pub trait StreamingHandler: Send {
 impl RefUnwindSafe for StringChunk {}
 impl UnwindSafe for StringChunk {}
 
-impl<F> From<F> for Box<dyn StreamingHandler>
+impl<F> From<F> for Box<dyn StreamingHandler + Send>
 where
     F: FnOnce(&mut StreamingHandlerSink<'_>) -> BoxResult + Send + 'static,
 {
