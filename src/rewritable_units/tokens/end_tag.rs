@@ -103,7 +103,7 @@ impl<'i> EndTag<'i> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     #[inline]
-    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.mutations
             .mutate()
             .content_before
@@ -116,7 +116,7 @@ impl<'i> EndTag<'i> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     #[inline]
-    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.mutations
             .mutate()
             .content_after
@@ -129,7 +129,7 @@ impl<'i> EndTag<'i> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     #[inline]
-    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.mutations
             .mutate()
             .replace(StringChunk::Stream(string_writer));

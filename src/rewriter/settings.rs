@@ -538,13 +538,13 @@ macro_rules! streaming {
         ) -> StreamingHandler
         where
             StreamingHandler:
-                FnOnce(&mut StreamingHandlerSink<'_>) -> Result<(), Box<dyn Error + Send + Sync>> + 'static + Send,
+                FnOnce(&mut StreamingHandlerSink<'_>) -> Result<(), Box<dyn Error + Send + Sync>> + 'static,
         {
             handler_closure
         }
 
         Box::new(streaming_macro_type_hint($closure))
-            as Box<dyn $crate::html_content::StreamingHandler>
+            as Box<dyn $crate::html_content::StreamingHandler + Send>
     }};
 }
 

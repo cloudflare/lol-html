@@ -249,7 +249,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// Consequent calls to the method append to the previously inserted content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.start_tag
             .mutations
             .mutate()
@@ -305,7 +305,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.after_chunk(StringChunk::Stream(string_writer));
     }
 
@@ -369,7 +369,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_prepend(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_prepend(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.prepend_chunk(StringChunk::Stream(string_writer));
     }
 
@@ -428,7 +428,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_append(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_append(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.append_chunk(StringChunk::Stream(string_writer));
     }
 
@@ -491,7 +491,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_set_inner_content(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_set_inner_content(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.set_inner_content_chunk(StringChunk::Stream(string_writer));
     }
 
@@ -542,7 +542,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.replace_chunk(StringChunk::Stream(string_writer));
     }
 
