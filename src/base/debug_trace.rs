@@ -11,7 +11,7 @@ cfg_if! {
                 $({
                     use std::char;
 
-                    print!(": {:?}", $ch.map(|ch| unsafe { char::from_u32_unchecked(ch as u32) }));
+                    print!(": {:?}", $ch.map(|ch| char::from_u32(ch as u32).unwrap_or('\u{fffd}') ));
                 })*
 
                 println!();
