@@ -4,6 +4,7 @@ use crate::base::Bytes;
 use crate::errors::RewritingError;
 use crate::html::Namespace;
 use crate::html_content::{ContentType, StreamingHandler};
+use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
 
@@ -115,7 +116,7 @@ impl<'i> StartTag<'i> {
         self.mutations
             .mutate()
             .content_before
-            .push_back((content, content_type).into());
+            .push_back(StringChunk::from_str(content, content_type));
     }
 
     /// Inserts `content` after the start tag.
@@ -126,7 +127,7 @@ impl<'i> StartTag<'i> {
         self.mutations
             .mutate()
             .content_after
-            .push_front((content, content_type).into());
+            .push_front(StringChunk::from_str(content, content_type));
     }
 
     /// Replaces the start tag with `content`.
@@ -136,7 +137,7 @@ impl<'i> StartTag<'i> {
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
         self.mutations
             .mutate()
-            .replace((content, content_type).into());
+            .replace(StringChunk::from_str(content, content_type));
     }
 
     /// Inserts content from a [`StreamingHandler`] before the start tag.
@@ -148,7 +149,7 @@ impl<'i> StartTag<'i> {
         self.mutations
             .mutate()
             .content_before
-            .push_back(string_writer.into());
+            .push_back(StringChunk::Stream(string_writer));
     }
 
     /// Inserts content from a [`StreamingHandler`] after the start tag.
@@ -160,7 +161,7 @@ impl<'i> StartTag<'i> {
         self.mutations
             .mutate()
             .content_after
-            .push_front(string_writer.into());
+            .push_front(StringChunk::Stream(string_writer));
     }
 
     /// Replaces the start tag with the content from a [`StreamingHandler`].
@@ -169,7 +170,9 @@ impl<'i> StartTag<'i> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
-        self.mutations.mutate().replace(string_writer.into());
+        self.mutations
+            .mutate()
+            .replace(StringChunk::Stream(string_writer));
     }
 
     /// Removes the start tag.

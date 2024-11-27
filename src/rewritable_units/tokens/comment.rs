@@ -2,6 +2,7 @@ use super::{Mutations, Token};
 use crate::base::Bytes;
 use crate::errors::RewritingError;
 use crate::html_content::StreamingHandler;
+use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::any::Any;
 use std::fmt::{self, Debug};
@@ -110,7 +111,7 @@ impl<'i> Comment<'i> {
         self.mutations
             .mutate()
             .content_before
-            .push_back((content, content_type).into());
+            .push_back(StringChunk::from_str(content, content_type));
     }
 
     /// Inserts content from a [`StreamingHandler`] before the comment.
@@ -119,11 +120,11 @@ impl<'i> Comment<'i> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     #[inline]
-    pub fn streaming_before(&mut self, handler: Box<dyn StreamingHandler>) {
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler>) {
         self.mutations
             .mutate()
             .content_before
-            .push_back(handler.into());
+            .push_back(StringChunk::Stream(string_writer));
     }
 
     /// Inserts `content` after the comment.
@@ -158,7 +159,7 @@ impl<'i> Comment<'i> {
         self.mutations
             .mutate()
             .content_after
-            .push_front((content, content_type).into());
+            .push_front(StringChunk::from_str(content, content_type));
     }
 
     /// Inserts content from a [`StreamingHandler`] after the comment.
@@ -167,11 +168,11 @@ impl<'i> Comment<'i> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     #[inline]
-    pub fn streaming_after(&mut self, handler: Box<dyn StreamingHandler>) {
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler>) {
         self.mutations
             .mutate()
             .content_after
-            .push_front(handler.into());
+            .push_front(StringChunk::Stream(string_writer));
     }
 
     /// Replaces the comment with the `content`.
@@ -205,7 +206,7 @@ impl<'i> Comment<'i> {
     pub fn replace(&mut self, content: &str, content_type: crate::rewritable_units::ContentType) {
         self.mutations
             .mutate()
-            .replace((content, content_type).into());
+            .replace(StringChunk::from_str(content, content_type));
     }
 
     /// Replaces the comment with the content from a [`StreamingHandler`].
@@ -214,8 +215,10 @@ impl<'i> Comment<'i> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     #[inline]
-    pub fn streaming_replace(&mut self, handler: Box<dyn StreamingHandler>) {
-        self.mutations.mutate().replace(handler.into());
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
+        self.mutations
+            .mutate()
+            .replace(StringChunk::Stream(string_writer));
     }
 
     /// Removes the comment.

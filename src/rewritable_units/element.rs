@@ -241,7 +241,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
             .mutations
             .mutate()
             .content_before
-            .push_back((content, content_type).into());
+            .push_back(StringChunk::from_str(content, content_type));
     }
 
     /// Inserts  content from a [`StreamingHandler`] before the element.
@@ -254,7 +254,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
             .mutations
             .mutate()
             .content_before
-            .push_back(string_writer.into());
+            .push_back(StringChunk::Stream(string_writer));
     }
 
     /// Inserts `content` after the element.
@@ -287,7 +287,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn after(&mut self, content: &str, content_type: ContentType) {
-        self.after_chunk((content, content_type).into());
+        self.after_chunk(StringChunk::from_str(content, content_type));
     }
 
     fn after_chunk(&mut self, chunk: StringChunk) {
@@ -306,7 +306,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler>) {
-        self.after_chunk(string_writer.into());
+        self.after_chunk(StringChunk::Stream(string_writer));
     }
 
     /// Prepends `content` to the element's inner content, i.e. inserts content right after
@@ -346,7 +346,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn prepend(&mut self, content: &str, content_type: ContentType) {
-        self.prepend_chunk((content, content_type).into());
+        self.prepend_chunk(StringChunk::from_str(content, content_type));
     }
 
     fn prepend_chunk(&mut self, chunk: StringChunk) {
@@ -370,7 +370,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     pub fn streaming_prepend(&mut self, string_writer: Box<dyn StreamingHandler>) {
-        self.prepend_chunk(string_writer.into());
+        self.prepend_chunk(StringChunk::Stream(string_writer));
     }
 
     /// Appends `content` to the element's inner content, i.e. inserts content right before
@@ -410,7 +410,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn append(&mut self, content: &str, content_type: ContentType) {
-        self.append_chunk((content, content_type).into());
+        self.append_chunk(StringChunk::from_str(content, content_type));
     }
 
     fn append_chunk(&mut self, chunk: StringChunk) {
@@ -429,7 +429,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     pub fn streaming_append(&mut self, string_writer: Box<dyn StreamingHandler>) {
-        self.append_chunk(string_writer.into());
+        self.append_chunk(StringChunk::Stream(string_writer));
     }
 
     /// Replaces inner content of the element with `content`.
@@ -468,7 +468,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn set_inner_content(&mut self, content: &str, content_type: ContentType) {
-        self.set_inner_content_chunk((content, content_type).into());
+        self.set_inner_content_chunk(StringChunk::from_str(content, content_type));
     }
 
     fn set_inner_content_chunk(&mut self, chunk: StringChunk) {
@@ -492,7 +492,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     pub fn streaming_set_inner_content(&mut self, string_writer: Box<dyn StreamingHandler>) {
-        self.set_inner_content_chunk(string_writer.into());
+        self.set_inner_content_chunk(StringChunk::Stream(string_writer));
     }
 
     /// Replaces the element and its inner content with `content`.
@@ -524,7 +524,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// ```
     #[inline]
     pub fn replace(&mut self, content: &str, content_type: ContentType) {
-        self.replace_chunk((content, content_type).into());
+        self.replace_chunk(StringChunk::from_str(content, content_type));
     }
 
     fn replace_chunk(&mut self, chunk: StringChunk) {
@@ -543,7 +543,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
     pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler>) {
-        self.replace_chunk(string_writer.into());
+        self.replace_chunk(StringChunk::Stream(string_writer));
     }
 
     /// Removes the element and its inner content.
