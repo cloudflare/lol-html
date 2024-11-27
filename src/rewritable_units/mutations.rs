@@ -84,16 +84,15 @@ impl Mutations {
     }
 }
 
-impl From<(&str, ContentType)> for StringChunk {
-    #[inline]
-    fn from((content, content_type): (&str, ContentType)) -> Self {
-        Self::Buffer(Box::from(content), content_type)
-    }
-}
-
 pub(crate) enum StringChunk {
     Buffer(Box<str>, ContentType),
     Stream(Box<dyn StreamingHandler>),
+}
+
+impl StringChunk {
+    pub(crate) fn from_str(content: impl Into<Box<str>>, content_type: ContentType) -> Self {
+        Self::Buffer(content.into(), content_type)
+    }
 }
 
 #[derive(Default)]
@@ -170,12 +169,5 @@ where
     #[inline]
     fn write_all(self: Box<F>, sink: &mut StreamingHandlerSink<'_>) -> BoxResult {
         (self)(sink)
-    }
-}
-
-impl From<Box<dyn StreamingHandler>> for StringChunk {
-    #[inline]
-    fn from(writer: Box<dyn StreamingHandler>) -> Self {
-        Self::Stream(writer)
     }
 }
