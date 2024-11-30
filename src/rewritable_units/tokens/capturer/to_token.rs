@@ -4,32 +4,29 @@ use crate::parser::{NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, T
 use encoding_rs::Encoding;
 
 pub(crate) enum ToTokenResult<'i> {
-    Token(Box<Token<'i>>),
+    Token(Token<'i>),
     Text(TextType),
     None,
 }
 
-impl<'i> From<Token<'i>> for ToTokenResult<'i> {
-    #[inline]
-    fn from(token: Token<'i>) -> Self {
-        ToTokenResult::Token(Box::new(token))
-    }
-}
-
 pub(crate) trait ToToken {
-    fn to_token(
-        &self,
+    fn to_token<'s>(
+        &'s self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult<'_>;
+        out: &mut ToTokenResult<'s>,
+    );
 }
 
-impl ToToken for TagLexeme<'_> {
-    fn to_token(
-        &self,
+impl<'i> ToToken for TagLexeme<'i> {
+    fn to_token<'x>(
+        &'x self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult<'_> {
+        out: &mut ToTokenResult<'x>,
+    ) {
+        debug_assert!(matches!(out, ToTokenResult::None));
+
         match *self.token_outline() {
             TagTokenOutline::StartTag {
                 name,
@@ -37,46 +34,57 @@ impl ToToken for TagLexeme<'_> {
                 ns,
                 self_closing,
                 ..
-            } if capture_flags.contains(TokenCaptureFlags::NEXT_START_TAG) => {
-                // NOTE: clear the flag once we've seen required start tag.
-                capture_flags.remove(TokenCaptureFlags::NEXT_START_TAG);
-
-                StartTag::new_token(
-                    self.part(name),
-                    Attributes::new(self.input(), attributes, encoding),
-                    ns,
-                    self_closing,
-                    self.raw(),
-                    encoding,
-                )
-                .into()
+            } => {
+                if capture_flags.contains(TokenCaptureFlags::NEXT_START_TAG) {
+                    // NOTE: clear the flag once we've seen required start tag.
+                    capture_flags.remove(TokenCaptureFlags::NEXT_START_TAG);
+                    *out = ToTokenResult::Token(StartTag::new_token(
+                        self.part(name),
+                        Attributes::new(self.input(), attributes, encoding),
+                        ns,
+                        self_closing,
+                        self.raw(),
+                        encoding,
+                    ));
+                }
             }
 
-            TagTokenOutline::EndTag { name, .. }
-                if capture_flags.contains(TokenCaptureFlags::NEXT_END_TAG) =>
-            {
-                // NOTE: clear the flag once we've seen required end tag.
-                capture_flags.remove(TokenCaptureFlags::NEXT_END_TAG);
-
-                EndTag::new_token(self.part(name), self.raw(), encoding).into()
+            TagTokenOutline::EndTag { name, .. } => {
+                if capture_flags.contains(TokenCaptureFlags::NEXT_END_TAG) {
+                    // NOTE: clear the flag once we've seen required end tag.
+                    capture_flags.remove(TokenCaptureFlags::NEXT_END_TAG);
+                    *out = ToTokenResult::Token(EndTag::new_token(
+                        self.part(name),
+                        self.raw(),
+                        encoding,
+                    ))
+                }
             }
-            _ => ToTokenResult::None,
         }
     }
 }
 
 impl ToToken for NonTagContentLexeme<'_> {
-    fn to_token(
-        &self,
+    fn to_token<'s>(
+        &'s self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
-    ) -> ToTokenResult<'_> {
+        out: &mut ToTokenResult<'s>,
+    ) {
+        debug_assert!(matches!(out, ToTokenResult::None));
+
         match *self.token_outline() {
-            Some(NonTagContentTokenOutline::Text(text_type)) => ToTokenResult::Text(text_type),
-            Some(NonTagContentTokenOutline::Comment(text))
-                if capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
-            {
-                Comment::new_token(self.part(text), self.raw(), encoding).into()
+            Some(NonTagContentTokenOutline::Text(text_type)) => {
+                *out = ToTokenResult::Text(text_type)
+            }
+            Some(NonTagContentTokenOutline::Comment(text)) => {
+                if capture_flags.contains(TokenCaptureFlags::COMMENTS) {
+                    *out = ToTokenResult::Token(Comment::new_token(
+                        self.part(text),
+                        self.raw(),
+                        encoding,
+                    ))
+                }
             }
 
             Some(NonTagContentTokenOutline::Doctype {
@@ -84,17 +92,20 @@ impl ToToken for NonTagContentLexeme<'_> {
                 public_id,
                 system_id,
                 force_quirks,
-            }) if capture_flags.contains(TokenCaptureFlags::DOCTYPES) => Doctype::new_token(
-                self.opt_part(name),
-                self.opt_part(public_id),
-                self.opt_part(system_id),
-                force_quirks,
-                false, // removed
-                self.raw(),
-                encoding,
-            )
-            .into(),
-            _ => ToTokenResult::None,
+            }) => {
+                if capture_flags.contains(TokenCaptureFlags::DOCTYPES) {
+                    *out = ToTokenResult::Token(Doctype::new_token(
+                        self.opt_part(name),
+                        self.opt_part(public_id),
+                        self.opt_part(system_id),
+                        force_quirks,
+                        false, // removed
+                        self.raw(),
+                        encoding,
+                    ))
+                }
+            }
+            Some(NonTagContentTokenOutline::Eof) | None => {}
         }
     }
 }
