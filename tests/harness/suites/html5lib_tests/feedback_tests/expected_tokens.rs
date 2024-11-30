@@ -17,7 +17,7 @@ pub struct TokenSinkProxy<'a, Sink> {
     pub tokens: &'a mut Vec<TestToken>,
 }
 
-impl<'a, Sink> TokenSinkProxy<'a, Sink> {
+impl<Sink> TokenSinkProxy<'_, Sink> {
     fn push_text_token(&mut self, s: &str) {
         if let Some(&mut TestToken::Text(ref mut last)) = self.tokens.last_mut() {
             *last += s;

@@ -1,4 +1,4 @@
-use criterion::*;
+use criterion::{criterion_group, criterion_main};
 use glob::glob;
 use lazy_static::lazy_static;
 use std::fmt::{self, Debug};

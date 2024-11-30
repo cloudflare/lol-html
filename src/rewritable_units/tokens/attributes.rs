@@ -130,7 +130,7 @@ impl Serialize for &Attribute<'_> {
     #[inline]
     fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if let Some(raw) = self.raw.as_ref() {
-            output_handler(raw)
+            output_handler(raw);
         } else {
             output_handler(&self.name);
             output_handler(b"=\"");

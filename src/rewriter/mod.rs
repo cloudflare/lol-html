@@ -256,7 +256,7 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
 // NOTE: this opaque Debug implementation is required to make
 // `.unwrap()` and `.expect()` methods available on Result
 // returned by the `HtmlRewriterBuilder.build()` method.
-impl<'h, O: OutputSink, H: HandlerTypes> Debug for HtmlRewriter<'h, O, H> {
+impl<O: OutputSink, H: HandlerTypes> Debug for HtmlRewriter<'_, O, H> {
     #[cold]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "HtmlRewriter")

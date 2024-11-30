@@ -92,7 +92,7 @@ impl<'output_handler> StreamingHandlerSink<'output_handler> {
     }
 }
 
-impl<'output_handler> StreamingHandlerSinkInner<'output_handler> {
+impl StreamingHandlerSinkInner<'_> {
     #[inline]
     pub(crate) fn write_str(&mut self, content: &str, content_type: ContentType) {
         match content_type {
@@ -175,7 +175,7 @@ impl TextEncoder {
 
     /// This is more efficient than `Bytes::from_str`, because it can output non-UTF-8/non-ASCII encodings
     /// without heap allocations.
-    /// It also avoids methods that have UB: https://github.com/hsivonen/encoding_rs/issues/79
+    /// It also avoids methods that have UB: <https://github.com/hsivonen/encoding_rs/issues/79>
     #[inline(never)]
     fn encode(&mut self, mut content: &str, output_handler: &mut dyn FnMut(&[u8])) {
         loop {
@@ -243,7 +243,7 @@ struct IncompleteUtf8Resync {
 }
 
 impl IncompleteUtf8Resync {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             char_bytes: [0; 4],
             char_len: 0,
@@ -440,7 +440,7 @@ fn invalid_utf8_fragments() {
                 assert!(
                     !std::str::from_utf8(ch).unwrap().contains('<'),
                     "{ch:x?} of {bad:x?}"
-                )
+                );
             };
             let mut t = StreamingHandlerSink::new(UTF_8, &mut handler);
             for chunk in bad.chunks(len) {
