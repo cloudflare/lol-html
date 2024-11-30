@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn sanitizer_bypass2() {
         let out = rewrite_comment(b"<?xml >s<img src=x onerror=alert(1)> ?>", UTF_8, |c| {
-            c.set_text("pie is a lie!").unwrap()
+            c.set_text("pie is a lie!").unwrap();
         });
         assert_eq!("<!--pie is a lie!-->s<img src=x onerror=alert(1)> ?>", out);
     }

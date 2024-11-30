@@ -98,7 +98,7 @@ impl<'de> Deserialize<'de> for Input {
     {
         struct StringVisitor;
 
-        impl<'de> Visitor<'de> for StringVisitor {
+        impl Visitor<'_> for StringVisitor {
             type Value = Input;
 
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {

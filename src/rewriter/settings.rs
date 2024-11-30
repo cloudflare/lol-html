@@ -254,7 +254,7 @@ pub struct ElementContentHandlers<'h, H: HandlerTypes = LocalHandlerTypes> {
     pub text: Option<H::TextHandler<'h>>,
 }
 
-impl<'h, H: HandlerTypes> Default for ElementContentHandlers<'h, H> {
+impl<H: HandlerTypes> Default for ElementContentHandlers<'_, H> {
     fn default() -> Self {
         ElementContentHandlers {
             element: None,
@@ -319,7 +319,7 @@ pub struct DocumentContentHandlers<'h, H: HandlerTypes = LocalHandlerTypes> {
     pub end: Option<H::EndHandler<'h>>,
 }
 
-impl<'h, H: HandlerTypes> Default for DocumentContentHandlers<'h, H> {
+impl<H: HandlerTypes> Default for DocumentContentHandlers<'_, H> {
     fn default() -> Self {
         DocumentContentHandlers {
             doctype: None,
@@ -525,7 +525,6 @@ macro_rules! comments {
 ///     ..RewriteStrSettings::default()
 /// };
 /// ```
-
 #[macro_export(local_inner_macros)]
 macro_rules! streaming {
     ($closure:expr) => {{

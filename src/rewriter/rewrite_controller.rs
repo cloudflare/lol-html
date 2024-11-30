@@ -40,7 +40,7 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
     }
 }
 
-impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
+impl<H: HandlerTypes> HtmlRewriteController<'_, H> {
     #[inline]
     fn respond_to_aux_info_request(
         aux_info_req: AuxStartTagInfoRequest<ElementDescriptor, SelectorHandlersLocator>,
@@ -65,7 +65,7 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
     }
 }
 
-impl<'h, H: HandlerTypes> TransformController for HtmlRewriteController<'h, H> {
+impl<H: HandlerTypes> TransformController for HtmlRewriteController<'_, H> {
     #[inline]
     fn initial_capture_flags(&self) -> TokenCaptureFlags {
         self.get_capture_flags()

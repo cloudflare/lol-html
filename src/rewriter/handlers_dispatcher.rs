@@ -123,7 +123,7 @@ pub(crate) struct ContentHandlersDispatcher<'h, H: HandlerTypes> {
     matched_elements_with_removed_content: usize,
 }
 
-impl<'h, H: HandlerTypes> Default for ContentHandlersDispatcher<'h, H> {
+impl<H: HandlerTypes> Default for ContentHandlersDispatcher<'_, H> {
     fn default() -> Self {
         ContentHandlersDispatcher {
             doctype_handlers: Default::default(),
