@@ -24,7 +24,7 @@ bitflags! {
 #[derive(Debug)]
 pub(crate) enum TokenCapturerEvent<'i> {
     LexemeConsumed,
-    TokenProduced(Box<Token<'i>>),
+    TokenProduced(Token<'i>),
 }
 
 type CapturerEventHandler<'h> =
@@ -66,6 +66,7 @@ impl TokenCapturer {
         self.text_decoder.flush_pending(event_handler)
     }
 
+    #[inline]
     pub fn feed<'i, T>(
         &mut self,
         lexeme: &Lexeme<'i, T>,

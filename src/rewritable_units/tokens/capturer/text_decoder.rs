@@ -10,7 +10,7 @@ macro_rules! emit {
     ($self:tt, $text:expr, $last:ident, $event_handler:ident) => {{
         let token = TextChunk::new_token($text, $self.last_text_type, $last, $self.encoding.get());
 
-        $event_handler(TokenCapturerEvent::TokenProduced(Box::new(token)))
+        $event_handler(TokenCapturerEvent::TokenProduced(token))
     }};
 }
 
