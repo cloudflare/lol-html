@@ -139,16 +139,17 @@ where
         let output_sink = &mut self.output_sink;
         let emission_enabled = self.emission_enabled;
         let lexeme_range = lexeme.raw_range();
-        let remaining_content_start = self.remaining_content_start;
+        let chunk_range = Range {
+            start: self.remaining_content_start,
+            end: lexeme_range.start,
+        };
+
         let mut lexeme_consumed = false;
 
         self.token_capturer.feed(lexeme, |event| {
             match event {
                 TokenCapturerEvent::LexemeConsumed => {
-                    let chunk = lexeme.input().slice(Range {
-                        start: remaining_content_start,
-                        end: lexeme_range.start,
-                    });
+                    let chunk = lexeme.input().slice(chunk_range);
 
                     lexeme_consumed = true;
 
