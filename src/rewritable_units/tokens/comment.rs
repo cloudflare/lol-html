@@ -124,7 +124,7 @@ impl<'i> Comment<'i> {
         self.mutations
             .mutate()
             .content_before
-            .push_back(StringChunk::Stream(string_writer));
+            .push_back(StringChunk::stream(string_writer));
     }
 
     /// Inserts `content` after the comment.
@@ -172,7 +172,7 @@ impl<'i> Comment<'i> {
         self.mutations
             .mutate()
             .content_after
-            .push_front(StringChunk::Stream(string_writer));
+            .push_front(StringChunk::stream(string_writer));
     }
 
     /// Replaces the comment with the `content`.
@@ -218,7 +218,7 @@ impl<'i> Comment<'i> {
     pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.mutations
             .mutate()
-            .replace(StringChunk::Stream(string_writer));
+            .replace(StringChunk::stream(string_writer));
     }
 
     /// Removes the comment.

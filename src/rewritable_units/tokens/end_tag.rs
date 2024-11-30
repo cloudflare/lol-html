@@ -107,7 +107,7 @@ impl<'i> EndTag<'i> {
         self.mutations
             .mutate()
             .content_before
-            .push_back(StringChunk::Stream(string_writer));
+            .push_back(StringChunk::stream(string_writer));
     }
 
     /// Inserts content from a [`StreamingHandler`] after the end tag.
@@ -120,7 +120,7 @@ impl<'i> EndTag<'i> {
         self.mutations
             .mutate()
             .content_after
-            .push_front(StringChunk::Stream(string_writer));
+            .push_front(StringChunk::stream(string_writer));
     }
 
     /// Replaces the end tag with content from a [`StreamingHandler`].
@@ -132,7 +132,7 @@ impl<'i> EndTag<'i> {
     pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.mutations
             .mutate()
-            .replace(StringChunk::Stream(string_writer));
+            .replace(StringChunk::stream(string_writer));
     }
 
     /// Removes the end tag.

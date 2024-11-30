@@ -149,7 +149,7 @@ impl<'i> StartTag<'i> {
         self.mutations
             .mutate()
             .content_before
-            .push_back(StringChunk::Stream(string_writer));
+            .push_back(StringChunk::stream(string_writer));
     }
 
     /// Inserts content from a [`StreamingHandler`] after the start tag.
@@ -161,7 +161,7 @@ impl<'i> StartTag<'i> {
         self.mutations
             .mutate()
             .content_after
-            .push_front(StringChunk::Stream(string_writer));
+            .push_front(StringChunk::stream(string_writer));
     }
 
     /// Replaces the start tag with the content from a [`StreamingHandler`].
@@ -172,7 +172,7 @@ impl<'i> StartTag<'i> {
     pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
         self.mutations
             .mutate()
-            .replace(StringChunk::Stream(string_writer));
+            .replace(StringChunk::stream(string_writer));
     }
 
     /// Removes the start tag.
