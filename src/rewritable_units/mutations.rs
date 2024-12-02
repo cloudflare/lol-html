@@ -1,6 +1,7 @@
 use super::StreamingHandlerSink;
 use std::error::Error as StdError;
 use std::panic::{RefUnwindSafe, UnwindSafe};
+use std::sync::Mutex;
 
 type BoxResult = Result<(), Box<dyn StdError + Send + Sync>>;
 
@@ -84,17 +85,25 @@ impl Mutations {
     }
 }
 
+/// Part of [`DynamicString`]
 pub(crate) enum StringChunk {
     Buffer(Box<str>, ContentType),
-    Stream(Box<dyn StreamingHandler + Send>),
+    // The mutex is never actually locked, but makes the struct `Sync` without unsafe.
+    Stream(Mutex<Box<dyn StreamingHandler + Send>>),
 }
 
 impl StringChunk {
     pub(crate) fn from_str(content: impl Into<Box<str>>, content_type: ContentType) -> Self {
         Self::Buffer(content.into(), content_type)
     }
+
+    #[inline]
+    pub(crate) fn stream(handler: Box<dyn StreamingHandler + Send>) -> Self {
+        Self::Stream(Mutex::new(handler))
+    }
 }
 
+/// String built from fragments or dynamic callbacks
 #[derive(Default)]
 pub(crate) struct DynamicString {
     chunks: Vec<StringChunk>,
@@ -128,7 +137,11 @@ impl DynamicString {
                     sink.write_str(&content, content_type);
                 }
                 StringChunk::Stream(handler) => {
-                    handler.write_all(sink)?;
+                    // The mutex will never be locked or poisoned. This is the cheapest way to unwrap it.
+                    let (Ok(h) | Err(h)) = handler
+                        .into_inner()
+                        .map_err(std::sync::PoisonError::into_inner);
+                    h.write_all(sink)?;
                 }
             };
         }
@@ -145,8 +158,6 @@ pub trait StreamingHandler {
     ///
     /// See [`StreamingHandlerSink`].
     fn write_all(self: Box<Self>, sink: &mut StreamingHandlerSink<'_>) -> BoxResult;
-
-    // Safety: due to lack of Sync, this trait must not have `&self` methods
 }
 
 impl RefUnwindSafe for StringChunk {}

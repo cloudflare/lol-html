@@ -19,13 +19,11 @@ impl Arena {
     }
 
     pub fn append(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {
-        let new_len = self.data.len() + slice.len();
-        let capacity = self.data.capacity();
+        // this specific form of capacity check optimizes out redundant resizing in extend_from_slice
+        if self.data.capacity() - self.data.len() < slice.len() {
+            let additional = slice.len() + self.data.len() - self.data.capacity();
 
-        if new_len > capacity {
-            let additional = new_len - capacity;
-
-            // NOTE: approximate usage, as `Vec::reserve_exact` doesn't
+            // NOTE: approximate usage, as `Vec::(try_)reserve_exact` doesn't
             // give guarantees about exact capacity value :).
             self.limiter.increase_usage(additional)?;
 
@@ -33,7 +31,9 @@ impl Arena {
             // executed quite rarely. We can't afford to use double capacity
             // strategy used by default (see: https://github.com/rust-lang/rust/blob/bdfd698f37184da42254a03ed466ab1f90e6fb6c/src/liballoc/raw_vec.rs#L424)
             // as we'll run out of the space allowance quite quickly.
-            self.data.reserve_exact(slice.len());
+            self.data
+                .try_reserve_exact(slice.len())
+                .map_err(|_| MemoryLimitExceededError)?;
         }
 
         self.data.extend_from_slice(slice);
