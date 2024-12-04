@@ -49,15 +49,15 @@ impl NthChild {
 pub(crate) enum OnTagNameExpr {
     ExplicitAny,
     Unmatchable,
-    LocalName(String),
+    LocalName(Box<str>),
     NthChild(NthChild),
     NthOfType(NthChild),
 }
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct AttributeComparisonExpr {
-    pub name: String,
-    pub value: String,
+    pub name: Box<str>,
+    pub value: Box<str>,
     pub case_sensitivity: ParsedCaseSensitivity,
     pub operator: AttrSelectorOperator,
 }
@@ -66,8 +66,8 @@ impl AttributeComparisonExpr {
     #[inline]
     #[must_use]
     pub const fn new(
-        name: String,
-        value: String,
+        name: Box<str>,
+        value: Box<str>,
         case_sensitivity: ParsedCaseSensitivity,
         operator: AttrSelectorOperator,
     ) -> Self {
@@ -105,9 +105,9 @@ impl Debug for AttributeComparisonExpr {
 /// An attribute check when attributes are received and parsed.
 #[derive(PartialEq, Eq, Debug)]
 pub(crate) enum OnAttributesExpr {
-    Id(String),
-    Class(String),
-    AttributeExists(String),
+    Id(Box<str>),
+    Class(Box<str>),
+    AttributeExists(Box<str>),
     AttributeComparisonExpr(AttributeComparisonExpr),
 }
 
