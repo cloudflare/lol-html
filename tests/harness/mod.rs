@@ -1,10 +1,3 @@
-use lazy_static::lazy_static;
-use std::sync::Mutex;
-
-lazy_static! {
-    pub static ref TEST_CRITICAL_SECTION_MUTEX: Mutex<()> = Mutex::new(());
-}
-
 macro_rules! ignore {
     (@info $($args:expr),+) => {
         if std::env::var("IGNORES_VERBOSE").is_ok() {

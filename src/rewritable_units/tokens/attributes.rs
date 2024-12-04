@@ -4,7 +4,7 @@ use crate::html::escape_double_quotes_only;
 use crate::parser::AttributeBuffer;
 use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
-use lazycell::LazyCell;
+use std::cell::OnceCell;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 use thiserror::Error;
@@ -154,7 +154,7 @@ impl Debug for Attribute<'_> {
 pub(crate) struct Attributes<'i> {
     input: &'i Bytes<'i>,
     attribute_buffer: &'i AttributeBuffer,
-    items: LazyCell<Vec<Attribute<'i>>>,
+    items: OnceCell<Vec<Attribute<'i>>>,
     encoding: &'static Encoding,
 }
 
@@ -169,7 +169,7 @@ impl<'i> Attributes<'i> {
         Attributes {
             input,
             attribute_buffer,
-            items: LazyCell::default(),
+            items: OnceCell::default(),
             encoding,
         }
     }
@@ -226,19 +226,9 @@ impl<'i> Attributes<'i> {
 
     #[inline]
     fn as_mut_vec(&mut self) -> &mut Vec<Attribute<'i>> {
-        // NOTE: we can't use borrow_mut_with here as we'll need
-        // because `self` is a mutable reference and we'll have
-        // two mutable references by passing it to the initializer
-        // closure.
-        if !self.items.filled() {
-            self.items
-                .fill(self.init_items())
-                .expect("Cell should be empty at this point");
-        }
+        let _ = self.items.get_or_init(|| self.init_items());
 
-        self.items
-            .borrow_mut()
-            .expect("Items should be initialized")
+        self.items.get_mut().expect("Items should be initialized")
     }
 
     #[cfg(test)]
@@ -252,7 +242,7 @@ impl<'i> Deref for Attributes<'i> {
 
     #[inline]
     fn deref(&self) -> &[Attribute<'i>] {
-        self.items.borrow_with(|| self.init_items())
+        self.items.get_or_init(|| self.init_items())
     }
 }
 

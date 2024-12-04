@@ -15,6 +15,12 @@ pub struct HasReplacementsError;
 #[allow(unnameable_types)] // accidentally exposed via `tag.set_name()`
 pub struct Bytes<'b>(Cow<'b, [u8]>);
 
+impl Bytes<'static> {
+    pub const fn from_static(string: &'static str) -> Self {
+        Self(Cow::Borrowed(string.as_bytes()))
+    }
+}
+
 impl<'b> Bytes<'b> {
     #[inline]
     pub fn from_str(string: &'b str, encoding: &'static Encoding) -> Self {
