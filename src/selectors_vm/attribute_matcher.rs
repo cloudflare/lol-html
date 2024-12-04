@@ -3,7 +3,7 @@ use crate::base::Bytes;
 use crate::html::Namespace;
 use crate::parser::{AttributeBuffer, AttributeOutline};
 use memchr::{memchr, memchr2};
-use selectors::attr::CaseSensitivity;
+use selectors::attr::{CaseSensitivity, ParsedCaseSensitivity};
 use std::cell::OnceCell;
 
 static ID_ATTR: Bytes<'static> = Bytes::from_static("id");
@@ -12,6 +12,27 @@ static CLASS_ATTR: Bytes<'static> = Bytes::from_static("class");
 #[inline]
 const fn is_attr_whitespace(b: u8) -> bool {
     b == b' ' || b == b'\n' || b == b'\r' || b == b'\t' || b == b'\x0c'
+}
+
+#[inline]
+pub fn to_unconditional(
+    parsed: ParsedCaseSensitivity,
+    is_html_element_in_html_document: bool,
+) -> CaseSensitivity {
+    match parsed {
+        ParsedCaseSensitivity::AsciiCaseInsensitiveIfInHtmlElementInHtmlDocument
+            if is_html_element_in_html_document =>
+        {
+            CaseSensitivity::AsciiCaseInsensitive
+        }
+        ParsedCaseSensitivity::AsciiCaseInsensitiveIfInHtmlElementInHtmlDocument => {
+            CaseSensitivity::CaseSensitive
+        }
+        ParsedCaseSensitivity::CaseSensitive | ParsedCaseSensitivity::ExplicitCaseSensitive => {
+            CaseSensitivity::CaseSensitive
+        }
+        ParsedCaseSensitivity::AsciiCaseInsensitive => CaseSensitivity::AsciiCaseInsensitive,
+    }
 }
 
 type MemoizedAttrValue<'i> = OnceCell<Option<Bytes<'i>>>;
@@ -99,9 +120,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     pub fn attr_eq(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
-            operand
-                .case_sensitivity
-                .to_unconditional(self.is_html_element)
+            to_unconditional(operand.case_sensitivity, self.is_html_element)
                 .eq(&actual_value, &operand.value)
         })
     }
@@ -109,9 +128,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     pub fn matches_splitted_by_whitespace(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
-            let case_sensitivity = operand
-                .case_sensitivity
-                .to_unconditional(self.is_html_element);
+            let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
             actual_value
                 .split(|&b| is_attr_whitespace(b))
@@ -122,9 +139,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     pub fn has_attr_with_prefix(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
-            let case_sensitivity = operand
-                .case_sensitivity
-                .to_unconditional(self.is_html_element);
+            let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
             let prefix_len = operand.value.len();
 
@@ -136,9 +151,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     pub fn has_dash_matching_attr(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
-            let case_sensitivity = operand
-                .case_sensitivity
-                .to_unconditional(self.is_html_element);
+            let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
             if case_sensitivity.eq(&actual_value, &operand.value) {
                 return true;
@@ -154,9 +167,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     pub fn has_attr_with_suffix(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
-            let case_sensitivity = operand
-                .case_sensitivity
-                .to_unconditional(self.is_html_element);
+            let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
             let suffix_len = operand.value.len();
             let value_len = actual_value.len();
@@ -169,9 +180,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     pub fn has_attr_with_substring(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
-            let case_sensitivity = operand
-                .case_sensitivity
-                .to_unconditional(self.is_html_element);
+            let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
             let Some((&first_byte, rest)) = operand.value.split_first() else {
                 return false;
