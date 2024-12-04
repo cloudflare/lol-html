@@ -12,20 +12,17 @@ use std::str::FromStr;
 pub(crate) struct SelectorImplDescriptor;
 
 #[derive(Clone, Default, Eq, PartialEq)]
-pub struct CssString(pub String);
+pub struct CssString(pub Box<str>);
 
 impl<'a> From<&'a str> for CssString {
     fn from(value: &'a str) -> Self {
-        Self(value.to_string())
+        Self(value.into())
     }
 }
 
 impl ToCss for CssString {
-    fn to_css<W>(&self, dest: &mut W) -> fmt::Result
-    where
-        W: fmt::Write,
-    {
-        write!(dest, "{}", self.0)
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        dest.write_str(&self.0)
     }
 }
 
