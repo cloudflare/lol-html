@@ -38,7 +38,7 @@ impl SelectorImpl for SelectorImplDescriptor {
     type NonTSPseudoClass = NonTSPseudoClassStub;
     type PseudoElement = PseudoElementStub;
 
-    type ExtraMatchingData = ();
+    type ExtraMatchingData<'a> = std::marker::PhantomData<&'a ()>;
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
@@ -127,6 +127,7 @@ impl SelectorsParser {
             | Component::Part(_)
             | Component::Host(_)
             | Component::Is(_)
+            | Component::Has(_)
             | Component::LastChild
             | Component::LastOfType
             | Component::NthLastChild(_, _)
