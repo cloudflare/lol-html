@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.1.0
+
+- Added streaming handlers.
+- Only allow changing the charset once with the `<meta>` tag, in accordance with the HTML spec.
+- Fixed parsing of invalid elements in `<svg>` and `<math>`.
+
 ## v2.0.0
 
 - Added the ability for the rewriter to be [`Send`](https://doc.rust-lang.org/std/marker/trait.Send.html).
