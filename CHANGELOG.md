@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.1.1
+
+- Fix dependency that prevented lol-html from being published.
+
 ## v2.1.0
 
 - Added streaming handlers.
