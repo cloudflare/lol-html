@@ -7,6 +7,7 @@ use html5ever::tokenizer::{
 };
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
 use markup5ever_rcdom::RcDom;
+use std::cell::RefCell;
 use std::iter::FromIterator;
 use std::string::ToString;
 
@@ -14,15 +15,16 @@ use std::string::ToString;
 // recording them into the provided array
 pub struct TokenSinkProxy<'a, Sink> {
     pub inner: Sink,
-    pub tokens: &'a mut Vec<TestToken>,
+    pub tokens: RefCell<&'a mut Vec<TestToken>>,
 }
 
 impl<Sink> TokenSinkProxy<'_, Sink> {
-    fn push_text_token(&mut self, s: &str) {
-        if let Some(&mut TestToken::Text(ref mut last)) = self.tokens.last_mut() {
+    fn push_text_token(&self, s: &str) {
+        let tokens = &mut *self.tokens.borrow_mut();
+        if let Some(&mut TestToken::Text(ref mut last)) = tokens.last_mut() {
             *last += s;
         } else {
-            self.tokens.push(TestToken::Text(s.to_string()));
+            tokens.push(TestToken::Text(s.to_string()));
         }
     }
 }
@@ -30,10 +32,10 @@ impl<Sink> TokenSinkProxy<'_, Sink> {
 impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
     type Handle = Sink::Handle;
 
-    fn process_token(&mut self, token: Token, line_number: u64) -> TokenSinkResult<Self::Handle> {
+    fn process_token(&self, token: Token, line_number: u64) -> TokenSinkResult<Self::Handle> {
         match token {
             Token::DoctypeToken(ref doctype) => {
-                self.tokens.push(TestToken::Doctype {
+                self.tokens.borrow_mut().push(TestToken::Doctype {
                     name: doctype.name.as_ref().map(ToString::to_string),
                     public_id: doctype.public_id.as_ref().map(ToString::to_string),
                     system_id: doctype.system_id.as_ref().map(ToString::to_string),
@@ -43,7 +45,7 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
             Token::TagToken(ref tag) => {
                 let name = tag.name.to_string();
 
-                self.tokens.push(match tag.kind {
+                self.tokens.borrow_mut().push(match tag.kind {
                     TagKind::StartTag => TestToken::StartTag {
                         name,
                         attributes: HashMap::from_iter(
@@ -58,7 +60,9 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
                 });
             }
             Token::CommentToken(ref s) => {
-                self.tokens.push(TestToken::Comment(s.to_string()));
+                self.tokens
+                    .borrow_mut()
+                    .push(TestToken::Comment(s.to_string()));
             }
             Token::CharacterTokens(ref s) => {
                 if !s.is_empty() {
@@ -73,7 +77,7 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
         self.inner.process_token(token, line_number)
     }
 
-    fn end(&mut self) {
+    fn end(&self) {
         self.inner.end();
     }
 
@@ -85,20 +89,20 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
 
 pub fn get(input: &str) -> Vec<TestToken> {
     let mut tokens = Vec::default();
-    let mut b = BufferQueue::new();
+    let b = BufferQueue::default();
 
     b.push_back(StrTendril::from(input));
 
     {
-        let mut t = Tokenizer::new(
+        let t = Tokenizer::new(
             TokenSinkProxy {
                 inner: TreeBuilder::new(RcDom::default(), TreeBuilderOpts::default()),
-                tokens: &mut tokens,
+                tokens: RefCell::new(&mut tokens),
             },
             TokenizerOpts::default(),
         );
 
-        while let TokenizerResult::Script(_) = t.feed(&mut b) {
+        while let TokenizerResult::Script(_) = t.feed(&b) {
             // ignore script markers
         }
 

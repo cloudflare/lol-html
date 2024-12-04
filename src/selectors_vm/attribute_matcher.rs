@@ -2,23 +2,19 @@ use super::compiler::AttrExprOperands;
 use crate::base::Bytes;
 use crate::html::Namespace;
 use crate::parser::{AttributeBuffer, AttributeOutline};
-use encoding_rs::UTF_8;
-use lazy_static::lazy_static;
-use lazycell::LazyCell;
 use memchr::{memchr, memchr2};
 use selectors::attr::CaseSensitivity;
+use std::cell::OnceCell;
 
-lazy_static! {
-    static ref ID_ATTR: Bytes<'static> = Bytes::from_str("id", UTF_8);
-    static ref CLASS_ATTR: Bytes<'static> = Bytes::from_str("class", UTF_8);
-}
+static ID_ATTR: Bytes<'static> = Bytes::from_static("id");
+static CLASS_ATTR: Bytes<'static> = Bytes::from_static("class");
 
 #[inline]
 const fn is_attr_whitespace(b: u8) -> bool {
     b == b' ' || b == b'\n' || b == b'\r' || b == b'\t' || b == b'\x0c'
 }
 
-type MemoizedAttrValue<'i> = LazyCell<Option<Bytes<'i>>>;
+type MemoizedAttrValue<'i> = OnceCell<Option<Bytes<'i>>>;
 
 pub(crate) struct AttributeMatcher<'i> {
     input: &'i Bytes<'i>,
@@ -35,8 +31,8 @@ impl<'i> AttributeMatcher<'i> {
         AttributeMatcher {
             input,
             attributes,
-            id: LazyCell::default(),
-            class: LazyCell::default(),
+            id: OnceCell::new(),
+            class: OnceCell::new(),
             is_html_element: ns == Namespace::Html,
         }
     }
@@ -78,7 +74,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     #[must_use]
     pub fn has_id(&self, id: &Bytes<'_>) -> bool {
-        match self.id.borrow_with(|| self.get_value(&ID_ATTR)) {
+        match self.id.get_or_init(|| self.get_value(&ID_ATTR)) {
             Some(actual_id) => actual_id == id,
             None => false,
         }
@@ -87,7 +83,7 @@ impl<'i> AttributeMatcher<'i> {
     #[inline]
     #[must_use]
     pub fn has_class(&self, class_name: &Bytes<'_>) -> bool {
-        match self.class.borrow_with(|| self.get_value(&CLASS_ATTR)) {
+        match self.class.get_or_init(|| self.get_value(&CLASS_ATTR)) {
             Some(class) => class
                 .split(|&b| is_attr_whitespace(b))
                 .any(|actual_class_name| actual_class_name == &**class_name),

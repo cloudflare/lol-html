@@ -10,7 +10,7 @@ publish = false
 encoding_rs = "0.8.13"
 lol_html = { path = "../" }
 libc = "0"
-thiserror = "1"
+thiserror = "2"
 
 [profile.release]
 panic = "abort"
