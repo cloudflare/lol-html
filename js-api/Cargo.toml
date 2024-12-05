@@ -1,19 +1,23 @@
 [package]
-name = "lol_html_js_api"
-version = "1.1.1"
-authors = ["Ivan Nikulin <inikulin@cloudflare.com>"]
+name = "lol-html"
+description = "Streaming HTML rewriter/parser with CSS selector-based API"
+license = "BSD-3-Clause"
+version = "2.1.1"
+authors = ["Ivan Nikulin <inikulin@cloudflare.com>", "Gus Caplan <me@gus.host>"]
+repository = "https://github.com/cloudflare/lol-html"
 edition = "2021"
-
+rust-version = "1.83"
 publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 js-sys = "0.3.51"
 lol_html = { path = "../" }
 serde = { version = "1.0.126", features = ["derive"] }
-serde-wasm-bindgen = "0.3.0"
-wasm-bindgen = "0.2.74"
-thiserror = "1.0.26"
 encoding_rs = "0.8.13"
+serde-wasm-bindgen = "0.4.5"
+thiserror = "2.0"
+wasm-bindgen = "0.2.97"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
