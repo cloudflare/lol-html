@@ -148,7 +148,7 @@ macro_rules! impl_mutations {
                 self.0.get_mut().map(|o| o.remove())
             }
 
-            #[wasm_bindgen(method, getter)]
+            #[wasm_bindgen(getter)]
             pub fn removed(&self) -> JsResult<bool> {
                 self.0.get().map(|o| o.removed())
             }

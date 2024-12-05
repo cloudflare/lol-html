@@ -9,7 +9,7 @@ impl_mutations!(Comment);
 
 #[wasm_bindgen]
 impl Comment {
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn text(&self) -> JsResult<String> {
         self.0.get().map(|c| c.text())
     }
