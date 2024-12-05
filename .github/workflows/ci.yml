@@ -40,7 +40,14 @@ jobs:
           key: clippy-${{ hashFiles('Cargo.lock') }}
           path: target
       - name: Run clippy
-        run: cargo clippy --all --all-targets
+        run: cargo clippy --all --all-targets --target-dir=target
+      - name: Run clippy on integration tests
+        run: cargo clippy --all --all-targets --features=integration_test --target-dir=target
+      - name: Run clippy on C API
+        run: cargo clippy --all-targets --manifest-path=c-api/Cargo.toml --target-dir=target
+      - name: Run clippy on JS API
+        run: cargo clippy --all-targets --manifest-path=js-api/Cargo.toml --target-dir=target
+
   test:
     name: Test
     runs-on: ubuntu-latest
