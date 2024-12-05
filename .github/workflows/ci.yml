@@ -72,3 +72,8 @@ jobs:
           path: target
       - name: Run Rust tests
         run: scripts/test.sh
+      - uses: actions/setup-node@v4
+      - name: wasm-pack install
+        run: npm i -g wasm-pack
+      - name: Run JS tests
+        run: make -C js-api test
