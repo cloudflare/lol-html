@@ -21,7 +21,7 @@ impl From<&NativeAttribute<'_>> for Attribute {
 #[wasm_bindgen]
 pub struct Element(NativeRefWrap<NativeElement<'static, 'static>>);
 
-impl_from_native!(NativeElement --> Element);
+impl_from_native!(NativeElement => Element);
 impl_mutations!(Element);
 
 #[wasm_bindgen]

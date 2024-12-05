@@ -4,7 +4,7 @@ use lol_html::html_content::DocumentEnd as NativeDocumentEnd;
 #[wasm_bindgen]
 pub struct DocumentEnd(NativeRefWrap<NativeDocumentEnd<'static>>);
 
-impl_from_native!(NativeDocumentEnd --> DocumentEnd);
+impl_from_native!(NativeDocumentEnd => DocumentEnd);
 
 #[wasm_bindgen]
 impl DocumentEnd {

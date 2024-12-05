@@ -4,7 +4,7 @@ use lol_html::html_content::Doctype as NativeDoctype;
 #[wasm_bindgen]
 pub struct Doctype(NativeRefWrap<NativeDoctype<'static>>);
 
-impl_from_native!(NativeDoctype --> Doctype);
+impl_from_native!(NativeDoctype => Doctype);
 
 #[wasm_bindgen]
 impl Doctype {

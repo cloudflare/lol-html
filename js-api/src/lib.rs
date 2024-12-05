@@ -156,12 +156,12 @@ macro_rules! impl_mutations {
 }
 
 macro_rules! impl_from_native {
-    ($Ty:ident --> $JsTy:path) => {
+    ($Ty:ty => $JsTy:path) => {
         impl $JsTy {
-            pub(crate) unsafe fn from_native<'r>(inner: &'r mut $Ty) -> (Self, Anchor<'r>) {
-                let (ref_wrap, anchor) = unsafe { NativeRefWrap::wrap(inner) };
+            pub(crate) fn with_native<'r, R>(inner: &'r mut $Ty, callback: impl FnOnce(&JsValue) -> R) -> R {
+                let (ref_wrap, _anchor) = unsafe { NativeRefWrap::wrap(inner) };
 
-                ($JsTy(ref_wrap), anchor)
+                (callback)(&JsValue::from($JsTy(ref_wrap)))
             }
         }
     };

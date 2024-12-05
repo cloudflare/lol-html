@@ -4,7 +4,7 @@ use lol_html::html_content::Comment as NativeComment;
 #[wasm_bindgen]
 pub struct Comment(NativeRefWrap<NativeComment<'static>>);
 
-impl_from_native!(NativeComment --> Comment);
+impl_from_native!(NativeComment => Comment);
 impl_mutations!(Comment);
 
 #[wasm_bindgen]

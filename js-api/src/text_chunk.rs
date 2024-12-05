@@ -4,7 +4,7 @@ use lol_html::html_content::TextChunk as NativeTextChunk;
 #[wasm_bindgen]
 pub struct TextChunk(NativeRefWrap<NativeTextChunk<'static>>);
 
-impl_from_native!(NativeTextChunk --> TextChunk);
+impl_from_native!(NativeTextChunk => TextChunk);
 impl_mutations!(TextChunk);
 
 #[wasm_bindgen]

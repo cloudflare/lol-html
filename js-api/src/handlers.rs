@@ -9,7 +9,6 @@ use lol_html::{
     DocumentContentHandlers as NativeDocumentContentHandlers,
     ElementContentHandlers as NativeElementContentHandlers,
 };
-use std::mem;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -26,16 +25,11 @@ macro_rules! make_handler {
             h
         }
         type_hint(Box::new(move |arg: &mut _| {
-            let (js_arg, anchor) = unsafe { $JsArgType::from_native(arg) };
+            $JsArgType::with_native(arg, |js_value| {
+                $handler.call1(&JsValue::NULL, &js_value)
+            }).map_err(|e| HandlerJsErrorWrap(e))?;
 
-            let res = match $handler.call1(&JsValue::NULL, &JsValue::from(js_arg)) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(HandlerJsErrorWrap(e).into()),
-            };
-
-            mem::drop(anchor);
-
-            res
+            Ok(())
         }))
     }};
 }
