@@ -1,10 +1,16 @@
 [package]
 name = "lol_html_c_api"
 version = "1.1.2"
+description = "Low output latency streaming HTML parser/rewriter"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>", "Joshua Nelson <jnelson@cloudflare.com>"]
 edition = "2021"
 links = "lolhtml"
 publish = false
+
+[features]
+default = ["capi"]
+# Required to exist for cargo-c to work
+capi = []
 
 [dependencies]
 encoding_rs = "0.8.13"
@@ -19,3 +25,15 @@ lto = true
 [lib]
 name = "lolhtml"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[package.metadata.capi.header]
+name = "lol_html"
+subdirectory = ""
+generation = false
+
+[package.metadata.capi.install.include]
+asset = [{ from = "include/lol_html.h" }]
+
+[package.metadata.capi.pkg_config]
+name = "lol-html"
+filename = "lol-html"
