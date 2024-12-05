@@ -21,8 +21,9 @@ unsafe impl Send for HandlerJsErrorWrap {}
 unsafe impl Sync for HandlerJsErrorWrap {}
 
 macro_rules! make_handler {
-    ($handler:ident, $JsArgType:ident) => {
-        move |arg: &mut _| {
+    ($handler:ident, $JsArgType:ident, $typehint:ty) => {{
+        fn type_hint(h: $typehint) -> $typehint { h }
+        type_hint(Box::new(move |arg: &mut _| {
             let (js_arg, anchor) = $JsArgType::from_native(arg);
 
             let res = match $handler.call1(&JsValue::NULL, &JsValue::from(js_arg)) {
@@ -33,8 +34,8 @@ macro_rules! make_handler {
             mem::drop(anchor);
 
             res
-        }
-    };
+        }))
+    }};
 }
 
 #[wasm_bindgen]
@@ -56,15 +57,15 @@ impl IntoNative<NativeElementContentHandlers<'static>> for ElementContentHandler
         let mut native = NativeElementContentHandlers::default();
 
         if let Some(handler) = self.element() {
-            native = native.element(make_handler!(handler, Element));
+            native = native.element(make_handler!(handler, Element, lol_html::ElementHandler));
         }
 
         if let Some(handler) = self.comments() {
-            native = native.comments(make_handler!(handler, Comment));
+            native = native.comments(make_handler!(handler, Comment, lol_html::CommentHandler));
         }
 
         if let Some(handler) = self.text() {
-            native = native.text(make_handler!(handler, TextChunk));
+            native = native.text(make_handler!(handler, TextChunk, lol_html::TextHandler));
         }
 
         native
@@ -93,19 +94,19 @@ impl IntoNative<NativeDocumentContentHandlers<'static>> for DocumentContentHandl
         let mut native = NativeDocumentContentHandlers::default();
 
         if let Some(handler) = self.doctype() {
-            native = native.doctype(make_handler!(handler, Doctype));
+            native = native.doctype(make_handler!(handler, Doctype, lol_html::DoctypeHandler));
         }
 
         if let Some(handler) = self.comments() {
-            native = native.comments(make_handler!(handler, Comment));
+            native = native.comments(make_handler!(handler, Comment, lol_html::CommentHandler));
         }
 
         if let Some(handler) = self.text() {
-            native = native.text(make_handler!(handler, TextChunk));
+            native = native.text(make_handler!(handler, TextChunk, lol_html::TextHandler));
         }
 
         if let Some(handler) = self.end() {
-            native = native.end(make_handler!(handler, DocumentEnd));
+            native = native.end(make_handler!(handler, DocumentEnd, lol_html::EndHandler));
         }
 
         native
