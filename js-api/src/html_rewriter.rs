@@ -49,12 +49,12 @@ pub struct HTMLRewriter(RewriterState);
 #[wasm_bindgen]
 impl HTMLRewriter {
     #[wasm_bindgen(constructor)]
-    pub fn new(encoding: String, output_sink: &JsFunction) -> JsResult<HTMLRewriter> {
+    pub fn new(encoding: String, output_sink: &JsFunction) -> JsResult<Self> {
         let encoding = Encoding::for_label(encoding.as_bytes())
             .and_then(AsciiCompatibleEncoding::new)
             .ok_or_else(|| JsError::new("Invalid encoding"))?;
 
-        Ok(HTMLRewriter(RewriterState::Before {
+        Ok(Self(RewriterState::Before {
             output_sink: JsOutputSink::new(output_sink),
             settings: Settings {
                 encoding,

@@ -35,7 +35,7 @@ impl Str {
 
 impl Drop for Str {
     fn drop(&mut self) {
-        if self.data == ptr::null() {
+        if self.data.is_null() {
             return;
         }
         let bytes = unsafe { slice::from_raw_parts_mut(self.data.cast_mut(), self.len) };
