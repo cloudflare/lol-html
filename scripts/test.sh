@@ -2,6 +2,8 @@
 
 set -e
 
+export CARGO_TARGET_DIR=$PWD/target
+
 echo "===  Running library tests... ==="
 cargo test --features=integration_test "$@"
 
