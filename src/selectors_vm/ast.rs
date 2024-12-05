@@ -1,7 +1,7 @@
 use super::parser::{Selector, SelectorImplDescriptor};
 use hashbrown::HashSet;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
-use selectors::parser::{Combinator, Component};
+use selectors::parser::{Combinator, Component, NthType};
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
 
@@ -12,13 +12,6 @@ pub(crate) struct NthChild {
 }
 
 impl NthChild {
-    /// A first child with a step of 0 and an offset of 1
-    #[inline]
-    #[must_use]
-    pub const fn first() -> Self {
-        Self::new(0, 1)
-    }
-
     #[inline]
     #[must_use]
     pub const fn new(step: i32, offset: i32) -> Self {
@@ -123,43 +116,36 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
     #[inline]
     fn from(component: &Component<SelectorImplDescriptor>) -> Self {
         match component {
-            Component::LocalName(n) => Self::OnTagName(OnTagNameExpr::LocalName(n.name.0.clone())),
+            Component::LocalName(n) => {
+                Self::OnTagName(OnTagNameExpr::LocalName(n.name.to_boxed_slice()))
+            }
             Component::ExplicitUniversalType | Component::ExplicitAnyNamespace => {
                 Self::OnTagName(OnTagNameExpr::ExplicitAny)
             }
             Component::ExplicitNoNamespace => Self::OnTagName(OnTagNameExpr::Unmatchable),
-            Component::ID(id) => Self::OnAttributes(OnAttributesExpr::Id(id.0.clone())),
-            Component::Class(c) => Self::OnAttributes(OnAttributesExpr::Class(c.0.clone())),
-            Component::AttributeInNoNamespaceExists { local_name, .. } => {
-                Self::OnAttributes(OnAttributesExpr::AttributeExists(local_name.0.clone()))
-            }
+            Component::ID(id) => Self::OnAttributes(OnAttributesExpr::Id(id.to_boxed_slice())),
+            Component::Class(c) => Self::OnAttributes(OnAttributesExpr::Class(c.to_boxed_slice())),
+            Component::AttributeInNoNamespaceExists { local_name, .. } => Self::OnAttributes(
+                OnAttributesExpr::AttributeExists(local_name.to_boxed_slice()),
+            ),
             &Component::AttributeInNoNamespace {
                 ref local_name,
                 ref value,
                 operator,
                 case_sensitivity,
-                never_matches,
-            } => {
-                if never_matches {
-                    Self::OnTagName(OnTagNameExpr::Unmatchable)
-                } else {
-                    Self::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(
-                        AttributeComparisonExpr::new(
-                            local_name.0.clone(),
-                            value.0.clone(),
-                            case_sensitivity,
-                            operator,
-                        ),
-                    ))
-                }
+            } => Self::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(
+                AttributeComparisonExpr::new(
+                    local_name.to_boxed_slice(),
+                    value.to_boxed_slice(),
+                    case_sensitivity,
+                    operator,
+                ),
+            )),
+            Component::Nth(data) if data.ty == NthType::Child => {
+                Self::OnTagName(OnTagNameExpr::NthChild(NthChild::new(data.a, data.b)))
             }
-            Component::FirstChild => Self::OnTagName(OnTagNameExpr::NthChild(NthChild::first())),
-            &Component::NthChild(a, b) => {
-                Self::OnTagName(OnTagNameExpr::NthChild(NthChild::new(a, b)))
-            }
-            Component::FirstOfType => Self::OnTagName(OnTagNameExpr::NthOfType(NthChild::first())),
-            &Component::NthOfType(a, b) => {
-                Self::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(a, b)))
+            Component::Nth(data) if data.ty == NthType::OfType => {
+                Self::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(data.a, data.b)))
             }
             // NOTE: the rest of the components are explicit namespace or
             // pseudo class-related. Ideally none of them should appear in
@@ -278,7 +264,7 @@ where
     }
 
     pub fn add_selector(&mut self, selector: &Selector, payload: P) {
-        for selector_item in &(selector.0).0 {
+        for selector_item in (selector.0).slice() {
             let mut predicate = Predicate::default();
             let mut branches = &mut self.root;
 
@@ -305,7 +291,8 @@ where
                         ),
                     },
                     Component::Negation(ss) => {
-                        ss.iter()
+                        ss.slice()
+                            .iter()
                             .for_each(|s| s.iter().for_each(|c| predicate.add_component(c, true)));
                     }
                     _ => predicate.add_component(component, false),
@@ -930,7 +917,7 @@ mod tests {
         assert!(!odd.has_index(2));
         assert!(odd.has_index(3));
 
-        let first = NthChild::first();
+        let first = NthChild::new(0, 1);
         assert!(first.has_index(1));
         assert!(!first.has_index(2));
         assert!(!first.has_index(3));
