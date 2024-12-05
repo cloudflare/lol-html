@@ -30,14 +30,14 @@ name = "bench"
 [dependencies]
 bitflags = "2.0.0"
 cfg-if = "1.0.0"
-cssparser = "0.29"
+cssparser = "0.34"
 encoding_rs = "0.8.13"
 memchr = "2.1.2"
 hashbrown = "0.15.0"
 mime = "0.3.16"
-# HACK: Using commit between 0.24 and 0.25, allows us to get rid of phf 0.8.
-selectors = {git = "https://github.com/servo/stylo.git", rev = "767bc8bc11424d107cd58c7c2d3a1695e387e4ea"}
+selectors = "0.26"
 thiserror = "2.0"
+precomputed-hash = "0.1.1"
 
 [dev-dependencies]
 criterion = "0.5.1"
