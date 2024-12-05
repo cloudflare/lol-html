@@ -2,7 +2,6 @@ use lol_html::html_content::ContentType as NativeContentType;
 use std::cell::Cell;
 use std::convert::Into;
 use std::marker::PhantomData;
-use std::mem;
 use std::ops::Drop;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -14,7 +13,7 @@ struct Anchor<'r> {
     lifetime: PhantomData<&'r mut ()>,
 }
 
-impl<'r> Anchor<'r> {
+impl Anchor<'_> {
     #[inline]
     pub fn new(poisoned: Rc<Cell<bool>>) -> Self {
         Anchor {
@@ -42,9 +41,9 @@ struct NativeRefWrap<R> {
 }
 
 impl<R> NativeRefWrap<R> {
-    pub fn wrap<I>(inner: &mut I) -> (Self, Anchor) {
+    pub unsafe fn wrap<I>(inner: &mut I) -> (Self, Anchor) {
         let wrap = Self {
-            inner_ptr: unsafe { mem::transmute(inner) },
+            inner_ptr: inner as *mut I as *mut R,
             poisoned: Rc::new(Cell::new(false)),
         };
 
@@ -157,10 +156,10 @@ macro_rules! impl_mutations {
 }
 
 macro_rules! impl_from_native {
-    ($Ty:ident --> $JsTy:ident) => {
+    ($Ty:ident --> $JsTy:path) => {
         impl $JsTy {
-            pub(crate) fn from_native<'r>(inner: &'r mut $Ty) -> (Self, Anchor<'r>) {
-                let (ref_wrap, anchor) = NativeRefWrap::wrap(inner);
+            pub(crate) unsafe fn from_native<'r>(inner: &'r mut $Ty) -> (Self, Anchor<'r>) {
+                let (ref_wrap, anchor) = unsafe { NativeRefWrap::wrap(inner) };
 
                 ($JsTy(ref_wrap), anchor)
             }
