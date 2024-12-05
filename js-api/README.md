@@ -5,7 +5,7 @@
 ```js
 'use strict';
 
-const { HTMLRewriter } = require('lol_html');
+const { HTMLRewriter } = require('lol-html');
 
 const chunks = [];
 const rewriter = new HTMLRewriter('utf8', (chunk) => {
