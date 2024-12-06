@@ -59,6 +59,7 @@ pub unsafe extern "C" fn lol_html_streaming_sink_write_utf8_chunk(
 }
 
 /// Safety: the user data and the callbacks must be safe to use from a different thread (e.g. can't rely on thread-local storage).
+///
 /// It doesn't have to be `Sync`, it will be used only by one thread at a time.
 ///
 /// Handler functions copy this struct. It can (and should) be created on the stack.

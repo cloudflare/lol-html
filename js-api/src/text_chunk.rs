@@ -9,12 +9,12 @@ impl_mutations!(TextChunk);
 
 #[wasm_bindgen]
 impl TextChunk {
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn text(&self) -> JsResult<String> {
         self.0.get().map(|c| c.as_str().into())
     }
 
-    #[wasm_bindgen(method, getter=lastInTextNode)]
+    #[wasm_bindgen(getter=lastInTextNode)]
     pub fn last_in_text_node(&self) -> JsResult<bool> {
         self.0.get().map(|c| c.last_in_text_node())
     }

@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 pub use crate::streaming::CStreamingHandler;
 use libc::{c_char, c_int, c_void, size_t};
 use lol_html::html_content::*;

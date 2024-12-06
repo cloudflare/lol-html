@@ -22,9 +22,11 @@ unsafe impl Sync for HandlerJsErrorWrap {}
 
 macro_rules! make_handler {
     ($handler:ident, $JsArgType:ident, $typehint:ty) => {{
-        fn type_hint(h: $typehint) -> $typehint { h }
+        fn type_hint(h: $typehint) -> $typehint {
+            h
+        }
         type_hint(Box::new(move |arg: &mut _| {
-            let (js_arg, anchor) = $JsArgType::from_native(arg);
+            let (js_arg, anchor) = unsafe { $JsArgType::from_native(arg) };
 
             let res = match $handler.call1(&JsValue::NULL, &JsValue::from(js_arg)) {
                 Ok(_) => Ok(()),

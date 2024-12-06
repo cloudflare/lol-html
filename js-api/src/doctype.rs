@@ -8,17 +8,17 @@ impl_from_native!(NativeDoctype --> Doctype);
 
 #[wasm_bindgen]
 impl Doctype {
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn name(&self) -> JsResult<Option<String>> {
         self.0.get().map(|d| d.name())
     }
 
-    #[wasm_bindgen(method, getter=publicId)]
+    #[wasm_bindgen(getter=publicId)]
     pub fn public_id(&self) -> JsResult<Option<String>> {
         self.0.get().map(|d| d.public_id())
     }
 
-    #[wasm_bindgen(method, getter=systemId)]
+    #[wasm_bindgen(getter=systemId)]
     pub fn system_id(&self) -> JsResult<Option<String>> {
         self.0.get().map(|d| d.system_id())
     }

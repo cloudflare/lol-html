@@ -9,57 +9,66 @@ on:
 env:
   RUSTFLAGS: -Dwarnings
   RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0 # makes cache smaller
+  CARGO_PROFILE_DEV_DEBUG: 0
 
 jobs:
   clippy:
-    name: clippy
+    name: Clipy and format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-      - name: Install Rust
-        run: rustup update stable && rustup default stable
-      - name: Get rust version
-        id: rust-version
-        run: echo "::set-output name=version::$(rustc --version)"
-      - name: Cache cargo index and registry
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Check format
+        run: cargo fmt -- --check
+      - name: Cache cargo registry
         uses: actions/cache@v4
         with:
-          key: immutable # this will always be hit because it's a constant
+          key: index-${{ hashFiles('Cargo.toml') }}
           path: |
-            ~/.cargo/registry/cache
             ~/.cargo/registry/index
-      - name: Create lockfile
-        run: cargo generate-lockfile
+            ~/.cargo/registry/cache
       - name: Fetch dependencies
         run: cargo fetch
       - name: Cache target directory
         uses: actions/cache@v4
         with:
+          key: clippy-${{ hashFiles('Cargo.lock') }}
           path: target
-          key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
       - name: Run clippy
-        run: cargo clippy --all --all-targets
+        run: cargo clippy --all --all-targets --target-dir=target
+      - name: Run clippy on integration tests
+        run: cargo clippy --all --all-targets --features=integration_test --target-dir=target
+      - name: Run clippy on C API
+        run: cargo clippy --all-targets --manifest-path=c-api/Cargo.toml --target-dir=target
+      - name: Run clippy on JS API
+        run: cargo clippy --all-targets --manifest-path=js-api/Cargo.toml --target-dir=target
+
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Install Rust (rustup)
-      run: rustup update stable --no-self-update && rustup default stable
-      shell: bash
-    - name: Run tests
-      run: scripts/test.sh
-  format:
-    name: Check code format
-    runs-on: ubuntu-latest
-    steps:
       - uses: actions/checkout@v4
-      - name: Install Rust (rustup)
-        run: |
-          rustup update stable --no-self-update && rustup default stable
-          rustup component add rustfmt
-        shell: bash
-      - name: Check format
-        run: cargo fmt -- --check
+        with:
+          submodules: 'recursive'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          key: index-${{ hashFiles('Cargo.toml') }}
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          key: target-${{ hashFiles('Cargo.lock') }}
+          path: target
+      - name: Run Rust tests
+        run: scripts/test.sh

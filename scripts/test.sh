@@ -2,8 +2,9 @@
 
 set -e
 
+export CARGO_TARGET_DIR=$PWD/target
+
 echo "===  Running library tests... ==="
-cargo clippy --features=integration_test --all-targets -- -Dwarnings
 cargo test --features=integration_test "$@"
 
 echo "=== Running C API tests... ==="
