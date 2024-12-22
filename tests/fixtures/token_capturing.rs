@@ -258,4 +258,7 @@ impl TestFixture<TestCase> for TokenCapturingTests {
     }
 }
 
-test_fixture!(TokenCapturingTests);
+#[test]
+fn test_token_capturing() {
+    TokenCapturingTests::run_tests();
+}

@@ -24,8 +24,9 @@ struct TestData {
     pub src: String,
 }
 
+#[derive(Debug)]
 pub struct TestCase {
-    pub description: String,
+    pub _description: String,
     pub selector: String,
     pub input: Input,
     pub expected: String,
@@ -65,7 +66,7 @@ pub fn get_test_cases(suite: &'static str) -> Vec<TestCase> {
                 }
 
                 test_cases.push(TestCase {
-                    description,
+                    _description: description,
                     selector: selector.clone(),
                     input,
                     expected: read_test_file(suite, &expected_file),

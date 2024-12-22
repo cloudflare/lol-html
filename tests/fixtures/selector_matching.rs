@@ -86,4 +86,7 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
     }
 }
 
-test_fixture!(SelectorMatchingTests);
+#[test]
+fn test_selector_matching() {
+    SelectorMatchingTests::run_tests();
+}
