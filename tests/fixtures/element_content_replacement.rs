@@ -49,4 +49,7 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
     }
 }
 
-test_fixture!(ElementContentReplacementTests);
+#[test]
+fn test_element_content_replacement() {
+    ElementContentReplacementTests::run_tests();
+}

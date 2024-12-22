@@ -24,7 +24,7 @@ pub struct Bailout {
     pub parsed_chunk: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TestCase {
     pub description: String,

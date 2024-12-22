@@ -10,7 +10,6 @@ categories = ["parser-implementations", "web-programming"]
 keywords = ["html", "css-selectors", "parser", "rewriter", "streaming"]
 readme = "README.md"
 include = ["/Cargo.toml", "/LICENSE", "/README.md", "/media", "/src"]
-autotests = false
 edition = "2021"
 
 [lib]
@@ -22,10 +21,6 @@ bench = false
 debug_trace = []
 # Unstable: for internal use only
 integration_test = []
-
-[[test]]
-harness = false
-name = "integration_tests"
 
 [[bench]]
 harness = false
@@ -55,7 +50,6 @@ serde_derive = "1.0.19"
 serde_json = "1.0.65"
 static_assertions = "1.1.0"
 rand = "0.8.5"
-rustc-test = "0.3.1"
 itertools = "0.13"
 
 [lints.rust]
