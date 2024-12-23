@@ -4,8 +4,9 @@ use lol_html::errors::RewritingError;
 use lol_html::html_content::{DocumentEnd, TextType};
 use lol_html::test_utils::Output;
 use lol_html::{
-    LocalName, LocalNameHash, SharedMemoryLimiter, Namespace, SharedEncoding, StartTagHandlingResult,
-    Token, TokenCaptureFlags, TransformController, TransformStream, TransformStreamSettings,
+    LocalName, LocalNameHash, Namespace, SharedEncoding, SharedMemoryLimiter,
+    StartTagHandlingResult, Token, TokenCaptureFlags, TransformController, TransformStream,
+    TransformStreamSettings,
 };
 
 macro_rules! expect_eql {

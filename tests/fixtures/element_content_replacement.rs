@@ -1,8 +1,8 @@
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
-use lol_html::test_utils::Output;
-use lol_html::{HtmlRewriter, Settings, element};
 use lol_html::html_content::ContentType;
+use lol_html::test_utils::Output;
+use lol_html::{element, HtmlRewriter, Settings};
 
 // NOTE: Inner element content replacement functionality used as a basis for
 // the multiple element methods and it's easy to get it wrong, so we have
@@ -19,21 +19,20 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
         let mut output = Output::new(encoding.into());
 
         {
-            let mut rewriter = HtmlRewriter::new(Settings {
-                    element_content_handlers: vec![
-                        element!(test.selector, |el| {
-                            el.set_inner_content(
-                                &format!("<!--Replaced ({}) -->", test.selector),
-                                ContentType::Html,
-                            );
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![element!(test.selector, |el| {
+                        el.set_inner_content(
+                            &format!("<!--Replaced ({}) -->", test.selector),
+                            ContentType::Html,
+                        );
 
-                            Ok(())
-                        })
-                    ],
+                        Ok(())
+                    })],
                     encoding,
                     ..Settings::new()
                 },
-                |c: &[u8]| output.push(c)
+                |c: &[u8]| output.push(c),
             );
 
             for chunk in test.input.chunks() {

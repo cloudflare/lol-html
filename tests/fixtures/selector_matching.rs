@@ -1,8 +1,8 @@
 use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
-use lol_html::test_utils::Output;
-use lol_html::{HtmlRewriter, Settings, element, comments, text};
 use lol_html::html_content::ContentType;
+use lol_html::test_utils::Output;
+use lol_html::{comments, element, text, HtmlRewriter, Settings};
 
 pub struct SelectorMatchingTests;
 
@@ -65,12 +65,12 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
                             }
 
                             Ok(())
-                        })
+                        }),
                     ],
                     encoding,
                     ..Settings::new()
                 },
-                |c: &[u8]| output.push(c)
+                |c: &[u8]| output.push(c),
             );
 
             for chunk in test.input.chunks() {
