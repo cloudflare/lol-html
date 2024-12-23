@@ -102,7 +102,16 @@ impl<'i> StartTag<'i> {
         }
     }
 
-    /// Whether the tag is explicitly self-closing, e.g. `<foo />`.
+    /// Whether the tag syntactically ends with `/>`. In HTML content this is purely a decorative, unnecessary, and has no effect of any kind.
+    ///
+    /// The `/>` syntax only affects parsing of elements in foreign content (SVG and MathML).
+    /// It will never close any HTML tags that aren't already defined as [void](spec) in HTML.
+    ///
+    /// This function only reports the parsed syntax, and will not report which elements are actually void in HTML.
+    ///
+    /// [spec]: https://html.spec.whatwg.org/multipage/syntax.html#start-tags
+    ///
+    /// If the `/` is part of an unquoted attribute, it's not parsed as the self-closing syntax.
     #[inline]
     pub fn self_closing(&self) -> bool {
         self.self_closing
