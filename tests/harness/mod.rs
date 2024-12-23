@@ -35,4 +35,3 @@ impl<T: std::fmt::Debug> Drop for DumpOnPanic<'_, T> {
         eprintln!("test case failed: {:?}", self.0);
     }
 }
-
