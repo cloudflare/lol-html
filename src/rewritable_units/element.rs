@@ -370,6 +370,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     fn prepend_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
+            self.start_tag.set_self_closing_syntax(false);
             self.start_tag
                 .mutations
                 .mutate()
@@ -434,6 +435,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     fn append_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
+            self.start_tag.set_self_closing_syntax(false);
             self.end_tag_mutations_mut().content_before.push_back(chunk);
         }
     }
@@ -492,6 +494,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     fn set_inner_content_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
+            self.start_tag.set_self_closing_syntax(false);
             self.remove_content();
             self.start_tag
                 .mutations
