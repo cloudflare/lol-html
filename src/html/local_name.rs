@@ -1,6 +1,7 @@
 use super::Tag;
 use crate::base::{Bytes, HasReplacementsError, Range};
 use encoding_rs::Encoding;
+use std::fmt;
 
 // NOTE: All standard tag names contain only ASCII alpha characters
 // and digits from 1 to 6 (in numbered header tags, i.e. <h1> - <h6>).
@@ -31,7 +32,7 @@ use encoding_rs::Encoding;
 // `EMPTY_HASH` is used as a sentinel value.
 //
 // Pub only for integration tests
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Default, Hash)]
+#[derive(PartialEq, Eq, Copy, Clone, Default, Hash)]
 pub struct LocalNameHash(u64);
 
 const EMPTY_HASH: u64 = !0;
@@ -80,6 +81,33 @@ impl LocalNameHash {
         } else {
             EMPTY_HASH
         };
+    }
+}
+
+impl fmt::Debug for LocalNameHash {
+    #[cold]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_empty() {
+            return f.write_str("N/A");
+        }
+
+        let mut reverse_buf = [0u8; 12];
+        let mut pos = 11;
+        let mut h = self.0;
+        loop {
+            reverse_buf[pos] = match (h & 31) as u8 {
+                v @ 6.. => v + (b'a' - 6),
+                v => v + b'1',
+            };
+            h >>= 5;
+            if h == 0 || pos == 0 {
+                break;
+            }
+            pos -= 1;
+        }
+        std::str::from_utf8(&reverse_buf[pos..])
+            .unwrap_or_default()
+            .fmt(f)
     }
 }
 
