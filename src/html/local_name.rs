@@ -26,53 +26,60 @@ use encoding_rs::Encoding;
 // we are safe here, since we'll just get first character shifted left
 // by zeroes as repetitave 1 digits get added to the hash.
 //
+// LocalNameHash is built incrementally as tags are parsed, so it needs
+// to be able to invalidate itself if parsing an unrepresentable name.
+// `EMPTY_HASH` is used as a sentinel value.
+//
 // Pub only for integration tests
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Default, Hash)]
-pub struct LocalNameHash(Option<u64>);
+pub struct LocalNameHash(u64);
+
+const EMPTY_HASH: u64 = !0;
 
 impl LocalNameHash {
     #[inline]
     #[must_use]
     pub const fn new() -> Self {
-        Self(Some(0))
+        Self(0)
     }
 
     #[inline]
     #[must_use]
     pub const fn is_empty(&self) -> bool {
-        self.0.is_none()
+        self.0 == EMPTY_HASH
     }
 
     #[inline]
     pub fn update(&mut self, ch: u8) {
-        if let Some(h) = self.0 {
-            // NOTE: check if we still have space for yet another
-            // character and if not then invalidate the hash.
-            // Note, that we can't have `1` (which is encoded as 0b00000) as
-            // a first character of a tag name, so it's safe to perform
-            // check this way.
-            self.0 = if h >> (64 - 5) == 0 {
-                match ch {
-                    // NOTE: apply 0x1F mask on ASCII alpha to convert it to the
-                    // number from 1 to 26 (character case is controlled by one of
-                    // upper bits which we eliminate with the mask). Then add
-                    // 5, since numbers from 0 to 5 are reserved for digits.
-                    // Aftwerards put result as 5 lower bits of the hash.
-                    b'a'..=b'z' | b'A'..=b'Z' => Some((h << 5) | ((u64::from(ch) & 0x1F) + 5)),
+        let h = self.0;
 
-                    // NOTE: apply 0x0F mask on ASCII digit to convert it to number
-                    // from 1 to 6. Then subtract 1 to make it zero-based.
-                    // Afterwards, put result as lower bits of the hash.
-                    b'1'..=b'6' => Some((h << 5) | ((u64::from(ch) & 0x0F) - 1)),
+        // NOTE: check if we still have space for yet another
+        // character and if not then invalidate the hash.
+        // Note, that we can't have `1` (which is encoded as 0b00000) as
+        // a first character of a tag name, so it's safe to perform
+        // check this way.
+        // EMPTY_HASH has all bits set, so it will fail this check.
+        self.0 = if h >> (64 - 5) == 0 {
+            match ch {
+                // NOTE: apply 0x1F mask on ASCII alpha to convert it to the
+                // number from 1 to 26 (character case is controlled by one of
+                // upper bits which we eliminate with the mask). Then add
+                // 5, since numbers from 0 to 5 are reserved for digits.
+                // Aftwerards put result as 5 lower bits of the hash.
+                b'a'..=b'z' | b'A'..=b'Z' => (h << 5) | ((u64::from(ch) & 0x1F) + 5),
 
-                    // NOTE: for any other characters hash function is not
-                    // applicable, so we completely invalidate the hash.
-                    _ => None,
-                }
-            } else {
-                None
-            };
-        }
+                // NOTE: apply 0x0F mask on ASCII digit to convert it to number
+                // from 1 to 6. Then subtract 1 to make it zero-based.
+                // Afterwards, put result as lower bits of the hash.
+                b'1'..=b'6' => (h << 5) | ((u64::from(ch) & 0x0F) - 1),
+
+                // NOTE: for any other characters hash function is not
+                // applicable, so we completely invalidate the hash.
+                _ => EMPTY_HASH,
+            }
+        } else {
+            EMPTY_HASH
+        };
     }
 }
 
@@ -92,10 +99,7 @@ impl From<&str> for LocalNameHash {
 impl PartialEq<Tag> for LocalNameHash {
     #[inline]
     fn eq(&self, tag: &Tag) -> bool {
-        match self.0 {
-            Some(h) => *tag as u64 == h,
-            None => false,
-        }
+        self.0 == *tag as u64
     }
 }
 
@@ -159,7 +163,10 @@ impl PartialEq<LocalName<'_>> for LocalName<'_> {
         use LocalName::{Bytes, Hash};
 
         match (self, other) {
-            (Hash(s), Hash(o)) => s == o,
+            (Hash(s), Hash(o)) => {
+                debug_assert!(!s.is_empty());
+                s == o
+            }
             (Bytes(s), Bytes(o)) => s.eq_ignore_ascii_case(o),
             _ => false,
         }
@@ -172,7 +179,7 @@ mod tests {
 
     #[test]
     fn from_str() {
-        assert_eq!(LocalNameHash::from("div"), LocalNameHash(Some(9691u64)));
+        assert_eq!(LocalNameHash::from("div"), LocalNameHash(9691u64));
     }
 
     #[test]
