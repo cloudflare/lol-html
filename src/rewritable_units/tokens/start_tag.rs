@@ -117,6 +117,10 @@ impl<'i> StartTag<'i> {
         self.self_closing
     }
 
+    pub(crate) fn set_self_closing_syntax(&mut self, has_slash: bool) {
+        self.self_closing = has_slash;
+    }
+
     /// Inserts `content` before the start tag.
     ///
     /// Consequent calls to the method append `content` to the previously inserted content.
