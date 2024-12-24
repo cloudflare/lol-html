@@ -121,6 +121,10 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     }
 
     /// Sets the tag name of the element.
+    ///
+    /// The new tag name must be in the same namespace, have the same content model, and be valid in its location.
+    /// Otherwise change of the tag name may cause the resulting document to be parsed in an unexpected way,
+    /// out of sync with this library.
     #[inline]
     pub fn set_tag_name(&mut self, name: &str) -> Result<(), TagNameError> {
         let name = self.tag_name_bytes_from_str(name)?;
@@ -134,16 +138,31 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         Ok(())
     }
 
-    /// Whether the element is explicitly self-closing, e.g. `<foo />`.
+    /// Whether the tag syntactically ends with `/>`. In HTML content this is purely a decorative, unnecessary, and has no effect of any kind.
+    ///
+    /// The `/>` syntax only affects parsing of elements in foreign content (SVG and MathML).
+    /// It will never close any HTML tags that aren't already defined as [void][spec] in HTML.
+    ///
+    /// This function only reports the parsed syntax, and will not report which elements are actually void in HTML.
+    /// Use [`can_have_content()`][Self::can_have_content] to check if the element is non-void.
+    ///
+    /// [spec]: https://html.spec.whatwg.org/multipage/syntax.html#start-tags
+    ///
+    /// If the `/` is part of an unquoted attribute, it's not parsed as the self-closing syntax.
     #[inline]
     #[must_use]
     pub fn is_self_closing(&self) -> bool {
         self.start_tag.self_closing()
     }
 
-    /// Whether the element can have inner content.  Returns `true` unless the element is an [HTML void
-    /// element](https://html.spec.whatwg.org/multipage/syntax.html#void-elements) or has a
-    /// self-closing tag (eg, `<foo />`).
+    /// Whether the element can have inner content.
+    ///
+    /// Returns `true` if the element isn't a [void element in HTML][void],
+    /// or is in **foreign content** and doesn't have a self-closing tag (eg, `<svg />`).
+    ///
+    /// [void]: https://html.spec.whatwg.org/multipage/syntax.html#void-elements
+    ///
+    /// Note that the self-closing syntax has no effect in HTML content.
     #[inline]
     #[must_use]
     pub fn can_have_content(&self) -> bool {
@@ -351,6 +370,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     fn prepend_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
+            self.start_tag.set_self_closing_syntax(false);
             self.start_tag
                 .mutations
                 .mutate()
@@ -415,6 +435,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     fn append_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
+            self.start_tag.set_self_closing_syntax(false);
             self.end_tag_mutations_mut().content_before.push_back(chunk);
         }
     }
@@ -473,6 +494,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     fn set_inner_content_chunk(&mut self, chunk: StringChunk) {
         if self.can_have_content {
+            self.start_tag.set_self_closing_syntax(false);
             self.remove_content();
             self.start_tag
                 .mutations

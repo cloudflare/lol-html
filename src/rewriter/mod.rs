@@ -447,6 +447,30 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_incorrect_self_closing() {
+        let res = rewrite_str::<LocalHandlerTypes>(
+            "<title /></title><div/></div><style /></style><script /></script>
+            <br/><br><embed/><embed> <svg><a/><path/><path></path></svg>",
+            RewriteStrSettings {
+                element_content_handlers: vec![element!("*:not(svg)", |el| {
+                    el.set_attribute("s", if el.is_self_closing() { "y" } else { "n" })?;
+                    el.set_attribute("c", if el.can_have_content() { "y" } else { "n" })?;
+                    el.append("…", ContentType::Text);
+                    Ok(())
+                })],
+                ..RewriteStrSettings::new()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            res,
+            r#"<title s="y" c="y">…</title><div s="y" c="y">…</div><style s="y" c="y">…</style><script s="y" c="y">…</script>
+            <br s="y" c="n" /><br s="n" c="n"><embed s="y" c="n" /><embed s="n" c="n"> <svg><a s="y" c="n" /><path s="y" c="n" /><path s="n" c="y">…</path></svg>"#
+        );
+    }
+
+    #[test]
     fn rewrite_arbitrary_settings() {
         let res = rewrite_str("<span>Some text</span>", Settings::new()).unwrap();
         assert_eq!(res, "<span>Some text</span>");

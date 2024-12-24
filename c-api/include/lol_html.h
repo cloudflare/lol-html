@@ -523,7 +523,15 @@ int lol_html_element_tag_name_set(
     size_t name_len
 );
 
-// Whether the element is explicitly self-closing, e.g. `<foo />`.
+// Whether the tag syntactically ends with `/>`. In HTML content this is purely a decorative, unnecessary, and has no effect of any kind.
+//
+// The `/>` syntax only affects parsing of elements in foreign content (SVG and MathML).
+// It will never close any HTML tags that aren't already defined as void in HTML.
+//
+// This function only reports the parsed syntax, and will not report which elements are actually void in HTML.
+// Use `lol_html_element_can_have_content` to check if the element is non-void.
+//
+// If the `/` is part of an unquoted attribute, it's not parsed as the self-closing syntax.
 bool lol_html_element_is_self_closing(
     lol_html_element_t *element
 );
