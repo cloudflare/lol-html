@@ -4,16 +4,6 @@ use crate::html::TextType;
 use crate::rewriter::RewritingError;
 use encoding_rs::{CoderResult, Decoder};
 
-// NOTE: this can't be refactored into method, because we hold a mutable reference for `self`
-// during the decoding loop in `feed_text`.
-macro_rules! emit {
-    ($self:tt, $text:expr, $last:ident, $event_handler:ident) => {{
-        let token = TextChunk::new_token($text, $self.last_text_type, $last, $self.encoding.get());
-
-        $event_handler(TokenCapturerEvent::TokenProduced(token))
-    }};
-}
-
 pub(crate) struct TextDecoder {
     encoding: SharedEncoding,
     pending_text_streaming_decoder: Option<Decoder>,
@@ -46,9 +36,10 @@ impl TextDecoder {
         Ok(())
     }
 
+    #[inline(never)]
     fn decode_with_streaming_decoder(
         &mut self,
-        raw: &[u8],
+        mut raw_input: &[u8],
         last: bool,
         event_handler: CapturerEventHandler<'_>,
     ) -> Result<(), RewritingError> {
@@ -59,20 +50,23 @@ impl TextDecoder {
             .pending_text_streaming_decoder
             .get_or_insert_with(|| encoding.new_decoder_without_bom_handling());
 
-        let mut consumed = 0;
-
         loop {
-            let (status, read, written, ..) = decoder.decode_to_str(&raw[consumed..], buffer, last);
+            let (status, read, written, ..) = decoder.decode_to_str(&raw_input, buffer, last);
 
             if written > 0 || last {
-                emit!(self, &buffer[..written], last, event_handler)?;
+                (event_handler)(TokenCapturerEvent::TokenProduced(TextChunk::new_token(
+                    &buffer[..written],
+                    self.last_text_type,
+                    last,
+                    self.encoding.get(),
+                )))?;
             }
 
             if status == CoderResult::InputEmpty {
                 break;
             }
 
-            consumed += read;
+            raw_input = &raw_input[read..];
         }
 
         Ok(())
