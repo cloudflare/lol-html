@@ -19,6 +19,7 @@ pub(crate) trait ToToken {
 }
 
 impl<'i> ToToken for TagLexeme<'i> {
+    #[inline]
     fn to_token(
         &self,
         capture_flags: &mut TokenCaptureFlags,
@@ -57,13 +58,19 @@ impl<'i> ToToken for TagLexeme<'i> {
 }
 
 impl ToToken for NonTagContentLexeme<'_> {
+    #[inline]
     fn to_token(
         &self,
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
     ) -> ToTokenResult<'_> {
         match *self.token_outline() {
-            Some(NonTagContentTokenOutline::Text(text_type)) => ToTokenResult::Text(text_type),
+            Some(NonTagContentTokenOutline::Text(text_type))
+                if capture_flags.contains(TokenCaptureFlags::TEXT) =>
+            {
+                ToTokenResult::Text(text_type)
+            }
+
             Some(NonTagContentTokenOutline::Comment(text))
                 if capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
             {
