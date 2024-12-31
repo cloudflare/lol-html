@@ -1,6 +1,7 @@
-use super::*;
+use super::TokenCaptureFlags;
 use crate::html::TextType;
 use crate::parser::{NonTagContentLexeme, NonTagContentTokenOutline, TagLexeme, TagTokenOutline};
+use crate::rewritable_units::{Attributes, Comment, Doctype, EndTag, StartTag, Token};
 use encoding_rs::Encoding;
 
 pub(crate) enum ToTokenResult<'i> {
