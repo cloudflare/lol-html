@@ -18,7 +18,7 @@ pub(crate) trait ToToken {
     ) -> ToTokenResult<'_>;
 }
 
-impl<'i> ToToken for TagLexeme<'i> {
+impl ToToken for TagLexeme<'_> {
     #[inline]
     fn to_token(
         &self,

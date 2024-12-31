@@ -501,5 +501,15 @@ mod tests {
                 "<before><foo & bar><after>"
             );
         }
+
+        #[test]
+        fn last_flush_text_decoder() {
+            let rewritten = rewrite_text_chunk(b"<p>\xF0\xF0\x9F\xF0\x9F\x98</p>", UTF_8, |c| {
+                if c.last_in_text_node() {
+                    c.after(" last", ContentType::Text);
+                }
+            });
+            assert_eq!("<p>\u{fffd}\u{fffd}\u{fffd} last</p>", rewritten);
+        }
     }
 }
