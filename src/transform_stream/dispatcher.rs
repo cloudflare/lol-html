@@ -179,40 +179,32 @@ where
     where
         Lexeme<'i, T>: ToToken,
     {
-        let mut lexeme_consumed = None;
+        let lexeme_consumed_end;
 
         match lexeme.to_token(&mut self.delegate.capture_flags, self.encoding.get()) {
             ToTokenResult::Token(token) => {
                 self.text_decoder.flush_pending(&mut |text_chunk| {
                     self.delegate.token_produced(Token::TextChunk(text_chunk))
                 })?;
-                lexeme_consumed = Some(self.delegate.lexeme_consumed(lexeme));
+                lexeme_consumed_end = self.delegate.lexeme_consumed(lexeme);
                 self.delegate.token_produced(token)?;
             }
             ToTokenResult::Text(text_type) => {
-                if self // TODO check flags in to_token
-                    .delegate
-                    .capture_flags
-                    .contains(TokenCaptureFlags::TEXT)
-                {
-                    lexeme_consumed = Some(self.delegate.lexeme_consumed(lexeme));
+                lexeme_consumed_end = self.delegate.lexeme_consumed(lexeme);
 
-                    self.text_decoder
-                        .feed_text(&lexeme.raw(), text_type, &mut |text_chunk| {
-                            self.delegate.token_produced(Token::TextChunk(text_chunk))
-                        })?;
-                }
+                self.text_decoder
+                    .feed_text(&lexeme.raw(), text_type, &mut |text_chunk| {
+                        self.delegate.token_produced(Token::TextChunk(text_chunk))
+                    })?;
             }
             ToTokenResult::None => {
-                self.text_decoder.flush_pending(&mut |text_chunk| {
+                return self.text_decoder.flush_pending(&mut |text_chunk| {
                     self.delegate.token_produced(Token::TextChunk(text_chunk))
-                })?;
+                });
             }
         };
 
-        if let Some(end) = lexeme_consumed {
-            self.delegate.remaining_content_start = end;
-        }
+        self.delegate.remaining_content_start = lexeme_consumed_end;
 
         Ok(())
     }
