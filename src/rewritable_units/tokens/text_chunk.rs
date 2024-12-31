@@ -72,7 +72,7 @@ pub struct TextChunk<'i> {
 impl<'i> TextChunk<'i> {
     #[inline]
     #[must_use]
-    pub(super) fn new(
+    pub(crate) fn new(
         text: &'i str,
         text_type: TextType,
         last_in_text_node: bool,

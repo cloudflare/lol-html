@@ -1,7 +1,5 @@
-mod text_decoder;
 mod to_token;
 
-pub(crate) use self::text_decoder::TextDecoder;
 pub(crate) use self::to_token::{ToToken, ToTokenResult};
 
 use bitflags::bitflags;
