@@ -4,7 +4,6 @@ mod to_token;
 use self::text_decoder::TextDecoder;
 use super::*;
 use crate::base::SharedEncoding;
-use crate::parser::Lexeme;
 use crate::rewriter::RewritingError;
 use bitflags::bitflags;
 
@@ -27,13 +26,13 @@ pub(crate) enum TokenCapturerEvent<'i> {
     TokenProduced(Token<'i>),
 }
 
-type CapturerEventHandler<'h> =
+pub(crate) type CapturerEventHandler<'h> =
     &'h mut dyn FnMut(TokenCapturerEvent<'_>) -> Result<(), RewritingError>;
 
 pub(crate) struct TokenCapturer {
-    encoding: SharedEncoding,
-    text_decoder: TextDecoder,
-    capture_flags: TokenCaptureFlags,
+    pub encoding: SharedEncoding,
+    pub text_decoder: TextDecoder,
+    pub capture_flags: TokenCaptureFlags,
 }
 
 impl TokenCapturer {
@@ -66,32 +65,5 @@ impl TokenCapturer {
         self.text_decoder.flush_pending(event_handler)
     }
 
-    #[inline]
-    pub fn feed<'i, T>(
-        &mut self,
-        lexeme: &Lexeme<'i, T>,
-        mut event_handler: impl FnMut(TokenCapturerEvent<'_>) -> Result<(), RewritingError>,
-    ) -> Result<(), RewritingError>
-    where
-        Lexeme<'i, T>: ToToken,
-    {
-        match lexeme.to_token(&mut self.capture_flags, self.encoding.get()) {
-            ToTokenResult::Token(token) => {
-                self.flush_pending_text(&mut event_handler)?;
-                event_handler(TokenCapturerEvent::LexemeConsumed)?;
-                event_handler(TokenCapturerEvent::TokenProduced(token))
-            }
-            ToTokenResult::Text(text_type) => {
-                if self.capture_flags.contains(TokenCaptureFlags::TEXT) {
-                    event_handler(TokenCapturerEvent::LexemeConsumed)?;
 
-                    self.text_decoder
-                        .feed_text(&lexeme.raw(), text_type, &mut event_handler)?;
-                }
-
-                Ok(())
-            }
-            ToTokenResult::None => self.flush_pending_text(&mut event_handler),
-        }
-    }
 }
