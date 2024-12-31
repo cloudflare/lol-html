@@ -1,4 +1,4 @@
-use super::{Mutations, Token};
+use super::Mutations;
 use crate::base::Bytes;
 use crate::errors::RewritingError;
 use crate::html::TextType;
@@ -72,20 +72,20 @@ pub struct TextChunk<'i> {
 impl<'i> TextChunk<'i> {
     #[inline]
     #[must_use]
-    pub(super) fn new_token(
+    pub(super) fn new(
         text: &'i str,
         text_type: TextType,
         last_in_text_node: bool,
         encoding: &'static Encoding,
-    ) -> Token<'i> {
-        Token::TextChunk(TextChunk {
+    ) -> Self {
+        TextChunk {
             text: text.into(),
             text_type,
             last_in_text_node,
             encoding,
             mutations: Mutations::new(),
             user_data: Box::new(()),
-        })
+        }
     }
 
     /// Returns the textual content of the chunk.
@@ -381,14 +381,8 @@ mod tests {
 
     #[test]
     fn in_place_text_modifications() {
-        use super::super::Token;
-
         let encoding = Encoding::for_label_no_replacement(b"utf-8").unwrap();
-        let Token::TextChunk(mut chunk) =
-            TextChunk::new_token("original text", TextType::PlainText, true, encoding)
-        else {
-            unreachable!()
-        };
+        let mut chunk = TextChunk::new("original text", TextType::PlainText, true, encoding);
 
         assert_eq!(chunk.as_str(), "original text");
         chunk.set_str("hello".to_owned());
