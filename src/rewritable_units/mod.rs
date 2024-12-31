@@ -1,6 +1,7 @@
 use std::any::Any;
 
 pub(crate) use self::mutations::{Mutations, StringChunk};
+pub(crate) use self::text_decoder::TextDecoder;
 pub(crate) use self::text_encoder::{IncompleteUtf8Resync, TextEncoder};
 
 pub use self::document_end::*;
@@ -89,6 +90,7 @@ mod mutations;
 mod document_end;
 mod element;
 mod streaming_sink;
+mod text_decoder;
 mod text_encoder;
 mod tokens;
 
