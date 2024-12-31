@@ -1,3 +1,5 @@
+use crate::rewritable_units::CapturerEventHandler;
+use crate::rewritable_units::ToTokenResult;
 use crate::base::{Bytes, Range, SharedEncoding};
 use crate::html::{LocalName, Namespace};
 use crate::parser::{
@@ -146,7 +148,7 @@ where
 
         let mut lexeme_consumed = false;
 
-        self.token_capturer.feed(lexeme, |event| {
+        let event_handler: CapturerEventHandler<'_> = &mut |event| {
             match event {
                 TokenCapturerEvent::LexemeConsumed => {
                     let chunk = lexeme.input().slice(chunk_range);
@@ -168,7 +170,24 @@ where
                 }
             }
             Ok(())
-        })?;
+        };
+
+        match lexeme.to_token(&mut self.token_capturer.capture_flags, self.token_capturer.encoding.get()) {
+            ToTokenResult::Token(token) => {
+                self.token_capturer.flush_pending_text(&mut *event_handler)?;
+                event_handler(TokenCapturerEvent::LexemeConsumed)?;
+                event_handler(TokenCapturerEvent::TokenProduced(token))?;
+            }
+            ToTokenResult::Text(text_type) => {
+                if self.token_capturer.capture_flags.contains(TokenCaptureFlags::TEXT) {
+                    event_handler(TokenCapturerEvent::LexemeConsumed)?;
+
+                    self.token_capturer.text_decoder
+                        .feed_text(&lexeme.raw(), text_type, &mut *event_handler)?;
+                }
+            }
+            ToTokenResult::None => self.token_capturer.flush_pending_text(&mut *event_handler)?,
+        };
 
         if lexeme_consumed {
             self.remaining_content_start = lexeme_range.end;
