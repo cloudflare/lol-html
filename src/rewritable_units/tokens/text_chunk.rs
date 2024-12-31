@@ -410,6 +410,7 @@ mod tests {
         macro_rules! skip_eof_chunk {
             ($c:ident) => {
                 if $c.last_in_text_node() {
+                    // This is not always true — a replacement char for an incomplete UTF-8 sequence could be flushed last
                     assert!($c.as_str().is_empty());
                     return;
                 }
