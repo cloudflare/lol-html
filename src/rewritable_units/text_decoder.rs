@@ -67,7 +67,13 @@ impl TextDecoder {
                 // the last call to feed_text() may make multiple calls to output_handler,
                 // but only one call to output_handler can be *the* last one.
                 let really_last = last_in_text_node && finished_decoding;
-                (output_handler)(&buffer[..written], really_last, encoding)?;
+
+                (output_handler)(
+                    // this will always be in bounds, but unwrap_or_default optimizes better
+                    buffer.get(..written).unwrap_or_default(),
+                    really_last,
+                    encoding,
+                )?;
             }
 
             if finished_decoding {
@@ -76,7 +82,7 @@ impl TextDecoder {
                 }
                 return Ok(());
             }
-            raw_input = &raw_input[read..];
+            raw_input = raw_input.get(read..).unwrap_or_default();
         }
     }
 
