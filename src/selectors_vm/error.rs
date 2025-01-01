@@ -45,6 +45,11 @@ pub enum SelectorError {
     #[error("Invalid or unescaped class name in selector.")]
     InvalidClassName,
 
+    /// Unused
+    #[error("Empty negation in selector.")]
+    #[deprecated(note = "unused")]
+    EmptyNegation,
+
     /// Unsupported combinator in the selector.
     #[error("Unsupported combinator `{0}` in selector.")]
     UnsupportedCombinator(char),
