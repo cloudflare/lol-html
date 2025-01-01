@@ -413,15 +413,6 @@ mod tests {
             };
         }
 
-        macro_rules! skip_eof_chunk {
-            ($c:ident) => {
-                if $c.last_in_text_node() {
-                    assert!($c.as_str().is_empty());
-                    return;
-                }
-            };
-        }
-
         #[test]
         fn parsed() {
             test!(|_| {}, HTML);
@@ -429,15 +420,20 @@ mod tests {
 
         #[test]
         fn with_prepends_and_appends() {
+            let mut first = true;
             test!(
                 |c| {
-                    skip_eof_chunk!(c);
-                    c.before("<span>", ContentType::Text);
-                    c.before("<div>Hey</div>", ContentType::Html);
-                    c.before("<foo>", ContentType::Html);
-                    c.after("</foo>", ContentType::Html);
-                    c.after("<!-- 42 -->", ContentType::Html);
-                    c.after("<foo & bar>", ContentType::Text);
+                    let is_first = std::mem::replace(&mut first, c.last_in_text_node());
+                    if is_first {
+                        c.before("<span>", ContentType::Text);
+                        c.before("<div>Hey</div>", ContentType::Html);
+                        c.before("<foo>", ContentType::Html);
+                    }
+                    if c.last_in_text_node() {
+                        c.after("</foo>", ContentType::Html);
+                        c.after("<!-- 42 -->", ContentType::Html);
+                        c.after("<foo & bar>", ContentType::Text);
+                    }
                 },
                 concat!(
                     "&lt;span&gt;<div>Hey</div><foo>",
@@ -452,17 +448,22 @@ mod tests {
 
         #[test]
         fn removed() {
+            let mut first = true;
             test!(
                 |c| {
-                    skip_eof_chunk!(c);
+                    let is_first = std::mem::replace(&mut first, c.last_in_text_node());
                     assert!(!c.removed());
 
                     c.remove();
 
                     assert!(c.removed());
 
-                    c.before("<before>", ContentType::Html);
-                    c.after("<after>", ContentType::Html);
+                    if is_first {
+                        c.before("<before>", ContentType::Html);
+                    }
+                    if c.last_in_text_node() {
+                        c.after("<after>", ContentType::Html);
+                    }
                 },
                 "<before><after>"
             );
@@ -472,17 +473,20 @@ mod tests {
         fn replaced_with_text() {
             test!(
                 |c| {
-                    skip_eof_chunk!(c);
-                    c.before("<before>", ContentType::Html);
-                    c.after("<after>", ContentType::Html);
+                    if c.last_in_text_node() {
+                        c.before("<before>", ContentType::Html);
+                        c.after("<after>", ContentType::Html);
 
-                    assert!(!c.removed());
+                        assert!(!c.removed());
 
-                    c.replace("<div></div>", ContentType::Html);
-                    c.replace("<!--42-->", ContentType::Html);
-                    c.replace("<foo & bar>", ContentType::Text);
+                        c.replace("<div></div>", ContentType::Html);
+                        c.replace("<!--42-->", ContentType::Html);
+                        c.replace("<foo & bar>", ContentType::Text);
 
-                    assert!(c.removed());
+                        assert!(c.removed());
+                    } else {
+                        c.remove();
+                    }
                 },
                 "<before>&lt;foo &amp; bar&gt;<after>"
             );
@@ -492,17 +496,20 @@ mod tests {
         fn replaced_with_html() {
             test!(
                 |c| {
-                    skip_eof_chunk!(c);
-                    c.before("<before>", ContentType::Html);
-                    c.after("<after>", ContentType::Html);
+                    if c.last_in_text_node() {
+                        c.before("<before>", ContentType::Html);
+                        c.after("<after>", ContentType::Html);
 
-                    assert!(!c.removed());
+                        assert!(!c.removed());
 
-                    c.replace("<div></div>", ContentType::Html);
-                    c.replace("<!--42-->", ContentType::Html);
-                    c.replace("<foo & bar>", ContentType::Html);
+                        c.replace("<div></div>", ContentType::Html);
+                        c.replace("<!--42-->", ContentType::Html);
+                        c.replace("<foo & bar>", ContentType::Html);
 
-                    assert!(c.removed());
+                        assert!(c.removed());
+                    } else {
+                        c.remove();
+                    }
                 },
                 "<before><foo & bar><after>"
             );

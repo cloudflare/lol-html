@@ -29,7 +29,7 @@ impl TextDecoder {
             encoding,
             pending_text_streaming_decoder: None,
             // TODO make adjustable
-            text_buffer: String::from_utf8(vec![0u8; 1024]).unwrap(),
+            text_buffer: "\0".repeat(if cfg!(debug_assertions) { 12 } else { 1024 }),
             last_text_type: TextType::Data,
         }
     }

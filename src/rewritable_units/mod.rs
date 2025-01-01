@@ -137,7 +137,9 @@ mod test_utils {
                 |c: &[u8]| output.push(c),
             );
 
-            rewriter.write(html).unwrap();
+            for ch in html.chunks(15) {
+                rewriter.write(ch).unwrap();
+            }
             rewriter.end().unwrap();
         }
 
