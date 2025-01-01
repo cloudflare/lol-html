@@ -2,7 +2,7 @@ use crate::base::SharedEncoding;
 use crate::rewriter::RewritingError;
 use encoding_rs::{CoderResult, Decoder, Encoding, UTF_8};
 
-const DEFAULT_BUFFER_LEN: usize = 1024;
+const DEFAULT_BUFFER_LEN: usize = if cfg!(test) { 13 } else { 1024 };
 
 pub(crate) struct TextDecoder {
     encoding: SharedEncoding,
