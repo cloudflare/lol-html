@@ -1439,7 +1439,11 @@ mod tests {
         #[test]
         fn parsed() {
             test!(
-                |_| {},
+                |el| {
+                    assert_eq!(el.get_attribute("a1").unwrap(), "foo \" baré \" baz");
+                    assert_eq!(el.get_attribute("a3").unwrap(), "foo/bar");
+                    assert_eq!(el.get_attribute("a4").unwrap(), "");
+                },
                 r#"<a a1='foo " baré " baz' / a2="foo ' bar ' baz" a3=foo/bar a4></a>"#
             );
         }
@@ -1524,6 +1528,26 @@ mod tests {
         }
 
         #[test]
+        fn value_trailing_slash() {
+            let mut output = rewrite_element(b"<img path=//>", UTF_8, "img", |el| {
+                assert_eq!(el.get_attribute("path").unwrap(), "//");
+                el.set_attribute("slash", "/").unwrap();
+
+                assert!(!el.can_have_content());
+            });
+
+            assert_eq!(output, r#"<img path=// slash="/">"#);
+
+            output = rewrite_element(b"<img path=//>", UTF_8, "img", |el| {
+                el.remove_attribute("path");
+
+                assert!(!el.can_have_content());
+            });
+
+            assert_eq!(output, r"<img>");
+        }
+
+        #[test]
         fn remove_non_existent_attr() {
             test!(
                 |el| {
@@ -1537,6 +1561,8 @@ mod tests {
         fn without_attrs() {
             test!(
                 |el| {
+                    assert!(el.can_have_content());
+
                     for name in &["a1", "a2", "a3", "a4"] {
                         el.remove_attribute(name);
                     }
