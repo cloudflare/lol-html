@@ -185,7 +185,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
     }
 
     #[inline]
-    pub fn start_matching(&mut self, match_info: MatchInfo<SelectorHandlersLocator>) {
+    pub fn start_matching(&mut self, match_info: &MatchInfo<SelectorHandlersLocator>) {
         let locator = match_info.payload;
 
         if match_info.with_content {

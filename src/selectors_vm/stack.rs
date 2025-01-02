@@ -245,10 +245,10 @@ impl<E: ElementData> Stack<E> {
     where
         'a: 'i, // 'a outlives 'i, required to downcast 'a lifetimes into 'i
     {
-        let cumulative = match self.items.last() {
-            Some(last) => &last.child_counter,
-            None => &self.root_child_counter,
-        };
+        let cumulative = self
+            .items
+            .last()
+            .map_or(&self.root_child_counter, |last| &last.child_counter);
         SelectorState {
             cumulative,
             typed: self
