@@ -142,16 +142,16 @@ impl Buffer {
 
     fn buffer_for_length(&mut self, content_len: usize) -> &mut [u8] {
         let buffer = match self {
-            Buffer::Heap(buf) => buf.as_mut_slice(),
+            Self::Heap(buf) => buf.as_mut_slice(),
             // Long non-ASCII content could take lots of roundtrips through the encoder
             buf if content_len >= Self::CONTENT_WRITE_LENGTH_LONG_ENOUGH_TO_USE_LARGER_BUFFER => {
-                *buf = Buffer::Heap(vec![0; Self::DEFAULT_HEAP_BUFFER_SIZE]);
+                *buf = Self::Heap(vec![0; Self::DEFAULT_HEAP_BUFFER_SIZE]);
                 match buf {
-                    Buffer::Heap(buf) => buf.as_mut(),
+                    Self::Heap(buf) => buf.as_mut(),
                     _ => unreachable!(),
                 }
             }
-            Buffer::Stack(buf) => buf.as_mut_slice(),
+            Self::Stack(buf) => buf.as_mut_slice(),
         };
         buffer
     }

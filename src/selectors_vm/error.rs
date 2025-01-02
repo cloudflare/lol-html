@@ -94,7 +94,10 @@ impl From<SelectorParseError<'_>> for SelectorError {
                 }
                 // NOTE: there are currently no cases in the parser code
                 // that trigger this error.
-                SelectorParseErrorKind::UnexpectedIdent(_) => unreachable!(),
+                SelectorParseErrorKind::UnexpectedIdent(_) => {
+                    debug_assert!(false);
+                    Self::UnsupportedSyntax
+                },
                 SelectorParseErrorKind::ExpectedNamespace(_) => Self::NamespacedSelector,
                 SelectorParseErrorKind::ExplicitNamespaceUnexpectedToken(_) => {
                     Self::UnexpectedToken
@@ -106,7 +109,10 @@ impl From<SelectorParseError<'_>> for SelectorError {
                     Self::UnexpectedTokenInAttribute
                 }
                 SelectorParseErrorKind::ClassNeedsIdent(_) => Self::InvalidClassName,
-                SelectorParseErrorKind::InvalidState => panic!("invalid state"),
+                SelectorParseErrorKind::InvalidState => {
+                    debug_assert!(false, "invalid state");
+                    Self::UnsupportedSyntax
+                }
             },
         }
     }

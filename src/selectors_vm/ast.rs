@@ -128,10 +128,10 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                 Self::OnTagName(OnTagNameExpr::ExplicitAny)
             }
             Component::ExplicitNoNamespace => Self::OnTagName(OnTagNameExpr::Unmatchable),
-            Component::ID(id) => Self::OnAttributes(OnAttributesExpr::Id(id.0.to_owned())),
-            Component::Class(c) => Self::OnAttributes(OnAttributesExpr::Class(c.0.to_owned())),
+            Component::ID(id) => Self::OnAttributes(OnAttributesExpr::Id(id.0.clone())),
+            Component::Class(c) => Self::OnAttributes(OnAttributesExpr::Class(c.0.clone())),
             Component::AttributeInNoNamespaceExists { local_name, .. } => {
-                Self::OnAttributes(OnAttributesExpr::AttributeExists(local_name.0.to_owned()))
+                Self::OnAttributes(OnAttributesExpr::AttributeExists(local_name.0.clone()))
             }
             &Component::AttributeInNoNamespace {
                 ref local_name,
@@ -145,8 +145,8 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                 } else {
                     Self::OnAttributes(OnAttributesExpr::AttributeComparisonExpr(
                         AttributeComparisonExpr::new(
-                            local_name.0.to_owned(),
-                            value.0.to_owned(),
+                            local_name.0.clone(),
+                            value.0.clone(),
                             case_sensitivity,
                             operator,
                         ),
