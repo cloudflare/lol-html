@@ -3,7 +3,7 @@ use super::{HandlerTypes, RewritingError};
 use crate::html::{LocalName, Namespace};
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
-use crate::transform_stream::*;
+use crate::transform_stream::{DispatcherError, StartTagHandlingResult, TransformController};
 use hashbrown::HashSet;
 
 #[derive(Default)]
@@ -48,7 +48,7 @@ impl<H: HandlerTypes> HtmlRewriteController<'_, H> {
         Err(DispatcherError::InfoRequest(Box::new(
             move |this, aux_info| {
                 if let Some(ref mut vm) = this.selector_matching_vm {
-                    let mut match_handler = |m| this.handlers_dispatcher.start_matching(m);
+                    let mut match_handler = |m| this.handlers_dispatcher.start_matching(&m);
 
                     aux_info_req(vm, aux_info, &mut match_handler)
                         .map_err(RewritingError::MemoryLimitExceeded)?;
@@ -78,7 +78,7 @@ impl<H: HandlerTypes> TransformController for HtmlRewriteController<'_, H> {
     ) -> StartTagHandlingResult<Self> {
         match self.selector_matching_vm {
             Some(ref mut vm) => {
-                let mut match_handler = |m| self.handlers_dispatcher.start_matching(m);
+                let mut match_handler = |m| self.handlers_dispatcher.start_matching(&m);
 
                 match vm.exec_for_start_tag(local_name, ns, &mut match_handler) {
                     Ok(()) => Ok(self.get_capture_flags()),

@@ -24,7 +24,7 @@ pub struct StartTag<'i> {
 impl<'i> StartTag<'i> {
     #[inline]
     #[must_use]
-    pub(super) fn new_token(
+    pub(super) const fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         ns: Namespace,
@@ -117,6 +117,9 @@ impl<'i> StartTag<'i> {
         self.self_closing
     }
 
+    /// If false, the tag won't be seiralized with `/>`
+    ///
+    /// This doesn't affect content model
     pub(crate) fn set_self_closing_syntax(&mut self, has_slash: bool) {
         self.self_closing = has_slash;
     }

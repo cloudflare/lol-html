@@ -1,4 +1,4 @@
-use super::*;
+use super::{LexemeSink, Lexer, TagTokenOutline};
 use crate::parser::state_machine::StateMachineConditions;
 
 impl<S: LexemeSink> StateMachineConditions for Lexer<S> {

@@ -56,6 +56,7 @@ cfg_if! {
         }
 
         impl<'s> From<&'s str> for TextType {
+            #[allow(clippy::fallible_impl_from)]
             fn from(text_type: &'s str) -> Self {
                 match text_type {
                     "Data state" => Self::Data,

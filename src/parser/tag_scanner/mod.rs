@@ -134,12 +134,11 @@ impl<S: TagHintSink> TagScanner<S> {
     fn take_feedback_directive(&mut self) -> FeedbackDirective {
         self.pending_text_type_change
             .take()
-            .map(|text_type| {
+            .map_or(FeedbackDirective::Skip, |text_type| {
                 FeedbackDirective::ApplyUnhandledFeedback(TreeBuilderFeedback::SwitchTextType(
                     text_type,
                 ))
             })
-            .unwrap_or(FeedbackDirective::Skip)
     }
 }
 

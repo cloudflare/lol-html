@@ -1,4 +1,4 @@
-use super::*;
+use super::{TagHintSink, TagScanner};
 use crate::parser::state_machine::StateMachineConditions;
 
 impl<S: TagHintSink> StateMachineConditions for TagScanner<S> {

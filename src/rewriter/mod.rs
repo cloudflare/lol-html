@@ -5,7 +5,7 @@ mod rewrite_controller;
 pub(crate) mod settings;
 
 use self::handlers_dispatcher::ContentHandlersDispatcher;
-use self::rewrite_controller::*;
+use self::rewrite_controller::{ElementDescriptor, HtmlRewriteController};
 pub use self::settings::*;
 use crate::base::SharedEncoding;
 use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};

@@ -1,6 +1,6 @@
 [package]
 name = "lol_html"
-version = "2.1.0"
+version = "2.2.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com, ifaaan@gmail.com>"]
 license = "BSD-3-Clause"
 description = "Streaming HTML rewriter/parser with CSS selector-based API"
@@ -11,6 +11,7 @@ keywords = ["html", "css-selectors", "parser", "rewriter", "streaming"]
 readme = "README.md"
 include = ["/Cargo.toml", "/LICENSE", "/README.md", "/media", "/src"]
 edition = "2021"
+rust-version = "1.80"
 
 [lib]
 # Disable libtest to make sure criterion can parse the command line flags.
@@ -50,7 +51,7 @@ serde_derive = "1.0.19"
 serde_json = "1.0.65"
 static_assertions = "1.1.0"
 rand = "0.8.5"
-itertools = "0.13"
+itertools = "0.14"
 
 [lints.rust]
 keyword_idents = { level = "deny", priority = 1 }
