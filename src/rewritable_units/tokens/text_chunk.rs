@@ -1,4 +1,4 @@
-use super::{Mutations, Token};
+use super::Mutations;
 use crate::base::Bytes;
 use crate::errors::RewritingError;
 use crate::html::TextType;
@@ -72,20 +72,20 @@ pub struct TextChunk<'i> {
 impl<'i> TextChunk<'i> {
     #[inline]
     #[must_use]
-    pub(super) fn new_token(
+    pub(crate) fn new(
         text: &'i str,
         text_type: TextType,
         last_in_text_node: bool,
         encoding: &'static Encoding,
-    ) -> Token<'i> {
-        Token::TextChunk(TextChunk {
+    ) -> Self {
+        TextChunk {
             text: text.into(),
             text_type,
             last_in_text_node,
             encoding,
             mutations: Mutations::new(),
             user_data: Box::new(()),
-        })
+        }
     }
 
     /// Returns the textual content of the chunk.
@@ -381,14 +381,8 @@ mod tests {
 
     #[test]
     fn in_place_text_modifications() {
-        use super::super::Token;
-
         let encoding = Encoding::for_label_no_replacement(b"utf-8").unwrap();
-        let Token::TextChunk(mut chunk) =
-            TextChunk::new_token("original text", TextType::PlainText, true, encoding)
-        else {
-            unreachable!()
-        };
+        let mut chunk = TextChunk::new("original text", TextType::PlainText, true, encoding);
 
         assert_eq!(chunk.as_str(), "original text");
         chunk.set_str("hello".to_owned());
@@ -416,6 +410,7 @@ mod tests {
         macro_rules! skip_eof_chunk {
             ($c:ident) => {
                 if $c.last_in_text_node() {
+                    // This is not always true — a replacement char for an incomplete UTF-8 sequence could be flushed last
                     assert!($c.as_str().is_empty());
                     return;
                 }
@@ -506,6 +501,16 @@ mod tests {
                 },
                 "<before><foo & bar><after>"
             );
+        }
+
+        #[test]
+        fn last_flush_text_decoder() {
+            let rewritten = rewrite_text_chunk(b"<p>\xF0\xF0\x9F\xF0\x9F\x98</p>", UTF_8, |c| {
+                if c.last_in_text_node() {
+                    c.after(" last", ContentType::Text);
+                }
+            });
+            assert_eq!("<p>\u{fffd}\u{fffd}\u{fffd} last</p>", rewritten);
         }
     }
 }
