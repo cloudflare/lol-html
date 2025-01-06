@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.2.0
+
+ - Updated cssparser and selectors dependencies
+ - Adopted `cargo-c` for building the C API
+ - Added WASM/JS API
+ - An invalid `/>` syntax will be removed when content is added to an HTML element
+
 ## v2.1.0
 
 - Added streaming handlers.
