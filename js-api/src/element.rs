@@ -1,7 +1,32 @@
+use super::end_tag::EndTag;
 use super::*;
+use js_sys::Function as JsFunction;
 use lol_html::html_content::{Attribute as NativeAttribute, Element as NativeElement};
 use serde::Serialize;
 use serde_wasm_bindgen::to_value as to_js_value;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+#[error("JS handler error")]
+pub struct HandlerJsErrorWrap(pub JsValue);
+
+// SAFETY: The exposed js-api only supports single-threaded usage.
+unsafe impl Send for HandlerJsErrorWrap {}
+unsafe impl Sync for HandlerJsErrorWrap {}
+
+macro_rules! make_handler {
+    ($handler:ident, $JsArgType:ident, $typehint:ty) => {{
+        fn type_hint(h: $typehint) -> $typehint {
+            h
+        }
+        type_hint(Box::new(move |arg: &mut _| {
+            $JsArgType::with_native(arg, |js_value| $handler.call1(&JsValue::NULL, &js_value))
+                .map_err(|e| HandlerJsErrorWrap(e))?;
+
+            Ok(())
+        }))
+    }};
+}
 
 #[derive(Serialize)]
 pub struct Attribute {
@@ -111,5 +136,14 @@ impl Element {
     #[wasm_bindgen(js_name=removeAndKeepContent)]
     pub fn remove_and_keep_content(&mut self) -> Result<(), JsValue> {
         self.0.get_mut().map(|e| e.remove_and_keep_content())
+    }
+
+    #[wasm_bindgen(method, js_name=onEndTag)]
+    pub fn on_end_tag(&mut self, handler: JsFunction) -> JsResult<()> {
+        if let Some(handlers) = self.0.get_mut()?.end_tag_handlers() {
+            handlers.push(make_handler!(handler, EndTag, lol_html::EndTagHandler));
+        }
+
+        Ok(())
     }
 }
