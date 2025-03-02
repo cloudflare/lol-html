@@ -155,47 +155,6 @@ macro_rules! impl_mutations {
     };
 }
 
-macro_rules! impl_mutations_end_tag {
-    ($Ty:ident) => {
-        #[wasm_bindgen]
-        impl $Ty {
-            pub fn before(
-                &mut self,
-                content: &str,
-                content_type: Option<ContentTypeOptions>,
-            ) -> Result<(), JsValue> {
-                self.0
-                    .get_mut()
-                    .map(|o| o.before(content, content_type.into_native()))
-            }
-
-            pub fn after(
-                &mut self,
-                content: &str,
-                content_type: Option<ContentTypeOptions>,
-            ) -> Result<(), JsValue> {
-                self.0
-                    .get_mut()
-                    .map(|o| o.after(content, content_type.into_native()))
-            }
-
-            pub fn replace(
-                &mut self,
-                content: &str,
-                content_type: Option<ContentTypeOptions>,
-            ) -> Result<(), JsValue> {
-                self.0
-                    .get_mut()
-                    .map(|o| o.replace(content, content_type.into_native()))
-            }
-
-            pub fn remove(&mut self) -> Result<(), JsValue> {
-                self.0.get_mut().map(|o| o.remove())
-            }
-        }
-    };
-}
-
 macro_rules! impl_from_native {
     ($Ty:ty => $JsTy:path) => {
         impl $JsTy {

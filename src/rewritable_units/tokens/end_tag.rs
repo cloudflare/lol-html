@@ -141,6 +141,13 @@ impl<'i> EndTag<'i> {
         self.mutations.mutate().remove();
     }
 
+    /// Returns `true` if the end tag has been replaced or removed.
+    #[inline]
+    #[must_use]
+    pub fn removed(&self) -> bool {
+        self.mutations.removed()
+    }
+
     #[inline]
     fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if let Some(raw) = &self.raw {
