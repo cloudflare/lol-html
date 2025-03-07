@@ -35,7 +35,8 @@ encoding_rs = "0.8.13"
 memchr = "2.1.2"
 hashbrown = "0.15.0"
 mime = "0.3.16"
-selectors = "0.24"
+# HACK: Using commit between 0.24 and 0.25, allows us to get rid of phf 0.8.
+selectors = {git = "https://github.com/servo/stylo.git", rev = "767bc8bc11424d107cd58c7c2d3a1695e387e4ea"}
 thiserror = "2.0"
 
 [dev-dependencies]
