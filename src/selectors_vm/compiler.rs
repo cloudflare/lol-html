@@ -617,16 +617,6 @@ mod tests {
             );
 
             assert_non_attr_expr_matches_and_negation_reverses_match(
-                r#"[foo*=""]"#,
-                encoding,
-                &[
-                    ("<div>", false),
-                    ("<span>", false),
-                    ("<anything-else>", false),
-                ],
-            );
-
-            assert_non_attr_expr_matches_and_negation_reverses_match(
                 "div",
                 encoding,
                 &[
@@ -725,6 +715,16 @@ mod tests {
                     ("<div foo='BaRα'>", true),
                     ("<div foo='42'>", false),
                     ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo*=""]"#,
+                encoding,
+                &[
+                    ("<div>", false),
+                    ("<span>", false),
+                    ("<anything-else>", false),
                 ],
             );
 

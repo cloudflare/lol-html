@@ -352,13 +352,6 @@ mod tests {
                 },
             ),
             (
-                r#"[foo*=""]"#,
-                Expr {
-                    simple_expr: OnTagNameExpr::Unmatchable,
-                    negation: false,
-                },
-            ),
-            (
                 ":not(div)",
                 Expr {
                     simple_expr: OnTagNameExpr::LocalName("div".into()),
@@ -417,6 +410,20 @@ mod tests {
                             value: "bar".into(),
                             case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
                             operator: AttrSelectorOperator::Equal,
+                        },
+                    ),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[foo*=""]"#,
+                Expr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "".into(),
+                            case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                            operator: AttrSelectorOperator::Substring,
                         },
                     ),
                     negation: false,
