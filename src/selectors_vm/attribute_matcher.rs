@@ -15,18 +15,17 @@ const fn is_attr_whitespace(b: u8) -> bool {
 }
 
 #[inline]
-pub fn to_unconditional(
+fn to_unconditional(
     parsed: ParsedCaseSensitivity,
     is_html_element_in_html_document: bool,
 ) -> CaseSensitivity {
     match parsed {
-        ParsedCaseSensitivity::AsciiCaseInsensitiveIfInHtmlElementInHtmlDocument
-            if is_html_element_in_html_document =>
-        {
-            CaseSensitivity::AsciiCaseInsensitive
-        }
         ParsedCaseSensitivity::AsciiCaseInsensitiveIfInHtmlElementInHtmlDocument => {
-            CaseSensitivity::CaseSensitive
+            if is_html_element_in_html_document {
+                CaseSensitivity::AsciiCaseInsensitive
+            } else {
+                CaseSensitivity::CaseSensitive
+            }
         }
         ParsedCaseSensitivity::CaseSensitive | ParsedCaseSensitivity::ExplicitCaseSensitive => {
             CaseSensitivity::CaseSensitive
