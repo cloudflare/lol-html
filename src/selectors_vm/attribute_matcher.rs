@@ -142,7 +142,8 @@ impl<'i> AttributeMatcher<'i> {
 
             let prefix_len = operand.value.len();
 
-            actual_value.len() >= prefix_len
+            !actual_value.is_empty()
+                && actual_value.len() >= prefix_len
                 && case_sensitivity.eq(&actual_value[..prefix_len], &operand.value)
         })
     }
@@ -171,7 +172,8 @@ impl<'i> AttributeMatcher<'i> {
             let suffix_len = operand.value.len();
             let value_len = actual_value.len();
 
-            value_len >= suffix_len
+            !actual_value.is_empty()
+                && value_len >= suffix_len
                 && case_sensitivity.eq(&actual_value[value_len - suffix_len..], &operand.value)
         })
     }
