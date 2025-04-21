@@ -192,7 +192,7 @@ checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "lol-html"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "encoding_rs",
  "js-sys",
@@ -205,7 +205,7 @@ dependencies = [
 
 [[package]]
 name = "lol_html"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "bitflags 2.6.0",
  "cfg-if",
