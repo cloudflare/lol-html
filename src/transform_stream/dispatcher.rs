@@ -125,7 +125,7 @@ where
 
         let chunk = lexeme.input().slice(chunk_range);
 
-        if self.emission_enabled && chunk.len() > 0 {
+        if self.emission_enabled && !chunk.is_empty() {
             self.output_sink.handle_chunk(&chunk);
         }
 
