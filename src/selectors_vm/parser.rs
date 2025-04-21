@@ -30,7 +30,7 @@ impl CssString {
 impl std::ops::Deref for CssString {
     type Target = str;
     fn deref(&self) -> &str {
-        &*self.0
+        &self.0
     }
 }
 
