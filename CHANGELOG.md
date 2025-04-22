@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.3.0
+
+ - Added `element.onEndTag` to JS bindings.
+ - Refactored TextDecoder and token construction to avoid heap allocations.
+ - Added fast paths for UTF-8 rewrites.
+
 ## v2.2.0
 
  - Updated cssparser and selectors dependencies
