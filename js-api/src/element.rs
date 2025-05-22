@@ -138,7 +138,7 @@ impl Element {
         self.0.get_mut().map(|e| e.remove_and_keep_content())
     }
 
-    #[wasm_bindgen(method, js_name=onEndTag)]
+    #[wasm_bindgen(js_name=onEndTag)]
     pub fn on_end_tag(&mut self, handler: JsFunction) -> JsResult<()> {
         if let Some(handlers) = self.0.get_mut()?.end_tag_handlers() {
             handlers.push(make_handler!(handler, EndTag, lol_html::EndTagHandler));

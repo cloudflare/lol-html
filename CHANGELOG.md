@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.4.0
+
+ - Upgraded `selectors` and `cssparser`
+
 ## v2.3.0
 
  - Added `element.onEndTag` to JS bindings.
