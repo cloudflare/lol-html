@@ -11,7 +11,7 @@ cfg_if! {
                 $({
                     use std::char;
 
-                    print!(": {:?}", $ch.map(|ch| char::from_u32(ch as u32).unwrap_or('\u{fffd}') ));
+                    print!(": {:?}", $ch.map(|ch| char::from_u32(ch.into()).unwrap_or('\u{fffd}') ));
                 })*
 
                 println!();

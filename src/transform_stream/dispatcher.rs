@@ -247,7 +247,7 @@ where
                         )
                     });
             }
-        };
+        }
 
         self.delegate.remaining_content_start = lexeme_consumed_end;
 

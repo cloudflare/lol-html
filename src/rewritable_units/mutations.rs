@@ -143,7 +143,7 @@ impl DynamicString {
                         .map_err(std::sync::PoisonError::into_inner);
                     h.write_all(sink)?;
                 }
-            };
+            }
         }
         Ok(())
     }

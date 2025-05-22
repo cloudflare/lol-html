@@ -34,6 +34,7 @@ impl OutputSink for JsOutputSink {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 enum RewriterState {
     Before {
         output_sink: JsOutputSink,
@@ -104,7 +105,7 @@ impl HTMLRewriter {
         }
     }
 
-    #[wasm_bindgen(method, js_name=onDocument)]
+    #[wasm_bindgen(js_name=onDocument)]
     pub fn on_document(&mut self, handlers: DocumentContentHandlers) -> JsResult<()> {
         match self.0 {
             RewriterState::Before {

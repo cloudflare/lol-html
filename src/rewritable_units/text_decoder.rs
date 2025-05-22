@@ -50,7 +50,7 @@ impl TextDecoder {
                 debug_assert!(self.pending_text_streaming_decoder.is_none());
                 return Ok(());
             }
-        };
+        }
 
         let decoder = self
             .pending_text_streaming_decoder
