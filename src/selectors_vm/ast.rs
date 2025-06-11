@@ -113,7 +113,6 @@ enum Condition {
 }
 
 impl From<&Component<SelectorImplDescriptor>> for Condition {
-    #[inline]
     fn from(component: &Component<SelectorImplDescriptor>) -> Self {
         match component {
             Component::LocalName(n) => {
@@ -151,8 +150,8 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
             // pseudo class-related. Ideally none of them should appear in
             // the parsed selector as we should bail earlier in the parser.
             // Otherwise, we'll have AST in invalid state in case of error.
-            _ => unreachable!(
-                "Unsupported selector components should be filtered out by the parser."
+            bad_selector => unreachable!(
+                "Unsupported selector components should be filtered out by the parser: {bad_selector:?}"
             ),
         }
     }
@@ -283,13 +282,12 @@ where
 
             for component in selector_item.iter_raw_parse_order_from(0) {
                 match component {
-                    Component::Combinator(c) => match c {
-                        Combinator::Child => host_and_switch_branch_vec!(children),
-                        Combinator::Descendant => host_and_switch_branch_vec!(descendants),
-                        _ => unreachable!(
-                            "Unsupported selector components should be filtered out by the parser."
-                        ),
-                    },
+                    Component::Combinator(Combinator::Child) => {
+                        host_and_switch_branch_vec!(children)
+                    }
+                    Component::Combinator(Combinator::Descendant) => {
+                        host_and_switch_branch_vec!(descendants)
+                    }
                     Component::Negation(ss) => {
                         ss.slice()
                             .iter()
