@@ -132,7 +132,7 @@ impl SelectorsParser {
                 Combinator::NextSibling => Err(SelectorError::UnsupportedCombinator('+')),
                 Combinator::LaterSibling => Err(SelectorError::UnsupportedCombinator('~')),
                 Combinator::PseudoElement | Combinator::SlotAssignment => {
-                    unreachable!("Pseudo element combinators should be filtered out at this point")
+                    Err(SelectorError::UnsupportedPseudoClassOrElement)
                 }
             },
 
