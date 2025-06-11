@@ -818,6 +818,7 @@ mod tests {
         assert_err(":not()", SelectorError::EmptySelector);
         assert_err("div + span", SelectorError::UnsupportedCombinator('+'));
         assert_err("div ~ span", SelectorError::UnsupportedCombinator('~'));
+        assert_err(":nth-child(n of a)", SelectorError::UnexpectedToken);
     }
 
     #[test]

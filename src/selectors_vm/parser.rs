@@ -147,10 +147,6 @@ impl SelectorsParser {
             | Component::AttributeInNoNamespace { .. } => Ok(()),
 
             Component::Nth(data) => Self::validate_nth(data),
-            Component::NthOf(data) => {
-                Self::validate_selectors(data.selectors())?;
-                Self::validate_nth(data.nth_data())
-            }
 
             Component::Negation(selectors) => selectors
                 .slice()
@@ -168,6 +164,10 @@ impl SelectorsParser {
             | Component::PseudoElement(_)
             | Component::NonTSPseudoClass(_)
             | Component::Slotted(_) => Err(SelectorError::UnsupportedPseudoClassOrElement),
+
+            // This is for `:nth-child(n of .selector)`,
+            // which is subtly different from `.selector:nth-of-type(n)`
+            Component::NthOf(_) => Err(SelectorError::UnsupportedPseudoClassOrElement),
 
             Component::DefaultNamespace(_)
             | Component::Namespace(_, _)
@@ -225,6 +225,10 @@ impl SelectorsParser {
 impl<'i> Parser<'i> for SelectorsParser {
     type Impl = SelectorImplDescriptor;
     type Error = SelectorParseErrorKind<'i>;
+
+    fn parse_nth_child_of(&self) -> bool {
+        false
+    }
 }
 
 /// Parsed CSS selector.
