@@ -67,34 +67,31 @@ impl ToToken for NonTagContentLexeme<'_> {
         capture_flags: &mut TokenCaptureFlags,
         encoding: &'static Encoding,
     ) -> ToTokenResult<'_> {
-        match *self.token_outline() {
+        match self.token_outline() {
             Some(NonTagContentTokenOutline::Text(text_type))
                 if capture_flags.contains(TokenCaptureFlags::TEXT) =>
             {
-                ToTokenResult::Text(text_type)
+                ToTokenResult::Text(*text_type)
             }
 
             Some(NonTagContentTokenOutline::Comment(text))
                 if capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
             {
                 ToTokenResult::Token(Comment::new_token(
-                    self.part(text),
+                    self.part(*text),
                     self.spanned().into(),
                     encoding,
                 ))
             }
 
-            Some(NonTagContentTokenOutline::Doctype {
-                name,
-                public_id,
-                system_id,
-                force_quirks,
-            }) if capture_flags.contains(TokenCaptureFlags::DOCTYPES) => {
+            Some(NonTagContentTokenOutline::Doctype(doctype))
+                if capture_flags.contains(TokenCaptureFlags::DOCTYPES) =>
+            {
                 ToTokenResult::Token(Doctype::new_token(
-                    self.opt_part(name),
-                    self.opt_part(public_id),
-                    self.opt_part(system_id),
-                    force_quirks,
+                    self.opt_part(doctype.name),
+                    self.opt_part(doctype.public_id),
+                    self.opt_part(doctype.system_id),
+                    doctype.force_quirks,
                     false, // removed
                     self.spanned(),
                     encoding,
