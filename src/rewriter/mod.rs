@@ -85,6 +85,16 @@ pub enum RewritingError {
     ContentHandlerError(Box<dyn StdError + Send + Sync + 'static>),
 }
 
+impl RewritingError {
+    #[cold]
+    #[inline(never)]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub(crate) fn internal(error: &'static str) -> Self {
+        debug_assert!(false, "{error}");
+        Self::ContentHandlerError(error.into())
+    }
+}
+
 /// A streaming HTML rewriter.
 ///
 /// # Example

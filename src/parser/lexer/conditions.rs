@@ -8,7 +8,10 @@ impl<S: LexemeSink> StateMachineConditions for Lexer<S> {
             Some(TagTokenOutline::EndTag { name_hash, .. }) => {
                 self.last_start_tag_name_hash == name_hash
             }
-            _ => unreachable!("End tag should exist at this point"),
+            _ => {
+                debug_assert!(false, "End tag should exist at this point");
+                false
+            }
         }
     }
 
