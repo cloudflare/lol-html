@@ -222,12 +222,12 @@ where
     ) -> Instruction<P> {
         let mut exprs = ExprSet::default();
 
-        on_tag_name_exprs
-            .iter()
-            .for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
-        on_attr_exprs
-            .iter()
-            .for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
+        for c in on_tag_name_exprs {
+            c.compile(self.encoding, &mut exprs, enable_nth_of_type);
+        }
+        for c in on_attr_exprs {
+            c.compile(self.encoding, &mut exprs, enable_nth_of_type);
+        }
 
         let ExprSet {
             local_name_exprs,
@@ -294,7 +294,11 @@ where
         addr_range
     }
 
+    // generic methods tend to be inlined, but this one is called from a couple of places,
+    // and has cheap-to-pass non-constants args, so it won't benefit from being merged into its callers.
+    // It's better to outline it, and let its callers be inlined.
     #[must_use]
+    #[inline(never)]
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
         let mut enable_nth_of_type = false;
         self.instructions = iter::repeat_with(|| None)
