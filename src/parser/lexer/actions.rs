@@ -270,7 +270,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             Some(StartTag { ref mut name, .. } | EndTag { ref mut name, .. }) => {
                 *name = get_token_part_range!(self);
             }
-            _ => unreachable!("Tag should exist at this point"),
+            _ => {
+                return Err(ActionError::RewritingError(RewritingError::internal(
+                    "Tag should exist at this point",
+                )))
+            }
         }
 
         Ok(())
@@ -288,7 +292,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
                         ref mut name_hash, ..
                     },
                 ) => name_hash.update(ch),
-                _ => unreachable!("Tag should exist at this point"),
+                _ => debug_assert!(false, "Tag should exist at this point"),
             }
         }
     }

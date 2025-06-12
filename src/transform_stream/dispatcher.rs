@@ -276,7 +276,9 @@ where
                 } => {
                     get_flags_from_aux_info_res!(aux_info_req, &attributes, self_closing)
                 }
-                _ => unreachable!("Tag should be a start tag at this point"),
+                _ => Err(RewritingError::internal(
+                    "Tag should be a start tag at this point",
+                )),
             },
 
             // NOTE: tag hint hasn't been produced for the tag, because
@@ -396,7 +398,7 @@ where
             Some(NonTagContentTokenOutline::Text(_)) => {}
             // when it's None, it still needs a flush for CDATA
             _ => self.flush_pending_captured_text()?,
-        }
+        };
         self.try_produce_token_from_lexeme(lexeme)
     }
 }
