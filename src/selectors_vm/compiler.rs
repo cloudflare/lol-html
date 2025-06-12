@@ -4,13 +4,15 @@ use super::{
     Ast, AstNode, AttributeComparisonExpr, Expr, OnAttributesExpr, OnTagNameExpr, Predicate,
     SelectorState,
 };
-use crate::base::{Bytes, HasReplacementsError};
+use crate::base::{BytesCow, HasReplacementsError};
 use crate::html::LocalName;
 use encoding_rs::Encoding;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter;
+
+type BytesOwned = Box<[u8]>;
 
 /// An expression using only the tag name of an element.
 pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState<'_>, &LocalName<'_>) -> bool + Send>;
@@ -25,8 +27,8 @@ struct ExprSet {
 }
 
 pub(crate) struct AttrExprOperands {
-    pub name: Bytes<'static>,
-    pub value: Bytes<'static>,
+    pub name: BytesOwned,
+    pub value: BytesOwned,
     pub case_sensitivity: ParsedCaseSensitivity,
 }
 
@@ -111,15 +113,15 @@ impl Expr<OnAttributesExpr> {
 fn compile_literal(
     encoding: &'static Encoding,
     lit: &str,
-) -> Result<Bytes<'static>, HasReplacementsError> {
-    Bytes::from_str_without_replacements(lit, encoding).map(Bytes::into_owned)
+) -> Result<BytesOwned, HasReplacementsError> {
+    Ok(BytesCow::from_str_without_replacements(lit, encoding)?.into())
 }
 
 #[inline]
 fn compile_literal_lowercase(
     encoding: &'static Encoding,
     lit: &str,
-) -> Result<Bytes<'static>, HasReplacementsError> {
+) -> Result<BytesOwned, HasReplacementsError> {
     compile_literal(encoding, &lit.to_ascii_lowercase())
 }
 
@@ -128,7 +130,7 @@ fn compile_operands(
     encoding: &'static Encoding,
     name: &str,
     value: &str,
-) -> Result<(Bytes<'static>, Bytes<'static>), HasReplacementsError> {
+) -> Result<(BytesOwned, BytesOwned), HasReplacementsError> {
     Ok((
         compile_literal_lowercase(encoding, name)?,
         compile_literal(encoding, value)?,
@@ -393,7 +395,7 @@ mod tests {
             Token::StartTag(t) => {
                 let (input, attrs) = t.raw_attributes();
                 let tag_name = t.name();
-                let attr_matcher = AttributeMatcher::new(input, attrs, Namespace::Html);
+                let attr_matcher = AttributeMatcher::new(*input, attrs, Namespace::Html);
                 let local_name =
                     LocalName::from_str_without_replacements(&tag_name, encoding).unwrap();
 

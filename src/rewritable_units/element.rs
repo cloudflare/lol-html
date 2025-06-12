@@ -3,10 +3,11 @@ use super::{
     Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag, StreamingHandler,
     StringChunk,
 };
-use crate::base::Bytes;
+use crate::base::BytesCow;
 use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
 use encoding_rs::Encoding;
 use std::any::Any;
+use std::borrow::Cow;
 use std::fmt::{self, Debug};
 use thiserror::Error;
 
@@ -40,7 +41,7 @@ pub enum TagNameError {
 pub struct Element<'r, 't, H: HandlerTypes = LocalHandlerTypes> {
     start_tag: &'r mut StartTag<'t>,
     end_tag_mutations: Option<Mutations>,
-    modified_end_tag_name: Option<Bytes<'static>>,
+    modified_end_tag_name: Option<Box<[u8]>>,
     end_tag_handlers: Vec<H::EndTagHandler<'static>>,
     can_have_content: bool,
     should_remove_content: bool,
@@ -66,7 +67,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         }
     }
 
-    fn tag_name_bytes_from_str(&self, name: &str) -> Result<Bytes<'static>, TagNameError> {
+    fn tag_name_bytes_from_str(&self, name: &str) -> Result<BytesCow<'static>, TagNameError> {
         match name.as_bytes().first() {
             Some(ch) if !ch.is_ascii_alphabetic() => Err(TagNameError::InvalidFirstCharacter),
             Some(_) => {
@@ -81,9 +82,9 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
                     // encoding then encoding_rs replaces it with a numeric
                     // character reference. Character references are not
                     // supported in tag names, so we need to bail.
-                    Bytes::from_str_without_replacements(name, self.encoding)
+                    BytesCow::from_str_without_replacements(name, self.encoding)
                         .map_err(|_| TagNameError::UnencodableCharacter)
-                        .map(Bytes::into_owned)
+                        .map(BytesCow::into_owned)
                 }
             }
             None => Err(TagNameError::Empty),
@@ -130,10 +131,10 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         let name = self.tag_name_bytes_from_str(name)?;
 
         if self.can_have_content {
-            self.modified_end_tag_name = Some(name.clone());
+            self.modified_end_tag_name = Some((*name).into());
         }
 
-        self.start_tag.set_name(name);
+        self.start_tag.set_name_raw(name);
 
         Ok(())
     }
@@ -699,7 +700,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
                 0,
                 H::new_end_tag_handler(|end_tag: &mut EndTag<'_>| {
                     if let Some(name) = modified_end_tag_name {
-                        end_tag.set_name_raw(name);
+                        end_tag.set_name_raw(Cow::from(name.into_vec()).into());
                     }
 
                     if let Some(mutations) = end_tag_mutations {

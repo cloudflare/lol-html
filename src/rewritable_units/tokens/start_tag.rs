@@ -1,18 +1,19 @@
 use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
 use crate::html::Namespace;
 use crate::html_content::{ContentType, StreamingHandler};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
+use std::borrow::Cow;
 use std::fmt::{self, Debug};
 
 /// An HTML start tag rewritable unit.
 ///
 /// Exposes API for examination and modification of a parsed HTML start tag.
 pub struct StartTag<'i> {
-    name: Bytes<'i>,
+    name: BytesCow<'i>,
     attributes: Attributes<'i>,
     ns: Namespace,
     self_closing: bool,
@@ -24,7 +25,7 @@ pub struct StartTag<'i> {
 impl<'i> StartTag<'i> {
     #[inline]
     #[must_use]
-    pub(super) const fn new_token(
+    pub(super) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         ns: Namespace,
@@ -33,7 +34,7 @@ impl<'i> StartTag<'i> {
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::StartTag(StartTag {
-            name,
+            name: name.into(),
             attributes,
             ns,
             self_closing,
@@ -63,9 +64,14 @@ impl<'i> StartTag<'i> {
 
     /// Sets the name of the tag.
     #[inline]
-    pub fn set_name(&mut self, name: Bytes<'static>) {
+    pub(crate) fn set_name_raw(&mut self, name: BytesCow<'static>) {
         self.name = name;
         self.raw = None;
+    }
+
+    /// Sets the name of the start tag only. To rename the element, prefer [`Element::set_tag_name()`][crate::html_content::Element::set_tag_name].
+    pub fn set_name(&mut self, name: BytesCow<'static>) {
+        self.set_name_raw(name);
     }
 
     /// Returns the [namespace URI] of the tag's element.

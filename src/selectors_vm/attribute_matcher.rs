@@ -6,8 +6,8 @@ use memchr::{memchr, memchr2};
 use selectors::attr::{CaseSensitivity, ParsedCaseSensitivity};
 use std::cell::OnceCell;
 
-static ID_ATTR: Bytes<'static> = Bytes::from_static("id");
-static CLASS_ATTR: Bytes<'static> = Bytes::from_static("class");
+const ID_ATTR: &[u8] = b"id";
+const CLASS_ATTR: &[u8] = b"class";
 
 #[inline]
 const fn is_attr_whitespace(b: u8) -> bool {
@@ -34,10 +34,10 @@ fn to_unconditional(
     }
 }
 
-type MemoizedAttrValue<'i> = OnceCell<Option<Bytes<'i>>>;
+type MemoizedAttrValue<'i> = OnceCell<Option<&'i [u8]>>;
 
 pub(crate) struct AttributeMatcher<'i> {
-    input: &'i Bytes<'i>,
+    input: Bytes<'i>,
     attributes: &'i AttributeBuffer,
     id: MemoizedAttrValue<'i>,
     class: MemoizedAttrValue<'i>,
@@ -47,7 +47,7 @@ pub(crate) struct AttributeMatcher<'i> {
 impl<'i> AttributeMatcher<'i> {
     #[inline]
     #[must_use]
-    pub fn new(input: &'i Bytes<'i>, attributes: &'i AttributeBuffer, ns: Namespace) -> Self {
+    pub fn new(input: Bytes<'i>, attributes: &'i AttributeBuffer, ns: Namespace) -> Self {
         AttributeMatcher {
             input,
             attributes,
@@ -58,10 +58,10 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    fn find(&self, lowercased_name: &Bytes<'_>) -> Option<AttributeOutline> {
+    fn find(&self, lowercased_name: &[u8]) -> Option<AttributeOutline> {
         self.attributes
             .iter()
-            .find(|a| {
+            .find(|&a| {
                 if lowercased_name.len() != a.name.end - a.name.start {
                     return false;
                 }
@@ -80,39 +80,39 @@ impl<'i> AttributeMatcher<'i> {
     }
 
     #[inline]
-    fn get_value(&self, lowercased_name: &Bytes<'_>) -> Option<Bytes<'i>> {
+    fn get_value(&self, lowercased_name: &[u8]) -> Option<&'i [u8]> {
         self.find(lowercased_name)
-            .map(|a| self.input.slice(a.value))
+            .map(|a| self.input.slice(a.value).as_slice())
     }
 
     #[inline]
     #[must_use]
-    pub fn has_attribute(&self, lowercased_name: &Bytes<'_>) -> bool {
+    pub fn has_attribute(&self, lowercased_name: &[u8]) -> bool {
         self.find(lowercased_name).is_some()
     }
 
     #[inline]
     #[must_use]
-    pub fn has_id(&self, id: &Bytes<'_>) -> bool {
-        match self.id.get_or_init(|| self.get_value(&ID_ATTR)) {
-            Some(actual_id) => actual_id == id,
+    pub fn has_id(&self, id: &[u8]) -> bool {
+        match self.id.get_or_init(|| self.get_value(ID_ATTR)) {
+            Some(actual_id) => *actual_id == id,
             None => false,
         }
     }
 
     #[inline]
     #[must_use]
-    pub fn has_class(&self, class_name: &Bytes<'_>) -> bool {
-        match self.class.get_or_init(|| self.get_value(&CLASS_ATTR)) {
+    pub fn has_class(&self, class_name: &[u8]) -> bool {
+        match self.class.get_or_init(|| self.get_value(CLASS_ATTR)) {
             Some(class) => class
                 .split(|&b| is_attr_whitespace(b))
-                .any(|actual_class_name| actual_class_name == &**class_name),
+                .any(|actual_class_name| actual_class_name == class_name),
             None => false,
         }
     }
 
     #[inline]
-    fn value_matches(&self, name: &Bytes<'_>, matcher: impl Fn(Bytes<'_>) -> bool) -> bool {
+    fn value_matches(&self, name: &[u8], matcher: impl Fn(&[u8]) -> bool) -> bool {
         self.get_value(name).is_some_and(matcher)
     }
 
@@ -120,7 +120,7 @@ impl<'i> AttributeMatcher<'i> {
     pub fn attr_eq(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             to_unconditional(operand.case_sensitivity, self.is_html_element)
-                .eq(&actual_value, &operand.value)
+                .eq(actual_value, &operand.value)
         })
     }
 
@@ -153,7 +153,7 @@ impl<'i> AttributeMatcher<'i> {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
-            if case_sensitivity.eq(&actual_value, &operand.value) {
+            if case_sensitivity.eq(actual_value, &operand.value) {
                 return true;
             }
 
@@ -197,7 +197,7 @@ impl<'i> AttributeMatcher<'i> {
                 }
             };
 
-            let mut haystack = &*actual_value;
+            let mut haystack = actual_value;
 
             loop {
                 match first_byte_searcher(haystack) {

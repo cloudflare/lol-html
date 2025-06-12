@@ -1,5 +1,5 @@
 use super::{Mutations, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
 use crate::html_content::StreamingHandler;
 use crate::rewritable_units::StringChunk;
@@ -26,7 +26,7 @@ pub enum CommentTextError {
 ///
 /// Exposes API for examination and modification of a parsed HTML comment.
 pub struct Comment<'i> {
-    text: Bytes<'i>,
+    text: BytesCow<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
     mutations: Mutations,
@@ -42,7 +42,7 @@ impl<'i> Comment<'i> {
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::Comment(Comment {
-            text,
+            text: text.into(),
             raw: Some(raw),
             encoding,
             mutations: Mutations::new(),
@@ -67,7 +67,7 @@ impl<'i> Comment<'i> {
             // encoding then encoding_rs replaces it with a numeric
             // character reference. Character references are not
             // supported in comments, so we need to bail.
-            match Bytes::from_str_without_replacements(text, self.encoding) {
+            match BytesCow::from_str_without_replacements(text, self.encoding) {
                 Ok(text) => {
                     self.text = text.into_owned();
                     self.raw = None;
