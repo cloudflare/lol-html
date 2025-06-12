@@ -15,6 +15,7 @@ pub(crate) struct Lexeme<'i, T> {
 }
 
 pub type TagLexeme<'i> = Lexeme<'i, TagTokenOutline>;
+/// The `NonTagContentTokenOutline` is `None` for CDATA markup, which is emitted, but not via tokens
 pub type NonTagContentLexeme<'i> = Lexeme<'i, Option<NonTagContentTokenOutline>>;
 
 impl<'i, T> Lexeme<'i, T> {

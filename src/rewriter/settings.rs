@@ -13,8 +13,14 @@ pub trait HandlerTypes: Sized {
     /// Handler type for [`Doctype`].
     type DoctypeHandler<'h>: FnMut(&mut Doctype<'_>) -> HandlerResult + 'h;
     /// Handler type for [`Comment`].
+    ///
+    /// The entire content of the comment will be buffered.
     type CommentHandler<'h>: FnMut(&mut Comment<'_>) -> HandlerResult + 'h;
-    /// Handler type for [`TextChunk`].
+    /// Handler type for [`TextChunk`] fragments. Beware: this is tricky to use.
+    ///
+    /// The text chunks are **not** text DOM nodes. They are fragments of text nodes, split at arbitrary points.
+    ///
+    /// See [`TextChunk`] documentation for more info. See also [`TextChunk::last_in_text_node()`].
     type TextHandler<'h>: FnMut(&mut TextChunk<'_>) -> HandlerResult + 'h;
     /// Handler type for [`Element`].
     type ElementHandler<'h>: FnMut(&mut Element<'_, '_, Self>) -> HandlerResult + 'h;
@@ -246,11 +252,11 @@ impl<'h, F: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>
 
 /// Specifies element content handlers associated with a selector.
 pub struct ElementContentHandlers<'h, H: HandlerTypes = LocalHandlerTypes> {
-    /// Element handler. See [`HandlerTypes::ElementHandler`].
+    /// Element handler. See [`element!`](crate::element) and [`HandlerTypes::ElementHandler`].
     pub element: Option<H::ElementHandler<'h>>,
-    /// Comment handler. See [`HandlerTypes::CommentHandler`].
+    /// Comment handler. See [`comments!`](crate::comments) and [`HandlerTypes::CommentHandler`].
     pub comments: Option<H::CommentHandler<'h>>,
-    /// Text handler. See [`HandlerTypes::TextHandler`].
+    /// Text handler that receives fragments of text nodes. See [`TextChunk`], [`text!`](crate::text), and [`HandlerTypes::TextHandler`].
     pub text: Option<H::TextHandler<'h>>,
 }
 
@@ -309,11 +315,11 @@ impl<'h, H: HandlerTypes> ElementContentHandlers<'h, H> {
 /// </html>
 /// ```
 pub struct DocumentContentHandlers<'h, H: HandlerTypes = LocalHandlerTypes> {
-    /// Doctype handler. See [`HandlerTypes::DoctypeHandler`].
+    /// Doctype handler. See [`doctype!`](crate::doctype) and [`HandlerTypes::DoctypeHandler`].
     pub doctype: Option<H::DoctypeHandler<'h>>,
-    /// Comment handler. See [`HandlerTypes::CommentHandler`].
+    /// Comment handler. See [`doc_comments!`](crate::doc_comments) and [`HandlerTypes::CommentHandler`].
     pub comments: Option<H::CommentHandler<'h>>,
-    /// Text handler. See [`HandlerTypes::TextHandler`].
+    /// Text handler that receives fragments of text nodes. See [`TextChunk`], [`doc_text!`](crate::doc_text), and [`HandlerTypes::TextHandler`].
     pub text: Option<H::TextHandler<'h>>,
     /// End handler. See [`HandlerTypes::EndHandler`].
     pub end: Option<H::EndHandler<'h>>,
@@ -381,7 +387,7 @@ macro_rules! __element_content_handler {
     };
 }
 
-/// A convenience macro to construct a rewriting handler for elements that can be matched by the
+/// A convenience macro to construct a [rewriting handler](ElementContentHandlers) for elements that can be matched by the
 /// specified CSS selector.
 ///
 /// # Example
@@ -421,8 +427,10 @@ macro_rules! element {
     }};
 }
 
-/// A convenience macro to construct a rewriting handler for text chunks in the inner content of an
-/// element that can be matched by the specified CSS selector.
+/// A convenience macro to construct a [rewriting handler](ElementContentHandlers) for fragments of text in the inner content of an
+/// element that can be matched by the specified CSS selector. Beware: this is tricky to use.
+///
+/// The text chunks may split the text nodes into smaller fragments. See [`TextChunk`] for more info.
 ///
 /// # Example
 /// ```
@@ -463,7 +471,7 @@ macro_rules! text {
     }};
 }
 
-/// A convenience macro to construct a rewriting handler for HTML comments in the inner content of
+/// A convenience macro to construct a [rewriting handler](ElementContentHandlers) for HTML comments in the inner content of
 /// an element that can be matched by the specified CSS selector.
 ///
 /// # Example
@@ -503,7 +511,7 @@ macro_rules! comments {
     }};
 }
 
-/// A convenience macro to construct a `StreamingHandler` from a closure.
+/// A convenience macro to construct a [`StreamingHandler`](crate::html_content::StreamingHandler) from a closure.
 ///
 /// For use with [`Element::streaming_replace`], etc.
 ///
@@ -555,7 +563,7 @@ macro_rules! __document_content_handler {
     };
 }
 
-/// A convenience macro to construct a handler for [document type declarations] in the HTML document.
+/// A convenience macro to construct a [handler](DocumentContentHandlers) for [document type declarations] in the HTML document.
 ///
 /// # Example
 /// ```
@@ -594,7 +602,9 @@ macro_rules! doctype {
     }};
 }
 
-/// A convenience macro to construct a rewriting handler for all text chunks in the HTML document.
+/// A convenience macro to construct a [rewriting handler](DocumentContentHandlers) for all text chunks in the HTML document. Beware: this is tricky to use.
+///
+/// The text chunks may split the text nodes into smaller fragments. See [`TextChunk`] for more info.
 ///
 /// # Example
 /// ```
@@ -635,7 +645,7 @@ macro_rules! doc_text {
     }};
 }
 
-/// A convenience macro to construct a rewriting handler for all HTML comments in the HTML document.
+/// A convenience macro to construct a [rewriting handler](DocumentContentHandlers) for all HTML comments in the HTML document.
 ///
 /// # Example
 /// ```
@@ -674,7 +684,7 @@ macro_rules! doc_comments {
     }};
 }
 
-/// A convenience macro to construct a rewriting handler for the end of the document.
+/// A convenience macro to construct a [rewriting handler](DocumentContentHandlers) for the end of the document.
 ///
 /// This handler will only be called after the rewriter has finished processing the final chunk.
 ///

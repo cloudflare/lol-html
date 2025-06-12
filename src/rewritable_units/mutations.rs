@@ -150,6 +150,8 @@ impl DynamicString {
 }
 
 /// A callback used to write content asynchronously.
+///
+/// Use the [`streaming!`] macro to construct it.
 pub trait StreamingHandler {
     /// This method is called only once, and is expected to write content
     /// by calling the [`sink.write_str()`](StreamingHandlerSink::write_str) one or more times.

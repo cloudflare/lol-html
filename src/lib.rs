@@ -78,6 +78,8 @@ pub mod send {
     /// [`EndTagHandler`](crate::EndTagHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type EndTagHandler<'h> = EndTagHandlerSend<'h>;
     /// [`TextHandler`](crate::TextHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    ///
+    /// See [`TextChunk`][crate::html_content::TextChunk].
     pub type TextHandler<'h> = TextHandlerSend<'h>;
 
     /// [`Element`](crate::rewritable_units::Element) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.

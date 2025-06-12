@@ -98,7 +98,7 @@ impl<'i> Attribute<'i> {
         })
     }
 
-    /// Returns the name of the attribute.
+    /// Returns the name of the attribute, always ASCII lowercased.
     #[inline]
     #[must_use]
     pub fn name(&self) -> String {
@@ -112,7 +112,7 @@ impl<'i> Attribute<'i> {
         self.name.as_string(self.encoding)
     }
 
-    /// Returns the value of the attribute.
+    /// Returns the value of the attribute. The value may have HTML/XML entities.
     #[inline]
     #[must_use]
     pub fn value(&self) -> String {
@@ -174,6 +174,9 @@ impl<'i> Attributes<'i> {
         }
     }
 
+    /// Adds or replaces the attribute. The value may have HTML/XML entities.
+    ///
+    /// Quotes will be escaped if needed. Other entities won't be changed.
     pub fn set_attribute(
         &mut self,
         name: &str,

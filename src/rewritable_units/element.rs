@@ -186,7 +186,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         self.start_tag.attributes()
     }
 
-    /// Returns the value of an attribute with the `name`.
+    /// Returns the value of an attribute with the `name`. The value may have HTML/XML entities.
     ///
     /// Returns `None` if the element doesn't have an attribute with the `name`.
     #[inline]
@@ -212,7 +212,9 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         self.attributes().iter().any(|attr| attr.name() == name)
     }
 
-    /// Sets `value` of element's attribute with `name`.
+    /// Sets `value` of element's attribute with `name`. The value may have HTML/XML entities.
+    ///
+    /// `"` will be entity-escaped if needed. `&` won't be escaped.
     ///
     /// If element doesn't have an attribute with the `name`, method adds a new attribute
     /// to the element with `name` and `value`.
@@ -630,8 +632,11 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         self.start_tag
     }
 
-    /// Returns the handlers that will run when the end tag is reached.  You can use this
-    /// to add your "on end tag" handlers.
+    /// Returns the handlers that will run when the end tag is reached.
+    ///
+    /// The handlers may not run if there is no explicit end tag.
+    ///
+    /// You can use this to add your "on end tag" handlers.
     ///
     /// This will return `None` if the element does not have an end tag.
     ///
