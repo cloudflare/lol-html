@@ -2,6 +2,8 @@ use crate::base::SharedEncoding;
 use crate::rewriter::RewritingError;
 use encoding_rs::{CoderResult, Decoder, Encoding, UTF_8};
 
+const DEFAULT_BUFFER_LEN: usize = if cfg!(test) { 13 } else { 1024 };
+
 pub(crate) struct TextDecoder {
     encoding: SharedEncoding,
     pending_text_streaming_decoder: Option<Decoder>,
@@ -15,8 +17,7 @@ impl TextDecoder {
         Self {
             encoding,
             pending_text_streaming_decoder: None,
-            // TODO make adjustable
-            text_buffer: String::from_utf8(vec![0u8; 1024]).unwrap(),
+            text_buffer: String::new(),
         }
     }
 
@@ -52,6 +53,9 @@ impl TextDecoder {
             }
         }
 
+        if self.pending_text_streaming_decoder.is_none() && self.text_buffer.is_empty() {
+            self.text_buffer = "\0".repeat(DEFAULT_BUFFER_LEN);
+        }
         let decoder = self
             .pending_text_streaming_decoder
             .get_or_insert_with(|| encoding.new_decoder_without_bom_handling());
@@ -113,7 +117,7 @@ impl TextDecoder {
                 // The slow path buffers 1KB, and even though this shouldn't matter,
                 // it is an observable behavior, and it makes bugs worse for text handlers
                 // that assume they'll get only a single chunk.
-                if valid_up_to != raw_input.len() && valid_up_to < self.text_buffer.len() {
+                if valid_up_to != raw_input.len() && valid_up_to < DEFAULT_BUFFER_LEN {
                     return None;
                 }
 
