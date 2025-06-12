@@ -187,13 +187,13 @@ impl<'i> AttributeMatcher<'i> {
                 return false;
             };
 
-            let first_byte_searcher: Box<dyn Fn(_) -> _> = match case_sensitivity {
-                CaseSensitivity::CaseSensitive => Box::new(|h| memchr(first_byte, h)),
+            let first_byte_searcher: &dyn Fn(_) -> _ = match case_sensitivity {
+                CaseSensitivity::CaseSensitive => &move |h| memchr(first_byte, h),
                 CaseSensitivity::AsciiCaseInsensitive => {
                     let lo = first_byte.to_ascii_lowercase();
                     let up = first_byte.to_ascii_uppercase();
 
-                    Box::new(move |h| memchr2(lo, up, h))
+                    &move |h| memchr2(lo, up, h)
                 }
             };
 
