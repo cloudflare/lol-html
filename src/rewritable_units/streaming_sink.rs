@@ -92,10 +92,12 @@ impl StreamingHandlerSinkInner<'_> {
     }
 
     pub(crate) fn write_html(&mut self, html: &str) {
-        if let Some(encoder) = &mut self.non_utf8_encoder {
-            encoder.encode(html, self.output_handler);
-        } else if !html.is_empty() {
-            (self.output_handler)(html.as_bytes());
+        if !html.is_empty() {
+            if let Some(encoder) = &mut self.non_utf8_encoder {
+                encoder.encode(html, self.output_handler);
+            } else {
+                (self.output_handler)(html.as_bytes());
+            }
         }
     }
 

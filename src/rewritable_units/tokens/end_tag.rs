@@ -1,7 +1,7 @@
 use super::{Mutations, Token};
 use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
-use crate::html_content::{ContentType, StreamingHandler};
+use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -160,7 +160,9 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
-    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
+        let output_handler = sink.output_handler();
+
         if let Some(raw) = &self.raw {
             output_handler(raw);
         } else {
