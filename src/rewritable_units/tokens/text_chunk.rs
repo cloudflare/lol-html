@@ -1,8 +1,7 @@
 use super::Mutations;
-use crate::base::BytesCow;
 use crate::errors::RewritingError;
 use crate::html::TextType;
-use crate::html_content::{ContentType, StreamingHandler};
+use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::any::Any;
@@ -320,9 +319,10 @@ impl<'i> TextChunk<'i> {
     }
 
     #[inline]
-    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
         if !self.text.is_empty() {
-            output_handler(&BytesCow::from_str(&self.text, self.encoding));
+            // The "text" here is actually markup
+            sink.write_str(&self.text, ContentType::Html);
         }
         Ok(())
     }
