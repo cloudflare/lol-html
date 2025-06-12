@@ -22,7 +22,7 @@ macro_rules! impl_serialize {
                 output_handler: &mut dyn FnMut(&[u8]),
             ) -> Result<(), crate::errors::RewritingError> {
                 let mut encoder = crate::rewritable_units::StreamingHandlerSink::new(
-                    self.encoding,
+                    self.encoding(),
                     output_handler,
                 );
                 match self.mutations.take() {

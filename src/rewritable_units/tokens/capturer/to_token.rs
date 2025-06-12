@@ -41,7 +41,6 @@ impl ToToken for TagLexeme<'_> {
                     ns,
                     self_closing,
                     self.raw(),
-                    encoding,
                 ))
             }
 

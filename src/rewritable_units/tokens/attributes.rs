@@ -155,7 +155,7 @@ pub(crate) struct Attributes<'i> {
     input: &'i Bytes<'i>,
     attribute_buffer: &'i AttributeBuffer,
     items: OnceCell<Vec<Attribute<'i>>>,
-    encoding: &'static Encoding,
+    pub(crate) encoding: &'static Encoding,
 }
 
 impl<'i> Attributes<'i> {

@@ -88,6 +88,11 @@ impl<'i> TextChunk<'i> {
         }
     }
 
+    #[inline(always)]
+    pub(crate) fn encoding(&self) -> &'static Encoding {
+        self.encoding
+    }
+
     /// Returns the textual content of the chunk.
     #[inline]
     #[must_use]

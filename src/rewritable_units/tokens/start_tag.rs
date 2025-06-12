@@ -17,11 +17,11 @@ pub struct StartTag<'i> {
     ns: Namespace,
     self_closing: bool,
     raw: Option<Bytes<'i>>,
-    encoding: &'static Encoding,
     pub(crate) mutations: Mutations,
 }
 
 impl<'i> StartTag<'i> {
+    /// Reuses encoding from `attributes`
     #[inline]
     #[must_use]
     pub(super) fn new_token(
@@ -30,7 +30,6 @@ impl<'i> StartTag<'i> {
         ns: Namespace,
         self_closing: bool,
         raw: Bytes<'i>,
-        encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::StartTag(StartTag {
             name: name.into(),
@@ -38,27 +37,26 @@ impl<'i> StartTag<'i> {
             ns,
             self_closing,
             raw: Some(raw),
-            encoding,
             mutations: Mutations::new(),
         })
     }
 
-    #[inline]
+    #[inline(always)]
     #[doc(hidden)]
     pub const fn encoding(&self) -> &'static Encoding {
-        self.encoding
+        self.attributes.encoding
     }
 
     /// Returns the name of the tag.
     #[inline]
     pub fn name(&self) -> String {
-        self.name.as_lowercase_string(self.encoding)
+        self.name.as_lowercase_string(self.attributes.encoding)
     }
 
     /// Returns the name of the tag, preserving its case.
     #[inline]
     pub fn name_preserve_case(&self) -> String {
-        self.name.as_string(self.encoding)
+        self.name.as_string(self.attributes.encoding)
     }
 
     /// Sets the name of the tag.
@@ -103,7 +101,8 @@ impl<'i> StartTag<'i> {
     /// to the tag with `name` and `value`.
     #[inline]
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
-        self.attributes.set_attribute(name, value, self.encoding)?;
+        self.attributes
+            .set_attribute(name, value, self.attributes.encoding)?;
         self.raw = None;
 
         Ok(())

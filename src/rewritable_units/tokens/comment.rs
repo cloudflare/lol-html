@@ -57,6 +57,11 @@ impl<'i> Comment<'i> {
         self.text.as_string(self.encoding)
     }
 
+    #[inline(always)]
+    pub(crate) fn encoding(&self) -> &'static Encoding {
+        self.encoding
+    }
+
     /// Sets the text of the comment.
     #[inline]
     pub fn set_text(&mut self, text: &str) -> Result<(), CommentTextError> {
