@@ -222,12 +222,12 @@ where
     ) -> Instruction<P> {
         let mut exprs = ExprSet::default();
 
-        on_tag_name_exprs
-            .iter()
-            .for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
-        on_attr_exprs
-            .iter()
-            .for_each(|c| c.compile(self.encoding, &mut exprs, enable_nth_of_type));
+        for c in on_tag_name_exprs {
+            c.compile(self.encoding, &mut exprs, enable_nth_of_type);
+        }
+        for c in on_attr_exprs {
+            c.compile(self.encoding, &mut exprs, enable_nth_of_type);
+        }
 
         let ExprSet {
             local_name_exprs,
@@ -295,6 +295,7 @@ where
     }
 
     #[must_use]
+    #[inline(never)]
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
         let mut enable_nth_of_type = false;
         self.instructions = iter::repeat_with(|| None)

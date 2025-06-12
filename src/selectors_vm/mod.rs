@@ -477,9 +477,9 @@ where
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<HereditaryJumpPtr>> {
         for (i, ancestor) in self.stack.items().iter().rev().enumerate() {
-            for (j, jumps) in ancestor.hereditary_jumps.iter().cloned().enumerate() {
-                self.try_exec_instr_set_without_attrs(jumps, ctx, match_handler)
-                    .map_err(|b| Bailout {
+            for (j, jumps) in ancestor.hereditary_jumps.iter().enumerate() {
+                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx, match_handler)
+                    .map_err(move |b| Bailout {
                         at_addr: b.at_addr,
                         recovery_point: HereditaryJumpPtr {
                             stack_offset: i,
