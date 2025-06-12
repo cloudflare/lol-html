@@ -32,6 +32,11 @@ impl<'i> EndTag<'i> {
         })
     }
 
+    #[inline(always)]
+    pub(crate) fn encoding(&self) -> &'static Encoding {
+        self.encoding
+    }
+
     /// Returns the name of the tag.
     #[inline]
     #[must_use]
