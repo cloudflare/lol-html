@@ -187,14 +187,14 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         });
     }
 
-    #[inline]
+    #[cold]
     fn create_doctype(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
-        self.current_non_tag_content_token = Some(Doctype {
+        self.current_non_tag_content_token = Some(Doctype(Box::new(DoctypeTokenOutline {
             name: None,
             public_id: None,
             system_id: None,
             force_quirks: false,
-        });
+        })));
     }
 
     #[inline]
@@ -228,39 +228,29 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     #[inline]
     fn set_force_quirks(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
-        if let Some(Doctype {
-            ref mut force_quirks,
-            ..
-        }) = self.current_non_tag_content_token
-        {
-            *force_quirks = true;
+        if let Some(Doctype(doctype)) = &mut self.current_non_tag_content_token {
+            doctype.force_quirks = true;
         }
     }
 
     #[inline]
     fn finish_doctype_name(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
-        if let Some(Doctype { ref mut name, .. }) = self.current_non_tag_content_token {
-            *name = Some(get_token_part_range!(self));
+        if let Some(Doctype(doctype)) = &mut self.current_non_tag_content_token {
+            doctype.name = Some(get_token_part_range!(self));
         }
     }
 
     #[inline]
     fn finish_doctype_public_id(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
-        if let Some(Doctype {
-            ref mut public_id, ..
-        }) = self.current_non_tag_content_token
-        {
-            *public_id = Some(get_token_part_range!(self));
+        if let Some(Doctype(doctype)) = &mut self.current_non_tag_content_token {
+            doctype.public_id = Some(get_token_part_range!(self));
         }
     }
 
     #[inline]
     fn finish_doctype_system_id(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
-        if let Some(Doctype {
-            ref mut system_id, ..
-        }) = self.current_non_tag_content_token
-        {
-            *system_id = Some(get_token_part_range!(self));
+        if let Some(Doctype(doctype)) = &mut self.current_non_tag_content_token {
+            doctype.system_id = Some(get_token_part_range!(self));
         }
     }
 
