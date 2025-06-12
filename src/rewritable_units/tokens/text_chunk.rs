@@ -1,5 +1,5 @@
 use super::Mutations;
-use crate::base::Bytes;
+use crate::base::BytesCow;
 use crate::errors::RewritingError;
 use crate::html::TextType;
 use crate::html_content::{ContentType, StreamingHandler};
@@ -317,7 +317,7 @@ impl<'i> TextChunk<'i> {
     #[inline]
     fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if !self.text.is_empty() {
-            output_handler(&Bytes::from_str(&self.text, self.encoding));
+            output_handler(&BytesCow::from_str(&self.text, self.encoding));
         }
         Ok(())
     }

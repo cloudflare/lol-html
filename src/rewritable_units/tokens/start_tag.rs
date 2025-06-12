@@ -1,6 +1,6 @@
 use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
 use crate::html::Namespace;
 use crate::html_content::{ContentType, StreamingHandler};
@@ -12,7 +12,7 @@ use std::fmt::{self, Debug};
 ///
 /// Exposes API for examination and modification of a parsed HTML start tag.
 pub struct StartTag<'i> {
-    name: Bytes<'i>,
+    name: BytesCow<'i>,
     attributes: Attributes<'i>,
     ns: Namespace,
     self_closing: bool,
@@ -24,7 +24,7 @@ pub struct StartTag<'i> {
 impl<'i> StartTag<'i> {
     #[inline]
     #[must_use]
-    pub(super) const fn new_token(
+    pub(super) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         ns: Namespace,
@@ -33,7 +33,7 @@ impl<'i> StartTag<'i> {
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::StartTag(StartTag {
-            name,
+            name: name.into(),
             attributes,
             ns,
             self_closing,
@@ -63,7 +63,7 @@ impl<'i> StartTag<'i> {
 
     /// Sets the name of the tag.
     #[inline]
-    pub fn set_name(&mut self, name: Bytes<'static>) {
+    pub fn set_name(&mut self, name: BytesCow<'static>) {
         self.name = name;
         self.raw = None;
     }

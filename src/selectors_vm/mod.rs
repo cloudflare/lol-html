@@ -217,7 +217,7 @@ where
         aux_info: AuxStartTagInfo<'_>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), MemoryLimitExceededError> {
-        let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ns);
+        let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ns);
 
         ctx.with_content = !aux_info.self_closing;
 
@@ -253,7 +253,7 @@ where
         let mut ctx = ctx.into_owned();
 
         aux_info_request!(move |this, aux_info, match_handler| {
-            let attr_matcher = AttributeMatcher::new(aux_info.input, aux_info.attr_buffer, ctx.ns);
+            let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ctx.ns);
 
             this.complete_instr_execution_with_attrs(
                 bailout.at_addr,
