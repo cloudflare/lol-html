@@ -96,7 +96,11 @@ impl<'b> Bytes<'b> {
 
     #[inline]
     pub(crate) fn slice(&self, range: Range) -> Self {
-        Self(&self.0[range.start..range.end])
+        debug_assert!(self.0.get(range.start..range.end).is_some());
+        // Optimizes to panic-free branchless
+        let end = range.end.min(self.0.len());
+        let start = range.start.min(end);
+        Self(&self.0[start..end])
     }
 
     #[inline]
@@ -107,7 +111,8 @@ impl<'b> Bytes<'b> {
 
     #[inline]
     pub(crate) fn opt_slice(&self, range: Option<Range>) -> Option<Self> {
-        range.map(|range| self.slice(range))
+        let range = range?;
+        self.0.get(range.start..range.end).map(Self)
     }
 
     pub(crate) fn as_debug_string(&self) -> String {
