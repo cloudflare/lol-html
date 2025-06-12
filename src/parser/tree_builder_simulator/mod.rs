@@ -53,7 +53,10 @@ macro_rules! expect_tag {
     ($lexeme:expr, $tag_pat:pat => $action:expr) => {
         match *$lexeme.token_outline() {
             $tag_pat => $action,
-            _ => unreachable!("Got unexpected tag type"),
+            _ => {
+                debug_assert!(false, "Got unexpected tag type");
+                return TreeBuilderFeedback::None;
+            }
         }
     };
 }
