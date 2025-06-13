@@ -1,7 +1,7 @@
 use super::{Mutations, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
-use crate::html_content::StreamingHandler;
+use crate::html_content::{StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::any::Any;
@@ -26,7 +26,7 @@ pub enum CommentTextError {
 ///
 /// Exposes API for examination and modification of a parsed HTML comment.
 pub struct Comment<'i> {
-    text: Bytes<'i>,
+    text: BytesCow<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
     mutations: Mutations,
@@ -42,7 +42,7 @@ impl<'i> Comment<'i> {
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::Comment(Comment {
-            text,
+            text: text.into(),
             raw: Some(raw),
             encoding,
             mutations: Mutations::new(),
@@ -57,6 +57,11 @@ impl<'i> Comment<'i> {
         self.text.as_string(self.encoding)
     }
 
+    #[inline(always)]
+    pub(crate) fn encoding(&self) -> &'static Encoding {
+        self.encoding
+    }
+
     /// Sets the text of the comment.
     #[inline]
     pub fn set_text(&mut self, text: &str) -> Result<(), CommentTextError> {
@@ -67,7 +72,7 @@ impl<'i> Comment<'i> {
             // encoding then encoding_rs replaces it with a numeric
             // character reference. Character references are not
             // supported in comments, so we need to bail.
-            match Bytes::from_str_without_replacements(text, self.encoding) {
+            match BytesCow::from_str_without_replacements(text, self.encoding) {
                 Ok(text) => {
                     self.text = text.into_owned();
                     self.raw = None;
@@ -235,7 +240,9 @@ impl<'i> Comment<'i> {
     }
 
     #[inline]
-    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
+        let output_handler = sink.output_handler();
+
         if let Some(raw) = &self.raw {
             output_handler(raw);
         } else {

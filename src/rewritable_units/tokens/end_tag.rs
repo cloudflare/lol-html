@@ -1,7 +1,7 @@
 use super::{Mutations, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
-use crate::html_content::{ContentType, StreamingHandler};
+use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -10,7 +10,7 @@ use std::fmt::{self, Debug};
 ///
 /// Exposes API for examination and modification of a parsed HTML end tag.
 pub struct EndTag<'i> {
-    name: Bytes<'i>,
+    name: BytesCow<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
     pub(crate) mutations: Mutations,
@@ -25,11 +25,16 @@ impl<'i> EndTag<'i> {
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::EndTag(EndTag {
-            name,
+            name: name.into(),
             raw: Some(raw),
             encoding,
             mutations: Mutations::new(),
         })
+    }
+
+    #[inline(always)]
+    pub(crate) fn encoding(&self) -> &'static Encoding {
+        self.encoding
     }
 
     /// Returns the name of the tag.
@@ -49,12 +54,12 @@ impl<'i> EndTag<'i> {
     #[inline]
     #[doc(hidden)]
     #[deprecated(note = "use set_name_str")]
-    pub fn set_name(&mut self, name: Bytes<'static>) {
+    pub fn set_name(&mut self, name: BytesCow<'static>) {
         self.set_name_raw(name);
     }
 
     /// Sets the name of the tag.
-    pub(crate) fn set_name_raw(&mut self, name: Bytes<'static>) {
+    pub(crate) fn set_name_raw(&mut self, name: BytesCow<'static>) {
         self.name = name;
         self.raw = None;
     }
@@ -62,7 +67,7 @@ impl<'i> EndTag<'i> {
     /// Sets the name of the tag by encoding the given string.
     #[inline]
     pub fn set_name_str(&mut self, name: String) {
-        self.set_name_raw(Bytes::from_string(name, self.encoding));
+        self.set_name_raw(BytesCow::from_string(name, self.encoding));
     }
 
     /// Inserts `content` before the end tag.
@@ -149,7 +154,9 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
-    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
+        let output_handler = sink.output_handler();
+
         if let Some(raw) = &self.raw {
             output_handler(raw);
         } else {

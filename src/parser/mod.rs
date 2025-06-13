@@ -62,6 +62,7 @@ impl<S: ParserOutputSink> Parser<S> {
         }
     }
 
+    #[inline(never)]
     pub fn parse(&mut self, input: &[u8], last: bool) -> Result<usize, RewritingError> {
         use ActionError::*;
 

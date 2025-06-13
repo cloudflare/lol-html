@@ -1,9 +1,9 @@
 use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
 use crate::html::Namespace;
-use crate::html_content::{ContentType, StreamingHandler};
+use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -12,58 +12,56 @@ use std::fmt::{self, Debug};
 ///
 /// Exposes API for examination and modification of a parsed HTML start tag.
 pub struct StartTag<'i> {
-    name: Bytes<'i>,
+    name: BytesCow<'i>,
     attributes: Attributes<'i>,
     ns: Namespace,
     self_closing: bool,
     raw: Option<Bytes<'i>>,
-    encoding: &'static Encoding,
     pub(crate) mutations: Mutations,
 }
 
 impl<'i> StartTag<'i> {
+    /// Reuses encoding from `attributes`
     #[inline]
     #[must_use]
-    pub(super) const fn new_token(
+    pub(super) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         ns: Namespace,
         self_closing: bool,
         raw: Bytes<'i>,
-        encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::StartTag(StartTag {
-            name,
+            name: name.into(),
             attributes,
             ns,
             self_closing,
             raw: Some(raw),
-            encoding,
             mutations: Mutations::new(),
         })
     }
 
-    #[inline]
+    #[inline(always)]
     #[doc(hidden)]
     pub const fn encoding(&self) -> &'static Encoding {
-        self.encoding
+        self.attributes.encoding
     }
 
     /// Returns the name of the tag.
     #[inline]
     pub fn name(&self) -> String {
-        self.name.as_lowercase_string(self.encoding)
+        self.name.as_lowercase_string(self.attributes.encoding)
     }
 
     /// Returns the name of the tag, preserving its case.
     #[inline]
     pub fn name_preserve_case(&self) -> String {
-        self.name.as_string(self.encoding)
+        self.name.as_string(self.attributes.encoding)
     }
 
     /// Sets the name of the tag.
     #[inline]
-    pub fn set_name(&mut self, name: Bytes<'static>) {
+    pub fn set_name(&mut self, name: BytesCow<'static>) {
         self.name = name;
         self.raw = None;
     }
@@ -88,7 +86,8 @@ impl<'i> StartTag<'i> {
     /// to the tag with `name` and `value`.
     #[inline]
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
-        self.attributes.set_attribute(name, value, self.encoding)?;
+        self.attributes
+            .set_attribute(name, value, self.attributes.encoding)?;
         self.raw = None;
 
         Ok(())
@@ -197,7 +196,9 @@ impl<'i> StartTag<'i> {
         self.mutations.mutate().remove();
     }
 
-    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
+        let output_handler = sink.output_handler();
+
         if let Some(raw) = &self.raw {
             output_handler(raw);
             return Ok(());

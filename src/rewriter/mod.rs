@@ -4,14 +4,12 @@ mod rewrite_controller;
 #[macro_use]
 pub(crate) mod settings;
 
-use self::handlers_dispatcher::ContentHandlersDispatcher;
 use self::rewrite_controller::{ElementDescriptor, HtmlRewriteController};
 pub use self::settings::*;
 use crate::base::SharedEncoding;
 use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};
 use crate::parser::ParsingAmbiguityError;
 use crate::rewritable_units::Element;
-use crate::selectors_vm::{self, SelectorMatchingVm};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use mime::Mime;
@@ -159,58 +157,26 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
     ///
     /// [`OutputSink`]: trait.OutputSink.html
     pub fn new<'s>(settings: Settings<'h, 's, H>, output_sink: O) -> Self {
+        let preallocated_parsing_buffer_size =
+            settings.memory_settings.preallocated_parsing_buffer_size;
+        let strict = settings.strict;
+
         let encoding = SharedEncoding::new(settings.encoding);
-        let mut selectors_ast = selectors_vm::Ast::default();
-        let mut dispatcher = ContentHandlersDispatcher::<H>::default();
-        let has_selectors =
-            !settings.element_content_handlers.is_empty() || settings.adjust_charset_on_meta_tag;
-
-        let charset_adjust_handler = if settings.adjust_charset_on_meta_tag {
-            let encoding = SharedEncoding::clone(&encoding);
-            Some(handler_adjust_charset_on_meta_tag(encoding))
-        } else {
-            None
-        };
-
-        let element_content_handlers = charset_adjust_handler
-            .into_iter()
-            .chain(settings.element_content_handlers);
-
-        for (selector, handlers) in element_content_handlers {
-            let locator = dispatcher.add_selector_associated_handlers(handlers);
-
-            selectors_ast.add_selector(&selector, locator);
-        }
-
-        for handlers in settings.document_content_handlers {
-            dispatcher.add_document_content_handlers(handlers);
-        }
 
         let memory_limiter =
             SharedMemoryLimiter::new(settings.memory_settings.max_allowed_memory_usage);
 
-        let selector_matching_vm = if has_selectors {
-            Some(SelectorMatchingVm::new(
-                selectors_ast,
-                settings.encoding.into(),
-                memory_limiter.clone(),
-                settings.enable_esi_tags,
-            ))
-        } else {
-            None
-        };
-
-        let controller = HtmlRewriteController::new(dispatcher, selector_matching_vm);
-
         let stream = TransformStream::new(TransformStreamSettings {
-            transform_controller: controller,
+            transform_controller: HtmlRewriteController::from_settings(
+                settings,
+                &memory_limiter,
+                &encoding,
+            ),
             output_sink,
-            preallocated_parsing_buffer_size: settings
-                .memory_settings
-                .preallocated_parsing_buffer_size,
+            preallocated_parsing_buffer_size,
             memory_limiter,
             encoding,
-            strict: settings.strict,
+            strict,
         });
 
         HtmlRewriter {
