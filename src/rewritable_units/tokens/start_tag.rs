@@ -6,7 +6,6 @@ use crate::html::Namespace;
 use crate::html_content::{ContentType, StreamingHandler};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
-use std::borrow::Cow;
 use std::fmt::{self, Debug};
 
 /// An HTML start tag rewritable unit.
@@ -70,6 +69,16 @@ impl<'i> StartTag<'i> {
     }
 
     /// Sets the name of the start tag only. To rename the element, prefer [`Element::set_tag_name()`][crate::html_content::Element::set_tag_name].
+    ///
+    /// The tag name must have a valid syntax for its context.
+    ///
+    /// The new tag name must be in the same namespace, have the same content model, and be valid in its location.
+    /// Otherwise change of the tag name may cause the resulting document to be parsed in an unexpected way,
+    /// out of sync with this library.
+    #[doc(hidden)]
+    #[deprecated(
+        note = "this method won't convert the string encoding, and the type of the argument is a private implementation detail. Use Element::set_tag_name() instead"
+    )]
     pub fn set_name(&mut self, name: BytesCow<'static>) {
         self.set_name_raw(name);
     }

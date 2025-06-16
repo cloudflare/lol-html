@@ -46,9 +46,10 @@ impl<'i> EndTag<'i> {
         self.name.as_string(self.encoding)
     }
 
-    #[inline]
     #[doc(hidden)]
-    #[deprecated(note = "use set_name_str")]
+    #[deprecated(
+        note = "this method won't convert the string encoding, and the type of the argument is a private implementation detail. Use set_name_str() instead"
+    )]
     pub fn set_name(&mut self, name: BytesCow<'static>) {
         self.set_name_raw(name);
     }
@@ -59,8 +60,13 @@ impl<'i> EndTag<'i> {
         self.raw = None;
     }
 
-    /// Sets the name of the tag by encoding the given string.
-    #[inline]
+    /// Sets the name of the tag only. To rename the element, prefer [`Element::set_tag_name()`][crate::html_content::Element::set_tag_name].
+    ///
+    /// The name will be converted to the document's encoding.
+    ///
+    /// The name must have a valid syntax, and the closing tag must be valid in its context.
+    /// The parser will not take the new name into account, so if the new tag alters the structure of the document,
+    /// the rest of the generated document will be parsed differently than during rewriting.
     pub fn set_name_str(&mut self, name: String) {
         self.set_name_raw(BytesCow::from_string(name, self.encoding));
     }
