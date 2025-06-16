@@ -3,7 +3,7 @@ use super::{
     Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag, StreamingHandler,
     StringChunk,
 };
-use crate::base::BytesCow;
+use crate::base::{BytesCow, SourceLocation};
 use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
 use encoding_rs::Encoding;
 use std::any::Any;
@@ -715,6 +715,14 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
         } else {
             None
         }
+    }
+
+    /// Position of this element's start tag in the source document, before any rewriting
+    ///
+    /// The end of this element hasn't been parsed yet. To find it, use [`Element::end_tag_handlers`].
+    #[must_use]
+    pub fn source_location(&self) -> SourceLocation {
+        self.start_tag.source_location()
     }
 }
 
@@ -1664,6 +1672,112 @@ mod tests {
                     assert!(el.removed());
                 },
                 "<before><foo & bar><after>"
+            );
+        }
+    }
+
+    mod location_spans {
+        use super::*;
+        use encoding_rs::WINDOWS_1252;
+
+        #[test]
+        fn tags() {
+            let raw_input = r"<html>
+                <div line=2>
+                    <a line=3><span line=3 />line 3</span></a>
+                </div>
+                ";
+            let output = rewrite_html(
+                raw_input.as_bytes(),
+                UTF_8,
+                vec![element!("*", |el: &mut Element<'_, '_>| {
+                    let loc = el.source_location();
+                    el.set_attribute("at", &loc.to_string()).unwrap();
+                    el.set_attribute("look", &raw_input[loc.bytes()]).unwrap();
+                    if let Some(end) = el.end_tag_handlers() {
+                        end.push(Box::new(|end| {
+                            let tag = &raw_input[end.source_location().bytes()];
+                            assert_eq!("</", &tag[0..2]);
+                            assert_eq!(b'>', *tag.as_bytes().last().unwrap());
+                            Ok(())
+                        }));
+                    }
+                    Ok(())
+                })],
+                vec![],
+            );
+
+            assert_eq!(
+                output,
+                r#"<html at="0B...6B" look="<html>">
+                <div line=2 at="23B...35B" look="<div line=2>">
+                    <a line=3 at="56B...66B" look="<a line=3>"><span line=3 at="66B...81B" look="<span line=3 />" />line 3</span></a>
+                </div>
+                "#
+            );
+        }
+
+        #[test]
+        fn text_and_comments() {
+            let mut raw_input = Vec::from(
+                br#"
+                <!doctype>
+                <html>l1
+                <meta charset="iso-8859-1">
+                l2 </>x
+                <p>l3</p><!-- l4 -->
+                <svg><![CDATA[
+                "#,
+            );
+            raw_input.extend(127..=255);
+            raw_input.extend_from_slice(
+                br"
+                l5
+                ]]></svg>
+                ",
+            );
+            let mut range_start = None;
+            let mut prev_range_end = 0;
+            let output = rewrite_html(
+                &raw_input,
+                WINDOWS_1252,
+                vec![],
+                vec![
+                    doc_comments!(|c| {
+                        let loc = c.source_location();
+                        let raw = &raw_input[loc.bytes()];
+                        assert_eq!(&raw[..4], b"<!--");
+                        assert_eq!(&raw[raw.len() - 3..], b"-->");
+                        c.set_text(&loc.to_string()).unwrap();
+                        Ok(())
+                    }),
+                    doc_text!(|t| {
+                        let loc = t.source_location().bytes();
+                        let start = *range_start.get_or_insert(loc.start);
+                        assert!(loc.start >= start);
+                        assert!(loc.end >= start);
+                        assert!(loc.start >= prev_range_end);
+                        assert!(loc.end >= prev_range_end);
+                        prev_range_end = loc.end;
+
+                        assert!(raw_input[start..loc.end]
+                            .iter()
+                            .all(|&b| b != b'<' && b != b'>'));
+
+                        if t.last_in_text_node() {
+                            t.set_str(format!("{start}..{}\n", loc.end));
+                            range_start = None;
+                        } else {
+                            t.remove();
+                        }
+                        Ok(())
+                    }),
+                ],
+            );
+
+            assert_eq!(
+                output,
+                "0..17\n<!doctype>27..44\n<html>50..69\n<meta charset=\"iso-8859-1\">96..116\n</>119..137\n<p>140..142\n</p><!--146B...157B-->157..174\n<svg><![CDATA[188..370\n]]></svg>379..396\n",
             );
         }
     }

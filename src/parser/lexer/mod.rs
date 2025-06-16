@@ -5,7 +5,7 @@ mod conditions;
 mod lexeme;
 
 pub(crate) use self::lexeme::*;
-use crate::base::{Align, Range};
+use crate::base::{Align, Bytes, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::parser::state_machine::{
     ActionError, ActionResult, FeedbackDirective, StateMachine, StateResult,
@@ -138,12 +138,14 @@ impl<S: LexemeSink> Lexer<S> {
     #[must_use]
     fn create_lexeme_with_raw<'i, T>(
         &self,
+        previously_consumed_byte_count: usize,
         input: &'i [u8],
         token: T,
         raw_end: usize,
     ) -> Lexeme<'i, T> {
         Lexeme::new(
-            input.into(),
+            previously_consumed_byte_count,
+            Bytes::new(input),
             token,
             Range {
                 start: self.lexeme_start,
@@ -154,18 +156,28 @@ impl<S: LexemeSink> Lexer<S> {
 
     #[inline]
     #[must_use]
-    fn create_lexeme_with_raw_inclusive<'i, T>(&self, input: &'i [u8], token: T) -> Lexeme<'i, T> {
+    fn create_lexeme_with_raw_inclusive<'i, T>(
+        &self,
+        previously_consumed_byte_count: usize,
+        input: &'i [u8],
+        token: T,
+    ) -> Lexeme<'i, T> {
         let raw_end = self.pos() + 1;
 
-        self.create_lexeme_with_raw(input, token, raw_end)
+        self.create_lexeme_with_raw(previously_consumed_byte_count, input, token, raw_end)
     }
 
     #[inline]
     #[must_use]
-    fn create_lexeme_with_raw_exclusive<'i, T>(&self, input: &'i [u8], token: T) -> Lexeme<'i, T> {
+    fn create_lexeme_with_raw_exclusive<'i, T>(
+        &self,
+        previously_consumed_byte_count: usize,
+        input: &'i [u8],
+        token: T,
+    ) -> Lexeme<'i, T> {
         let raw_end = self.pos();
 
-        self.create_lexeme_with_raw(input, token, raw_end)
+        self.create_lexeme_with_raw(previously_consumed_byte_count, input, token, raw_end)
     }
 }
 

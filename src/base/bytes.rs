@@ -75,6 +75,11 @@ impl<'b> BytesCow<'b> {
 
 impl<'b> Bytes<'b> {
     #[inline]
+    pub(crate) fn new(bytes: &'b [u8]) -> Self {
+        Self(bytes)
+    }
+
+    #[inline]
     pub fn as_string(&self, encoding: &'static Encoding) -> String {
         encoding.decode(self.0).0.into_owned()
     }
@@ -85,19 +90,19 @@ impl<'b> Bytes<'b> {
     }
 
     #[inline]
-    pub(crate) fn as_slice(&self) -> &'b [u8] {
+    pub(crate) const fn as_slice(&self) -> &'b [u8] {
         self.0
     }
 
     #[inline]
     pub(crate) fn slice(&self, range: Range) -> Self {
-        self.0[range.start..range.end].into()
+        Self(&self.0[range.start..range.end])
     }
 
     #[inline]
     pub fn split_at(&self, pos: usize) -> (Self, Self) {
         let (before, after) = self.0.split_at(pos);
-        (Bytes::from(before), Bytes::from(after))
+        (Self(before), Self(after))
     }
 
     #[inline]
@@ -147,13 +152,6 @@ impl<'b> From<BytesCow<'b>> for Box<[u8]> {
             Cow::Owned(v) if v.len() == v.capacity() => v.into_boxed_slice(),
             _ => Self::from(&bytes.0[..]),
         }
-    }
-}
-
-impl<'b> From<&'b [u8]> for Bytes<'b> {
-    #[inline]
-    fn from(bytes: &'b [u8]) -> Self {
-        Bytes(bytes)
     }
 }
 

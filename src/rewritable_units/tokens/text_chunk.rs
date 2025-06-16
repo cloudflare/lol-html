@@ -1,4 +1,5 @@
 use super::Mutations;
+use crate::base::SourceLocation;
 use crate::errors::RewritingError;
 use crate::html::TextType;
 use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
@@ -66,6 +67,7 @@ pub struct TextChunk<'i> {
     encoding: &'static Encoding,
     mutations: Mutations,
     user_data: Box<dyn Any>,
+    source_location: SourceLocation,
 }
 
 impl<'i> TextChunk<'i> {
@@ -76,6 +78,7 @@ impl<'i> TextChunk<'i> {
         text_type: TextType,
         last_in_text_node: bool,
         encoding: &'static Encoding,
+        source_location: SourceLocation,
     ) -> Self {
         TextChunk {
             text: text.into(),
@@ -84,6 +87,7 @@ impl<'i> TextChunk<'i> {
             encoding,
             mutations: Mutations::new(),
             user_data: Box::new(()),
+            source_location,
         }
     }
 
@@ -326,6 +330,12 @@ impl<'i> TextChunk<'i> {
         }
         Ok(())
     }
+
+    /// Position of this text fragment in the source document, before any rewriting
+    #[must_use]
+    pub fn source_location(&self) -> SourceLocation {
+        self.source_location.clone()
+    }
 }
 
 impl_serialize!(TextChunk);
@@ -337,6 +347,7 @@ impl Debug for TextChunk<'_> {
         f.debug_struct("TextChunk")
             .field("text", &self.as_str())
             .field("last_in_text_node", &self.last_in_text_node())
+            .field("at", &self.source_location())
             .finish()
     }
 }
@@ -387,7 +398,13 @@ mod tests {
     #[test]
     fn in_place_text_modifications() {
         let encoding = Encoding::for_label_no_replacement(b"utf-8").unwrap();
-        let mut chunk = TextChunk::new("original text", TextType::PlainText, true, encoding);
+        let mut chunk = TextChunk::new(
+            "original text",
+            TextType::PlainText,
+            true,
+            encoding,
+            SourceLocation::from_start_len(0, 0),
+        );
 
         assert_eq!(chunk.as_str(), "original text");
         chunk.set_str("hello".to_owned());

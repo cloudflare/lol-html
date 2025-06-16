@@ -23,7 +23,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     #[inline]
     fn emit_eof(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
-        let lexeme = self.create_lexeme_with_raw_exclusive(input, Some(Eof));
+        let lexeme = self.create_lexeme_with_raw_exclusive(
+            context.previously_consumed_byte_count,
+            input,
+            Some(Eof),
+        );
 
         self.emit_lexeme(context, &lexeme)
     }
@@ -36,8 +40,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             // representation of text token content is the raw slice.
             // Also, we always emit text if we encounter some other bounded
             // lexical structure and, thus, we use exclusive range for the raw slice.
-            let lexeme =
-                self.create_lexeme_with_raw_exclusive(input, Some(Text(self.last_text_type)));
+            let lexeme = self.create_lexeme_with_raw_exclusive(
+                context.previously_consumed_byte_count,
+                input,
+                Some(Text(self.last_text_type)),
+            );
 
             self.emit_lexeme(context, &lexeme)?;
         }
@@ -48,7 +55,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     #[inline]
     fn emit_current_token(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
         let token = self.current_non_tag_content_token.take();
-        let lexeme = self.create_lexeme_with_raw_inclusive(input, token);
+        let lexeme = self.create_lexeme_with_raw_inclusive(
+            context.previously_consumed_byte_count,
+            input,
+            token,
+        );
 
         self.emit_lexeme(context, &lexeme)
     }
@@ -64,7 +75,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             .try_get_tree_builder_feedback(context, &token)
             .map_err(ActionError::from)?;
 
-        let mut lexeme = self.create_lexeme_with_raw_inclusive(input, token);
+        let mut lexeme = self.create_lexeme_with_raw_inclusive(
+            context.previously_consumed_byte_count,
+            input,
+            token,
+        );
 
         // NOTE: exit from any non-initial text parsing mode always happens on tag emission
         // (except for CDATA, but there is a special action to take care of it).
@@ -104,7 +119,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         input: &[u8],
     ) -> ActionResult {
         let token = self.current_non_tag_content_token.take();
-        let lexeme = self.create_lexeme_with_raw_exclusive(input, token);
+        let lexeme = self.create_lexeme_with_raw_exclusive(
+            context.previously_consumed_byte_count,
+            input,
+            token,
+        );
 
         self.emit_lexeme(context, &lexeme)?;
         self.emit_eof(context, input)
@@ -116,7 +135,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         context: &mut ParserContext<S>,
         input: &[u8],
     ) -> ActionResult {
-        let lexeme = self.create_lexeme_with_raw_inclusive(input, None);
+        let lexeme = self.create_lexeme_with_raw_inclusive(
+            context.previously_consumed_byte_count,
+            input,
+            None,
+        );
 
         self.emit_lexeme(context, &lexeme)
     }
@@ -128,7 +151,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         input: &[u8],
     ) -> ActionResult {
         // NOTE: since we are at EOF we use exclusive range for token's raw.
-        let lexeme = self.create_lexeme_with_raw_exclusive(input, None);
+        let lexeme = self.create_lexeme_with_raw_exclusive(
+            context.previously_consumed_byte_count,
+            input,
+            None,
+        );
 
         self.emit_lexeme(context, &lexeme)?;
         self.emit_eof(context, input)

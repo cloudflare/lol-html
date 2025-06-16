@@ -31,6 +31,9 @@ pub(crate) enum ParserDirective {
 pub(crate) struct ParserContext<S> {
     output_sink: S,
     tree_builder_simulator: TreeBuilderSimulator,
+    /// Amount of bytes consumed by previous calls to `parse()`,
+    /// i.e. number of bytes from the start of the document until the start of the current input slice
+    previously_consumed_byte_count: usize,
 }
 
 pub(crate) trait ParserOutputSink: LexemeSink + TagHintSink {}
@@ -51,6 +54,7 @@ impl<S: ParserOutputSink> Parser<S> {
     pub fn new(output_sink: S, initial_directive: ParserDirective, strict: bool) -> Self {
         let context = ParserContext {
             output_sink,
+            previously_consumed_byte_count: 0,
             tree_builder_simulator: TreeBuilderSimulator::new(strict),
         };
 
@@ -82,8 +86,10 @@ impl<S: ParserOutputSink> Parser<S> {
                 Err(ParsingTermination::EndOfInput {
                     consumed_byte_count,
                 }) => {
+                    self.context.previously_consumed_byte_count += consumed_byte_count;
                     return Ok(consumed_byte_count);
                 }
+
                 Err(ParsingTermination::ActionError(ParserDirectiveChangeRequired(
                     new_directive,
                     sm_bookmark,

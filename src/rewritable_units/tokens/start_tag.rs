@@ -1,5 +1,7 @@
 use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
+use crate::base::SourceLocation;
+use crate::base::SpannedRawBytes;
 use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
 use crate::html::Namespace;
@@ -16,7 +18,7 @@ pub struct StartTag<'i> {
     attributes: Attributes<'i>,
     ns: Namespace,
     self_closing: bool,
-    raw: Option<Bytes<'i>>,
+    raw: SpannedRawBytes<'i>,
     pub(crate) mutations: Mutations,
 }
 
@@ -29,14 +31,14 @@ impl<'i> StartTag<'i> {
         attributes: Attributes<'i>,
         ns: Namespace,
         self_closing: bool,
-        raw: Bytes<'i>,
+        raw: SpannedRawBytes<'i>,
     ) -> Token<'i> {
         Token::StartTag(StartTag {
             name: name.into(),
             attributes,
             ns,
             self_closing,
-            raw: Some(raw),
+            raw,
             mutations: Mutations::new(),
         })
     }
@@ -63,7 +65,7 @@ impl<'i> StartTag<'i> {
     #[inline]
     pub(crate) fn set_name_raw(&mut self, name: BytesCow<'static>) {
         self.name = name;
-        self.raw = None;
+        self.raw.set_modified();
     }
 
     /// Sets the name of the start tag only. To rename the element, prefer [`Element::set_tag_name()`][crate::html_content::Element::set_tag_name].
@@ -103,7 +105,7 @@ impl<'i> StartTag<'i> {
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
         self.attributes
             .set_attribute(name, value, self.attributes.encoding)?;
-        self.raw = None;
+        self.raw.set_modified();
 
         Ok(())
     }
@@ -112,7 +114,7 @@ impl<'i> StartTag<'i> {
     #[inline]
     pub fn remove_attribute(&mut self, name: &str) {
         if self.attributes.remove_attribute(name) {
-            self.raw = None;
+            self.raw.set_modified();
         }
     }
 
@@ -214,7 +216,7 @@ impl<'i> StartTag<'i> {
     fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
         let output_handler = sink.output_handler();
 
-        if let Some(raw) = &self.raw {
+        if let Some(raw) = self.raw.original() {
             output_handler(raw);
             return Ok(());
         }
@@ -251,6 +253,11 @@ impl<'i> StartTag<'i> {
     ) -> (&'i Bytes<'i>, &'i crate::parser::AttributeBuffer) {
         self.attributes.raw_attributes()
     }
+
+    /// Position of this tag in the source document, before any rewriting
+    pub fn source_location(&self) -> SourceLocation {
+        self.raw.source_location()
+    }
 }
 
 impl_serialize!(StartTag);
@@ -262,6 +269,7 @@ impl Debug for StartTag<'_> {
             .field("name", &self.name())
             .field("attributes", &self.attributes())
             .field("self_closing", &self.self_closing)
+            .field("at", &self.source_location())
             .finish()
     }
 }
