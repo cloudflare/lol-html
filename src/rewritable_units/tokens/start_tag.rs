@@ -1,9 +1,9 @@
 use super::{Attribute, AttributeNameError, Attributes};
 use super::{Mutations, Serialize, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
 use crate::html::Namespace;
-use crate::html_content::{ContentType, StreamingHandler};
+use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -12,60 +12,73 @@ use std::fmt::{self, Debug};
 ///
 /// Exposes API for examination and modification of a parsed HTML start tag.
 pub struct StartTag<'i> {
-    name: Bytes<'i>,
+    name: BytesCow<'i>,
     attributes: Attributes<'i>,
     ns: Namespace,
     self_closing: bool,
     raw: Option<Bytes<'i>>,
-    encoding: &'static Encoding,
     pub(crate) mutations: Mutations,
 }
 
 impl<'i> StartTag<'i> {
+    /// Reuses encoding from `attributes`
     #[inline]
     #[must_use]
-    pub(super) const fn new_token(
+    pub(super) fn new_token(
         name: Bytes<'i>,
         attributes: Attributes<'i>,
         ns: Namespace,
         self_closing: bool,
         raw: Bytes<'i>,
-        encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::StartTag(StartTag {
-            name,
+            name: name.into(),
             attributes,
             ns,
             self_closing,
             raw: Some(raw),
-            encoding,
             mutations: Mutations::new(),
         })
     }
 
-    #[inline]
+    #[inline(always)]
     #[doc(hidden)]
     pub const fn encoding(&self) -> &'static Encoding {
-        self.encoding
+        self.attributes.encoding
     }
 
     /// Returns the name of the tag.
     #[inline]
     pub fn name(&self) -> String {
-        self.name.as_lowercase_string(self.encoding)
+        self.name.as_lowercase_string(self.attributes.encoding)
     }
 
     /// Returns the name of the tag, preserving its case.
     #[inline]
     pub fn name_preserve_case(&self) -> String {
-        self.name.as_string(self.encoding)
+        self.name.as_string(self.attributes.encoding)
     }
 
     /// Sets the name of the tag.
     #[inline]
-    pub fn set_name(&mut self, name: Bytes<'static>) {
+    pub(crate) fn set_name_raw(&mut self, name: BytesCow<'static>) {
         self.name = name;
         self.raw = None;
+    }
+
+    /// Sets the name of the start tag only. To rename the element, prefer [`Element::set_tag_name()`][crate::html_content::Element::set_tag_name].
+    ///
+    /// The tag name must have a valid syntax for its context.
+    ///
+    /// The new tag name must be in the same namespace, have the same content model, and be valid in its location.
+    /// Otherwise change of the tag name may cause the resulting document to be parsed in an unexpected way,
+    /// out of sync with this library.
+    #[doc(hidden)]
+    #[deprecated(
+        note = "this method won't convert the string encoding, and the type of the argument is a private implementation detail. Use Element::set_tag_name() instead"
+    )]
+    pub fn set_name(&mut self, name: BytesCow<'static>) {
+        self.set_name_raw(name);
     }
 
     /// Returns the [namespace URI] of the tag's element.
@@ -88,7 +101,8 @@ impl<'i> StartTag<'i> {
     /// to the tag with `name` and `value`.
     #[inline]
     pub fn set_attribute(&mut self, name: &str, value: &str) -> Result<(), AttributeNameError> {
-        self.attributes.set_attribute(name, value, self.encoding)?;
+        self.attributes
+            .set_attribute(name, value, self.attributes.encoding)?;
         self.raw = None;
 
         Ok(())
@@ -105,7 +119,7 @@ impl<'i> StartTag<'i> {
     /// Whether the tag syntactically ends with `/>`. In HTML content this is purely a decorative, unnecessary, and has no effect of any kind.
     ///
     /// The `/>` syntax only affects parsing of elements in foreign content (SVG and MathML).
-    /// It will never close any HTML tags that aren't already defined as [void](spec) in HTML.
+    /// It will never close any HTML tags that aren't already defined as [void][spec] in HTML.
     ///
     /// This function only reports the parsed syntax, and will not report which elements are actually void in HTML.
     ///
@@ -197,7 +211,9 @@ impl<'i> StartTag<'i> {
         self.mutations.mutate().remove();
     }
 
-    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
+        let output_handler = sink.output_handler();
+
         if let Some(raw) = &self.raw {
             output_handler(raw);
             return Ok(());

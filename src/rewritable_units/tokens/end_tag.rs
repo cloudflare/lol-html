@@ -1,7 +1,7 @@
 use super::{Mutations, Token};
-use crate::base::Bytes;
+use crate::base::{Bytes, BytesCow};
 use crate::errors::RewritingError;
-use crate::html_content::{ContentType, StreamingHandler};
+use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
 use encoding_rs::Encoding;
 use std::fmt::{self, Debug};
@@ -10,7 +10,7 @@ use std::fmt::{self, Debug};
 ///
 /// Exposes API for examination and modification of a parsed HTML end tag.
 pub struct EndTag<'i> {
-    name: Bytes<'i>,
+    name: BytesCow<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
     pub(crate) mutations: Mutations,
@@ -25,11 +25,16 @@ impl<'i> EndTag<'i> {
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::EndTag(EndTag {
-            name,
+            name: name.into(),
             raw: Some(raw),
             encoding,
             mutations: Mutations::new(),
         })
+    }
+
+    #[inline(always)]
+    pub(crate) fn encoding(&self) -> &'static Encoding {
+        self.encoding
     }
 
     /// Returns the name of the tag.
@@ -46,23 +51,29 @@ impl<'i> EndTag<'i> {
         self.name.as_string(self.encoding)
     }
 
-    #[inline]
     #[doc(hidden)]
-    #[deprecated(note = "use set_name_str")]
-    pub fn set_name(&mut self, name: Bytes<'static>) {
+    #[deprecated(
+        note = "this method won't convert the string encoding, and the type of the argument is a private implementation detail. Use set_name_str() instead"
+    )]
+    pub fn set_name(&mut self, name: BytesCow<'static>) {
         self.set_name_raw(name);
     }
 
     /// Sets the name of the tag.
-    pub(crate) fn set_name_raw(&mut self, name: Bytes<'static>) {
+    pub(crate) fn set_name_raw(&mut self, name: BytesCow<'static>) {
         self.name = name;
         self.raw = None;
     }
 
-    /// Sets the name of the tag by encoding the given string.
-    #[inline]
+    /// Sets the name of the tag only. To rename the element, prefer [`Element::set_tag_name()`][crate::html_content::Element::set_tag_name].
+    ///
+    /// The name will be converted to the document's encoding.
+    ///
+    /// The name must have a valid syntax, and the closing tag must be valid in its context.
+    /// The parser will not take the new name into account, so if the new tag alters the structure of the document,
+    /// the rest of the generated document will be parsed differently than during rewriting.
     pub fn set_name_str(&mut self, name: String) {
-        self.set_name_raw(Bytes::from_string(name, self.encoding));
+        self.set_name_raw(BytesCow::from_string(name, self.encoding));
     }
 
     /// Inserts `content` before the end tag.
@@ -149,7 +160,9 @@ impl<'i> EndTag<'i> {
     }
 
     #[inline]
-    fn serialize_self(&self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
+        let output_handler = sink.output_handler();
+
         if let Some(raw) = &self.raw {
             output_handler(raw);
         } else {

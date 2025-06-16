@@ -62,6 +62,10 @@ impl<S: ParserOutputSink> Parser<S> {
         }
     }
 
+    // generic methods tend to be inlined, but this one is called from a couple of places,
+    // and has cheap-to-pass non-constants args, so it won't benefit from being merged into its callers.
+    // It's better to outline it, and let its callers be inlined.
+    #[inline(never)]
     pub fn parse(&mut self, input: &[u8], last: bool) -> Result<usize, RewritingError> {
         use ActionError::*;
 

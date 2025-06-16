@@ -3,7 +3,8 @@ use thiserror::Error;
 
 /// Input contained non-UTF-8 byte sequence
 ///
-/// [`StreamingHandlerSink::write_utf8_chunk`] will not fail on an incomplete UTF-8 sequence at the end of the chunk,
+/// [`StreamingHandlerSink::write_utf8_chunk`][crate::html_content::StreamingHandlerSink::write_utf8_chunk]
+/// will not fail on an incomplete UTF-8 sequence at the end of the chunk,
 /// but it will report errors if incomplete UTF-8 sequences are within the chunk, or the next call starts with
 /// bytes that don't match the previous call's trailing bytes.
 #[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]

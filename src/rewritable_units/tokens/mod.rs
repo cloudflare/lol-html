@@ -22,11 +22,11 @@ macro_rules! impl_serialize {
                 output_handler: &mut dyn FnMut(&[u8]),
             ) -> Result<(), crate::errors::RewritingError> {
                 let mut encoder = crate::rewritable_units::StreamingHandlerSink::new(
-                    self.encoding,
+                    self.encoding(),
                     output_handler,
                 );
                 match self.mutations.take() {
-                    None => self.serialize_self(encoder.output_handler()),
+                    None => self.serialize_self(&mut encoder),
                     Some(mutations) => {
                         mutations
                             .content_before
@@ -34,7 +34,7 @@ macro_rules! impl_serialize {
                             .map_err(crate::errors::RewritingError::ContentHandlerError)?;
 
                         if !mutations.removed {
-                            self.serialize_self(encoder.output_handler())?;
+                            self.serialize_self(&mut encoder)?;
                         } else {
                             mutations
                                 .replacement
