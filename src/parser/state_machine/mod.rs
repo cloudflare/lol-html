@@ -75,7 +75,7 @@ pub type ParseResult = Result<Never, ParsingTermination>;
 pub(crate) trait StateMachineActions {
     type Context;
 
-    fn emit_eof(&mut self, context: &mut Self::Context, input: &[u8]) -> ActionResult;
+    fn emit_text_and_eof(&mut self, context: &mut Self::Context, input: &[u8]) -> ActionResult;
     fn emit_text(&mut self, context: &mut Self::Context, input: &[u8]) -> ActionResult;
     fn emit_current_token(&mut self, context: &mut Self::Context, input: &[u8]) -> ActionResult;
     fn emit_tag(&mut self, context: &mut Self::Context, input: &[u8]) -> ActionResult;

@@ -88,7 +88,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     }
 
     noop_action_with_result!(
-        emit_eof,
+        emit_text_and_eof,
         emit_text,
         emit_current_token,
         emit_current_token_and_eof,
