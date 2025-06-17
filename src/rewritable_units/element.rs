@@ -38,8 +38,8 @@ pub enum TagNameError {
 /// An HTML element rewritable unit.
 ///
 /// Exposes API for examination and modification of a parsed HTML element.
-pub struct Element<'r, 't, H: HandlerTypes = LocalHandlerTypes> {
-    start_tag: &'r mut StartTag<'t>,
+pub struct Element<'rewriter, 'input_token, H: HandlerTypes = LocalHandlerTypes> {
+    start_tag: &'rewriter mut StartTag<'input_token>,
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Box<[u8]>>,
     end_tag_handlers: Vec<H::EndTagHandler<'static>>,
@@ -49,10 +49,13 @@ pub struct Element<'r, 't, H: HandlerTypes = LocalHandlerTypes> {
     user_data: Box<dyn Any>,
 }
 
-impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
+impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, H> {
     #[inline]
     #[must_use]
-    pub(crate) fn new(start_tag: &'r mut StartTag<'t>, can_have_content: bool) -> Self {
+    pub(crate) fn new(
+        start_tag: &'rewriter mut StartTag<'input_token>,
+        can_have_content: bool,
+    ) -> Self {
         let encoding = start_tag.encoding();
 
         Element {
@@ -182,7 +185,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// Returns an immutable collection of element's attributes.
     #[inline]
     #[must_use]
-    pub fn attributes(&self) -> &[Attribute<'t>] {
+    pub fn attributes(&self) -> &[Attribute<'input_token>] {
         self.start_tag.attributes()
     }
 
@@ -631,7 +634,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     /// Returns the start tag.
     #[inline]
-    pub fn start_tag(&mut self) -> &mut StartTag<'t> {
+    pub fn start_tag(&mut self) -> &mut StartTag<'input_token> {
         self.start_tag
     }
 
