@@ -20,6 +20,7 @@
 #![allow(clippy::default_trait_access)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::redundant_pub_crate)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
 #![cfg_attr(any(feature = "integration_test", test), allow(unnameable_types))]
 
@@ -47,7 +48,11 @@ pub use self::rewriter::{
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
 
-/// These module contains types to work with [`Send`]able [`HtmlRewriter`]s.
+/// This module contains type aliases that make the [`HtmlRewriter`] safe to move between threads (have the [`Send`] bound).
+///
+/// The bound requires content handlers to be thread-safe, which prevents them from mutating external state without synchronization.
+///
+/// Rewriting is sequential, so there's no benefit from using the `Send`-compatible rewriter.
 pub mod send {
     pub use crate::rewriter::{
         CommentHandlerSend as CommentHandler, DoctypeHandlerSend as DoctypeHandler,

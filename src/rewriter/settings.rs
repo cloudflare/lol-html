@@ -126,36 +126,46 @@ impl HandlerTypes for SendHandlerTypes {
 /// The result of a handler.
 pub type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
 
-/// Handler for the [document type declaration].
+/// Boxed closure for handling the [document type declaration].
 ///
 /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
 pub type DoctypeHandler<'h> = Box<dyn FnMut(&mut Doctype<'_>) -> HandlerResult + 'h>;
-/// Handler for HTML comments.
+/// Boxed closure for handling HTML comments.
 pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment<'_>) -> HandlerResult + 'h>;
-/// Handler for text chunks present the HTML.
+/// Boxed closure for handling text chunks present the HTML.
 pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk<'_>) -> HandlerResult + 'h>;
-/// Handler for elements matched by a selector.
+/// Boxed closure for handling elements matched by a selector.
 pub type ElementHandler<'h, H = LocalHandlerTypes> =
     Box<dyn FnMut(&mut Element<'_, '_, H>) -> HandlerResult + 'h>;
-/// Handler for end tags.
+/// Boxed closure for handling end tags.
 pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResult + 'h>;
-/// Handler for the document end. This is called after the last chunk is processed.
+/// Boxed closure for handling the document end. This is called after the last chunk is processed.
 pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'h>;
 
-/// Handler for the [document type declaration] that are [`Send`]able.
+/// [Sendable](crate::send) boxed closure for handling the [document type declaration].
 ///
 /// [document type declaration]: https://developer.mozilla.org/en-US/docs/Glossary/Doctype
+///
+/// See also non-sendable [`DoctypeHandler`](crate::DoctypeHandler).
 pub type DoctypeHandlerSend<'h> = Box<dyn FnMut(&mut Doctype<'_>) -> HandlerResult + Send + 'h>;
-/// Handler for HTML comments that are [`Send`]able.
+/// [Sendable](crate::send) boxed closure for handling HTML comments.
+///
+/// See also non-sendable [`CommentHandler`](crate::CommentHandler).
 pub type CommentHandlerSend<'h> = Box<dyn FnMut(&mut Comment<'_>) -> HandlerResult + Send + 'h>;
-/// Handler for text chunks present the HTML that are [`Send`]able.
+/// [Sendable](crate::send) boxed closure for handling text chunks](TextChunk) present the HTML.
+///
+/// See also non-sendable [`TextHandler`](crate::TextHandler).
 pub type TextHandlerSend<'h> = Box<dyn FnMut(&mut TextChunk<'_>) -> HandlerResult + Send + 'h>;
-/// Handler for elements matched by a selector that are [`Send`]able.
+/// [Sendable](crate::send) boxed closure for handling elements matched by a selector.
 pub type ElementHandlerSend<'h, H = SendHandlerTypes> =
     Box<dyn FnMut(&mut Element<'_, '_, H>) -> HandlerResult + Send + 'h>;
-/// Handler for end tags that are [`Send`]able.
+/// [Sendable](crate::send) boxed closure for handling end tags.
+///
+/// See also non-sendable [`EndTagHandler`](crate::EndTagHandler).
 pub type EndTagHandlerSend<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResult + Send + 'h>;
-/// Handler for the document end that are [`Send`]able. This is called after the last chunk is processed.
+/// [Sendable](crate::send) boxed closure for handling the document end. This is called after the last chunk is processed.
+///
+/// See also non-sendable [`EndHandler`](crate::EndHandler).
 pub type EndHandlerSend<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>;
 
 /// Trait that allows closures to be used as handlers
@@ -411,6 +421,12 @@ macro_rules! __element_content_handler {
 ///
 /// assert_eq!(html, r#"<span id="foo">Hello!</span>"#);
 /// ```
+///
+/// When using [sendable handlers](crate::send), beware that the [`Element`] type has a generic argument that controls `Send` compatibility.
+/// Use [`send::Element`](crate::send::Element) or write the closure's argument's type as `&mut Element<'_, '_, _>`.
+///
+/// This macro can create either sendable or non-sendable handlers, but not both in a generic context.
+/// `H: HandlerTypes` bound won't work with this macro.
 #[macro_export(local_inner_macros)]
 macro_rules! element {
     ($selector:expr, $handler:expr) => {{
@@ -455,6 +471,9 @@ macro_rules! element {
 ///
 /// assert_eq!(html, r#"<span>Hello world</span>"#);
 /// ```
+///
+/// This macro can create either [sendable](crate::send) or non-sendable handlers, but not both in a generic context.
+/// `H: HandlerTypes` bound won't work with this macro.
 #[macro_export(local_inner_macros)]
 macro_rules! text {
     ($selector:expr, $handler:expr) => {{
@@ -495,6 +514,9 @@ macro_rules! text {
 ///
 /// assert_eq!(html, r#"<span><!--Hello!--></span>"#);
 /// ```
+///
+/// This macro can create either [sendable](crate::send) or non-sendable handlers, but not both in a generic context.
+/// `H: HandlerTypes` bound won't work with this macro.
 #[macro_export(local_inner_macros)]
 macro_rules! comments {
     ($selector:expr, $handler:expr) => {{
@@ -514,6 +536,8 @@ macro_rules! comments {
 /// A convenience macro to construct a [`StreamingHandler`](crate::html_content::StreamingHandler) from a closure.
 ///
 /// For use with [`Element::streaming_replace`], etc.
+///
+/// The closure must be `'static` (can't capture by a temporary reference), and `Send`, even when using [non-sendable](crate::send) rewriter.
 ///
 /// ```rust
 /// use lol_html::{element, streaming, RewriteStrSettings};

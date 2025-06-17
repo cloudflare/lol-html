@@ -189,6 +189,7 @@ impl<'i> TextChunk<'i> {
     /// Use [`Element::end_tag_handlers`][crate::rewritable_units::Element::end_tag_handlers] to add content after all text in an element.
     #[inline]
     #[must_use]
+    #[doc(alias = "is_last")]
     pub fn last_in_text_node(&self) -> bool {
         self.last_in_text_node
     }
