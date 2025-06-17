@@ -89,7 +89,7 @@ impl Mutations {
 pub(crate) enum StringChunk {
     Buffer(Box<str>, ContentType),
     // The mutex is never actually locked, but makes the struct `Sync` without unsafe.
-    Stream(Mutex<Box<dyn StreamingHandler + Send>>),
+    Stream(Mutex<Box<dyn StreamingHandler + Send + 'static>>),
 }
 
 impl StringChunk {
@@ -98,7 +98,7 @@ impl StringChunk {
     }
 
     #[inline]
-    pub(crate) fn stream(handler: Box<dyn StreamingHandler + Send>) -> Self {
+    pub(crate) fn stream(handler: Box<dyn StreamingHandler + Send + 'static>) -> Self {
         Self::Stream(Mutex::new(handler))
     }
 }
@@ -152,6 +152,10 @@ impl DynamicString {
 /// A callback used to write content asynchronously.
 ///
 /// Use the [`streaming!`] macro to construct it.
+#[diagnostic::on_unimplemented(
+    note = "use `streaming!` macro to create the handler",
+    label = "Must be `FnOnce(&mut StreamingHandlerSink<'_>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> + Send + 'static`"
+)]
 pub trait StreamingHandler {
     /// This method is called only once, and is expected to write content
     /// by calling the [`sink.write_str()`](StreamingHandlerSink::write_str) one or more times.
@@ -165,7 +169,7 @@ pub trait StreamingHandler {
 impl RefUnwindSafe for StringChunk {}
 impl UnwindSafe for StringChunk {}
 
-impl<F> From<F> for Box<dyn StreamingHandler + Send>
+impl<F> From<F> for Box<dyn StreamingHandler + Send + 'static>
 where
     F: FnOnce(&mut StreamingHandlerSink<'_>) -> BoxResult + Send + 'static,
 {

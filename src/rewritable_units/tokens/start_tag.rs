@@ -179,7 +179,7 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method append to the previously inserted content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.mutations
             .mutate()
             .content_before
@@ -191,7 +191,7 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method prepend to the previously inserted content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.mutations
             .mutate()
             .content_after
@@ -203,7 +203,7 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method overwrite previous replacement content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.mutations
             .mutate()
             .replace(StringChunk::stream(string_writer));
