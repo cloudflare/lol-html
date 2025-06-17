@@ -9,6 +9,9 @@ pub(crate) struct TextDecoder {
     text_buffer: String,
 }
 
+pub(crate) type OutputHandlerCallback<'tmp> =
+    dyn FnMut(&str, bool, &'static Encoding, SourceLocation) -> Result<(), RewritingError> + 'tmp;
+
 impl TextDecoder {
     #[inline]
     #[must_use]
@@ -25,12 +28,7 @@ impl TextDecoder {
     #[inline]
     pub fn flush_pending(
         &mut self,
-        output_handler: &mut dyn FnMut(
-            &str,
-            bool,
-            &'static Encoding,
-            SourceLocation,
-        ) -> Result<(), RewritingError>,
+        output_handler: &mut OutputHandlerCallback<'_>,
     ) -> Result<(), RewritingError> {
         if self.pending_text_streaming_decoder.is_some() {
             self.feed_text(
@@ -47,12 +45,7 @@ impl TextDecoder {
         &mut self,
         input_span: Spanned<Bytes<'_>>,
         last_in_text_node: bool,
-        output_handler: &mut dyn FnMut(
-            &str,
-            bool,
-            &'static Encoding,
-            SourceLocation,
-        ) -> Result<(), RewritingError>,
+        output_handler: &mut OutputHandlerCallback<'_>,
     ) -> Result<(), RewritingError> {
         let mut raw_input = input_span.as_slice();
         let mut next_source_location_bytes_start = input_span.source_location().bytes().start;
