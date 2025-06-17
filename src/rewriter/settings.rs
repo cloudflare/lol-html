@@ -101,13 +101,13 @@ impl HandlerTypes for SendHandlerTypes {
     type EndHandler<'h> = EndHandlerSend<'h>;
 
     fn new_end_tag_handler<'h>(
-        handler: impl IntoHandler<EndTagHandlerSend<'h>>,
+        handler: impl IntoHandler<Self::EndTagHandler<'h>>,
     ) -> Self::EndTagHandler<'h> {
         handler.into_handler()
     }
 
     fn new_element_handler<'h>(
-        handler: impl IntoHandler<ElementHandlerSend<'h, Self>>,
+        handler: impl IntoHandler<Self::ElementHandler<'h>>,
     ) -> Self::ElementHandler<'h> {
         handler.into_handler()
     }
@@ -135,8 +135,8 @@ pub type CommentHandler<'h> = Box<dyn FnMut(&mut Comment<'_>) -> HandlerResult +
 /// Handler for text chunks present the HTML.
 pub type TextHandler<'h> = Box<dyn FnMut(&mut TextChunk<'_>) -> HandlerResult + 'h>;
 /// Handler for elements matched by a selector.
-pub type ElementHandler<'h> =
-    Box<dyn FnMut(&mut Element<'_, '_, LocalHandlerTypes>) -> HandlerResult + 'h>;
+pub type ElementHandler<'h, H = LocalHandlerTypes> =
+    Box<dyn FnMut(&mut Element<'_, '_, H>) -> HandlerResult + 'h>;
 /// Handler for end tags.
 pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResult + 'h>;
 /// Handler for the document end. This is called after the last chunk is processed.

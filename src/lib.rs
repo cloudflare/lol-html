@@ -49,9 +49,10 @@ pub use self::transform_stream::OutputSink;
 
 /// These module contains types to work with [`Send`]able [`HtmlRewriter`]s.
 pub mod send {
-    use crate::rewriter::{
-        CommentHandlerSend, DoctypeHandlerSend, ElementHandlerSend, EndHandlerSend,
-        EndTagHandlerSend, TextHandlerSend,
+    pub use crate::rewriter::{
+        CommentHandlerSend as CommentHandler, DoctypeHandlerSend as DoctypeHandler,
+        ElementHandlerSend as ElementHandler, EndHandlerSend as EndHandler,
+        EndTagHandlerSend as EndTagHandler, TextHandlerSend as TextHandler,
     };
     pub use crate::rewriter::{IntoHandler, SendHandlerTypes};
 
@@ -66,21 +67,6 @@ pub mod send {
     pub type ElementContentHandlers<'h> = crate::ElementContentHandlers<'h, SendHandlerTypes>;
     /// [`DocumentContentHandlers`](crate::DocumentContentHandlers) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type DocumentContentHandlers<'h> = crate::DocumentContentHandlers<'h, SendHandlerTypes>;
-
-    /// [`CommentHandler`](crate::CommentHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type CommentHandler<'h> = CommentHandlerSend<'h>;
-    /// [`DoctypeHandler`](crate::DoctypeHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type DoctypeHandler<'h> = DoctypeHandlerSend<'h>;
-    /// [`ElementHandler`](crate::ElementHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type ElementHandler<'h> = ElementHandlerSend<'h>;
-    /// [`EndHandler`](crate::EndHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type EndHandler<'h> = EndHandlerSend<'h>;
-    /// [`EndTagHandler`](crate::EndTagHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type EndTagHandler<'h> = EndTagHandlerSend<'h>;
-    /// [`TextHandler`](crate::TextHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    ///
-    /// See [`TextChunk`][crate::html_content::TextChunk].
-    pub type TextHandler<'h> = TextHandlerSend<'h>;
 
     /// [`Element`](crate::rewritable_units::Element) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type Element<'r, 't> = crate::rewritable_units::Element<'r, 't, SendHandlerTypes>;
