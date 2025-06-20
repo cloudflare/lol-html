@@ -14,6 +14,7 @@ rewriter.on('a[href]', {
       .getAttribute('href')
       .replace('http:', 'https:');
     el.setAttribute('href', href);
+    el.setAttribute("start", 'byte '+el.sourceLocationBytes[0]);
 
     el.onEndTag((tag) => {
       endTags.push(tag.name);
@@ -32,8 +33,8 @@ rewriter.on('a[href]', {
 rewriter.end();
 
 const output = Buffer.concat(chunks).toString('utf8');
-if (output != '<div><a href="https://example.com"></a></div>') {
-  throw "fail";
+if (output != '<div><a href="https://example.com" start="byte 5"></a></div>') {
+  throw "fail\ngot: " + output;
 }
 
 if (endTags.length != 1 || endTags[0] != 'a') {

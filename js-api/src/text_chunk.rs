@@ -19,4 +19,12 @@ impl TextChunk {
     pub fn last_in_text_node(&self) -> JsResult<bool> {
         self.0.get().map(|c| c.last_in_text_node())
     }
+
+    /// Returns a JS array `[start, end]` with byte offsets relative to the start of the document.
+    ///
+    /// The byte offsets are incompatible with JS's char code indices.
+    #[wasm_bindgen(getter=sourceLocationBytes)]
+    pub fn source_location_bytes(&self) -> JsResult<JsValue> {
+        Ok(location_to_js(self.0.get()?.source_location()))
+    }
 }

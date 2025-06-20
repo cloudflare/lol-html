@@ -1,3 +1,4 @@
+use lol_html_native::html_content::SourceLocation;
 use lol_html_native::html_content::ContentType as NativeContentType;
 use std::cell::Cell;
 use std::convert::Into;
@@ -165,6 +166,12 @@ macro_rules! impl_from_native {
             }
         }
     };
+}
+
+fn location_to_js(location: SourceLocation) -> JsValue {
+    let range = location.bytes();
+    let arr: Box<[_]> = [range.start as u32, range.end as u32].into();
+    arr.into()
 }
 
 mod comment;
