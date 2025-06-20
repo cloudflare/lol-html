@@ -9,9 +9,9 @@ publish = false
 [dependencies]
 lol_html = { path = "../../" }
 lol_html_c_api = { path = "../../c-api" }
-encoding_rs = "0.8.13"
-libc = "0.2.61"
 rand = "0.8.4"
+encoding_rs = "0.8.35"
+libc = "0.2.174"
 
 [build-dependencies]
-bindgen = "0.63.0"
+bindgen = "0.72.0"

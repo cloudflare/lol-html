@@ -13,7 +13,7 @@ default = ["capi"]
 capi = []
 
 [dependencies]
-encoding_rs = "0.8.13"
+encoding_rs = "0.8.35"
 lol_html = { path = "../" }
 libc = "0"
 thiserror = "2"
