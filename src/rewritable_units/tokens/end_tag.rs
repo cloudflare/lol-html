@@ -38,7 +38,7 @@ impl<'i> EndTag<'i> {
         self.encoding
     }
 
-    /// Returns the name of the tag.
+    /// Returns the name of the tag, always ASCII lowercase.
     #[inline]
     #[must_use]
     pub fn name(&self) -> String {

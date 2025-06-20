@@ -9,7 +9,11 @@ use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{self, Debug};
 
-/// An HTML text node chunk.
+/// A fragment of an HTML text node. Beware: this is tricky to use.
+///
+/// ## The text is fragmented
+///
+/// The text chunks are **not** complete text DOM nodes. They are fragments of text nodes, split at arbitrary points.
 ///
 /// Since the rewriter operates on a streaming input with minimal internal buffering, HTML
 /// text node can be represented by multiple text chunks. The size of a chunk depends on multiple
@@ -24,6 +28,14 @@ use std::fmt::{self, Debug};
 /// produce one text chunk where [`last_in_text_node`] returns `true`. The last chunk in a text
 /// node can have empty textual content. To perform an action once on the text contents of an
 /// element, see [`Element::end_tag_handlers`][crate::rewritable_units::Element::end_tag_handlers].
+///
+/// ## The text may contain entities
+///
+/// Text chunks are passed through as-is, without unescaping. The text may contain HTML entities, potentially
+/// split across chunk boundaries. Text chunks may also appear inside `<style>` or `<script>`,
+/// which do not support HTML entities.
+///
+/// It is important to observe [`TextChunk::text_type`] and unescape/escape the chunks accordingly.
 ///
 /// # Example
 /// ```
@@ -96,21 +108,35 @@ impl<'i> TextChunk<'i> {
         self.encoding
     }
 
-    /// Returns the textual content of the chunk.
+    /// Returns the content of the chunk, which [`may not be a complete text node`](TextChunk).
+    ///
+    /// It may contain markup, such as HTML/XML entities. See [`TextChunk::text_type`].
+    ///
+    /// Because the text may be fragmented and contain markup, operating on the slice directly is tricky.
+    /// It may be necessary to buffer the text. See [`TextChunk::last_in_text_node`].
     #[inline]
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.text
     }
 
-    /// Returns the textual content of the chunk that the caller can modify.  Note that this can
-    /// cause the string to be allocated.
+    /// Returns the content of the chunk, which [`may not be a complete text node`](TextChunk).
+    ///
+    /// It may contain markup, such as HTML/XML entities. See [`TextChunk::text_type`].
+    ///
+    /// The string may be mutated, but needs to have markup escaped appropriately for the context its in.
+    ///
+    /// Because the text may be fragmented and contain markup, operating on the slice directly is tricky.
+    /// It may be necessary to buffer the text. See [`TextChunk::last_in_text_node`].
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut String {
         self.text.to_mut()
     }
 
-    /// Sets the textual content of the chunk.
+    /// Sets the content of this chunk only, without affecting text chunks around it.
+    ///
+    /// The markup must contain escaping appropriate for the context it's in, e.g. use `&amp` instead of `&` in HTML body.
+    /// See [`TextChunk::text_type`].
     #[inline]
     pub fn set_str(&mut self, text: String) {
         self.text = Cow::Owned(text);
@@ -158,8 +184,12 @@ impl<'i> TextChunk<'i> {
     /// Returns `true` if the chunk is last in a HTML text node.
     ///
     /// Note that last chunk can have empty textual content.
+    ///
+    /// In the current implementation, text nodes are interrupted by comments and CDATA.
+    /// Use [`Element::end_tag_handlers`][crate::rewritable_units::Element::end_tag_handlers] to add content after all text in an element.
     #[inline]
     #[must_use]
+    #[doc(alias = "is_last")]
     pub fn last_in_text_node(&self) -> bool {
         self.last_in_text_node
     }

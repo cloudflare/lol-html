@@ -129,6 +129,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         self.emit_eof(context, input)
     }
 
+    /// Emits `<[CDATA[` and such.
     #[inline]
     fn emit_raw_without_token(
         &mut self,

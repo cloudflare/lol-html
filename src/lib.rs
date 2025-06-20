@@ -20,6 +20,7 @@
 #![allow(clippy::default_trait_access)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::redundant_pub_crate)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
 #![cfg_attr(any(feature = "integration_test", test), allow(unnameable_types))]
 
@@ -47,11 +48,16 @@ pub use self::rewriter::{
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
 
-/// These module contains types to work with [`Send`]able [`HtmlRewriter`]s.
+/// This module contains type aliases that make the [`HtmlRewriter`] safe to move between threads (have the [`Send`] bound).
+///
+/// The bound requires content handlers to be thread-safe, which prevents them from mutating external state without synchronization.
+///
+/// Rewriting is sequential, so there's no benefit from using the `Send`-compatible rewriter.
 pub mod send {
-    use crate::rewriter::{
-        CommentHandlerSend, DoctypeHandlerSend, ElementHandlerSend, EndHandlerSend,
-        EndTagHandlerSend, TextHandlerSend,
+    pub use crate::rewriter::{
+        CommentHandlerSend as CommentHandler, DoctypeHandlerSend as DoctypeHandler,
+        ElementHandlerSend as ElementHandler, EndHandlerSend as EndHandler,
+        EndTagHandlerSend as EndTagHandler, TextHandlerSend as TextHandler,
     };
     pub use crate::rewriter::{IntoHandler, SendHandlerTypes};
 
@@ -66,19 +72,6 @@ pub mod send {
     pub type ElementContentHandlers<'h> = crate::ElementContentHandlers<'h, SendHandlerTypes>;
     /// [`DocumentContentHandlers`](crate::DocumentContentHandlers) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type DocumentContentHandlers<'h> = crate::DocumentContentHandlers<'h, SendHandlerTypes>;
-
-    /// [`CommentHandler`](crate::CommentHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type CommentHandler<'h> = CommentHandlerSend<'h>;
-    /// [`DoctypeHandler`](crate::DoctypeHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type DoctypeHandler<'h> = DoctypeHandlerSend<'h>;
-    /// [`ElementHandler`](crate::ElementHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type ElementHandler<'h> = ElementHandlerSend<'h>;
-    /// [`EndHandler`](crate::EndHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type EndHandler<'h> = EndHandlerSend<'h>;
-    /// [`EndTagHandler`](crate::EndTagHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type EndTagHandler<'h> = EndTagHandlerSend<'h>;
-    /// [`TextHandler`](crate::TextHandler) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type TextHandler<'h> = TextHandlerSend<'h>;
 
     /// [`Element`](crate::rewritable_units::Element) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type Element<'r, 't> = crate::rewritable_units::Element<'r, 't, SendHandlerTypes>;

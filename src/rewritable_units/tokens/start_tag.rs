@@ -49,7 +49,7 @@ impl<'i> StartTag<'i> {
         self.attributes.encoding
     }
 
-    /// Returns the name of the tag.
+    /// Returns the name of the tag, always ASCII lowercased.
     #[inline]
     pub fn name(&self) -> String {
         self.name.as_lowercase_string(self.attributes.encoding)
@@ -97,7 +97,9 @@ impl<'i> StartTag<'i> {
         &self.attributes
     }
 
-    /// Sets `value` of tag's attribute with `name`.
+    /// Sets `value` of tag's attribute with `name`. The value may have HTML/XML entities.
+    ///
+    /// `"` will be entity-escaped if needed. `&` won't be escaped.
     ///
     /// If tag doesn't have an attribute with the `name`, method adds a new attribute
     /// to the tag with `name` and `value`.
