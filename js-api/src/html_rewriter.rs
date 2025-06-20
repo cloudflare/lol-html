@@ -2,8 +2,8 @@ use super::handlers::{DocumentContentHandlers, ElementContentHandlers, HandlerJs
 use super::*;
 use encoding_rs::Encoding;
 use js_sys::{Error as JsError, Function as JsFunction, Uint8Array};
-use lol_html::errors::RewritingError;
-use lol_html::{
+use lol_html_native::errors::RewritingError;
+use lol_html_native::{
     AsciiCompatibleEncoding, HtmlRewriter as NativeHTMLRewriter, OutputSink, Selector, Settings,
 };
 use std::borrow::Cow;

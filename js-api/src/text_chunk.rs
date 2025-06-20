@@ -1,5 +1,5 @@
 use super::*;
-use lol_html::html_content::TextChunk as NativeTextChunk;
+use lol_html_native::html_content::TextChunk as NativeTextChunk;
 
 #[wasm_bindgen]
 pub struct TextChunk(NativeRefWrap<NativeTextChunk<'static>>);
@@ -9,6 +9,7 @@ impl_mutations!(TextChunk);
 
 #[wasm_bindgen]
 impl TextChunk {
+    /// The text may be an incomplete fragment of a text node
     #[wasm_bindgen(getter)]
     pub fn text(&self) -> JsResult<String> {
         self.0.get().map(|c| c.as_str().into())

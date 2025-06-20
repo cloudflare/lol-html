@@ -1,7 +1,7 @@
 use super::end_tag::EndTag;
 use super::*;
 use js_sys::Function as JsFunction;
-use lol_html::html_content::{Attribute as NativeAttribute, Element as NativeElement};
+use lol_html_native::html_content::{Attribute as NativeAttribute, Element as NativeElement};
 use serde::Serialize;
 use serde_wasm_bindgen::to_value as to_js_value;
 use thiserror::Error;
@@ -141,7 +141,7 @@ impl Element {
     #[wasm_bindgen(js_name=onEndTag)]
     pub fn on_end_tag(&mut self, handler: JsFunction) -> JsResult<()> {
         if let Some(handlers) = self.0.get_mut()?.end_tag_handlers() {
-            handlers.push(make_handler!(handler, EndTag, lol_html::EndTagHandler));
+            handlers.push(make_handler!(handler, EndTag, lol_html_native::EndTagHandler));
         }
 
         Ok(())

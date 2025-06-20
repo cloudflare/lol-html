@@ -1,5 +1,5 @@
 use super::*;
-use lol_html::html_content::Comment as NativeComment;
+use lol_html_native::html_content::Comment as NativeComment;
 
 #[wasm_bindgen]
 pub struct Comment(NativeRefWrap<NativeComment<'static>>);

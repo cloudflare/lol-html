@@ -1,4 +1,4 @@
-use lol_html::html_content::ContentType as NativeContentType;
+use lol_html_native::html_content::ContentType as NativeContentType;
 use std::cell::Cell;
 use std::convert::Into;
 use std::marker::PhantomData;
@@ -41,7 +41,7 @@ struct NativeRefWrap<R> {
 }
 
 impl<R> NativeRefWrap<R> {
-    pub unsafe fn wrap<I>(inner: &mut I) -> (Self, Anchor) {
+    pub unsafe fn wrap<I>(inner: &mut I) -> (Self, Anchor<'_>) {
         let wrap = Self {
             inner_ptr: std::ptr::from_mut::<I>(inner).cast::<R>(),
             poisoned: Rc::new(Cell::new(false)),

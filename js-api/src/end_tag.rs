@@ -1,5 +1,5 @@
 use super::*;
-use lol_html::html_content::EndTag as NativeEndTag;
+use lol_html_native::html_content::EndTag as NativeEndTag;
 
 #[wasm_bindgen]
 pub struct EndTag(NativeRefWrap<NativeEndTag<'static>>);

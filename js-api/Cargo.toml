@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 js-sys = "0.3.77"
-lol_html = { path = "../" }
+lol_html_native = { package = "lol_html", path = "../", version = "2.5.0" }
 serde = { version = "1.0.219", features = ["derive"] }
 encoding_rs = "0.8.35"
 serde-wasm-bindgen = "0.6.5"

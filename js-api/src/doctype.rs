@@ -1,5 +1,5 @@
 use super::*;
-use lol_html::html_content::Doctype as NativeDoctype;
+use lol_html_native::html_content::Doctype as NativeDoctype;
 
 #[wasm_bindgen]
 pub struct Doctype(NativeRefWrap<NativeDoctype<'static>>);
