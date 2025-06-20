@@ -59,7 +59,7 @@ pub struct ExternDocumentContentHandlers {
 
 impl ExternDocumentContentHandlers {
     #[must_use]
-    pub fn as_safe_document_content_handlers(&self) -> DocumentContentHandlers {
+    pub fn as_safe_document_content_handlers(&self) -> DocumentContentHandlers<'_> {
         let mut handlers = DocumentContentHandlers::default();
 
         add_handler!(handlers, Doctype, self.doctype);
@@ -79,7 +79,7 @@ pub struct ExternElementContentHandlers {
 
 impl ExternElementContentHandlers {
     #[must_use]
-    pub fn as_safe_element_content_handlers(&self) -> ElementContentHandlers {
+    pub fn as_safe_element_content_handlers(&self) -> ElementContentHandlers<'_> {
         let mut handlers = ElementContentHandlers::default();
 
         add_handler!(handlers, Element, self.element);
@@ -103,7 +103,7 @@ pub struct HtmlRewriterBuilder {
 
 impl HtmlRewriterBuilder {
     #[must_use]
-    pub fn get_safe_handlers(&self) -> SafeContentHandlers {
+    pub fn get_safe_handlers(&self) -> SafeContentHandlers<'_> {
         SafeContentHandlers {
             document: self
                 .document_content_handlers
