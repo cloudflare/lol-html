@@ -14,7 +14,7 @@ env:
 
 jobs:
   clippy:
-    name: Clipy and format
+    name: Clippy and format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +47,8 @@ jobs:
         run: cargo clippy --all-targets --manifest-path=c-api/Cargo.toml --target-dir=target
       - name: Run clippy on JS API
         run: cargo clippy --all-targets --manifest-path=js-api/Cargo.toml --target-dir=target
+      - name: Check docs
+        run: cargo doc --no-deps --all --target-dir=target
       - name: Check semver
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
