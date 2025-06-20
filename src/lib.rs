@@ -102,6 +102,7 @@ pub mod html_content {
         StreamingHandler, StreamingHandlerSink, TextChunk, UserData,
     };
 
+    pub use super::base::SourceLocation;
     pub use super::html::TextType;
 }
 

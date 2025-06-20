@@ -20,7 +20,7 @@ pub struct TokenSinkProxy<'a, Sink> {
 
 impl<Sink> TokenSinkProxy<'_, Sink> {
     fn push_text_token(&self, s: &str) {
-        let tokens = &mut *self.tokens.borrow_mut();
+        let tokens = &mut **self.tokens.borrow_mut();
         if let Some(&mut TestToken::Text(ref mut last)) = tokens.last_mut() {
             *last += s;
         } else {

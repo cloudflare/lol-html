@@ -83,7 +83,7 @@ impl<S: TagHintSink> TagScanner<S> {
             end: self.pos(),
         };
 
-        let input_bytes = Bytes::from(input);
+        let input_bytes = Bytes::new(input);
         let name = LocalName::new(&input_bytes, name_range, self.tag_name_hash);
 
         trace!(@output name);

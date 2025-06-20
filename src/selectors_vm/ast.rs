@@ -283,10 +283,10 @@ where
             for component in selector_item.iter_raw_parse_order_from(0) {
                 match component {
                     Component::Combinator(Combinator::Child) => {
-                        host_and_switch_branch_vec!(children)
+                        host_and_switch_branch_vec!(children);
                     }
                     Component::Combinator(Combinator::Descendant) => {
-                        host_and_switch_branch_vec!(descendants)
+                        host_and_switch_branch_vec!(descendants);
                     }
                     Component::Negation(ss) => {
                         ss.slice()
@@ -823,7 +823,7 @@ mod tests {
 
     #[test]
     fn pseudo_class_parse_errors() {
-        [
+        for s in &[
             ":active",
             ":any-link",
             ":blank",
@@ -879,14 +879,14 @@ mod tests {
             ":valid",
             ":visited",
             ":where(p)",
-        ]
-        .iter()
-        .for_each(|s| assert_err(s, SelectorError::UnsupportedPseudoClassOrElement));
+        ] {
+            assert_err(s, SelectorError::UnsupportedPseudoClassOrElement);
+        }
     }
 
     #[test]
     fn pseudo_elements_parse_errors() {
-        [
+        for s in &[
             "::after",
             "::backdrop",
             "::before",
@@ -899,9 +899,9 @@ mod tests {
             "::selection",
             "::slotted()",
             "::spelling-error",
-        ]
-        .iter()
-        .for_each(|s| assert_err(s, SelectorError::UnsupportedPseudoClassOrElement));
+        ] {
+            assert_err(s, SelectorError::UnsupportedPseudoClassOrElement);
+        }
     }
 
     #[test]

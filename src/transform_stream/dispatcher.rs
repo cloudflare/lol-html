@@ -1,9 +1,9 @@
-use crate::base::{Bytes, Range, SharedEncoding};
+use crate::base::{Bytes, Range, SharedEncoding, SourceLocation};
 use crate::html::{LocalName, Namespace};
 use crate::html_content::{TextChunk, TextType};
 use crate::parser::{
-    AttributeBuffer, Lexeme, LexemeSink, NonTagContentLexeme, ParserDirective, ParserOutputSink,
-    TagHintSink, TagLexeme, TagTokenOutline,
+    AttributeBuffer, Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline,
+    ParserDirective, ParserOutputSink, TagHintSink, TagLexeme, TagTokenOutline,
 };
 use crate::rewritable_units::TextDecoder;
 use crate::rewritable_units::ToTokenResult;
@@ -91,10 +91,14 @@ where
     O: OutputSink,
 {
     fn flush_remaining_input(&mut self, input: &[u8], consumed_byte_count: usize) {
-        let output = &input[self.remaining_content_start..consumed_byte_count];
+        if self.emission_enabled {
+            let output = input
+                .get(self.remaining_content_start..consumed_byte_count)
+                .unwrap_or_default();
 
-        if self.emission_enabled && !output.is_empty() {
-            self.output_sink.handle_chunk(output);
+            if !output.is_empty() {
+                self.output_sink.handle_chunk(output);
+            }
         }
 
         self.remaining_content_start = 0;
@@ -113,9 +117,7 @@ where
         Ok(())
     }
 
-    /// Returns offset to the end of the consumed range
-    #[inline(never)]
-    fn lexeme_consumed<T>(&mut self, lexeme: &Lexeme<'_, T>) -> usize {
+    fn lexeme_consumed<T>(&mut self, lexeme: &Lexeme<'_, T>) {
         let lexeme_range = lexeme.raw_range();
 
         let chunk_range = Range {
@@ -129,7 +131,7 @@ where
             self.output_sink.handle_chunk(&chunk);
         }
 
-        lexeme_range.end
+        self.remaining_content_start = lexeme_range.end;
     }
 
     #[inline]
@@ -150,9 +152,15 @@ where
         encoding: &'static Encoding,
         text_type: TextType,
         is_last_in_node: bool,
+        source_location: SourceLocation,
     ) -> Result<(), RewritingError> {
-        let mut token =
-            Token::TextChunk(TextChunk::new(text, text_type, is_last_in_node, encoding));
+        let mut token = Token::TextChunk(TextChunk::new(
+            text,
+            text_type,
+            is_last_in_node,
+            encoding,
+            source_location,
+        ));
 
         trace!(@output token);
 
@@ -202,55 +210,30 @@ where
     where
         Lexeme<'i, T>: ToToken,
     {
-        let lexeme_consumed_end;
-
         match lexeme.to_token(&mut self.delegate.capture_flags, self.encoding.get()) {
             ToTokenResult::Token(token) => {
-                self.text_decoder
-                    .flush_pending(&mut |text, is_last, encoding| {
-                        self.delegate.text_token_produced(
-                            text,
-                            encoding,
-                            self.last_text_type,
-                            is_last,
-                        )
-                    })?;
-                lexeme_consumed_end = self.delegate.lexeme_consumed(lexeme);
+                self.delegate.lexeme_consumed(lexeme);
                 self.delegate.token_produced(token)?;
             }
             ToTokenResult::Text(text_type) => {
-                lexeme_consumed_end = self.delegate.lexeme_consumed(lexeme);
-
+                self.delegate.lexeme_consumed(lexeme);
                 self.last_text_type = text_type;
                 self.text_decoder.feed_text(
-                    &lexeme.raw(),
+                    lexeme.spanned(),
                     false,
-                    &mut |text, is_last, encoding| {
+                    &mut |text, is_last, encoding, source_location| {
                         self.delegate.text_token_produced(
                             text,
                             encoding,
                             self.last_text_type,
                             is_last,
+                            source_location,
                         )
                     },
                 )?;
             }
-            ToTokenResult::None => {
-                return self
-                    .text_decoder
-                    .flush_pending(&mut |text, is_last, encoding| {
-                        self.delegate.text_token_produced(
-                            text,
-                            encoding,
-                            self.last_text_type,
-                            is_last,
-                        )
-                    });
-            }
+            ToTokenResult::None => {}
         }
-
-        self.delegate.remaining_content_start = lexeme_consumed_end;
-
         Ok(())
     }
 
@@ -347,12 +330,18 @@ where
         self.get_next_parser_directive()
     }
 
+    /// Emit text chunk with is_last_in_node
     #[inline]
     fn flush_pending_captured_text(&mut self) -> Result<(), RewritingError> {
         self.text_decoder
-            .flush_pending(&mut |text, is_last, encoding| {
-                self.delegate
-                    .text_token_produced(text, encoding, self.last_text_type, is_last)
+            .flush_pending(&mut |text, is_last, encoding, source_location| {
+                self.delegate.text_token_produced(
+                    text,
+                    encoding,
+                    self.last_text_type,
+                    is_last,
+                    source_location,
+                )
             })
     }
 
@@ -403,6 +392,11 @@ where
         &mut self,
         lexeme: &NonTagContentLexeme<'_>,
     ) -> Result<(), RewritingError> {
+        match lexeme.token_outline() {
+            Some(NonTagContentTokenOutline::Text(_)) => {}
+            // when it's None, it still needs a flush for CDATA
+            _ => self.flush_pending_captured_text()?,
+        }
         self.try_produce_token_from_lexeme(lexeme)
     }
 }

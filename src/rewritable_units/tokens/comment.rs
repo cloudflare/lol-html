@@ -1,5 +1,6 @@
 use super::{Mutations, Token};
 use crate::base::{Bytes, BytesCow};
+use crate::base::{SourceLocation, SpannedRawBytes};
 use crate::errors::RewritingError;
 use crate::html_content::{StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
@@ -27,7 +28,7 @@ pub enum CommentTextError {
 /// Exposes API for examination and modification of a parsed HTML comment.
 pub struct Comment<'i> {
     text: BytesCow<'i>,
-    raw: Option<Bytes<'i>>,
+    raw: SpannedRawBytes<'i>,
     encoding: &'static Encoding,
     mutations: Mutations,
     user_data: Box<dyn Any>,
@@ -38,12 +39,12 @@ impl<'i> Comment<'i> {
     #[must_use]
     pub(super) fn new_token(
         text: Bytes<'i>,
-        raw: Bytes<'i>,
+        raw: SpannedRawBytes<'i>,
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::Comment(Comment {
             text: text.into(),
-            raw: Some(raw),
+            raw,
             encoding,
             mutations: Mutations::new(),
             user_data: Box::new(()),
@@ -75,7 +76,7 @@ impl<'i> Comment<'i> {
             match BytesCow::from_str_without_replacements(text, self.encoding) {
                 Ok(text) => {
                     self.text = text.into_owned();
-                    self.raw = None;
+                    self.raw.set_modified();
 
                     Ok(())
                 }
@@ -243,7 +244,7 @@ impl<'i> Comment<'i> {
     fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
         let output_handler = sink.output_handler();
 
-        if let Some(raw) = &self.raw {
+        if let Some(raw) = self.raw.original() {
             output_handler(raw);
         } else {
             output_handler(b"<!--");
@@ -251,6 +252,12 @@ impl<'i> Comment<'i> {
             output_handler(b"-->");
         }
         Ok(())
+    }
+
+    /// Position of this comment in the source document, before any rewriting
+    #[must_use]
+    pub fn source_location(&self) -> SourceLocation {
+        self.raw.source_location()
     }
 }
 
@@ -262,6 +269,7 @@ impl Debug for Comment<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Comment")
             .field("text", &self.text())
+            .field("at", &self.source_location())
             .finish()
     }
 }

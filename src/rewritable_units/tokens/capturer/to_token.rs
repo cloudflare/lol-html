@@ -40,7 +40,7 @@ impl ToToken for TagLexeme<'_> {
                     Attributes::new(self.input(), attributes, encoding),
                     ns,
                     self_closing,
-                    self.raw(),
+                    self.spanned().into(),
                 ))
             }
 
@@ -49,7 +49,11 @@ impl ToToken for TagLexeme<'_> {
             {
                 // NOTE: clear the flag once we've seen required end tag.
                 capture_flags.remove(TokenCaptureFlags::NEXT_END_TAG);
-                ToTokenResult::Token(EndTag::new_token(self.part(name), self.raw(), encoding))
+                ToTokenResult::Token(EndTag::new_token(
+                    self.part(name),
+                    self.spanned().into(),
+                    encoding,
+                ))
             }
             _ => ToTokenResult::None,
         }
@@ -73,7 +77,11 @@ impl ToToken for NonTagContentLexeme<'_> {
             Some(NonTagContentTokenOutline::Comment(text))
                 if capture_flags.contains(TokenCaptureFlags::COMMENTS) =>
             {
-                ToTokenResult::Token(Comment::new_token(self.part(text), self.raw(), encoding))
+                ToTokenResult::Token(Comment::new_token(
+                    self.part(text),
+                    self.spanned().into(),
+                    encoding,
+                ))
             }
 
             Some(NonTagContentTokenOutline::Doctype {
@@ -88,7 +96,7 @@ impl ToToken for NonTagContentLexeme<'_> {
                     self.opt_part(system_id),
                     force_quirks,
                     false, // removed
-                    self.raw(),
+                    self.spanned(),
                     encoding,
                 ))
             }

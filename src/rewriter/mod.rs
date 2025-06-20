@@ -316,6 +316,7 @@ pub fn rewrite_str<'h, 's, H: HandlerTypes>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::html::TextType;
     use crate::html_content::ContentType;
     use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
     use encoding_rs::Encoding;
@@ -607,6 +608,78 @@ mod tests {
                     "   BAZ<!-- bonjour 1337-->\nBAZ",
                     "</html>PshhhBAZ",
                 )
+            );
+        }
+    }
+
+    #[test]
+    fn rewrite_text_types() {
+        for &enc in &ASCII_COMPATIBLE_ENCODINGS {
+            let actual: String = {
+                let mut output = Output::new(enc);
+
+                let rewriter = HtmlRewriter::new(
+                    Settings {
+                        element_content_handlers: vec![],
+                        document_content_handlers: vec![doc_text!(|c| {
+                            let replace = match c.text_type() {
+                                TextType::PlainText => 'P',
+                                TextType::RCData => 'r',
+                                TextType::RawText => 'R',
+                                TextType::ScriptData => 'S',
+                                TextType::Data => '.',
+                                TextType::CDataSection => 'C',
+                            };
+                            let mut replaced: String = c
+                                .as_str()
+                                .chars()
+                                .map(|c| if c == '\n' { c } else { replace })
+                                .collect();
+                            if c.last_in_text_node() {
+                                replaced.push(';');
+                            }
+                            c.set_str(replaced);
+
+                            Ok(())
+                        })],
+                        encoding: enc.try_into().unwrap(),
+                        ..Settings::new()
+                    },
+                    |c: &[u8]| output.push(c),
+                );
+
+                write_chunks(
+                    rewriter,
+                    enc,
+                    &[
+                        "\n  <!doctype html> <title>rcdata</titlenot> <!--no comment rcdata</title>",
+                        "\n   <textarea>rc<x> --><!--no comment </TEXTAREA> ",
+                        "\n   body <!--> 1 </> 2 <noscript>nnnn</noscript>",
+                        "\n  <script>scr</script> <style>style</style>",
+                        "\n  <script><!-- scr --></script> <style>/*<![CDATA[*/ style /*]]>*/</style>",
+                        "\n  <svg> body <![CDATA[ cdata ]]> body",
+                        "\n  <script>scr</script> <style>style</style>",
+                        "\n  <script><!-- com -->s</script> <style>/*<![CDATA[*/ style /*]]>*/</style>",
+                        "\n  </svg>",
+                    ],
+                );
+
+                output.into()
+            };
+
+            assert_eq!(
+                actual,
+                "\
+                \n..;<!doctype html>.;<title>rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr;</title>\
+                \n...;<textarea>rrrrrrrrrrrrrrrrrrrrrrrr;</TEXTAREA>.\
+                \n........;<!-->...;</>...;<noscript>RRRR;</noscript>\
+                \n..;<script>SSS;</script>.;<style>RRRRR;</style>\
+                \n..;<script>SSSSSSSSSSSS;</script>.;<style>RRRRRRRRRRRRRRRRRRRRRRRRRRR;</style>\
+                \n..;<svg>......;<![CDATA[CCCCCCC;]]>.....\
+                \n..;<script>...;</script>.;<style>.....;</style>\
+                \n..;<script><!-- com -->.;</script>.;<style>..;<![CDATA[CCCCCCCCCCC;]]>..;</style>\
+                \n..;</svg>\
+                "
             );
         }
     }

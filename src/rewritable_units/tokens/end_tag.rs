@@ -1,5 +1,6 @@
 use super::{Mutations, Token};
 use crate::base::{Bytes, BytesCow};
+use crate::base::{SourceLocation, SpannedRawBytes};
 use crate::errors::RewritingError;
 use crate::html_content::{ContentType, StreamingHandler, StreamingHandlerSink};
 use crate::rewritable_units::StringChunk;
@@ -11,7 +12,7 @@ use std::fmt::{self, Debug};
 /// Exposes API for examination and modification of a parsed HTML end tag.
 pub struct EndTag<'i> {
     name: BytesCow<'i>,
-    raw: Option<Bytes<'i>>,
+    raw: SpannedRawBytes<'i>,
     encoding: &'static Encoding,
     pub(crate) mutations: Mutations,
 }
@@ -21,12 +22,12 @@ impl<'i> EndTag<'i> {
     #[must_use]
     pub(super) fn new_token(
         name: Bytes<'i>,
-        raw: Bytes<'i>,
+        raw: SpannedRawBytes<'i>,
         encoding: &'static Encoding,
     ) -> Token<'i> {
         Token::EndTag(EndTag {
             name: name.into(),
-            raw: Some(raw),
+            raw,
             encoding,
             mutations: Mutations::new(),
         })
@@ -62,7 +63,7 @@ impl<'i> EndTag<'i> {
     /// Sets the name of the tag.
     pub(crate) fn set_name_raw(&mut self, name: BytesCow<'static>) {
         self.name = name;
-        self.raw = None;
+        self.raw.set_modified();
     }
 
     /// Sets the name of the tag only. To rename the element, prefer [`Element::set_tag_name()`][crate::html_content::Element::set_tag_name].
@@ -163,7 +164,7 @@ impl<'i> EndTag<'i> {
     fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
         let output_handler = sink.output_handler();
 
-        if let Some(raw) = &self.raw {
+        if let Some(raw) = self.raw.original() {
             output_handler(raw);
         } else {
             output_handler(b"</");
@@ -171,6 +172,12 @@ impl<'i> EndTag<'i> {
             output_handler(b">");
         }
         Ok(())
+    }
+
+    /// Position of this tag in the source document, before any rewriting
+    #[must_use]
+    pub fn source_location(&self) -> SourceLocation {
+        self.raw.source_location()
     }
 }
 
@@ -181,6 +188,7 @@ impl Debug for EndTag<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EndTag")
             .field("name", &self.name())
+            .field("at", &self.source_location())
             .finish()
     }
 }
