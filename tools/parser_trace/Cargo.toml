@@ -7,6 +7,6 @@ edition = "2021"
 publish = false
 
 [dependencies]
-encoding_rs = "0.8.13"
+encoding_rs = "0.8.35"
 lol_html = { path = "../../", features=["integration_test", "debug_trace"] }
-getopts = "0.2.15"
+getopts = "0.2.23"

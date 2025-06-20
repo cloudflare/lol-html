@@ -8,4 +8,4 @@ publish = false
 
 [dependencies]
 test_case = { path = "../test_case" }
-afl = "0.12.11"
+afl = "0.15.19"
