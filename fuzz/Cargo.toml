@@ -2,7 +2,7 @@
 name = "lol_html-fuzz"
 version = "0.0.1"
 authors = ["Automatically generated"]
-
+edition = "2021"
 publish = false
 
 [package.metadata]
@@ -21,3 +21,6 @@ path = "fuzz_targets/fuzz_c_api.rs"
 [[bin]]
 name = "fuzz_rewriter"
 path = "fuzz_targets/fuzz_rewriter.rs"
+
+[profile.dev]
+opt-level=3
