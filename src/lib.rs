@@ -62,11 +62,13 @@ pub mod send {
     pub use crate::rewriter::{IntoHandler, SendHandlerTypes};
 
     /// An [`HtmlRewriter`](crate::HtmlRewriter) that implements [`Send`].
-    pub type HtmlRewriter<'h, O> = crate::HtmlRewriter<'h, O, SendHandlerTypes>;
+    pub type HtmlRewriter<'handlers, O> = crate::HtmlRewriter<'handlers, O, SendHandlerTypes>;
     /// [`Settings`](crate::Settings) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type Settings<'h, 's> = crate::Settings<'h, 's, SendHandlerTypes>;
+    pub type Settings<'handlers, 'selectors> =
+        crate::Settings<'handlers, 'selectors, SendHandlerTypes>;
     /// [`RewriteStrSettings`](crate::RewriteStrSettings) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type RewriteStrSettings<'h, 's> = crate::RewriteStrSettings<'h, 's, SendHandlerTypes>;
+    pub type RewriteStrSettings<'handlers, 'selectors> =
+        crate::RewriteStrSettings<'handlers, 'selectors, SendHandlerTypes>;
 
     /// [`ElementContentHandlers`](crate::ElementContentHandlers) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     pub type ElementContentHandlers<'h> = crate::ElementContentHandlers<'h, SendHandlerTypes>;
@@ -74,7 +76,8 @@ pub mod send {
     pub type DocumentContentHandlers<'h> = crate::DocumentContentHandlers<'h, SendHandlerTypes>;
 
     /// [`Element`](crate::rewritable_units::Element) for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
-    pub type Element<'r, 't> = crate::rewritable_units::Element<'r, 't, SendHandlerTypes>;
+    pub type Element<'rewriter, 'input_token> =
+        crate::rewritable_units::Element<'rewriter, 'input_token, SendHandlerTypes>;
 }
 
 /// The errors that can be produced by the crate's API.

@@ -38,8 +38,8 @@ pub enum TagNameError {
 /// An HTML element rewritable unit.
 ///
 /// Exposes API for examination and modification of a parsed HTML element.
-pub struct Element<'r, 't, H: HandlerTypes = LocalHandlerTypes> {
-    start_tag: &'r mut StartTag<'t>,
+pub struct Element<'rewriter, 'input_token, H: HandlerTypes = LocalHandlerTypes> {
+    start_tag: &'rewriter mut StartTag<'input_token>,
     end_tag_mutations: Option<Mutations>,
     modified_end_tag_name: Option<Box<[u8]>>,
     end_tag_handlers: Vec<H::EndTagHandler<'static>>,
@@ -49,10 +49,13 @@ pub struct Element<'r, 't, H: HandlerTypes = LocalHandlerTypes> {
     user_data: Box<dyn Any>,
 }
 
-impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
+impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, H> {
     #[inline]
     #[must_use]
-    pub(crate) fn new(start_tag: &'r mut StartTag<'t>, can_have_content: bool) -> Self {
+    pub(crate) fn new(
+        start_tag: &'rewriter mut StartTag<'input_token>,
+        can_have_content: bool,
+    ) -> Self {
         let encoding = start_tag.encoding();
 
         Element {
@@ -182,7 +185,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// Returns an immutable collection of element's attributes.
     #[inline]
     #[must_use]
-    pub fn attributes(&self) -> &[Attribute<'t>] {
+    pub fn attributes(&self) -> &[Attribute<'input_token>] {
         self.start_tag.attributes()
     }
 
@@ -271,7 +274,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// Consequent calls to the method append to the previously inserted content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.start_tag
             .mutations
             .mutate()
@@ -327,7 +330,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.after_chunk(StringChunk::stream(string_writer));
     }
 
@@ -392,7 +395,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_prepend(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_prepend(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.prepend_chunk(StringChunk::stream(string_writer));
     }
 
@@ -452,7 +455,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     /// [empty element]: https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_append(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_append(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.append_chunk(StringChunk::stream(string_writer));
     }
 
@@ -516,7 +519,10 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_set_inner_content(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_set_inner_content(
+        &mut self,
+        string_writer: Box<dyn StreamingHandler + Send + 'static>,
+    ) {
         self.set_inner_content_chunk(StringChunk::stream(string_writer));
     }
 
@@ -567,7 +573,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
     ///
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.replace_chunk(StringChunk::stream(string_writer));
     }
 
@@ -628,7 +634,7 @@ impl<'r, 't, H: HandlerTypes> Element<'r, 't, H> {
 
     /// Returns the start tag.
     #[inline]
-    pub fn start_tag(&mut self) -> &mut StartTag<'t> {
+    pub fn start_tag(&mut self) -> &mut StartTag<'input_token> {
         self.start_tag
     }
 

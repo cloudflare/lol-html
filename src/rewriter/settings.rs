@@ -7,27 +7,34 @@ use std::error::Error;
 
 /// Trait used to parameterize the type of handlers used in the rewriter.
 ///
-/// This is used to select between [`Send`]able and
-/// non-[`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+/// This trait is meant to be an implementation detail for the [`Send`-compatible type aliases](crate::send).
+/// We don't recommend writing code generic over [`HandlerTypes`], because it makes working with closures much more difficult.
+///
+/// Many types like [`Element`] and [`ElementHandler`] have a hidden generic type that defaults to `LocalHandlerTypes`.
+/// If you need to use `Send`-able handlers, remove the default type by replacing it with `_`, e.g. `Element<'_, '_, _>`.
+#[diagnostic::on_unimplemented(
+    note = "If `{Self}` is a generic type, add `{Self}: HandlerTypes` trait bound, otherwise replace `{Self}` with `LocalHandlerTypes`",
+    note = "The concrete type of `{Self}` can only be either `LocalHandlerTypes` to allow non-`Send` closures in content handlers, or `SendHandlerTypes` to require `Send` closures"
+)]
 pub trait HandlerTypes: Sized {
     /// Handler type for [`Doctype`].
-    type DoctypeHandler<'h>: FnMut(&mut Doctype<'_>) -> HandlerResult + 'h;
+    type DoctypeHandler<'handler>: FnMut(&mut Doctype<'_>) -> HandlerResult + 'handler;
     /// Handler type for [`Comment`].
     ///
     /// The entire content of the comment will be buffered.
-    type CommentHandler<'h>: FnMut(&mut Comment<'_>) -> HandlerResult + 'h;
+    type CommentHandler<'handler>: FnMut(&mut Comment<'_>) -> HandlerResult + 'handler;
     /// Handler type for [`TextChunk`] fragments. Beware: this is tricky to use.
     ///
     /// The text chunks are **not** text DOM nodes. They are fragments of text nodes, split at arbitrary points.
     ///
     /// See [`TextChunk`] documentation for more info. See also [`TextChunk::last_in_text_node()`].
-    type TextHandler<'h>: FnMut(&mut TextChunk<'_>) -> HandlerResult + 'h;
+    type TextHandler<'handler>: FnMut(&mut TextChunk<'_>) -> HandlerResult + 'handler;
     /// Handler type for [`Element`].
-    type ElementHandler<'h>: FnMut(&mut Element<'_, '_, Self>) -> HandlerResult + 'h;
+    type ElementHandler<'handler>: FnMut(&mut Element<'_, '_, Self>) -> HandlerResult + 'handler;
     /// Handler type for [`EndTag`].
-    type EndTagHandler<'h>: FnOnce(&mut EndTag<'_>) -> HandlerResult + 'h;
+    type EndTagHandler<'handler>: FnOnce(&mut EndTag<'_>) -> HandlerResult + 'handler;
     /// Handler type for [`DocumentEnd`].
-    type EndHandler<'h>: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'h;
+    type EndHandler<'handler>: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'handler;
 
     // Inside the HTML rewriter we need to create handlers, and they need to be the most constrained
     // possible version of a handler (i.e. if we have `Send` and non-`Send` handlers we need to
@@ -40,14 +47,14 @@ pub trait HandlerTypes: Sized {
     // a way to create a handler compatible with itself.
 
     #[doc(hidden)]
-    fn new_end_tag_handler<'h>(
-        handler: impl IntoHandler<EndTagHandlerSend<'h>>,
-    ) -> Self::EndTagHandler<'h>;
+    fn new_end_tag_handler<'handler>(
+        handler: impl IntoHandler<EndTagHandlerSend<'handler>>,
+    ) -> Self::EndTagHandler<'handler>;
 
     #[doc(hidden)]
-    fn new_element_handler<'h>(
-        handler: impl IntoHandler<ElementHandlerSend<'h, Self>>,
-    ) -> Self::ElementHandler<'h>;
+    fn new_element_handler<'handler>(
+        handler: impl IntoHandler<ElementHandlerSend<'handler, Self>>,
+    ) -> Self::ElementHandler<'handler>;
 
     /// Creates a handler by running multiple handlers in sequence.
     #[doc(hidden)]
@@ -124,7 +131,7 @@ impl HandlerTypes for SendHandlerTypes {
 }
 
 /// The result of a handler.
-pub type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
+pub type HandlerResult = Result<(), Box<dyn Error + Send + Sync + 'static>>;
 
 /// Boxed closure for handling the [document type declaration].
 ///
@@ -169,8 +176,12 @@ pub type EndTagHandlerSend<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResul
 pub type EndHandlerSend<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>;
 
 /// Trait that allows closures to be used as handlers
+#[diagnostic::on_unimplemented(
+    message = "Handler could not be made from `{Self}`\nThe internal `IntoHandler` trait is implemented for closures like `FnMut(&mut _) -> HandlerResult` and `FnOnce(&mut _) -> HandlerResult`, with `+ Send` if needed",
+    note = "Ensure that the closure's arguments are correct (add explicit parameter types if needed) and that it implements `Send` if using `Send`-able handlers"
+)]
 #[doc(hidden)]
-pub trait IntoHandler<T> {
+pub trait IntoHandler<T: Sized> {
     fn into_handler(self) -> T;
 }
 
@@ -557,6 +568,9 @@ macro_rules! comments {
 ///     ..RewriteStrSettings::default()
 /// };
 /// ```
+///
+/// Note: if you get "implementation of `FnOnce` is not general enough" error, add explicit argument
+/// `sink: &mut StreamingHandlerSink<'_>` to the closure.
 #[macro_export(local_inner_macros)]
 macro_rules! streaming {
     ($closure:expr) => {{
@@ -823,7 +837,7 @@ impl MemorySettings {
 /// Specifies settings for [`HtmlRewriter`].
 ///
 /// [`HtmlRewriter`]: struct.HtmlRewriter.html
-pub struct Settings<'h, 's, H: HandlerTypes = LocalHandlerTypes> {
+pub struct Settings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> {
     /// Specifies CSS selectors and rewriting handlers for elements and their inner content.
     ///
     /// ### Hint
@@ -863,7 +877,10 @@ pub struct Settings<'h, 's, H: HandlerTypes = LocalHandlerTypes> {
     /// [`element`]: macro.element.html
     /// [`comments`]: macro.comments.html
     /// [`text`]: macro.text.html
-    pub element_content_handlers: Vec<(Cow<'s, Selector>, ElementContentHandlers<'h, H>)>,
+    pub element_content_handlers: Vec<(
+        Cow<'selectors, Selector>,
+        ElementContentHandlers<'handlers, H>,
+    )>,
 
     /// Specifies rewriting handlers for the content without associating it to a particular
     /// CSS selector.
@@ -878,7 +895,7 @@ pub struct Settings<'h, 's, H: HandlerTypes = LocalHandlerTypes> {
     /// [`doctype`]: macro.doctype.html
     /// [`doc_comments`]: macro.doc_comments.html
     /// [`doc_text`]: macro.doc_text.html
-    pub document_content_handlers: Vec<DocumentContentHandlers<'h, H>>,
+    pub document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
 
     /// Specifies the [character encoding] for the input and the output of the rewriter.
     ///
@@ -1023,7 +1040,7 @@ impl<'h, 's, H: HandlerTypes> From<RewriteStrSettings<'h, 's, H>> for Settings<'
 /// Specifies settings for the [`rewrite_str`] function.
 ///
 /// [`rewrite_str`]: fn.rewrite_str.html
-pub struct RewriteStrSettings<'h, 's, H: HandlerTypes = LocalHandlerTypes> {
+pub struct RewriteStrSettings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> {
     /// Specifies CSS selectors and rewriting handlers for elements and their inner content.
     ///
     /// ### Hint
@@ -1063,7 +1080,10 @@ pub struct RewriteStrSettings<'h, 's, H: HandlerTypes = LocalHandlerTypes> {
     /// [`element`]: macro.element.html
     /// [`comments`]: macro.comments.html
     /// [`text`]: macro.text.html
-    pub element_content_handlers: Vec<(Cow<'s, Selector>, ElementContentHandlers<'h, H>)>,
+    pub element_content_handlers: Vec<(
+        Cow<'selectors, Selector>,
+        ElementContentHandlers<'handlers, H>,
+    )>,
 
     /// Specifies rewriting handlers for the content without associating it to a particular
     /// CSS selector.
@@ -1078,7 +1098,7 @@ pub struct RewriteStrSettings<'h, 's, H: HandlerTypes = LocalHandlerTypes> {
     /// [`doctype`]: macro.doctype.html
     /// [`doc_comments`]: macro.doc_comments.html
     /// [`doc_text`]: macro.doc_text.html
-    pub document_content_handlers: Vec<DocumentContentHandlers<'h, H>>,
+    pub document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
 
     /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
     /// into ambigious state.
