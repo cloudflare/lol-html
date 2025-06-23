@@ -51,26 +51,41 @@ pub(crate) struct StateMachineBookmark {
 pub(crate) enum ActionError {
     RewritingError(RewritingError),
     ParserDirectiveChangeRequired(ParserDirective, StateMachineBookmark),
+    EndOfInput { consumed_byte_count: usize },
+    Internal(&'static str),
 }
 
-impl From<ParsingAmbiguityError> for ActionError {
+impl ActionError {
     #[cold]
-    fn from(err: ParsingAmbiguityError) -> Self {
-        Self::RewritingError(RewritingError::ParsingAmbiguity(err))
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub(crate) fn internal(error: &'static str) -> Box<Self> {
+        debug_assert!(false, "{error}");
+        Box::new(Self::Internal(error))
     }
 }
 
-pub enum ParsingTermination {
-    ActionError(ActionError),
-    EndOfInput { consumed_byte_count: usize },
+impl From<ParsingAmbiguityError> for Box<ActionError> {
+    #[cold]
+    fn from(err: ParsingAmbiguityError) -> Self {
+        Self::new(ActionError::RewritingError(
+            RewritingError::ParsingAmbiguity(err),
+        ))
+    }
+}
+
+impl From<RewritingError> for Box<ActionError> {
+    #[cold]
+    fn from(err: RewritingError) -> Self {
+        Self::new(ActionError::RewritingError(err))
+    }
 }
 
 // TODO: use `!` type when it become stable.
 pub enum Never {}
 
-pub type ActionResult = Result<(), ActionError>;
-pub type StateResult = Result<(), ParsingTermination>;
-pub type ParseResult = Result<Never, ParsingTermination>;
+pub type ActionResult<T = ()> = Result<T, Box<ActionError>>;
+pub type StateResult = ActionResult<()>;
+pub type ParseResult = ActionResult<Never>;
 
 pub(crate) trait StateMachineActions {
     type Context;
@@ -222,9 +237,9 @@ pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
 
         self.set_pos(self.pos() - consumed_byte_count);
 
-        Err(ParsingTermination::EndOfInput {
+        Err(Box::new(ActionError::EndOfInput {
             consumed_byte_count,
-        })
+        }))
     }
 
     #[inline]
@@ -249,10 +264,10 @@ pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
         new_parser_directive: ParserDirective,
         feedback_directive: FeedbackDirective,
     ) -> ActionResult {
-        Err(ActionError::ParserDirectiveChangeRequired(
+        Err(Box::new(ActionError::ParserDirectiveChangeRequired(
             new_parser_directive,
             self.create_bookmark(pos, feedback_directive),
-        ))
+        )))
     }
 
     #[inline]

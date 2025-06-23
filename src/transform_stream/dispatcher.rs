@@ -2,8 +2,9 @@ use crate::base::{Bytes, Range, SharedEncoding, SourceLocation};
 use crate::html::{LocalName, Namespace};
 use crate::html_content::{TextChunk, TextType};
 use crate::parser::{
-    AttributeBuffer, Lexeme, LexemeSink, NonTagContentLexeme, NonTagContentTokenOutline,
-    ParserDirective, ParserOutputSink, TagHintSink, TagLexeme, TagTokenOutline,
+    ActionError, ActionResult, AttributeBuffer, Lexeme, LexemeSink, NonTagContentLexeme,
+    NonTagContentTokenOutline, ParserDirective, ParserOutputSink, TagHintSink, TagLexeme,
+    TagTokenOutline,
 };
 use crate::rewritable_units::TextDecoder;
 use crate::rewritable_units::ToTokenResult;
@@ -17,9 +18,8 @@ pub(crate) struct AuxStartTagInfo<'i> {
     pub self_closing: bool,
 }
 
-type AuxStartTagInfoRequest<C> = Box<
-    dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> Result<TokenCaptureFlags, RewritingError> + Send,
->;
+type AuxStartTagInfoRequest<C> =
+    Box<dyn FnOnce(&mut C, AuxStartTagInfo<'_>) -> ActionResult<TokenCaptureFlags> + Send>;
 
 // Pub only for integration tests
 #[allow(private_interfaces)]
@@ -203,10 +203,7 @@ where
     }
 
     #[inline(never)]
-    fn try_produce_token_from_lexeme<'i, T>(
-        &mut self,
-        lexeme: &Lexeme<'i, T>,
-    ) -> Result<(), RewritingError>
+    fn try_produce_token_from_lexeme<'i, T>(&mut self, lexeme: &Lexeme<'i, T>) -> ActionResult
     where
         Lexeme<'i, T>: ToToken,
     {
@@ -246,10 +243,7 @@ where
         }
     }
 
-    fn adjust_capture_flags_for_tag_lexeme(
-        &mut self,
-        lexeme: &TagLexeme<'_>,
-    ) -> Result<(), RewritingError> {
+    fn adjust_capture_flags_for_tag_lexeme(&mut self, lexeme: &TagLexeme<'_>) -> ActionResult {
         let input = lexeme.input();
 
         macro_rules! get_flags_from_aux_info_res {
@@ -276,7 +270,7 @@ where
                 } => {
                     get_flags_from_aux_info_res!(aux_info_req, &attributes, self_closing)
                 }
-                _ => Err(RewritingError::internal(
+                _ => Err(ActionError::internal(
                     "Tag should be a start tag at this point",
                 )),
             },
@@ -302,7 +296,7 @@ where
                         Err(DispatcherError::InfoRequest(aux_info_req)) => {
                             get_flags_from_aux_info_res!(aux_info_req, &attributes, self_closing)
                         }
-                        Err(DispatcherError::RewritingError(e)) => Err(e),
+                        Err(DispatcherError::RewritingError(e)) => Err(e.into()),
                     }
                 }
 
@@ -362,7 +356,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
-    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> Result<ParserDirective, RewritingError> {
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ActionResult<ParserDirective> {
         // NOTE: flush pending text before reporting tag to the transform controller.
         // Otherwise, transform controller can enable or disable text handlers too early.
         // In case of start tag, newly matched element text handlers
@@ -390,15 +384,12 @@ where
     }
 
     #[inline]
-    fn handle_non_tag_content(
-        &mut self,
-        lexeme: &NonTagContentLexeme<'_>,
-    ) -> Result<(), RewritingError> {
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>) -> ActionResult {
         match lexeme.token_outline() {
             Some(NonTagContentTokenOutline::Text(_)) => {}
             // when it's None, it still needs a flush for CDATA
             _ => self.flush_pending_captured_text()?,
-        };
+        }
         self.try_produce_token_from_lexeme(lexeme)
     }
 }

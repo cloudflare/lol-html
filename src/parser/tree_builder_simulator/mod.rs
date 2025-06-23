@@ -205,10 +205,14 @@ impl TreeBuilderSimulator {
     fn leave_ns(&mut self) -> TreeBuilderFeedback {
         self.ns_stack.pop();
 
-        self.current_ns = *self
-            .ns_stack
-            .last()
-            .expect("Namespace stack should always have at least one item");
+        let Some(item) = self.ns_stack.last() else {
+            debug_assert!(
+                false,
+                "Namespace stack should always have at least one item"
+            );
+            return TreeBuilderFeedback::None;
+        };
+        self.current_ns = *item;
 
         TreeBuilderFeedback::SetAllowCdata(self.current_ns != Namespace::Html)
     }
