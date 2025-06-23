@@ -212,7 +212,7 @@ pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
         self.run_parsing_loop(context, input, last)
     }
 
-    #[inline]
+    #[cold]
     fn break_on_end_of_input(&mut self, input: &[u8]) -> StateResult {
         let consumed_byte_count = self.get_consumed_byte_count(input);
 
