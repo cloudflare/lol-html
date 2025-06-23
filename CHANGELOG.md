@@ -1,8 +1,14 @@
 # Changelog
 
+## v2.5.0
+
+- Source code locations for tags and other tokens.
+- Document text chunks and escaping of attributes.
+- Selector validation improvements.
+
 ## v2.4.0
 
- - Upgraded `selectors` and `cssparser`
+ - Upgraded `selectors` and `cssparser`.
 
 ## v2.3.0
 
