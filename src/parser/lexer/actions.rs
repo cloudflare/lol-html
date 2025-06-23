@@ -1,5 +1,6 @@
 use super::*;
 use crate::parser::state_machine::StateMachineActions;
+use crate::parser::ActionError;
 
 use NonTagContentTokenOutline::*;
 use TagTokenOutline::{EndTag, StartTag};
@@ -75,11 +76,9 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         let token = self
             .current_tag_token
             .take()
-            .expect("Tag token should exist at this point");
+            .ok_or_else(|| ActionError::internal("Tag token should exist at this point"))?;
 
-        let feedback = self
-            .try_get_tree_builder_feedback(context, &token)
-            .map_err(ActionError::from)?;
+        let feedback = self.try_get_tree_builder_feedback(context, &token)?;
 
         let mut lexeme = self.create_lexeme_with_raw_inclusive(
             context.previously_consumed_byte_count,
@@ -105,10 +104,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             *ns = context.tree_builder_simulator.current_ns();
         }
 
-        match self
-            .emit_tag_lexeme(context, &lexeme)
-            .map_err(ActionError::RewritingError)?
-        {
+        match self.emit_tag_lexeme(context, &lexeme)? {
             ParserDirective::Lex => Ok(()),
             ParserDirective::WherePossibleScanForTagsOnly => self.change_parser_directive(
                 self.lexeme_start,
@@ -260,11 +256,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             Some(StartTag { ref mut name, .. } | EndTag { ref mut name, .. }) => {
                 *name = get_token_part_range!(self);
             }
-            _ => {
-                return Err(ActionError::RewritingError(RewritingError::internal(
-                    "Tag should exist at this point",
-                )))
-            }
+            _ => return Err(ActionError::internal("Tag should exist at this point")),
         }
 
         Ok(())

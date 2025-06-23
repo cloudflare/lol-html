@@ -7,18 +7,12 @@ mod lexeme;
 pub(crate) use self::lexeme::*;
 use crate::base::{Align, Bytes, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
-use crate::parser::state_machine::{
-    ActionError, ActionResult, FeedbackDirective, StateMachine, StateResult,
-};
+use crate::parser::state_machine::{ActionResult, FeedbackDirective, StateMachine, StateResult};
 use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback};
-use crate::rewriter::RewritingError;
 
 pub(crate) trait LexemeSink {
-    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> Result<ParserDirective, RewritingError>;
-    fn handle_non_tag_content(
-        &mut self,
-        lexeme: &NonTagContentLexeme<'_>,
-    ) -> Result<(), RewritingError>;
+    fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ActionResult<ParserDirective>;
+    fn handle_non_tag_content(&mut self, lexeme: &NonTagContentLexeme<'_>) -> ActionResult;
 }
 
 pub(crate) type State<S> = fn(&mut Lexer<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;
@@ -113,10 +107,8 @@ impl<S: LexemeSink> Lexer<S> {
 
         self.lexeme_start = lexeme.raw_range().end;
 
-        context
-            .output_sink
-            .handle_non_tag_content(lexeme)
-            .map_err(ActionError::RewritingError)
+        context.output_sink.handle_non_tag_content(lexeme)?;
+        Ok(())
     }
 
     #[inline]
@@ -124,7 +116,7 @@ impl<S: LexemeSink> Lexer<S> {
         &mut self,
         context: &mut ParserContext<S>,
         lexeme: &TagLexeme<'_>,
-    ) -> Result<ParserDirective, RewritingError> {
+    ) -> ActionResult<ParserDirective> {
         trace!(@output lexeme);
 
         self.lexeme_start = lexeme.raw_range().end;
