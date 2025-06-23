@@ -33,7 +33,6 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     impl_common_sm_actions!();
 
-    #[inline]
     fn emit_text(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
         if self.pos() > self.lexeme_start {
             // NOTE: unlike any other tokens (except EOF), text tokens don't have
@@ -53,12 +52,13 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         Ok(())
     }
 
+    #[inline(never)]
     fn emit_text_and_eof(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
         self.emit_text(context, input)?;
         self.emit_eof(context, input)
     }
 
-    #[inline]
+    #[inline(never)]
     fn emit_current_token(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
         let token = self.current_non_tag_content_token.take();
         let lexeme = self.create_lexeme_with_raw_inclusive(
@@ -70,7 +70,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         self.emit_lexeme(context, &lexeme)
     }
 
-    #[inline]
+    #[inline(never)]
     fn emit_tag(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
         let token = self
             .current_tag_token
@@ -118,7 +118,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         }
     }
 
-    #[inline]
+    #[inline(never)]
     fn emit_current_token_and_eof(
         &mut self,
         context: &mut ParserContext<S>,
@@ -136,7 +136,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     /// Emits `<[CDATA[` and such.
-    #[inline]
+    #[inline(never)]
     fn emit_raw_without_token(
         &mut self,
         context: &mut ParserContext<S>,
@@ -151,7 +151,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         self.emit_lexeme(context, &lexeme)
     }
 
-    #[inline]
+    #[inline(never)]
     fn emit_raw_without_token_and_eof(
         &mut self,
         context: &mut ParserContext<S>,
