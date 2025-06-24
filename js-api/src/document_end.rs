@@ -1,5 +1,5 @@
 use super::*;
-use lol_html::html_content::DocumentEnd as NativeDocumentEnd;
+use lol_html_native::html_content::DocumentEnd as NativeDocumentEnd;
 
 #[wasm_bindgen]
 pub struct DocumentEnd(NativeRefWrap<NativeDocumentEnd<'static>>);
