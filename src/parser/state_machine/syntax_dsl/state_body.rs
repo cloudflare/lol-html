@@ -1,7 +1,12 @@
 macro_rules! state_body {
-    ( | [ $self:tt, $ctx:tt, $input:ident, $ch:ident ] |> [$($arms:tt)+], [$($enter_actions:tt)*] ) => {
-        action_list!(@state_enter |$self, $ctx, $input|> $($enter_actions)*);
-        state_body!(@map_arms | [$self, $ctx, $input, $ch] |> [$($arms)+], [])
+    ( | [ $self:tt, $ctx:tt, $input:ident] |> [$($arms:tt)+]) => {
+        // NOTE: clippy complains about some states that break the loop in each match arm
+        #[allow(clippy::never_loop)]
+        loop {
+            let ch = $self.consume_ch($input);
+
+            state_body!(@map_arms | [$self, $ctx, $input, ch] |> [$($arms)+], []);
+        }
     };
 
 

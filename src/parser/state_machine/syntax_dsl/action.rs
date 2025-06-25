@@ -13,14 +13,14 @@ macro_rules! action {
     };
 
     ( @state_transition | $self:tt, $ctx:tt, $input:ident | > - -> $state:ident) => {
-        $self.switch_state(Self::$state);
+        $self.set_state(Self::$state);
         return Ok(());
     };
 
     ( @state_transition | $self:tt, $ctx:tt, $input:ident | > - -> dyn $state_getter:ident) => {
         {
             let state = $self.$state_getter();
-            $self.switch_state(state);
+            $self.set_state(state);
         }
 
         return Ok(());

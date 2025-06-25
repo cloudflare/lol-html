@@ -156,9 +156,6 @@ pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
         state: fn(&mut Self, context: &mut Self::Context, &[u8]) -> StateResult,
     );
 
-    fn is_state_enter(&self) -> bool;
-    fn set_is_state_enter(&mut self, val: bool);
-
     fn last_start_tag_name_hash(&self) -> LocalNameHash;
     fn set_last_start_tag_name_hash(&mut self, name_hash: LocalNameHash);
 
@@ -257,15 +254,9 @@ pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
     }
 
     #[inline]
-    fn switch_state(&mut self, state: fn(&mut Self, &mut Self::Context, &[u8]) -> StateResult) {
-        self.set_state(state);
-        self.set_is_state_enter(true);
-    }
-
-    #[inline]
     fn switch_text_type(&mut self, text_type: TextType) {
         self.set_last_text_type(text_type);
-        self.switch_state(self.next_text_parsing_state());
+        self.set_state(self.next_text_parsing_state());
     }
 
     #[inline]
@@ -283,16 +274,6 @@ pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
 
 macro_rules! impl_common_sm_accessors {
     () => {
-        #[inline]
-        fn is_state_enter(&self) -> bool {
-            self.is_state_enter
-        }
-
-        #[inline]
-        fn set_is_state_enter(&mut self, val: bool) {
-            self.is_state_enter = val;
-        }
-
         #[inline]
         fn set_last_text_type(&mut self, text_type: TextType) {
             self.last_text_type = text_type;
