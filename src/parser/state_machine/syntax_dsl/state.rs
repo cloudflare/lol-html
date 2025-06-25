@@ -1,6 +1,7 @@
 macro_rules! state {
     // defining state with enter actions
     (
+        $(#[$meta:meta])*
         $name:ident <-- ( $($enter_actions:tt)* ) {
             $($arms:tt)*
         }
@@ -8,6 +9,7 @@ macro_rules! state {
         $($rest:tt)*
     ) => {
         #[allow(unused_variables)]
+        $(#[$meta])*
         fn $name(&mut self, context: &mut Self::Context, input: &[u8]) -> StateResult {
             // consume_ch shouldn't be needed here, but the existing states are written to assume an off-by-one position
             let _ = self.consume_ch(input);
@@ -26,6 +28,7 @@ macro_rules! state {
     };
     // defining state without enter actions
     (
+        $(#[$meta:meta])*
         $name:ident {
             $($arms:tt)*
         }
@@ -33,6 +36,7 @@ macro_rules! state {
         $($rest:tt)*
     ) => {
         #[allow(unused_variables)]
+        $(#[$meta])*
         fn $name(&mut self, context: &mut Self::Context, input: &[u8]) -> StateResult {
             state_body!(|[self, context, input]|> [$($arms)*]);
         }

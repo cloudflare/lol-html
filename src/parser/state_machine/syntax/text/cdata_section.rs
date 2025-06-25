@@ -1,5 +1,6 @@
 define_state_group!(cdata_section_states_group = {
 
+    #[cold]
     cdata_section_state {
         b']' => ( emit_text?; --> cdata_section_bracket_state )
         eoc  => ( emit_text?; )

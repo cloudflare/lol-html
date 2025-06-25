@@ -1,5 +1,5 @@
 define_state_group!(comment_states_group = {
-
+    #[cold]
     bogus_comment_state {
         b'>' => ( mark_comment_text_end; emit_current_token?; --> data_state )
         eof  => ( mark_comment_text_end; emit_current_token_and_eof?; )
