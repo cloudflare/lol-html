@@ -17,6 +17,13 @@ macro_rules! action {
         return Ok(());
     };
 
+    ( @state_transition | $self:tt, $ctx:tt, $input:ident | > - -> #[inline] $state:ident) => {
+        // Jumps directly to the state function, which allows easy inlining,
+        // but the calls using #[inline] must never create a loop
+        $self.set_state(Self::$state);
+        return Self::$state($self, $ctx, $input);
+    };
+
     ( @state_transition | $self:tt, $ctx:tt, $input:ident | > - -> dyn $state_getter:ident) => {
         {
             let state = $self.$state_getter();

@@ -23,7 +23,7 @@ define_state_group!(script_data_escaped_states_group = {
 
     script_data_escaped_less_than_sign_state {
         [ "SCRIPT"; ignore_case ] => ( unmark_tag_start; --> script_data_double_escaped_start_state )
-        b'/'                      => ( --> script_data_escaped_end_tag_open_state )
+        b'/'                      => ( --> #[inline] script_data_escaped_end_tag_open_state )
         eof                       => ( emit_text_and_eof?; )
         _                         => ( unmark_tag_start; emit_text?; reconsume in script_data_escaped_state )
     }

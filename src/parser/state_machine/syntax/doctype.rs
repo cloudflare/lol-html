@@ -1,7 +1,7 @@
 define_state_group!(doctype_states_group = {
 
     doctype_state {
-        whitespace => ( --> before_doctype_name_state )
+        whitespace => ( --> #[inline] before_doctype_name_state )
         b'>'       => ( create_doctype; set_force_quirks; emit_current_token?; --> data_state )
         eof        => ( create_doctype; set_force_quirks; emit_current_token_and_eof?; )
         _          => ( reconsume in before_doctype_name_state )
@@ -11,7 +11,7 @@ define_state_group!(doctype_states_group = {
         whitespace => ()
         b'>'       => ( create_doctype; set_force_quirks; emit_current_token?; --> data_state )
         eof        => ( create_doctype; set_force_quirks; emit_current_token_and_eof?; )
-        _          => ( create_doctype; start_token_part; --> doctype_name_state )
+        _          => ( create_doctype; start_token_part; --> #[inline] doctype_name_state )
     }
 
     doctype_name_state {

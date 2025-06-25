@@ -2,7 +2,7 @@ define_state_group!(cdata_section_states_group = {
 
     #[cold]
     cdata_section_state {
-        b']' => ( emit_text?; --> cdata_section_bracket_state )
+        b']' => ( emit_text?; --> #[inline] cdata_section_bracket_state )
         eoc  => ( emit_text?; )
         eof  => ( emit_text_and_eof?; )
         _    => ()
