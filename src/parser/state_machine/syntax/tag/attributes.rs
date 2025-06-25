@@ -1,6 +1,6 @@
 define_state_group!(attributes_states_group = {
 
-     before_attribute_name_state {
+    before_attribute_name_state {
         whitespace => ()
         b'/'       => ( --> self_closing_start_tag_state )
         b'>'       => ( emit_tag?; --> dyn next_text_parsing_state )
@@ -36,17 +36,9 @@ define_state_group!(attributes_states_group = {
     }
 
     attribute_value_quoted_state <-- ( start_token_part; ) {
-        closing_quote => ( finish_attr_value; finish_attr; --> after_attribute_value_quoted_state )
+        closing_quote => ( finish_attr_value; finish_attr; --> before_attribute_name_state )
         eof           => ( emit_raw_without_token_and_eof?; )
         _             => ()
-    }
-
-    after_attribute_value_quoted_state {
-        whitespace => ( --> before_attribute_name_state )
-        b'/'       => ( --> self_closing_start_tag_state )
-        b'>'       => ( emit_tag?; --> dyn next_text_parsing_state )
-        eof        => ( emit_raw_without_token_and_eof?; )
-        _          => ( reconsume in before_attribute_name_state )
     }
 
     attribute_value_unquoted_state <-- ( start_token_part; ) {
