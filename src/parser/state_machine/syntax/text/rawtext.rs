@@ -1,10 +1,9 @@
 define_state_group!(rawtext_states_group = {
 
     rawtext_state {
-        b'<' => ( emit_text?; mark_tag_start; --> rawtext_less_than_sign_state )
+        memchr(b'<') => ( emit_text?; mark_tag_start; --> #[inline] rawtext_less_than_sign_state )
         eoc  => ( emit_text?; )
         eof  => ( emit_text_and_eof?; )
-        _    => ()
     }
 
     rawtext_less_than_sign_state {

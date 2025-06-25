@@ -107,9 +107,8 @@ define_state_group!(doctype_states_group = {
 
     #[cold]
     bogus_doctype_state {
-        b'>' => ( emit_current_token?; --> data_state )
+        memchr(b'>') => ( emit_current_token?; --> data_state )
         eof  => ( emit_current_token_and_eof?; )
-        _    => ()
     }
 
 });

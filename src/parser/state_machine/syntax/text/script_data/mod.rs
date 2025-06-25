@@ -7,10 +7,9 @@ mod double_escaped;
 define_state_group!(script_data_states_group = {
 
     script_data_state {
-        b'<' => ( emit_text?; mark_tag_start; --> #[inline] script_data_less_than_sign_state )
+        memchr(b'<') => ( emit_text?; mark_tag_start; --> #[inline] script_data_less_than_sign_state )
         eoc  => ( emit_text?; )
         eof  => ( emit_text_and_eof?; )
-        _    => ()
     }
 
     script_data_less_than_sign_state {

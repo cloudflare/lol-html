@@ -173,6 +173,8 @@ pub(crate) trait StateMachine: StateMachineActions + StateMachineConditions {
     fn get_consumed_byte_count(&self, input: &[u8]) -> usize;
 
     fn consume_ch(&mut self, input: &[u8]) -> Option<u8>;
+    /// true if it matched (`consume_ch` would return the `needle`), false if reached end of input
+    fn consume_until(&mut self, needle: u8, input: &[u8]) -> bool;
     fn unconsume_ch(&mut self);
     fn consume_several(&mut self, count: usize);
     fn lookahead(&self, input: &[u8], offset: usize) -> Option<u8>;
@@ -342,6 +344,22 @@ macro_rules! impl_common_input_cursor_methods {
             trace!(@chars "consume", ch);
 
             ch
+        }
+
+        #[inline]
+        fn consume_until(&mut self, needle: u8, input: &[u8]) -> bool {
+            let rest = input.get(self.next_pos..).unwrap_or(&input[..0]);
+
+            match memchr::memchr(needle, rest) {
+                None => {
+                    self.next_pos += 1 + rest.len();
+                    false
+                },
+                Some(pos) => {
+                    self.next_pos += 1 + pos;
+                    true
+                }
+            }
         }
 
         #[inline]

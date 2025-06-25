@@ -1,4 +1,13 @@
 macro_rules! state_body {
+
+    // Special version of a body that just skips to the given char
+    ( | [ $self:tt, $ctx:tt, $input:ident] |> [ memchr($memchr:literal) => $($arms:tt)+]) => {
+        let ch = if $self.consume_until($memchr, $input) { Some(()) } else { None };
+
+        state_body!(@map_arms | [$self, $ctx, $input, ch] |> [ _ /* memchr match */ => $($arms)+], []);
+    };
+
+    // Regular byte-by-byte matching body
     ( | [ $self:tt, $ctx:tt, $input:ident] |> [$($arms:tt)+]) => {
         // NOTE: clippy complains about some states that break the loop in each match arm
         #[allow(clippy::never_loop)]

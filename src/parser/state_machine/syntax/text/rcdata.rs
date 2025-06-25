@@ -1,10 +1,9 @@
 define_state_group!(rcdata_states_group = {
 
     rcdata_state {
-        b'<' => ( emit_text?; mark_tag_start; --> rcdata_less_than_sign_state )
+        memchr(b'<') => ( emit_text?; mark_tag_start; --> rcdata_less_than_sign_state )
         eoc  => ( emit_text?; )
         eof  => ( emit_text_and_eof?; )
-        _    => ()
     }
 
     rcdata_less_than_sign_state {
