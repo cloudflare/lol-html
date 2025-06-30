@@ -13,6 +13,7 @@ HtmlRewriterBuilder:rewriter_builder_t \
 HtmlRewriter:rewriter_t \
 Selector:selector_t \
 TextChunk:text_chunk_t \
+SourceLocationBytes:source_location_bytes_t \
 Str:str_t
 endef
 
@@ -29,3 +30,5 @@ all::
 	cbindgen -c cbindgen.toml /tmp/lol_html_h.rs | sed -E $(SED_EXPRS) -e 's#///#// #g' > include/lol_html.h
 	git --no-pager diff -w -- include/
 
+test::
+	cargo run --manifest-path=./c-tests/Cargo.toml

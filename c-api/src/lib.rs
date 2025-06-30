@@ -104,6 +104,20 @@ macro_rules! impl_content_mutation_handlers {
             impl_content_mutation_handlers! { IMPL $($kind)? $name: $typ, $(#[$meta])* $fn_name => $method }
         )+
     };
+    (IMPL $name:ident: $typ:ty, $fn_name:ident => source_location_bytes) => {
+        /// Returns [`SourceLocationBytes`].
+        ///
+        #[doc = concat!("`", stringify!($name), "`")]
+        /// must be valid and non-`NULL`.
+        #[no_mangle]
+        pub unsafe extern "C" fn $fn_name($name: *mut $typ) -> SourceLocationBytes {
+            let loc = to_ref_mut!($name).source_location().bytes();
+            SourceLocationBytes {
+                start: loc.start,
+                end: loc.end,
+            }
+        }
+    };
     (IMPL $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
         $(#[$meta])*
         #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
@@ -235,6 +249,13 @@ pub mod string;
 pub mod text_chunk;
 
 pub use self::string::Str;
+
+/// `size_t` byte offsets from the start of the input document
+#[repr(C)]
+pub struct SourceLocationBytes {
+    pub start: usize,
+    pub end: usize,
+}
 
 // NOTE: prevent dead code from complaining about enum
 // never being constructed in the Rust code.

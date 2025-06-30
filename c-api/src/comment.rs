@@ -49,6 +49,7 @@ impl_content_mutation_handlers! { comment: Comment [
     @STREAM lol_html_comment_streaming_before => streaming_before,
     @STREAM lol_html_comment_streaming_after => streaming_after,
     @STREAM lol_html_comment_streaming_replace => streaming_replace,
+    lol_html_comment_source_location_bytes => source_location_bytes,
 ] }
 
 /// Attaches custom user data to the comment.

@@ -62,6 +62,7 @@ impl_content_mutation_handlers! { text_chunk: TextChunk [
     @STREAM lol_html_text_chunk_streaming_before => streaming_before,
     @STREAM lol_html_text_chunk_streaming_after => streaming_after,
     @STREAM lol_html_text_chunk_streaming_replace => streaming_replace,
+    lol_html_text_chunk_source_location_bytes => source_location_bytes,
 ] }
 
 /// Attaches custom user data to the text chunk.

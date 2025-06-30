@@ -277,6 +277,7 @@ impl_content_mutation_handlers! { element: Element [
     @STREAM lol_html_element_streaming_after => streaming_after,
     @STREAM lol_html_element_streaming_set_inner_content => streaming_set_inner_content,
     @STREAM lol_html_element_streaming_replace => streaming_replace,
+    lol_html_element_source_location_bytes => source_location_bytes,
 ] }
 
 /// Attaches custom user data to the element.
@@ -374,6 +375,7 @@ impl_content_mutation_handlers! { end_tag: EndTag [
     @STREAM lol_html_end_tag_streaming_before => streaming_before,
     @STREAM lol_html_end_tag_streaming_after => streaming_after,
     @STREAM lol_html_end_tag_streaming_replace => streaming_replace,
+    lol_html_end_tag_source_location_bytes => source_location_bytes,
 ] }
 
 /// Returns the end tag name.
