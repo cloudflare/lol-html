@@ -117,6 +117,12 @@ typedef lol_html_rewriter_directive_t (*lol_html_end_tag_handler_t)(
     void *user_data
 );
 
+// `size_t` byte offsets from the start of the input document
+typedef struct lol_html_SourceLocationBytes {
+    size_t start;
+    size_t end;
+} lol_html_source_location_bytes_t;
+
 // For use with streaming content handlers.
 //
 // Safety: the user data and the callbacks must be safe to use from a different thread (e.g. can't rely on thread-local storage).
@@ -347,6 +353,12 @@ void lol_html_doctype_remove(lol_html_doctype_t *doctype);
 // Returns `true` if the doctype has been removed.
 bool lol_html_doctype_is_removed(const lol_html_doctype_t *doctype);
 
+// Returns [`SourceLocationBytes`].
+//
+//`doctype`
+// must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_doctype_source_location_bytes(lol_html_doctype_t *doctype);
+
 // Comment
 //---------------------------------------------------------------------
 
@@ -424,7 +436,11 @@ void lol_html_comment_user_data_set(
 // Returns user data attached to the comment.
 void *lol_html_comment_user_data_get(const lol_html_comment_t *comment);
 
-
+// Returns [`SourceLocationBytes`].
+//
+//`comment`
+// must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_comment_source_location_bytes(lol_html_comment_t *comment);
 
 // Element
 //---------------------------------------------------------------------
@@ -505,6 +521,12 @@ lol_html_str_t lol_html_attribute_name_get_preserve_case(const lol_html_attribut
 
 // Returns the attribute value.
 lol_html_str_t lol_html_attribute_value_get(const lol_html_attribute_t *attribute);
+
+// Returns [`SourceLocationBytes`].
+//
+//`element`
+// must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_element_source_location_bytes(lol_html_element_t *element);
 
 // Returns the attribute value. The `data` field will be NULL if an attribute with the given name
 // doesn't exist on the element.
@@ -847,6 +869,12 @@ int lol_html_element_streaming_set_inner_content(lol_html_element_t *element,
 int lol_html_element_streaming_replace(lol_html_element_t *element,
                                        lol_html_streaming_handler_t *streaming_writer);
 
+// Returns [`SourceLocationBytes`].
+//
+//`end_tag`
+// must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_end_tag_source_location_bytes(lol_html_end_tag_t *end_tag);
+
 //[`EndTag::streaming_before`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
@@ -1031,6 +1059,12 @@ int lol_html_text_chunk_streaming_after(lol_html_text_chunk_t *text_chunk,
 // Returns 0 on success.
 int lol_html_text_chunk_streaming_replace(lol_html_text_chunk_t *text_chunk,
         lol_html_streaming_handler_t *streaming_writer);
+
+// Returns [`SourceLocationBytes`].
+//
+//`text_chunk`
+// must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_text_chunk_source_location_bytes(lol_html_text_chunk_t *text_chunk);
 
 // Attaches custom user data to the text chunk.
 //
