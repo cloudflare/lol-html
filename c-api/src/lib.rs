@@ -85,7 +85,7 @@ macro_rules! unwrap_or_ret_null {
 }
 
 macro_rules! impl_content_mutation_handlers {
-    ($name:ident: $typ:ty [ $($(@$kind:ident)? $fn_name:ident => $method:ident),+$(,)? ]) => {
+    ($name:ident: $typ:ty [ $($(#[$meta:meta])* $(@$kind:ident)? $fn_name:ident => $method:ident),+$(,)? ]) => {
         $(
             // stable Rust can't concatenate idents, so fn_name must be written out manually,
             // but it is possible to compare concatenated strings.
@@ -101,10 +101,11 @@ macro_rules! impl_content_mutation_handlers {
                     i += 1;
                 }
             };
-            impl_content_mutation_handlers! { IMPL $($kind)? $name: $typ, $fn_name => $method }
+            impl_content_mutation_handlers! { IMPL $($kind)? $name: $typ, $(#[$meta])* $fn_name => $method }
         )+
     };
-    (IMPL $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
+    (IMPL $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
         #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
         ///
         /// The `content` must be a valid UTF-8 string. It's copied immediately.
@@ -124,7 +125,8 @@ macro_rules! impl_content_mutation_handlers {
             content_insertion_fn_body! { $name.$method(content, content_len, is_html) }
         }
     };
-    (IMPL STREAM $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
+    (IMPL STREAM $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
         #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
         ///
         /// The [`CStreamingHandler`] contains callbacks that will be called
@@ -146,7 +148,8 @@ macro_rules! impl_content_mutation_handlers {
             content_insertion_fn_body! { $name.$method(streaming_writer) }
         }
     };
-    (IMPL VOID $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
+    (IMPL VOID $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
         #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
         ///
         #[doc = concat!("`", stringify!($name), "`")]
@@ -158,7 +161,8 @@ macro_rules! impl_content_mutation_handlers {
             to_ref_mut!($name).$method();
         }
     };
-    (IMPL BOOL $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
+    (IMPL BOOL $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
         #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
         ///
         #[doc = concat!("`", stringify!($name), "`")]
