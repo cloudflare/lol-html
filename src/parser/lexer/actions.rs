@@ -16,12 +16,7 @@ macro_rules! get_token_part_range {
     };
 }
 
-impl<S: LexemeSink> StateMachineActions for Lexer<S> {
-    type Context = ParserContext<S>;
-
-    impl_common_sm_actions!();
-
-    #[inline]
+impl<S: LexemeSink> Lexer<S> {
     fn emit_eof(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
         let lexeme = self.create_lexeme_with_raw_exclusive(
             context.previously_consumed_byte_count,
@@ -31,6 +26,12 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
         self.emit_lexeme(context, &lexeme)
     }
+}
+
+impl<S: LexemeSink> StateMachineActions for Lexer<S> {
+    type Context = ParserContext<S>;
+
+    impl_common_sm_actions!();
 
     #[inline]
     fn emit_text(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
@@ -50,6 +51,11 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         }
 
         Ok(())
+    }
+
+    fn emit_text_and_eof(&mut self, context: &mut ParserContext<S>, input: &[u8]) -> ActionResult {
+        self.emit_text(context, input)?;
+        self.emit_eof(context, input)
     }
 
     #[inline]
