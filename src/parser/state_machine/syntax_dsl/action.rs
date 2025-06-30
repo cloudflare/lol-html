@@ -1,6 +1,6 @@
 macro_rules! action {
     (| $self:tt, $ctx:tt, $input:ident | > $action_fn:ident ? $($args:expr),* ) => {
-        $self.$action_fn($ctx, $input $(,$args),*).map_err(ParsingTermination::ActionError)?;
+        $self.$action_fn($ctx, $input $(,$args),*)?;
     };
 
     (| $self:tt, $ctx:tt, $input:ident | > $action_fn:ident $($args:expr),* ) => {
