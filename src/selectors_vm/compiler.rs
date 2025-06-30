@@ -15,10 +15,11 @@ use std::iter;
 type BytesOwned = Box<[u8]>;
 
 /// An expression using only the tag name of an element.
-pub type CompiledLocalNameExpr = Box<dyn Fn(&SelectorState<'_>, &LocalName<'_>) -> bool + Send>;
+pub type CompiledLocalNameExpr =
+    Box<dyn Fn(&SelectorState<'_>, &LocalName<'_>) -> bool + Send + 'static>;
 /// An expression using the attributes of an element.
 pub type CompiledAttributeExpr =
-    Box<dyn Fn(&SelectorState<'_>, &AttributeMatcher<'_>) -> bool + Send>;
+    Box<dyn Fn(&SelectorState<'_>, &AttributeMatcher<'_>) -> bool + Send + 'static>;
 
 #[derive(Default)]
 struct ExprSet {

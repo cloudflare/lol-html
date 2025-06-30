@@ -13,26 +13,26 @@ use std::fmt::{self, Debug};
 /// An HTML start tag rewritable unit.
 ///
 /// Exposes API for examination and modification of a parsed HTML start tag.
-pub struct StartTag<'i> {
-    name: BytesCow<'i>,
-    attributes: Attributes<'i>,
+pub struct StartTag<'input_token> {
+    name: BytesCow<'input_token>,
+    attributes: Attributes<'input_token>,
     ns: Namespace,
     self_closing: bool,
-    raw: SpannedRawBytes<'i>,
+    raw: SpannedRawBytes<'input_token>,
     pub(crate) mutations: Mutations,
 }
 
-impl<'i> StartTag<'i> {
+impl<'input_token> StartTag<'input_token> {
     /// Reuses encoding from `attributes`
     #[inline]
     #[must_use]
     pub(super) fn new_token(
-        name: Bytes<'i>,
-        attributes: Attributes<'i>,
+        name: Bytes<'input_token>,
+        attributes: Attributes<'input_token>,
         ns: Namespace,
         self_closing: bool,
-        raw: SpannedRawBytes<'i>,
-    ) -> Token<'i> {
+        raw: SpannedRawBytes<'input_token>,
+    ) -> Token<'input_token> {
         Token::StartTag(StartTag {
             name: name.into(),
             attributes,
@@ -93,7 +93,7 @@ impl<'i> StartTag<'i> {
 
     /// Returns an immutable collection of tag's attributes.
     #[inline]
-    pub fn attributes(&self) -> &[Attribute<'i>] {
+    pub fn attributes(&self) -> &[Attribute<'input_token>] {
         &self.attributes
     }
 
@@ -179,7 +179,7 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method append to the previously inserted content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_before(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.mutations
             .mutate()
             .content_before
@@ -191,7 +191,7 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method prepend to the previously inserted content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_after(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.mutations
             .mutate()
             .content_after
@@ -203,7 +203,7 @@ impl<'i> StartTag<'i> {
     /// Consequent calls to the method overwrite previous replacement content.
     ///
     /// Use the [`streaming!`] macro to make a `StreamingHandler` from a closure.
-    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send>) {
+    pub fn streaming_replace(&mut self, string_writer: Box<dyn StreamingHandler + Send + 'static>) {
         self.mutations
             .mutate()
             .replace(StringChunk::stream(string_writer));
@@ -252,7 +252,10 @@ impl<'i> StartTag<'i> {
     #[cfg(test)]
     pub(crate) const fn raw_attributes(
         &self,
-    ) -> (&'i Bytes<'i>, &'i crate::parser::AttributeBuffer) {
+    ) -> (
+        &'input_token Bytes<'input_token>,
+        &'input_token crate::parser::AttributeBuffer,
+    ) {
         self.attributes.raw_attributes()
     }
 

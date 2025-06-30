@@ -82,7 +82,7 @@ pub enum RewritingError {
 
     /// An error that was propagated from one of the content handlers.
     #[error("{0}")]
-    ContentHandlerError(Box<dyn StdError + Send + Sync>),
+    ContentHandlerError(Box<dyn StdError + Send + Sync + 'static>),
 }
 
 /// A streaming HTML rewriter.
@@ -327,7 +327,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     // Assert that HtmlRewriter with `SendHandlerTypes` is `Send`.
-    assert_impl_all!(crate::send::HtmlRewriter<'_, Box<dyn FnMut(&[u8]) + Send>>: Send);
+    assert_impl_all!(crate::send::HtmlRewriter<'_, Box<dyn FnMut(&[u8]) + Send + 'static>>: Send);
 
     fn write_chunks<O: OutputSink>(
         mut rewriter: HtmlRewriter<'_, O>,
