@@ -130,12 +130,11 @@ typedef struct lol_html_CStreamingHandler {
     // The `sink` argument is guaranteed non-`NULL`. It is valid only for the duration of this call, and can only be used on the same thread.
     // The sink is for [`lol_html_streaming_sink_write_str`] and [`lol_html_streaming_sink_write_utf8_chunk`].
     // `user_data` comes from this struct.
-    //
     // `write_all_callback` must not be `NULL`.
     int (*write_all_callback)(lol_html_streaming_sink_t *sink, void *user_data);
     // Called exactly once, after the last use of this handler.
-    // It may be `NULL`.
     // `user_data` comes from this struct.
+    // May be `NULL`.
     void (*drop_callback)(void *user_data);
     // *Always* initialize to `NULL`.
     void *reserved;

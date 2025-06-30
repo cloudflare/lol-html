@@ -1,6 +1,7 @@
 use super::*;
 use std::slice::Iter;
 
+/// Returns the tag name of the element.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_tag_name_get(element: *const Element) -> Str {
     let element = to_ref!(element);
@@ -8,6 +9,7 @@ pub unsafe extern "C" fn lol_html_element_tag_name_get(element: *const Element) 
     Str::new(element.tag_name())
 }
 
+/// Returns the tag name of the element, preserving its case.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_tag_name_get_preserve_case(
     element: *const Element,
@@ -17,6 +19,12 @@ pub unsafe extern "C" fn lol_html_element_tag_name_get_preserve_case(
     Str::new(element.tag_name_preserve_case())
 }
 
+/// Sets the tag name of the element.
+///
+/// Name should be a valid UTF8-string.
+///
+/// Returns 0 in case of success and -1 otherwise. The actual error message
+/// can be obtained using `lol_html_take_last_error` function.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_tag_name_set(
     element: *mut Element,
@@ -31,8 +39,14 @@ pub unsafe extern "C" fn lol_html_element_tag_name_set(
     0
 }
 
+/// Returns the namespace URI of the element.
+///
+/// NOTE: This method returns static zero-terminated C string, so it don't
+/// need to be freed.
 #[no_mangle]
-pub unsafe extern "C" fn lol_html_element_namespace_uri_get(element: *mut Element) -> *const c_char {
+pub unsafe extern "C" fn lol_html_element_namespace_uri_get(
+    element: *mut Element,
+) -> *const c_char {
     let element = to_ref!(element);
 
     match element.namespace_uri() {
@@ -43,6 +57,13 @@ pub unsafe extern "C" fn lol_html_element_namespace_uri_get(element: *mut Elemen
     }
 }
 
+/// Returns the iterator over the element attributes.
+///
+/// WARNING: The iterator is valid only during the handler execution and
+/// should never be leaked outside of it.
+///
+/// Use `lol_html_attributes_iterator_free` function to deallocate
+/// returned iterator.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
     element: *const Element<'r, 't>,
@@ -52,6 +73,12 @@ pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
     to_ptr_mut(attributes.iter())
 }
 
+// Advances the iterator and returns next attribute.
+//
+// Returns NULL if iterator has been exhausted.
+//
+// WARNING: Returned attribute is valid only during the handler
+// execution and should never be leaked outside of it.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_attributes_iterator_next<'t>(
     iterator: *mut Iter<'_, Attribute<'t>>,
@@ -64,11 +91,13 @@ pub unsafe extern "C" fn lol_html_attributes_iterator_next<'t>(
     }
 }
 
+// Frees the memory held by the attribute iterator.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
     drop(to_box!(iterator));
 }
 
+/// Returns the attribute name.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
@@ -76,6 +105,7 @@ pub unsafe extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute
     Str::new(attribute.name())
 }
 
+/// Returns the attribute name, preserving its case.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_attribute_name_get_preserve_case(
     attribute: *const Attribute,
@@ -85,6 +115,7 @@ pub unsafe extern "C" fn lol_html_attribute_name_get_preserve_case(
     Str::new(attribute.name_preserve_case())
 }
 
+/// Returns the attribute value.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_attribute_value_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
@@ -92,6 +123,13 @@ pub unsafe extern "C" fn lol_html_attribute_value_get(attribute: *const Attribut
     Str::new(attribute.value())
 }
 
+/// Returns the attribute value. The `data` field will be NULL if an attribute with the given name
+/// doesn't exist on the element.
+///
+/// Name should be a valid UTF8-string.
+///
+/// If the provided name is invalid UTF8-string the function returns NULL as well.
+/// Therefore one should always check `lol_html_take_last_error` result after the call.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_get_attribute(
     element: *const Element,
@@ -104,6 +142,10 @@ pub unsafe extern "C" fn lol_html_element_get_attribute(
     Str::from_opt(element.get_attribute(name))
 }
 
+/// Returns 1 if element has attribute with the given name, and 0 otherwise.
+/// Returns -1 in case of an error.
+///
+/// Name should be a valid UTF8-string.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_has_attribute(
     element: *const Element,
@@ -120,6 +162,13 @@ pub unsafe extern "C" fn lol_html_element_has_attribute(
     }
 }
 
+/// Updates the attribute value if attribute with the given name already exists on
+/// the element, or creates adds new attribute with given name and value otherwise.
+///
+/// Name and value should be valid UTF8-strings.
+///
+/// Returns 0 in case of success and -1 otherwise. The actual error message
+/// can be obtained using `lol_html_take_last_error` function.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_set_attribute(
     element: *mut Element,
@@ -137,6 +186,12 @@ pub unsafe extern "C" fn lol_html_element_set_attribute(
     0
 }
 
+/// Removes the attribute with the given name from the element.
+///
+/// Name should be a valid UTF8-string.
+///
+/// Returns 0 in case of success and -1 otherwise. The actual error message
+/// can be obtained using `lol_html_take_last_error` function.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_remove_attribute(
     element: *mut Element,
@@ -152,16 +207,69 @@ pub unsafe extern "C" fn lol_html_element_remove_attribute(
 }
 
 impl_content_mutation_handlers! { element: Element [
+    /// Inserts the content string right after the element's start tag
+    /// either as raw text or as HTML.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_element_prepend => prepend,
+    /// Inserts the content string right before the element's end tag
+    /// either as raw text or as HTML.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_element_append => append,
+    /// Inserts the content string before the element either as raw text or as HTML.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_element_before => before,
+    /// Inserts the content string right after the element's end tag as raw text or as HTML.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_element_after => after,
+    /// Sets either text or HTML inner content of the element.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_element_set_inner_content => set_inner_content,
+    /// Replaces the element with the provided text or HTML content.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_element_replace => replace,
+    /// Removes the element.
     @VOID lol_html_element_remove => remove,
+    /// Removes the element, but leaves its inner content intact.
     @VOID lol_html_element_remove_and_keep_content => remove_and_keep_content,
+    /// Returns `true` if the element has been removed.
     @BOOL lol_html_element_is_removed => removed,
+    /// Whether the tag syntactically ends with `/>`. In HTML content this is purely a decorative, unnecessary, and has no effect of any kind.
+    ///
+    /// The `/>` syntax only affects parsing of elements in foreign content (SVG and MathML).
+    /// It will never close any HTML tags that aren't already defined as void in HTML.
+    ///
+    /// This function only reports the parsed syntax, and will not report which elements are actually void in HTML.
+    /// Use `lol_html_element_can_have_content` to check if the element is non-void.
+    ///
+    /// If the `/` is part of an unquoted attribute, it's not parsed as the self-closing syntax.
     @BOOL lol_html_element_is_self_closing => is_self_closing,
+    /// Whether the element can have inner content.  Returns `true` unless the element is an [HTML void
+    /// element](https://html.spec.whatwg.org/multipage/syntax.html#void-elements) or has a
+    /// self-closing tag (eg, `<foo />`).
     @BOOL lol_html_element_can_have_content => can_have_content,
     @STREAM lol_html_element_streaming_prepend => streaming_prepend,
     @STREAM lol_html_element_streaming_append => streaming_append,
@@ -171,6 +279,11 @@ impl_content_mutation_handlers! { element: Element [
     @STREAM lol_html_element_streaming_replace => streaming_replace,
 ] }
 
+/// Attaches custom user data to the element.
+///
+/// The same element can be passed to multiple handlers if it has been
+/// captured by multiple selectors. It might be handy to store some processing
+/// state on the element, so it can be shared between handlers.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_user_data_set(
     element: *mut Element,
@@ -179,6 +292,7 @@ pub unsafe extern "C" fn lol_html_element_user_data_set(
     to_ref_mut!(element).set_user_data(user_data);
 }
 
+/// Returns user data attached to the element.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_user_data_get(element: *mut Element) -> *mut c_void {
     get_user_data!(element)
@@ -186,6 +300,28 @@ pub unsafe extern "C" fn lol_html_element_user_data_get(element: *mut Element) -
 
 type EndTagHandler = unsafe extern "C" fn(*mut EndTag, *mut c_void) -> RewriterDirective;
 
+/// Adds content handlers to the builder for the end tag of the given element.
+///
+/// Subsequent calls to the method on the same element adds new handler.
+/// They will run in the order in which they were registered.
+///
+/// The handler can optionally have associated user data which will be
+/// passed to the handler on each invocation along with the rewritable
+/// unit argument.
+///
+/// If the handler returns LOL_HTML_STOP directive then rewriting
+/// stops immediately and `write()` or `end()` of the rewriter methods
+/// return an error code.
+///
+/// Not all elements (for example, `<br>`) support end tags. If this function is
+/// called on such an element, this function returns an error code as described
+/// below.
+///
+/// Returns 0 in case of success and -1 otherwise. The actual error message
+/// can be obtained using `lol_html_take_last_error` function.
+///
+/// WARNING: Pointers passed to handlers are valid only during the
+/// handler execution. So they should never be leaked outside of handlers.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_add_end_tag_handler(
     element: *mut Element,
@@ -208,6 +344,7 @@ pub unsafe extern "C" fn lol_html_element_add_end_tag_handler(
     0
 }
 
+/// Clears the handlers that would run on the end tag of the given element.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_element_clear_end_tag_handlers(element: *mut Element) {
     let element = to_ref_mut!(element);
@@ -217,27 +354,48 @@ pub unsafe extern "C" fn lol_html_element_clear_end_tag_handlers(element: *mut E
 }
 
 impl_content_mutation_handlers! { end_tag: EndTag [
+    /// Inserts the content string before the element's end tag either as raw text or as HTML.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_end_tag_before => before,
+    /// Inserts the content string right after the element's end tag as raw text or as HTML.
+    ///
+    /// Content should be a valid UTF8-string.
+    ///
+    /// Returns 0 in case of success and -1 otherwise. The actual error message
+    /// can be obtained using `lol_html_take_last_error` function.
     lol_html_end_tag_after => after,
     lol_html_end_tag_replace => replace,
+    /// Removes the end tag.
     @VOID lol_html_end_tag_remove => remove,
     @STREAM lol_html_end_tag_streaming_before => streaming_before,
     @STREAM lol_html_end_tag_streaming_after => streaming_after,
     @STREAM lol_html_end_tag_streaming_replace => streaming_replace,
 ] }
 
+/// Returns the end tag name.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_end_tag_name_get(end_tag: *mut EndTag) -> Str {
     let tag = to_ref_mut!(end_tag);
     Str::new(tag.name())
 }
 
+/// Returns the end tag name, preserving its case.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_end_tag_name_get_preserve_case(end_tag: *mut EndTag) -> Str {
     let tag = to_ref_mut!(end_tag);
     Str::new(tag.name_preserve_case())
 }
 
+/// Sets the tag name of the end tag.
+///
+/// Name should be a valid UTF8-string.
+///
+/// Returns 0 in case of success and -1 otherwise. The actual error message
+/// can be obtained using `lol_html_take_last_error` function.
 #[no_mangle]
 pub unsafe extern "C" fn lol_html_end_tag_name_set(
     end_tag: *mut EndTag,
