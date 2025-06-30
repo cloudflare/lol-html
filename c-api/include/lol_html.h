@@ -425,81 +425,6 @@ void lol_html_comment_user_data_set(
 void *lol_html_comment_user_data_get(const lol_html_comment_t *comment);
 
 
-// Text chunk
-//---------------------------------------------------------------------
-
-// Returns a fat pointer to the UTF8 representation of content of the chunk.
-//
-// If the chunk is last in the current text node then content can be an empty string.
-//
-// WARNING: The pointer is valid only during the handler execution and
-// should never be leaked outside of handlers.
-lol_html_text_chunk_content_t lol_html_text_chunk_content_get(
-    const lol_html_text_chunk_t *chunk
-);
-
-// Returns `true` if the chunk is last in the current text node.
-bool lol_html_text_chunk_is_last_in_text_node(const lol_html_text_chunk_t *chunk);
-
-// Inserts the content string before the text chunk either as raw text or as HTML.
-//
-// Content should be a valid UTF8-string.
-//
-// Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `lol_html_take_last_error` function.
-int lol_html_text_chunk_before(
-    lol_html_text_chunk_t *chunk,
-    const char *content,
-    size_t content_len,
-    bool is_html
-);
-
-// Inserts the content string after the text chunk either as raw text or as HTML.
-//
-// Content should be a valid UTF8-string.
-//
-// Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `lol_html_take_last_error` function.
-int lol_html_text_chunk_after(
-    lol_html_text_chunk_t *chunk,
-    const char *content,
-    size_t content_len,
-    bool is_html
-);
-
-// Replace the text chunk with the content of the string which is interpreted
-// either as raw text or as HTML.
-//
-// Content should be a valid UTF8-string.
-//
-// Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `lol_html_take_last_error` function.
-int lol_html_text_chunk_replace(
-    lol_html_text_chunk_t *chunk,
-    const char *content,
-    size_t content_len,
-    bool is_html
-);
-
-// Removes the text chunk.
-void lol_html_text_chunk_remove(lol_html_text_chunk_t *chunk);
-
-// Returns `true` if the text chunk has been removed.
-bool lol_html_text_chunk_is_removed(const lol_html_text_chunk_t *chunk);
-
-// Attaches custom user data to the text chunk.
-//
-// The same text chunk can be passed to multiple handlers if it has been
-// captured by multiple selectors. It might be handy to store some processing
-// state on the chunk, so it can be shared between handlers.
-void lol_html_text_chunk_user_data_set(
-    const lol_html_text_chunk_t *chunk,
-    void *user_data
-);
-
-// Returns user data attached to the text chunk.
-void *lol_html_text_chunk_user_data_get(const lol_html_text_chunk_t *chunk);
-
 
 // Element
 //---------------------------------------------------------------------
@@ -971,6 +896,94 @@ int lol_html_end_tag_streaming_replace(lol_html_end_tag_t *end_tag,
                                        lol_html_streaming_handler_t *streaming_writer);
 
 
+// Write another piece of UTF-8 data to the output. Returns `0` on success, and `-1` if it wasn't valid UTF-8.
+// All pointers must be non-NULL.
+int lol_html_streaming_sink_write_str(lol_html_streaming_sink_t *sink,
+                                         const char *string_utf8,
+                                         size_t string_utf8_len,
+                                         bool is_html);
+
+// [`StreamingHandlerSink::write_utf8_chunk`]
+//
+// Writes as much of the given UTF-8 fragment as possible, converting the encoding and HTML-escaping if `is_html` is `false`.
+//
+// The `bytes_utf8` doesn't need to be a complete UTF-8 string, as long as consecutive calls to this function create a valid UTF-8 string.
+// Any incomplete UTF-8 sequence at the end of the content is buffered and flushed as soon as it's completed.
+//
+// Other functions like [`lol_html_streaming_sink_write_str`] should not be called after a
+// `lol_html_streaming_sink_write_utf8_chunk` call with an incomplete UTF-8 sequence.
+//
+// Returns `0` on success, and `-1` if it wasn't valid UTF-8.
+// All pointers must be non-`NULL`.
+int lol_html_streaming_sink_write_utf8_chunk(lol_html_streaming_sink_t *sink,
+                                                const char *bytes_utf8,
+                                                size_t bytes_utf8_len,
+                                                bool is_html);
+
+// Text chunk
+//---------------------------------------------------------------------
+
+// Returns a fat pointer to the UTF8 representation of content of the chunk.
+//
+// If the chunk is last in the current text node then content can be an empty string.
+//
+// WARNING: The pointer is valid only during the handler execution and
+// should never be leaked outside of handlers.
+lol_html_text_chunk_content_t lol_html_text_chunk_content_get(
+    const lol_html_text_chunk_t *chunk
+);
+
+// Inserts the content string before the text chunk either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_before(
+    lol_html_text_chunk_t *chunk,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+
+// Inserts the content string after the text chunk either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_after(
+    lol_html_text_chunk_t *chunk,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Replace the text chunk with the content of the string which is interpreted
+// either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_replace(
+    lol_html_text_chunk_t *chunk,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Removes the text chunk.
+void lol_html_text_chunk_remove(lol_html_text_chunk_t *chunk);
+
+// Returns `true` if the text chunk has been removed.
+bool lol_html_text_chunk_is_removed(const lol_html_text_chunk_t *chunk);
+
+// Returns `true` if the chunk is last in the current text node.
+bool lol_html_text_chunk_is_last_in_text_node(const lol_html_text_chunk_t *chunk);
+
+
 //[`TextChunk::streaming_before`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
@@ -985,7 +998,7 @@ int lol_html_end_tag_streaming_replace(lol_html_end_tag_t *end_tag,
 //
 // Returns 0 on success.
 int lol_html_text_chunk_streaming_before(lol_html_text_chunk_t *text_chunk,
-                                         lol_html_streaming_handler_t *streaming_writer);
+        lol_html_streaming_handler_t *streaming_writer);
 
 //[`TextChunk::streaming_after`]
 //
@@ -1017,31 +1030,17 @@ int lol_html_text_chunk_streaming_after(lol_html_text_chunk_t *text_chunk,
 //
 // Returns 0 on success.
 int lol_html_text_chunk_streaming_replace(lol_html_text_chunk_t *text_chunk,
-                                          lol_html_streaming_handler_t *streaming_writer);
+        lol_html_streaming_handler_t *streaming_writer);
 
-// Write another piece of UTF-8 data to the output. Returns `0` on success, and `-1` if it wasn't valid UTF-8.
-// All pointers must be non-NULL.
-int lol_html_streaming_sink_write_str(lol_html_streaming_sink_t *sink,
-                                         const char *string_utf8,
-                                         size_t string_utf8_len,
-                                         bool is_html);
+// Attaches custom user data to the text chunk.
+//
+// The same text chunk can be passed to multiple handlers if it has been
+// captured by multiple selectors. It might be handy to store some processing
+// state on the chunk, so it can be shared between handlers.
+void lol_html_text_chunk_user_data_set(lol_html_text_chunk_t *chunk, void *user_data);
 
-// [`StreamingHandlerSink::write_utf8_chunk`]
-//
-// Writes as much of the given UTF-8 fragment as possible, converting the encoding and HTML-escaping if `is_html` is `false`.
-//
-// The `bytes_utf8` doesn't need to be a complete UTF-8 string, as long as consecutive calls to this function create a valid UTF-8 string.
-// Any incomplete UTF-8 sequence at the end of the content is buffered and flushed as soon as it's completed.
-//
-// Other functions like [`lol_html_streaming_sink_write_str`] should not be called after a
-// `lol_html_streaming_sink_write_utf8_chunk` call with an incomplete UTF-8 sequence.
-//
-// Returns `0` on success, and `-1` if it wasn't valid UTF-8.
-// All pointers must be non-`NULL`.
-int lol_html_streaming_sink_write_utf8_chunk(lol_html_streaming_sink_t *sink,
-                                                const char *bytes_utf8,
-                                                size_t bytes_utf8_len,
-                                                bool is_html);
+// Returns user data attached to the text chunk.
+void *lol_html_text_chunk_user_data_get(const lol_html_text_chunk_t *chunk);
 
 #if defined(__cplusplus)
 }  // extern C
