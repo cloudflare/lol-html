@@ -29,6 +29,8 @@ pub unsafe extern "C" fn lol_html_doctype_user_data_get(doctype: *const Doctype)
 }
 
 impl_content_mutation_handlers! { doctype: Doctype [
+    /// Removes the doctype.
     @VOID lol_html_doctype_remove => remove,
+    /// Returns `true` if the doctype has been removed.
     @BOOL lol_html_doctype_is_removed => removed,
 ] }
