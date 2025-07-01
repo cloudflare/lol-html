@@ -107,8 +107,7 @@ macro_rules! impl_content_mutation_handlers {
     (IMPL $name:ident: $typ:ty, $fn_name:ident => source_location_bytes) => {
         /// Returns [`SourceLocationBytes`].
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`.
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name($name: *mut $typ) -> SourceLocationBytes {
             let loc = to_ref_mut!($name).source_location().bytes();
@@ -120,15 +119,15 @@ macro_rules! impl_content_mutation_handlers {
     };
     (IMPL $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
         $(#[$meta])*
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
-        ///
         /// The `content` must be a valid UTF-8 string. It's copied immediately.
         /// If `is_html` is `true`, then the `content` will be written without HTML-escaping.
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`. If `content` is `NULL`, an error will be reported.
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
+        /// If `content` is `NULL`, an error will be reported.
         ///
         /// Returns 0 on success.
+        ///
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
@@ -141,8 +140,6 @@ macro_rules! impl_content_mutation_handlers {
     };
     (IMPL STREAM $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
         $(#[$meta])*
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
-        ///
         /// The [`CStreamingHandler`] contains callbacks that will be called
         /// when the content needs to be written.
         ///
@@ -150,10 +147,12 @@ macro_rules! impl_content_mutation_handlers {
         /// `streaming_writer` may be used from another thread (`Send`), but it's only going
         /// to be used by one thread at a time (`!Sync`).
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
+        /// If `streaming_writer` is `NULL`, an error will be reported.
         ///
         /// Returns 0 on success.
+        ///
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
@@ -164,10 +163,9 @@ macro_rules! impl_content_mutation_handlers {
     };
     (IMPL VOID $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
         $(#[$meta])*
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`.
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
@@ -177,10 +175,10 @@ macro_rules! impl_content_mutation_handlers {
     };
     (IMPL BOOL $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
         $(#[$meta])*
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
+        /// Returns `_Bool`.
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`. Returns `_Bool`.
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
