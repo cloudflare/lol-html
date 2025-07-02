@@ -1,7 +1,6 @@
 # To generate a header:
 #
-# cargo expand > tmp.rs
-# cbindgen tmp.rs
+# make
 
 language = "C"
 tab_width = 4

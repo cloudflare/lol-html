@@ -19,6 +19,10 @@ static lol_html_rewriter_directive_t get_set_comment_text(
 ) {
     UNUSED(user_data);
 
+    lol_html_source_location_bytes_t loc = lol_html_comment_source_location_bytes(comment);
+    ok(loc.start == 0);
+    ok(loc.end == 13);
+
     const char *new_text = "Yo";
 
     note("Get/set text");

@@ -117,6 +117,12 @@ typedef lol_html_rewriter_directive_t (*lol_html_end_tag_handler_t)(
     void *user_data
 );
 
+// `size_t` byte offsets from the start of the input document
+typedef struct lol_html_SourceLocationBytes {
+    size_t start;
+    size_t end;
+} lol_html_source_location_bytes_t;
+
 // For use with streaming content handlers.
 //
 // Safety: the user data and the callbacks must be safe to use from a different thread (e.g. can't rely on thread-local storage).
@@ -130,12 +136,11 @@ typedef struct lol_html_CStreamingHandler {
     // The `sink` argument is guaranteed non-`NULL`. It is valid only for the duration of this call, and can only be used on the same thread.
     // The sink is for [`lol_html_streaming_sink_write_str`] and [`lol_html_streaming_sink_write_utf8_chunk`].
     // `user_data` comes from this struct.
-    //
     // `write_all_callback` must not be `NULL`.
     int (*write_all_callback)(lol_html_streaming_sink_t *sink, void *user_data);
     // Called exactly once, after the last use of this handler.
-    // It may be `NULL`.
     // `user_data` comes from this struct.
+    // May be `NULL`.
     void (*drop_callback)(void *user_data);
     // *Always* initialize to `NULL`.
     void *reserved;
@@ -348,6 +353,11 @@ void lol_html_doctype_remove(lol_html_doctype_t *doctype);
 // Returns `true` if the doctype has been removed.
 bool lol_html_doctype_is_removed(const lol_html_doctype_t *doctype);
 
+// Returns [`SourceLocationBytes`].
+//
+// `doctype` must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_doctype_source_location_bytes(lol_html_doctype_t *doctype);
+
 // Comment
 //---------------------------------------------------------------------
 
@@ -407,6 +417,9 @@ int lol_html_comment_replace(
 );
 
 // Removes the comment.
+// `comment` must be valid and non-`NULL`.
+//
+// Calls [`Comment::remove`].
 void lol_html_comment_remove(lol_html_comment_t *comment);
 
 // Returns `true` if the comment has been removed.
@@ -425,82 +438,10 @@ void lol_html_comment_user_data_set(
 // Returns user data attached to the comment.
 void *lol_html_comment_user_data_get(const lol_html_comment_t *comment);
 
-
-// Text chunk
-//---------------------------------------------------------------------
-
-// Returns a fat pointer to the UTF8 representation of content of the chunk.
+// Returns [`SourceLocationBytes`].
 //
-// If the chunk is last in the current text node then content can be an empty string.
-//
-// WARNING: The pointer is valid only during the handler execution and
-// should never be leaked outside of handlers.
-lol_html_text_chunk_content_t lol_html_text_chunk_content_get(
-    const lol_html_text_chunk_t *chunk
-);
-
-// Returns `true` if the chunk is last in the current text node.
-bool lol_html_text_chunk_is_last_in_text_node(const lol_html_text_chunk_t *chunk);
-
-// Inserts the content string before the text chunk either as raw text or as HTML.
-//
-// Content should be a valid UTF8-string.
-//
-// Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `lol_html_take_last_error` function.
-int lol_html_text_chunk_before(
-    lol_html_text_chunk_t *chunk,
-    const char *content,
-    size_t content_len,
-    bool is_html
-);
-
-// Inserts the content string after the text chunk either as raw text or as HTML.
-//
-// Content should be a valid UTF8-string.
-//
-// Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `lol_html_take_last_error` function.
-int lol_html_text_chunk_after(
-    lol_html_text_chunk_t *chunk,
-    const char *content,
-    size_t content_len,
-    bool is_html
-);
-
-// Replace the text chunk with the content of the string which is interpreted
-// either as raw text or as HTML.
-//
-// Content should be a valid UTF8-string.
-//
-// Returns 0 in case of success and -1 otherwise. The actual error message
-// can be obtained using `lol_html_take_last_error` function.
-int lol_html_text_chunk_replace(
-    lol_html_text_chunk_t *chunk,
-    const char *content,
-    size_t content_len,
-    bool is_html
-);
-
-// Removes the text chunk.
-void lol_html_text_chunk_remove(lol_html_text_chunk_t *chunk);
-
-// Returns `true` if the text chunk has been removed.
-bool lol_html_text_chunk_is_removed(const lol_html_text_chunk_t *chunk);
-
-// Attaches custom user data to the text chunk.
-//
-// The same text chunk can be passed to multiple handlers if it has been
-// captured by multiple selectors. It might be handy to store some processing
-// state on the chunk, so it can be shared between handlers.
-void lol_html_text_chunk_user_data_set(
-    const lol_html_text_chunk_t *chunk,
-    void *user_data
-);
-
-// Returns user data attached to the text chunk.
-void *lol_html_text_chunk_user_data_get(const lol_html_text_chunk_t *chunk);
-
+// `comment` must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_comment_source_location_bytes(lol_html_comment_t *comment);
 
 // Element
 //---------------------------------------------------------------------
@@ -582,6 +523,11 @@ lol_html_str_t lol_html_attribute_name_get_preserve_case(const lol_html_attribut
 // Returns the attribute value.
 lol_html_str_t lol_html_attribute_value_get(const lol_html_attribute_t *attribute);
 
+// Returns [`SourceLocationBytes`].
+//
+// `element` must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_element_source_location_bytes(lol_html_element_t *element);
+
 // Returns the attribute value. The `data` field will be NULL if an attribute with the given name
 // doesn't exist on the element.
 //
@@ -638,6 +584,8 @@ int lol_html_element_remove_attribute(
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `lol_html_take_last_error` function.
+//
+// Calls [`Element::before`].
 int lol_html_element_before(
     lol_html_element_t *element,
     const char *content,
@@ -666,6 +614,8 @@ int lol_html_element_prepend(
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `lol_html_take_last_error` function.
+//
+// Calls [`Element::append`].
 int lol_html_element_append(
     lol_html_element_t *element,
     const char *content,
@@ -771,6 +721,8 @@ void lol_html_element_clear_end_tag_handlers(lol_html_element_t* element);
 //
 // Returns 0 in case of success and -1 otherwise. The actual error message
 // can be obtained using `lol_html_take_last_error` function.
+//
+// Calls [`EndTag::before`].
 int lol_html_end_tag_before(
     lol_html_end_tag_t *end_tag,
     const char *content,
@@ -792,6 +744,9 @@ int lol_html_end_tag_after(
 );
 
 // Removes the end tag.
+// `end_tag` must be valid and non-`NULL`.
+//
+// Calls [`EndTag::remove`].
 void lol_html_end_tag_remove(lol_html_end_tag_t *end_tag);
 
 // Returns the end tag name.
@@ -827,7 +782,7 @@ int lol_html_doc_end_append(
 
 
 
-//[`Element::streaming_prepend`]
+// [`Element::streaming_prepend`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
@@ -836,14 +791,14 @@ int lol_html_doc_end_append(
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`element`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `element` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
 int lol_html_element_streaming_prepend(lol_html_element_t *element,
                                        lol_html_streaming_handler_t *streaming_writer);
 
-//[`Element::streaming_append`]
+// [`Element::streaming_append`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
@@ -852,14 +807,14 @@ int lol_html_element_streaming_prepend(lol_html_element_t *element,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`element`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `element` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
 int lol_html_element_streaming_append(lol_html_element_t *element,
                                       lol_html_streaming_handler_t *streaming_writer);
 
-//[`Element::streaming_before`]
+// [`Element::streaming_before`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
@@ -868,14 +823,14 @@ int lol_html_element_streaming_append(lol_html_element_t *element,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`element`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `element` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
 int lol_html_element_streaming_before(lol_html_element_t *element,
                                       lol_html_streaming_handler_t *streaming_writer);
 
-//[`Element::streaming_after`]
+// [`Element::streaming_after`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
@@ -884,14 +839,14 @@ int lol_html_element_streaming_before(lol_html_element_t *element,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`element`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `element` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
 int lol_html_element_streaming_after(lol_html_element_t *element,
                                      lol_html_streaming_handler_t *streaming_writer);
 
-//[`Element::streaming_set_inner_content`]
+// [`Element::streaming_set_inner_content`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
@@ -900,14 +855,14 @@ int lol_html_element_streaming_after(lol_html_element_t *element,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`element`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `element` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
 int lol_html_element_streaming_set_inner_content(lol_html_element_t *element,
                                                  lol_html_streaming_handler_t *streaming_writer);
 
-//[`Element::streaming_replace`]
+// [`Element::streaming_replace`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
@@ -916,14 +871,19 @@ int lol_html_element_streaming_set_inner_content(lol_html_element_t *element,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`element`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `element` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
 int lol_html_element_streaming_replace(lol_html_element_t *element,
                                        lol_html_streaming_handler_t *streaming_writer);
 
-//[`EndTag::streaming_before`]
+// Returns [`SourceLocationBytes`].
+//
+// `end_tag` must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_end_tag_source_location_bytes(lol_html_end_tag_t *end_tag);
+
+// [`EndTag::streaming_before`]
 //
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
@@ -932,15 +892,15 @@ int lol_html_element_streaming_replace(lol_html_element_t *element,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`end_tag`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `end_tag` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
+//
+// Calls [`EndTag::streaming_before`].
 int lol_html_end_tag_streaming_before(lol_html_end_tag_t *end_tag,
                                       lol_html_streaming_handler_t *streaming_writer);
 
-//[`EndTag::streaming_after`]
-//
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
 //
@@ -948,15 +908,15 @@ int lol_html_end_tag_streaming_before(lol_html_end_tag_t *end_tag,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`end_tag`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `end_tag` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
+//
+// Calls [`EndTag::streaming_after`].
 int lol_html_end_tag_streaming_after(lol_html_end_tag_t *end_tag,
                                      lol_html_streaming_handler_t *streaming_writer);
 
-//[`EndTag::streaming_replace`]
-//
 // The [`CStreamingHandler`] contains callbacks that will be called
 // when the content needs to be written.
 //
@@ -964,61 +924,15 @@ int lol_html_end_tag_streaming_after(lol_html_end_tag_t *end_tag,
 // `streaming_writer` may be used from another thread (`Send`), but it's only going
 // to be used by one thread at a time (`!Sync`).
 //
-//`end_tag`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+// `end_tag` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
 //
 // Returns 0 on success.
+//
+// Calls [`EndTag::streaming_replace`].
 int lol_html_end_tag_streaming_replace(lol_html_end_tag_t *end_tag,
                                        lol_html_streaming_handler_t *streaming_writer);
 
-
-//[`TextChunk::streaming_before`]
-//
-// The [`CStreamingHandler`] contains callbacks that will be called
-// when the content needs to be written.
-//
-// `streaming_writer` is copied immediately, and doesn't have a stable address.
-// `streaming_writer` may be used from another thread (`Send`), but it's only going
-// to be used by one thread at a time (`!Sync`).
-//
-//`text_chunk`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
-//
-// Returns 0 on success.
-int lol_html_text_chunk_streaming_before(lol_html_text_chunk_t *text_chunk,
-                                         lol_html_streaming_handler_t *streaming_writer);
-
-//[`TextChunk::streaming_after`]
-//
-// The [`CStreamingHandler`] contains callbacks that will be called
-// when the content needs to be written.
-//
-// `streaming_writer` is copied immediately, and doesn't have a stable address.
-// `streaming_writer` may be used from another thread (`Send`), but it's only going
-// to be used by one thread at a time (`!Sync`).
-//
-//`text_chunk`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
-//
-// Returns 0 on success.
-int lol_html_text_chunk_streaming_after(lol_html_text_chunk_t *text_chunk,
-                                        lol_html_streaming_handler_t *streaming_writer);
-
-//[`TextChunk::streaming_replace`]
-//
-// The [`CStreamingHandler`] contains callbacks that will be called
-// when the content needs to be written.
-//
-// `streaming_writer` is copied immediately, and doesn't have a stable address.
-// `streaming_writer` may be used from another thread (`Send`), but it's only going
-// to be used by one thread at a time (`!Sync`).
-//
-//`text_chunk`
-// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
-//
-// Returns 0 on success.
-int lol_html_text_chunk_streaming_replace(lol_html_text_chunk_t *text_chunk,
-                                          lol_html_streaming_handler_t *streaming_writer);
 
 // Write another piece of UTF-8 data to the output. Returns `0` on success, and `-1` if it wasn't valid UTF-8.
 // All pointers must be non-NULL.
@@ -1043,6 +957,136 @@ int lol_html_streaming_sink_write_utf8_chunk(lol_html_streaming_sink_t *sink,
                                                 const char *bytes_utf8,
                                                 size_t bytes_utf8_len,
                                                 bool is_html);
+
+// Text chunk
+//---------------------------------------------------------------------
+
+// Returns a fat pointer to the UTF8 representation of content of the chunk.
+//
+// If the chunk is last in the current text node then content can be an empty string.
+//
+// WARNING: The pointer is valid only during the handler execution and
+// should never be leaked outside of handlers.
+lol_html_text_chunk_content_t lol_html_text_chunk_content_get(
+    const lol_html_text_chunk_t *chunk
+);
+
+// Inserts the content string before the text chunk either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_before(
+    lol_html_text_chunk_t *chunk,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+
+// Inserts the content string after the text chunk either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_after(
+    lol_html_text_chunk_t *chunk,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Replace the text chunk with the content of the string which is interpreted
+// either as raw text or as HTML.
+//
+// Content should be a valid UTF8-string.
+//
+// Returns 0 in case of success and -1 otherwise. The actual error message
+// can be obtained using `lol_html_take_last_error` function.
+int lol_html_text_chunk_replace(
+    lol_html_text_chunk_t *chunk,
+    const char *content,
+    size_t content_len,
+    bool is_html
+);
+
+// Removes the text chunk.
+void lol_html_text_chunk_remove(lol_html_text_chunk_t *chunk);
+
+// Returns `true` if the text chunk has been removed.
+bool lol_html_text_chunk_is_removed(const lol_html_text_chunk_t *chunk);
+
+// Returns `true` if the chunk is last in the current text node.
+// `text_chunk` must be valid and non-`NULL`.
+// Returns `_Bool`.
+//
+// Calls [`TextChunk::last_in_text_node`].
+bool lol_html_text_chunk_is_last_in_text_node(lol_html_text_chunk_t *text_chunk);
+
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+// `text_chunk` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+//
+// Calls [`TextChunk::streaming_before`].
+int lol_html_text_chunk_streaming_before(lol_html_text_chunk_t *text_chunk,
+        lol_html_streaming_handler_t *streaming_writer);
+
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+// `text_chunk` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+//
+// Calls [`TextChunk::streaming_after`].
+int lol_html_text_chunk_streaming_after(lol_html_text_chunk_t *text_chunk,
+                                        lol_html_streaming_handler_t *streaming_writer);
+
+// The [`CStreamingHandler`] contains callbacks that will be called
+// when the content needs to be written.
+//
+// `streaming_writer` is copied immediately, and doesn't have a stable address.
+// `streaming_writer` may be used from another thread (`Send`), but it's only going
+// to be used by one thread at a time (`!Sync`).
+//
+// `text_chunk` must be valid and non-`NULL`.
+// If `streaming_writer` is `NULL`, an error will be reported.
+//
+// Returns 0 on success.
+//
+// Calls [`TextChunk::streaming_replace`].
+int lol_html_text_chunk_streaming_replace(lol_html_text_chunk_t *text_chunk,
+        lol_html_streaming_handler_t *streaming_writer);
+
+// Returns [`SourceLocationBytes`].
+//
+// `text_chunk` must be valid and non-`NULL`.
+lol_html_source_location_bytes_t lol_html_text_chunk_source_location_bytes(lol_html_text_chunk_t *text_chunk);
+
+// Attaches custom user data to the text chunk.
+//
+// The same text chunk can be passed to multiple handlers if it has been
+// captured by multiple selectors. It might be handy to store some processing
+// state on the chunk, so it can be shared between handlers.
+void lol_html_text_chunk_user_data_set(lol_html_text_chunk_t *chunk, void *user_data);
+
+// Returns user data attached to the text chunk.
+void *lol_html_text_chunk_user_data_get(const lol_html_text_chunk_t *chunk);
 
 #if defined(__cplusplus)
 }  // extern C

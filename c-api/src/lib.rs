@@ -85,7 +85,7 @@ macro_rules! unwrap_or_ret_null {
 }
 
 macro_rules! impl_content_mutation_handlers {
-    ($name:ident: $typ:ty [ $($(@$kind:ident)? $fn_name:ident => $method:ident),+$(,)? ]) => {
+    ($name:ident: $typ:ty [ $($(#[$meta:meta])* $(@$kind:ident)? $fn_name:ident => $method:ident),+$(,)? ]) => {
         $(
             // stable Rust can't concatenate idents, so fn_name must be written out manually,
             // but it is possible to compare concatenated strings.
@@ -101,19 +101,33 @@ macro_rules! impl_content_mutation_handlers {
                     i += 1;
                 }
             };
-            impl_content_mutation_handlers! { IMPL $($kind)? $name: $typ, $fn_name => $method }
+            impl_content_mutation_handlers! { IMPL $($kind)? $name: $typ, $(#[$meta])* $fn_name => $method }
         )+
     };
-    (IMPL $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
+    (IMPL $name:ident: $typ:ty, $fn_name:ident => source_location_bytes) => {
+        /// Returns [`SourceLocationBytes`].
         ///
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
+        #[no_mangle]
+        pub unsafe extern "C" fn $fn_name($name: *mut $typ) -> SourceLocationBytes {
+            let loc = to_ref_mut!($name).source_location().bytes();
+            SourceLocationBytes {
+                start: loc.start,
+                end: loc.end,
+            }
+        }
+    };
+    (IMPL $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
         /// The `content` must be a valid UTF-8 string. It's copied immediately.
         /// If `is_html` is `true`, then the `content` will be written without HTML-escaping.
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`. If `content` is `NULL`, an error will be reported.
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
+        /// If `content` is `NULL`, an error will be reported.
         ///
         /// Returns 0 on success.
+        ///
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
@@ -124,9 +138,8 @@ macro_rules! impl_content_mutation_handlers {
             content_insertion_fn_body! { $name.$method(content, content_len, is_html) }
         }
     };
-    (IMPL STREAM $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
-        ///
+    (IMPL STREAM $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
         /// The [`CStreamingHandler`] contains callbacks that will be called
         /// when the content needs to be written.
         ///
@@ -134,10 +147,12 @@ macro_rules! impl_content_mutation_handlers {
         /// `streaming_writer` may be used from another thread (`Send`), but it's only going
         /// to be used by one thread at a time (`!Sync`).
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`. If `streaming_writer` is `NULL`, an error will be reported.
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
+        /// If `streaming_writer` is `NULL`, an error will be reported.
         ///
         /// Returns 0 on success.
+        ///
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
@@ -146,11 +161,11 @@ macro_rules! impl_content_mutation_handlers {
             content_insertion_fn_body! { $name.$method(streaming_writer) }
         }
     };
-    (IMPL VOID $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
+    (IMPL VOID $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`.
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
@@ -158,11 +173,12 @@ macro_rules! impl_content_mutation_handlers {
             to_ref_mut!($name).$method();
         }
     };
-    (IMPL BOOL $name:ident: $typ:ty, $fn_name:ident => $method:ident) => {
-        #[doc = concat!("[`", stringify!($typ), "::", stringify!($method), "`]")]
+    (IMPL BOOL $name:ident: $typ:ty, $(#[$meta:meta])* $fn_name:ident => $method:ident) => {
+        $(#[$meta])*
+        #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
+        /// Returns `_Bool`.
         ///
-        #[doc = concat!("`", stringify!($name), "`")]
-        /// must be valid and non-`NULL`. Returns `_Bool`.
+        #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
         #[no_mangle]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
@@ -231,6 +247,13 @@ pub mod string;
 pub mod text_chunk;
 
 pub use self::string::Str;
+
+/// `size_t` byte offsets from the start of the input document
+#[repr(C)]
+pub struct SourceLocationBytes {
+    pub start: usize,
+    pub end: usize,
+}
 
 // NOTE: prevent dead code from complaining about enum
 // never being constructed in the Rust code.
