@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.0
+
+- Added source code locations to the C and JS APIs
+- Significant performance improvements and code size reductions
+
 ## v2.5.0
 
 - Source code locations for tags and other tokens.
