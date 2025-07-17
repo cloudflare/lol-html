@@ -7,7 +7,7 @@ use std::str;
 
 /// An error used to indicate that an encoded string has replacements and can't be converted losslessly.
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(unnameable_types, reason = "accidentally exposed via `tag.set_name()`")]
+#[allow(unnameable_types)] // accidentally exposed via `tag.set_name()`
 pub struct HasReplacementsError;
 
 /// A thin wrapper around byte slice with handy APIs attached
@@ -17,7 +17,7 @@ pub(crate) struct Bytes<'b>(&'b [u8]);
 
 /// A thin wrapper around either byte slice or owned bytes with some handy APIs attached
 #[derive(Clone, PartialEq, Eq, Hash)]
-#[allow(unnameable_types, reason = "accidentally exposed via `tag.set_name()`")]
+#[allow(unnameable_types)] // accidentally exposed via `tag.set_name()`
 #[repr(transparent)]
 pub struct BytesCow<'b>(Cow<'b, [u8]>);
 
