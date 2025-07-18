@@ -47,7 +47,7 @@ macro_rules! create_runner {
         move |b, i: &Vec<Vec<u8>>| {
             b.iter(|| {
                 let mut rewriter = lol_html::HtmlRewriter::new($settings, |c: &[u8]| {
-                    black_box(c);
+                    std::hint::black_box(c);
                 });
 
                 for chunk in i {
@@ -63,7 +63,7 @@ macro_rules! create_runner {
 macro_rules! noop_handler {
     () => {
         |arg| {
-            black_box(arg);
+            std::hint::black_box(arg);
             Ok(())
         }
     };

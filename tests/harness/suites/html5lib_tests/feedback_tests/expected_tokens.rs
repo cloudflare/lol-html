@@ -3,9 +3,9 @@ use hashbrown::HashMap;
 use html5ever::tendril::StrTendril;
 use html5ever::tokenizer::{
     BufferQueue, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
-    TokenizerResult,
 };
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
+use html5ever::TokenizerResult;
 use markup5ever_rcdom::RcDom;
 use std::cell::RefCell;
 use std::iter::FromIterator;

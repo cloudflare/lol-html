@@ -270,7 +270,7 @@ where
                 } => {
                     get_flags_from_aux_info_res!(aux_info_req, &attributes, self_closing)
                 }
-                _ => Err(ActionError::internal(
+                TagTokenOutline::EndTag { .. } => Err(ActionError::internal(
                     "Tag should be a start tag at this point",
                 )),
             },
