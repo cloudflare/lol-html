@@ -21,6 +21,7 @@ impl<T> LimitedVec<T> {
     }
 
     pub fn push(&mut self, element: T) -> Result<(), MemoryLimitExceededError> {
+        #[allow(clippy::branches_sharing_code)]
         if self.vec.capacity() - self.vec.len() >= 1 {
             // the two push calls are optimized into one, but need to be two so each gets its own capacity hint
             self.vec.push(element);
