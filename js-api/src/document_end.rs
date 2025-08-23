@@ -11,6 +11,7 @@ impl DocumentEnd {
     pub fn append(
         &mut self,
         content: &str,
+        #[wasm_bindgen(js_name = "html")]
         content_type: Option<ContentTypeOptions>,
     ) -> Result<(), JsValue> {
         self.0
