@@ -91,6 +91,7 @@ trait IntoNative<T> {
 
 #[wasm_bindgen]
 extern "C" {
+    #[wasm_bindgen(typescript_type = "boolean")]
     pub type ContentTypeOptions;
 
     #[wasm_bindgen(method, getter)]
@@ -117,6 +118,7 @@ macro_rules! impl_mutations {
             pub fn before(
                 &mut self,
                 content: &str,
+                #[wasm_bindgen(js_name = "html")]
                 content_type: Option<ContentTypeOptions>,
             ) -> Result<(), JsValue> {
                 self.0
@@ -127,6 +129,7 @@ macro_rules! impl_mutations {
             pub fn after(
                 &mut self,
                 content: &str,
+                #[wasm_bindgen(js_name = "html")]
                 content_type: Option<ContentTypeOptions>,
             ) -> Result<(), JsValue> {
                 self.0
@@ -137,6 +140,7 @@ macro_rules! impl_mutations {
             pub fn replace(
                 &mut self,
                 content: &str,
+                #[wasm_bindgen(js_name = "html")]
                 content_type: Option<ContentTypeOptions>,
             ) -> Result<(), JsValue> {
                 self.0

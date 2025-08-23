@@ -105,6 +105,7 @@ impl Element {
     pub fn prepend(
         &mut self,
         content: &str,
+        #[wasm_bindgen(js_name = "html")]
         content_type: Option<ContentTypeOptions>,
     ) -> Result<(), JsValue> {
         self.0
@@ -115,6 +116,7 @@ impl Element {
     pub fn append(
         &mut self,
         content: &str,
+        #[wasm_bindgen(js_name = "html")]
         content_type: Option<ContentTypeOptions>,
     ) -> Result<(), JsValue> {
         self.0
@@ -126,6 +128,7 @@ impl Element {
     pub fn set_inner_content(
         &mut self,
         content: &str,
+        #[wasm_bindgen(js_name = "html")]
         content_type: Option<ContentTypeOptions>,
     ) -> Result<(), JsValue> {
         self.0

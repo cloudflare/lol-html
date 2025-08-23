@@ -34,8 +34,17 @@ macro_rules! make_handler {
     }};
 }
 
+#[wasm_bindgen(typescript_custom_section)]
+const INTERFACE_ELEMENT_CONTENT_HANDLERS: &'static str = r#"
+export interface ElementContentHandlers {
+    element?: (element: Element) => void;
+    comments?: (comment: Comment) => void;
+    text?: (textChunk: TextChunk) => void;
+}"#;
+
 #[wasm_bindgen]
 extern "C" {
+    #[wasm_bindgen(typescript_type = "ElementContentHandlers")]
     pub type ElementContentHandlers;
 
     #[wasm_bindgen(method, getter)]
@@ -68,8 +77,18 @@ impl IntoNative<NativeElementContentHandlers<'static>> for ElementContentHandler
     }
 }
 
+#[wasm_bindgen(typescript_custom_section)]
+const INTERFACE_DOCUMENT_CONTENT_HANDLERS: &'static str = r#"
+export interface DocumentContentHandlers {
+    doctype?: (doctype: Doctype) => void;
+    comments?: (comment: Comment) => void;
+    text?: (textChunk: TextChunk) => void;
+    end?: (end: DocumentEnd) => void;
+}"#;
+
 #[wasm_bindgen]
 extern "C" {
+    #[wasm_bindgen(typescript_type = "DocumentContentHandlers")]
     pub type DocumentContentHandlers;
 
     #[wasm_bindgen(method, getter)]

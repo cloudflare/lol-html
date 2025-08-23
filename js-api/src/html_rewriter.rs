@@ -50,7 +50,11 @@ pub struct HTMLRewriter(RewriterState);
 #[wasm_bindgen]
 impl HTMLRewriter {
     #[wasm_bindgen(constructor)]
-    pub fn new(encoding: String, output_sink: &JsFunction) -> JsResult<Self> {
+    pub fn new(
+        encoding: String,
+        #[wasm_bindgen(unchecked_param_type = "(chunk: Uint8Array) => void")]
+        output_sink: &JsFunction
+    ) -> JsResult<Self> {
         let encoding = Encoding::for_label(encoding.as_bytes())
             .and_then(AsciiCompatibleEncoding::new)
             .ok_or_else(|| JsError::new("Invalid encoding"))?;
