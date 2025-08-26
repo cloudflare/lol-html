@@ -37,9 +37,9 @@ macro_rules! make_handler {
 #[wasm_bindgen(typescript_custom_section)]
 const INTERFACE_ELEMENT_CONTENT_HANDLERS: &'static str = r#"
 export interface ElementContentHandlers {
-    element?: (element: Element) => void;
-    comments?: (comment: Comment) => void;
-    text?: (textChunk: TextChunk) => void;
+  element?: (element: Element) => void;
+  comments?: (comment: Comment) => void;
+  text?: (textChunk: TextChunk) => void;
 }"#;
 
 #[wasm_bindgen]
@@ -80,10 +80,10 @@ impl IntoNative<NativeElementContentHandlers<'static>> for ElementContentHandler
 #[wasm_bindgen(typescript_custom_section)]
 const INTERFACE_DOCUMENT_CONTENT_HANDLERS: &'static str = r#"
 export interface DocumentContentHandlers {
-    doctype?: (doctype: Doctype) => void;
-    comments?: (comment: Comment) => void;
-    text?: (textChunk: TextChunk) => void;
-    end?: (end: DocumentEnd) => void;
+  doctype?: (doctype: Doctype) => void;
+  comments?: (comment: Comment) => void;
+  text?: (textChunk: TextChunk) => void;
+  end?: (end: DocumentEnd) => void;
 }"#;
 
 #[wasm_bindgen]

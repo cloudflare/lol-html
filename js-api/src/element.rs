@@ -105,7 +105,6 @@ impl Element {
     pub fn prepend(
         &mut self,
         content: &str,
-        #[wasm_bindgen(js_name = "html")]
         content_type: Option<ContentTypeOptions>,
     ) -> Result<(), JsValue> {
         self.0
@@ -116,7 +115,6 @@ impl Element {
     pub fn append(
         &mut self,
         content: &str,
-        #[wasm_bindgen(js_name = "html")]
         content_type: Option<ContentTypeOptions>,
     ) -> Result<(), JsValue> {
         self.0
@@ -128,7 +126,6 @@ impl Element {
     pub fn set_inner_content(
         &mut self,
         content: &str,
-        #[wasm_bindgen(js_name = "html")]
         content_type: Option<ContentTypeOptions>,
     ) -> Result<(), JsValue> {
         self.0
@@ -154,7 +151,7 @@ impl Element {
     /// The location is for the start tag only.
     ///
     /// The byte offsets are incompatible with JS's char code indices.
-    #[wasm_bindgen(getter=sourceLocationBytes)]
+    #[wasm_bindgen(getter=sourceLocationBytes, unchecked_return_type="[number, number]")]
     pub fn source_location_bytes(&self) -> JsResult<JsValue> {
         Ok(location_to_js(self.0.get()?.source_location()))
     }
