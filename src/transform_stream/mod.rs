@@ -75,7 +75,7 @@ where
 
         let chunk = if self.has_buffered_data {
             self.buffer
-                .append(data)
+                .append_with_grace(data, self.parser.is_in_attribute())
                 .map_err(RewritingError::MemoryLimitExceeded)?;
 
             self.buffer.bytes()

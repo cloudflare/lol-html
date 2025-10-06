@@ -120,6 +120,10 @@ impl<S: ParserOutputSink> Parser<S> {
     pub fn get_dispatcher(&mut self) -> &mut S {
         &mut self.context.output_sink
     }
+
+    pub fn is_in_attribute(&self) -> bool {
+        self.lexer.is_in_attribute()
+    }
 }
 
 cfg_if! {

@@ -4,4 +4,5 @@ mod limiter;
 
 pub(crate) use arena::Arena;
 pub(crate) use limited_vec::LimitedVec;
-pub use limiter::{MemoryLimitExceededError, SharedMemoryLimiter};
+pub use limiter::MemoryLimitExceededError;
+pub(crate) use limiter::SharedMemoryLimiter;

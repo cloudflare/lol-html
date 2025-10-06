@@ -878,7 +878,7 @@ mod tests {
             // Use two chunks for the stream to force the usage of the buffer and
             // make sure to overflow it.
             let chunk_1 = format!("<img alt=\"{}", "l".repeat(MAX / 2));
-            let chunk_2 = format!("{}\" />", "r".repeat(MAX / 2));
+            let chunk_2 = format!("{}\" />", "r".repeat(MAX + MAX / 2));
 
             rewriter.write(chunk_1.as_bytes()).unwrap();
 
@@ -893,10 +893,10 @@ mod tests {
         #[test]
         #[should_panic(expected = "Attempt to use the HtmlRewriter after a fatal error.")]
         fn poisoning_after_fatal_error() {
-            const MAX: usize = 10;
+            const MAX: usize = 50;
 
             let mut rewriter = create_rewriter(MAX, |_: &[u8]| {});
-            let chunk = format!("<img alt=\"{}", "l".repeat(MAX));
+            let chunk = format!("<img alt=\"{}", "l".repeat(MAX * 2));
 
             rewriter.write(chunk.as_bytes()).unwrap_err();
             rewriter.end().unwrap_err();

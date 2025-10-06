@@ -32,7 +32,7 @@ impl<T> LimitedVec<T> {
             let additional_bytes = additional
                 .checked_mul(size_of::<T>())
                 .ok_or(MemoryLimitExceededError)?;
-            self.limiter.increase_usage(additional_bytes)?;
+            self.limiter.increase_usage(additional_bytes, false)?;
 
             // exact to reserve what has been accounted for.
             // not bothering with decrease_usage on real OOM, since the library won't recover anyway

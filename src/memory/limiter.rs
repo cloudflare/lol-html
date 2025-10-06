@@ -12,7 +12,7 @@ pub struct MemoryLimitExceededError;
 
 // Pub only for integration tests
 #[derive(Debug, Clone)]
-pub struct SharedMemoryLimiter {
+pub(crate) struct SharedMemoryLimiter {
     current_usage: Arc<AtomicUsize>,
     max: usize,
 }
@@ -33,20 +33,26 @@ impl SharedMemoryLimiter {
     }
 
     #[inline]
-    pub fn increase_usage(&self, byte_count: usize) -> Result<(), MemoryLimitExceededError> {
+    pub fn increase_usage(
+        &self,
+        byte_count: usize,
+        allow_double_limit: bool,
+    ) -> Result<(), MemoryLimitExceededError> {
         let previous_usage = self.current_usage.fetch_add(byte_count, Ordering::Relaxed);
         let current_usage = previous_usage + byte_count;
 
         if current_usage > self.max {
-            Err(MemoryLimitExceededError)
-        } else {
-            Ok(())
+            if !allow_double_limit || current_usage > self.max * 2 {
+                return Err(MemoryLimitExceededError);
+            }
         }
+
+        Ok(())
     }
 
     #[inline]
     pub fn preallocate(&self, byte_count: usize) {
-        self.increase_usage(byte_count).expect(
+        self.increase_usage(byte_count, false).expect(
             "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`.",
         );
     }
@@ -67,16 +73,16 @@ mod tests {
 
         assert_eq!(limiter.current_usage(), 0);
 
-        limiter.increase_usage(3).unwrap();
+        limiter.increase_usage(3, false).unwrap();
         assert_eq!(limiter.current_usage(), 3);
 
-        limiter.increase_usage(5).unwrap();
+        limiter.increase_usage(5, false).unwrap();
         assert_eq!(limiter.current_usage(), 8);
 
         limiter.decrease_usage(4);
         assert_eq!(limiter.current_usage(), 4);
 
-        let err = limiter.increase_usage(15).unwrap_err();
+        let err = limiter.increase_usage(15, false).unwrap_err();
 
         assert_eq!(err, MemoryLimitExceededError);
     }

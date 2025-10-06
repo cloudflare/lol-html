@@ -796,7 +796,9 @@ pub struct MemorySettings {
     /// [`HtmlRewriter`]: struct.HtmlRewriter.html
     pub preallocated_parsing_buffer_size: usize,
 
-    /// Sets a hard limit in bytes on memory consumption of a [`HtmlRewriter`] instance.
+    /// Sets a soft limit in bytes on memory consumption of a [`HtmlRewriter`] instance.
+    ///
+    /// Long HTML attributes in the input are allowed to use up to double the limit.
     ///
     /// Rewriter's [`write`] and [`end`] methods will error if this limit is exceeded.
     ///

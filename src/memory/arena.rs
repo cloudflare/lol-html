@@ -19,13 +19,23 @@ impl Arena {
     }
 
     pub fn append(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {
+        self.append_with_grace(slice, false)
+    }
+
+    /// `allow_double_limit` allows exceeding the limit this time, up to 2x the max
+    pub fn append_with_grace(
+        &mut self,
+        slice: &[u8],
+        allow_double_limit: bool,
+    ) -> Result<(), MemoryLimitExceededError> {
         // this specific form of capacity check optimizes out redundant resizing in extend_from_slice
         if self.data.capacity() - self.data.len() < slice.len() {
             let additional = slice.len() + self.data.len() - self.data.capacity();
 
             // NOTE: approximate usage, as `Vec::(try_)reserve_exact` doesn't
             // give guarantees about exact capacity value :).
-            self.limiter.increase_usage(additional)?;
+            self.limiter
+                .increase_usage(additional, allow_double_limit)?;
 
             // NOTE: with wisely chosen preallocated size this branch should be
             // executed quite rarely. We can't afford to use double capacity

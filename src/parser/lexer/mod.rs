@@ -169,6 +169,10 @@ impl<S: LexemeSink> Lexer<S> {
 
         self.create_lexeme_with_raw(previously_consumed_byte_count, input, token, raw_end)
     }
+
+    pub(crate) fn is_in_attribute(&self) -> bool {
+        self.current_attr.is_some()
+    }
 }
 
 impl<S: LexemeSink> StateMachine for Lexer<S> {
