@@ -1,7 +1,7 @@
 use crate::harness::suites::html5lib_tests::Unescape;
 use encoding_rs::Encoding;
 use lol_html::AsciiCompatibleEncoding;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde_json::error::Error as SerdeError;
 use std::env;
@@ -63,7 +63,7 @@ impl Input {
                 Ok(val) => val.parse().unwrap(),
                 Err(_) => {
                     if len > 1 {
-                        thread_rng().gen_range(1..len)
+                        rng().random_range(1..len)
                     } else {
                         len
                     }
