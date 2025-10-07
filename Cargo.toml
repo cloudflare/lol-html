@@ -35,7 +35,7 @@ encoding_rs = "0.8.35"
 hashbrown = "0.15.4"
 memchr = "2.7.5"
 mime = "0.3.17"
-selectors = "0.30"
+selectors = "0.32"
 thiserror = "2.0"
 precomputed-hash = "0.1.1"
 
