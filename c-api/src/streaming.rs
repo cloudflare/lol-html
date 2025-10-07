@@ -90,7 +90,7 @@ impl StreamingHandler for CStreamingHandler {
     fn write_all(
         self: Box<Self>,
         sink: &mut StreamingHandlerSink<'_>,
-    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if !self.reserved.is_null() {
             return Err(CStreamingHandlerError::Uninitialized.into());
         }
