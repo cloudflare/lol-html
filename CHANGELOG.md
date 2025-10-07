@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.7.0
+
+- Improve type generation in js-api.
+- Updated dependencies.
+
 ## v2.6.0
 
 - Added source code locations to the C and JS APIs
