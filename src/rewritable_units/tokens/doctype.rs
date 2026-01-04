@@ -149,7 +149,6 @@ impl Debug for Doctype<'_> {
 mod tests {
     use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
-    use crate::*;
     use encoding_rs::{Encoding, UTF_8};
 
     fn rewrite_doctype(

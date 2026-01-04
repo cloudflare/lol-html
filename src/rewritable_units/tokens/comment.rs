@@ -279,7 +279,6 @@ mod tests {
     use crate::errors::*;
     use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
-    use crate::*;
     use encoding_rs::{Encoding, EUC_JP, UTF_8};
 
     fn rewrite_comment(
