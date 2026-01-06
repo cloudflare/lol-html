@@ -90,9 +90,8 @@ impl TransformController for TraceTransformController {
 }
 
 fn main() {
-    let matches = match parse_options() {
-        Some(m) => m,
-        None => return,
+    let Some(matches) = parse_options() else {
+        return;
     };
 
     let html = matches.free.first().unwrap();

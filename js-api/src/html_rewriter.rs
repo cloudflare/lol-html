@@ -51,7 +51,7 @@ pub struct HTMLRewriter(RewriterState);
 impl HTMLRewriter {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        encoding: String,
+        encoding: &str,
         #[wasm_bindgen(unchecked_param_type = "(chunk: Uint8Array) => void")]
         output_sink: &JsFunction,
     ) -> JsResult<Self> {

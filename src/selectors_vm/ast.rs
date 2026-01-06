@@ -209,8 +209,8 @@ where
     P: Hash + Eq,
 {
     pub predicate: Predicate,
-    pub children: Vec<AstNode<P>>,
-    pub descendants: Vec<AstNode<P>>,
+    pub children: Vec<Self>,
+    pub descendants: Vec<Self>,
     pub payload: HashSet<P>,
 }
 

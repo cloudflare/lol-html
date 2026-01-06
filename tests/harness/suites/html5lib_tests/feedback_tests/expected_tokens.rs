@@ -1,5 +1,4 @@
 use super::super::TestToken;
-use hashbrown::HashMap;
 use html5ever::TokenizerResult;
 use html5ever::tendril::StrTendril;
 use html5ever::tokenizer::{
@@ -8,7 +7,6 @@ use html5ever::tokenizer::{
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
 use markup5ever_rcdom::RcDom;
 use std::cell::RefCell;
-use std::iter::FromIterator;
 use std::string::ToString;
 
 // sends tokens to a given sink, while at the same time converting and
@@ -48,12 +46,12 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
                 self.tokens.borrow_mut().push(match tag.kind {
                     TagKind::StartTag => TestToken::StartTag {
                         name,
-                        attributes: HashMap::from_iter(
-                            tag.attrs
-                                .iter()
-                                .rev()
-                                .map(|attr| (attr.name.local.to_string(), attr.value.to_string())),
-                        ),
+                        attributes: tag
+                            .attrs
+                            .iter()
+                            .rev()
+                            .map(|attr| (attr.name.local.to_string(), attr.value.to_string()))
+                            .collect(),
                         self_closing: tag.self_closing,
                     },
                     TagKind::EndTag => TestToken::EndTag { name },
