@@ -286,7 +286,7 @@ where
                     ref attributes,
                     self_closing,
                 } => {
-                    let name = LocalName::new(input, name, name_hash);
+                    let name = LocalName::new(*input, name, name_hash);
 
                     match self
                         .delegate
@@ -302,7 +302,7 @@ where
                 }
 
                 TagTokenOutline::EndTag { name, name_hash } => {
-                    let name = LocalName::new(input, name, name_hash);
+                    let name = LocalName::new(*input, name, name_hash);
                     Ok(self.delegate.transform_controller.handle_end_tag(name))
                 }
             },

@@ -143,7 +143,7 @@ pub enum LocalName<'i> {
 impl<'i> LocalName<'i> {
     #[inline]
     #[must_use]
-    pub(crate) fn new(input: &'i Bytes<'i>, range: Range, hash: LocalNameHash) -> Self {
+    pub(crate) fn new(input: Bytes<'i>, range: Range, hash: LocalNameHash) -> Self {
         if hash.is_empty() {
             LocalName::Bytes(input.slice(range).into())
         } else {
