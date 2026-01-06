@@ -14,6 +14,7 @@ use crate::html::{LocalName, Namespace};
 use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
+use hashbrown::DefaultHashBuilder;
 
 pub use self::ast::*;
 pub(crate) use self::attribute_matcher::AttributeMatcher;
@@ -83,9 +84,14 @@ struct ExecutionCtx<'i, E: ElementData> {
 
 impl<'i, E: ElementData> ExecutionCtx<'i, E> {
     #[inline]
-    pub fn new(local_name: LocalName<'i>, ns: Namespace, enable_esi_tags: bool) -> Self {
+    pub fn new(
+        local_name: LocalName<'i>,
+        ns: Namespace,
+        enable_esi_tags: bool,
+        hasher: DefaultHashBuilder,
+    ) -> Self {
         ExecutionCtx {
-            stack_item: StackItem::new(local_name),
+            stack_item: StackItem::new(local_name, hasher),
             with_content: true,
             ns,
             enable_esi_tags,
@@ -144,6 +150,7 @@ pub(crate) struct SelectorMatchingVm<E: ElementData> {
     program: Program<E::MatchPayload>,
     stack: Stack<E>,
     enable_esi_tags: bool,
+    hasher: DefaultHashBuilder,
 }
 
 impl<E> SelectorMatchingVm<E>
@@ -160,11 +167,13 @@ where
     ) -> Self {
         let program = Compiler::new(encoding).compile(ast);
         let enable_nth_of_type = program.enable_nth_of_type;
+        let hasher = DefaultHashBuilder::default();
 
         Self {
             program,
+            stack: Stack::new(memory_limiter, enable_nth_of_type.then(|| hasher.clone())),
             enable_esi_tags,
-            stack: Stack::new(memory_limiter, enable_nth_of_type),
+            hasher,
         }
     }
 
@@ -178,7 +187,7 @@ where
 
         self.stack.add_child(&local_name);
 
-        let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags);
+        let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags, self.hasher.clone());
 
         match Stack::get_stack_directive(&ctx.stack_item, ns, ctx.enable_esi_tags) {
             PopImmediately => {
@@ -581,6 +590,9 @@ mod tests {
         fn matched_payload_mut(&mut self) -> &mut HashSet<usize> {
             &mut self.0
         }
+        fn new(_: DefaultHashBuilder) -> Self {
+            Self::default()
+        }
     }
 
     struct TestTransformController<T: FnMut(&mut Token<'_>)>(T);
@@ -670,8 +682,9 @@ mod tests {
         ($selectors:expr) => {{
             let mut ast = Ast::default();
 
+            let hasher = DefaultHashBuilder::default();
             for (i, selector) in $selectors.iter().enumerate() {
-                ast.add_selector(&selector.parse().unwrap(), i);
+                ast.add_selector(&selector.parse().unwrap(), i, hasher.clone());
             }
 
             let memory_limiter = SharedMemoryLimiter::new(2048);

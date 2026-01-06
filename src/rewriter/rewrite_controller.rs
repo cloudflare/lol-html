@@ -7,9 +7,8 @@ use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::Ast;
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
 use crate::transform_stream::{DispatcherError, StartTagHandlingResult, TransformController};
-use hashbrown::HashSet;
+use hashbrown::{DefaultHashBuilder, HashSet};
 
-#[derive(Default)]
 pub(crate) struct ElementDescriptor {
     pub matched_content_handlers: HashSet<SelectorHandlersLocator>,
     pub end_tag_handler_idx: Option<usize>,
@@ -22,6 +21,15 @@ impl ElementData for ElementDescriptor {
     #[inline]
     fn matched_payload_mut(&mut self) -> &mut HashSet<SelectorHandlersLocator> {
         &mut self.matched_content_handlers
+    }
+
+    #[inline]
+    fn new(hasher: DefaultHashBuilder) -> Self {
+        Self {
+            matched_content_handlers: HashSet::with_hasher(hasher),
+            end_tag_handler_idx: None,
+            remove_content: false,
+        }
     }
 }
 
@@ -55,10 +63,11 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
             .into_iter()
             .chain(settings.element_content_handlers);
 
+        let hasher = DefaultHashBuilder::default();
         for (selector, handlers) in element_content_handlers {
             let locator = dispatcher.add_selector_associated_handlers(handlers);
 
-            selectors_ast.add_selector(&selector, locator);
+            selectors_ast.add_selector(&selector, locator, hasher.clone());
         }
 
         for handlers in settings.document_content_handlers {

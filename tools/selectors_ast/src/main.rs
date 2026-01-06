@@ -15,7 +15,8 @@ fn main() {
         .for_each(|(i, s)| {
             let selector = s.parse().map_err(|e| format!("{e}")).unwrap();
 
-            ast.add_selector(&selector, i);
+            // private API
+            ast.add_selector(&selector, i, Default::default());
         });
 
     println!("{ast:#?}");

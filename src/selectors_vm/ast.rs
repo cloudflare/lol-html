@@ -1,5 +1,5 @@
 use super::parser::{Selector, SelectorImplDescriptor};
-use hashbrown::HashSet;
+use hashbrown::{DefaultHashBuilder, HashSet};
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component, NthType};
 use std::fmt::{self, Debug, Formatter};
@@ -218,12 +218,14 @@ impl<P> AstNode<P>
 where
     P: Hash + Eq,
 {
-    fn new(predicate: Predicate) -> Self {
+    #[inline]
+    #[must_use]
+    fn new(predicate: Predicate, hasher: DefaultHashBuilder) -> Self {
         Self {
             predicate,
             children: Vec::default(),
             descendants: Vec::default(),
-            payload: HashSet::default(),
+            payload: HashSet::with_hasher(hasher),
         }
     }
 }
@@ -248,21 +250,22 @@ where
         predicate: Predicate,
         branches: &mut Vec<AstNode<P>>,
         cumulative_node_count: &mut usize,
+        hasher: DefaultHashBuilder,
     ) -> usize {
         branches
             .iter()
             .enumerate()
             .find(|(_, n)| n.predicate == predicate)
             .map(|(i, _)| i)
-            .unwrap_or_else(|| {
-                branches.push(AstNode::new(predicate));
+            .unwrap_or_else(move || {
+                branches.push(AstNode::new(predicate, hasher));
                 *cumulative_node_count += 1;
 
                 branches.len() - 1
             })
     }
 
-    pub fn add_selector(&mut self, selector: &Selector, payload: P) {
+    pub fn add_selector(&mut self, selector: &Selector, payload: P, hasher: DefaultHashBuilder) {
         for selector_item in (selector.0).slice() {
             let mut predicate = Predicate::default();
             let mut branches = &mut self.root;
@@ -273,6 +276,7 @@ where
                         predicate,
                         branches,
                         &mut self.cumulative_node_count,
+                        hasher.clone(),
                     );
 
                     branches = &mut branches[node_idx].$branches;
@@ -297,8 +301,12 @@ where
                 }
             }
 
-            let node_idx =
-                Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
+            let node_idx = Self::host_expressions(
+                predicate,
+                branches,
+                &mut self.cumulative_node_count,
+                hasher.clone(),
+            );
 
             branches[node_idx].payload.insert(payload);
         }
@@ -321,7 +329,7 @@ mod tests {
         let mut ast = Ast::default();
 
         for (idx, selector) in selectors.iter().enumerate() {
-            ast.add_selector(&selector.parse().unwrap(), idx);
+            ast.add_selector(&selector.parse().unwrap(), idx, Default::default());
         }
 
         assert_eq!(ast, expected);
