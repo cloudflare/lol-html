@@ -58,6 +58,7 @@ pub(crate) enum ActionError {
 impl ActionError {
     #[cold]
     #[cfg_attr(debug_assertions, track_caller)]
+    #[allow(clippy::unnecessary_box_returns)]
     pub(crate) fn internal(error: &'static str) -> Box<Self> {
         debug_assert!(false, "{error}");
         Box::new(Self::Internal(error))

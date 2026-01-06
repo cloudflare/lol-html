@@ -27,9 +27,7 @@ pub(crate) enum TreeBuilderFeedback {
     SwitchTextType(TextType),
     SetAllowCdata(bool),
     #[allow(clippy::type_complexity)]
-    RequestLexeme(
-        Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback + Send>,
-    ),
+    RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> Self + Send>),
     None,
 }
 

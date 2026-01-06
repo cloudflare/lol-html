@@ -345,7 +345,7 @@ mod tests {
             unreachable!();
         }
         fn new(_: DefaultHashBuilder) -> Self {
-            TestElementData::default()
+            Self::default()
         }
     }
 

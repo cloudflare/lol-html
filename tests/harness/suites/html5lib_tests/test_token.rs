@@ -92,10 +92,13 @@ impl<'de> Deserialize<'de> for TestToken {
                         },
                         attributes: {
                             let value: HashMap<String, String> = next!("3 or 4");
-                            HashMap::from_iter(value.into_iter().map(|(mut k, v)| {
-                                k.make_ascii_lowercase();
-                                (k, v)
-                            }))
+                            value
+                                .into_iter()
+                                .map(|(mut k, v)| {
+                                    k.make_ascii_lowercase();
+                                    (k, v)
+                                })
+                                .collect()
                         },
                         self_closing: seq.next_element()?.unwrap_or(false),
                     },
