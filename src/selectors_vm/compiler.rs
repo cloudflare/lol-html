@@ -329,7 +329,7 @@ mod tests {
     use crate::selectors_vm::{tests::test_with_token, TryExecResult};
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
-    use hashbrown::HashSet;
+    use hashbrown::{DefaultHashBuilder, HashSet};
 
     macro_rules! assert_instr_res {
         ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
@@ -361,8 +361,9 @@ mod tests {
     ) -> Program<usize> {
         let mut ast = Ast::default();
 
+        let hasher = DefaultHashBuilder::default();
         for (idx, selector) in selectors.iter().enumerate() {
-            ast.add_selector(&selector.parse().unwrap(), idx);
+            ast.add_selector(&selector.parse().unwrap(), idx, hasher.clone());
         }
 
         let program = Compiler::new(encoding).compile(ast);
