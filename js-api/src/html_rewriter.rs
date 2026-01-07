@@ -37,8 +37,8 @@ impl OutputSink for JsOutputSink {
 #[allow(clippy::large_enum_variant)]
 enum RewriterState {
     Before {
-        output_sink: JsOutputSink,
         settings: Settings<'static, 'static>,
+        output_sink: JsOutputSink,
     },
     During(NativeHTMLRewriter<'static, JsOutputSink>),
     After,
@@ -70,26 +70,29 @@ impl HTMLRewriter {
     }
 
     fn inner_mut(&mut self) -> JsResult<&mut NativeHTMLRewriter<'static, JsOutputSink>> {
-        match self.0 {
-            RewriterState::Before { .. } => {
-                if let RewriterState::Before {
-                    settings,
-                    output_sink,
-                } = std::mem::replace(&mut self.0, RewriterState::After)
-                {
-                    let rewriter = NativeHTMLRewriter::new(settings, output_sink);
-
-                    self.0 = RewriterState::During(rewriter);
-                    self.inner_mut()
-                } else {
-                    unsafe {
-                        std::hint::unreachable_unchecked();
-                    }
-                }
-            }
-            RewriterState::During(ref mut inner) => Ok(inner),
-            RewriterState::After => Err(JsError::new("Rewriter is ended").into()),
+        match &mut self.0 {
+            RewriterState::During(inner) => Ok(inner),
+            state => Self::advance_state(std::mem::replace(state, RewriterState::After), state),
         }
+    }
+
+    #[cold]
+    fn advance_state(
+        old_state: RewriterState,
+        new_state: &mut RewriterState,
+    ) -> JsResult<&mut NativeHTMLRewriter<'static, JsOutputSink>> {
+        if let RewriterState::Before {
+            settings,
+            output_sink,
+        } = old_state
+        {
+            *new_state = RewriterState::During(NativeHTMLRewriter::new(settings, output_sink));
+            if let RewriterState::During(inner) = new_state {
+                return Ok(inner);
+            }
+        }
+
+        Err(JsError::new("Rewriter is ended").into())
     }
 
     pub fn on(&mut self, selector: &str, handlers: ElementContentHandlers) -> JsResult<()> {
