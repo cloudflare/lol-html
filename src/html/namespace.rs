@@ -20,4 +20,16 @@ impl Namespace {
             MathML => "http://www.w3.org/1998/Math/MathML",
         }
     }
+
+    #[inline]
+    #[must_use]
+    pub const fn uri_c_str(self) -> &'static std::ffi::CStr {
+        use Namespace::{Html, MathML, Svg};
+
+        match self {
+            Html => c"http://www.w3.org/1999/xhtml",
+            Svg => c"http://www.w3.org/2000/svg",
+            MathML => c"http://www.w3.org/1998/Math/MathML",
+        }
+    }
 }
