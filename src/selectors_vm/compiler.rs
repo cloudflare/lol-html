@@ -326,7 +326,7 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::Token;
-    use crate::selectors_vm::{tests::test_with_token, TryExecResult};
+    use crate::selectors_vm::{TryExecResult, tests::test_with_token};
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
     use hashbrown::{DefaultHashBuilder, HashSet};

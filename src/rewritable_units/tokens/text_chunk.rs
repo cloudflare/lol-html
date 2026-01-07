@@ -445,8 +445,7 @@ mod tests {
     mod serialization {
         use super::*;
 
-        const HTML: &str =
-            "Lorem ipsum dolor sit amet, cÔnsectetur adipiscing elit, sed do eiusmod tempor \
+        const HTML: &str = "Lorem ipsum dolor sit amet, cÔnsectetur adipiscing elit, sed do eiusmod tempor \
              incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud \
              exercitation & ullamco laboris nisi ut aliquip ex ea commodo > consequat.";
 

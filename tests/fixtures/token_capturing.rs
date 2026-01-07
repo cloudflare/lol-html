@@ -1,4 +1,4 @@
-use crate::harness::suites::html5lib_tests::{get_test_cases, TestCase, TestToken, TestTokenList};
+use crate::harness::suites::html5lib_tests::{TestCase, TestToken, TestTokenList, get_test_cases};
 use crate::harness::{Input, TestFixture};
 use lol_html::errors::RewritingError;
 use lol_html::html_content::{DocumentEnd, TextType};

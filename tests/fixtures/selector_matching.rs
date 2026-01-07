@@ -1,8 +1,8 @@
-use crate::harness::suites::selectors_tests::{get_test_cases, TestCase};
 use crate::harness::TestFixture;
+use crate::harness::suites::selectors_tests::{TestCase, get_test_cases};
 use lol_html::html_content::ContentType;
 use lol_html::test_utils::Output;
-use lol_html::{comments, element, text, HtmlRewriter, Settings};
+use lol_html::{HtmlRewriter, Settings, comments, element, text};
 
 pub struct SelectorMatchingTests;
 

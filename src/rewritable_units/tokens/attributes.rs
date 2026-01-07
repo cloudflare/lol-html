@@ -25,7 +25,9 @@ pub enum AttributeNameError {
     /// [`encoding`].
     ///
     /// [`encoding`]: ../struct.Settings.html#structfield.encoding
-    #[error("The attribute name contains a character that can't be represented in the document's character encoding.")]
+    #[error(
+        "The attribute name contains a character that can't be represented in the document's character encoding."
+    )]
     UnencodableCharacter,
 }
 

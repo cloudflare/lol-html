@@ -1,4 +1,4 @@
-use lol_html::{element, HtmlRewriter, Settings};
+use lol_html::{HtmlRewriter, Settings, element};
 use std::io;
 use std::io::prelude::*;
 

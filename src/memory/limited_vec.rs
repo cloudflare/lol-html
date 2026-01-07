@@ -74,11 +74,7 @@ impl<T> LimitedVec<T> {
 
     const fn min_capacity() -> usize {
         let items = 128 / size_of::<T>();
-        if items >= 8 {
-            items
-        } else {
-            8
-        }
+        if items >= 8 { items } else { 8 }
     }
 }
 

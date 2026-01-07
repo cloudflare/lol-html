@@ -140,12 +140,12 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                     operator,
                 ),
             )),
-            Component::Nth(data) if data.ty == NthType::Child => {
-                Self::OnTagName(OnTagNameExpr::NthChild(NthChild::new(data.an_plus_b.0, data.an_plus_b.1)))
-            }
-            Component::Nth(data) if data.ty == NthType::OfType => {
-                Self::OnTagName(OnTagNameExpr::NthOfType(NthChild::new(data.an_plus_b.0, data.an_plus_b.1)))
-            }
+            Component::Nth(data) if data.ty == NthType::Child => Self::OnTagName(
+                OnTagNameExpr::NthChild(NthChild::new(data.an_plus_b.0, data.an_plus_b.1)),
+            ),
+            Component::Nth(data) if data.ty == NthType::OfType => Self::OnTagName(
+                OnTagNameExpr::NthOfType(NthChild::new(data.an_plus_b.0, data.an_plus_b.1)),
+            ),
             // NOTE: the rest of the components are explicit namespace or
             // pseudo class-related. Ideally none of them should appear in
             // the parsed selector as we should bail earlier in the parser.

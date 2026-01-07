@@ -31,7 +31,9 @@ pub enum TagNameError {
     /// [`encoding`].
     ///
     /// [`encoding`]: ../struct.Settings.html#structfield.encoding
-    #[error("The tag name contains a character that can't be represented in the document's character encoding.")]
+    #[error(
+        "The tag name contains a character that can't be represented in the document's character encoding."
+    )]
     UnencodableCharacter,
 }
 
@@ -755,7 +757,7 @@ mod tests {
     use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
     use crate::*;
-    use encoding_rs::{Encoding, EUC_JP, UTF_8};
+    use encoding_rs::{EUC_JP, Encoding, UTF_8};
     use rewritable_units::StreamingHandlerSink;
 
     fn rewrite_element(
@@ -894,13 +896,10 @@ mod tests {
 
     #[test]
     fn self_closing_script() {
-        let out = rewrite_element(
-            br#"<svG><sCript/><img></script></svg>"#,
-            UTF_8,
-            "img",
-            |el| el.set_tag_name("HIT").unwrap(),
-        );
-        assert_eq!(out, r#"<svG><sCript/><HIT></script></svg>"#);
+        let out = rewrite_element(br"<svG><sCript/><img></script></svg>", UTF_8, "img", |el| {
+            el.set_tag_name("HIT").unwrap();
+        });
+        assert_eq!(out, r"<svG><sCript/><HIT></script></svg>");
     }
 
     #[test]
@@ -1771,9 +1770,11 @@ mod tests {
                         assert!(loc.end >= prev_range_end);
                         prev_range_end = loc.end;
 
-                        assert!(raw_input[start..loc.end]
-                            .iter()
-                            .all(|&b| b != b'<' && b != b'>'));
+                        assert!(
+                            raw_input[start..loc.end]
+                                .iter()
+                                .all(|&b| b != b'<' && b != b'>')
+                        );
 
                         if t.last_in_text_node() {
                             t.set_str(format!("{start}..{}\n", loc.end));

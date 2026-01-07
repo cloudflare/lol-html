@@ -19,7 +19,9 @@ pub enum CommentTextError {
     /// The provided value contains a character that can't be represented in the document's [`encoding`].
     ///
     /// [`encoding`]: ../struct.Settings.html#structfield.encoding
-    #[error("Comment text contains a character that can't be represented in the document's character encoding.")]
+    #[error(
+        "Comment text contains a character that can't be represented in the document's character encoding."
+    )]
     UnencodableCharacter,
 }
 
@@ -279,7 +281,7 @@ mod tests {
     use crate::errors::*;
     use crate::html_content::*;
     use crate::rewritable_units::test_utils::*;
-    use encoding_rs::{Encoding, EUC_JP, UTF_8};
+    use encoding_rs::{EUC_JP, Encoding, UTF_8};
 
     fn rewrite_comment(
         html: &[u8],

@@ -97,7 +97,7 @@ mod tokens;
 #[cfg(test)]
 mod test_utils {
     use crate::rewriter::AsciiCompatibleEncoding;
-    use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS};
+    use crate::test_utils::{ASCII_COMPATIBLE_ENCODINGS, Output};
     use crate::*;
     use encoding_rs::Encoding;
     use std::borrow::Cow;

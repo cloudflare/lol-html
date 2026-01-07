@@ -1,5 +1,5 @@
-use super::settings::*;
 use super::ElementDescriptor;
+use super::settings::*;
 use crate::rewritable_units::{DocumentEnd, Element, StartTag, Token, TokenCaptureFlags};
 use crate::selectors_vm::MatchInfo;
 

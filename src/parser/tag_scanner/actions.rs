@@ -1,6 +1,6 @@
 use super::*;
-use crate::parser::state_machine::{ActionError, ActionResult, StateMachineActions};
 use crate::parser::ParserContext;
+use crate::parser::state_machine::{ActionError, ActionResult, StateMachineActions};
 
 impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
     type Context = ParserContext<S>;

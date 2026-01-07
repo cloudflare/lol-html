@@ -43,8 +43,8 @@ impl From<TextType> for TreeBuilderFeedback {
 #[inline]
 fn request_lexeme(
     callback: impl FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> TreeBuilderFeedback
-        + 'static
-        + Send,
+    + 'static
+    + Send,
 ) -> TreeBuilderFeedback {
     TreeBuilderFeedback::RequestLexeme(Box::new(callback))
 }
