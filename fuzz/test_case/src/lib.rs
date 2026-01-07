@@ -11,8 +11,8 @@ use std::ffi::{CStr, CString};
 
 use encoding_rs::*;
 use lol_html::html_content::ContentType;
-use lol_html::{comments, doc_comments, doc_text, element, streaming, text};
 use lol_html::{HtmlRewriter, MemorySettings, Settings};
+use lol_html::{comments, doc_comments, doc_text, element, streaming, text};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 

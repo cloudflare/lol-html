@@ -1,7 +1,7 @@
 mod expected_tokens;
 
 use super::super::{for_each_test_file, get_test_file_reader};
-use super::{default_initial_states, Bailout, TestCase};
+use super::{Bailout, TestCase, default_initial_states};
 use hashbrown::HashMap;
 use serde_derive::Deserialize;
 use serde_json::from_reader;

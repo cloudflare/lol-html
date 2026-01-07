@@ -1,7 +1,7 @@
 use crate::rewriter::AsciiCompatibleEncoding;
 use encoding_rs::Encoding;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// This serves as a map from integer to [`Encoding`], which allows more efficient
 /// sets/gets of the [`SharedEncoding`].
@@ -92,9 +92,9 @@ impl SharedEncoding {
 
 #[cfg(test)]
 mod tests {
-    use crate::base::encoding::ALL_ENCODINGS;
-    use crate::base::SharedEncoding;
     use crate::AsciiCompatibleEncoding;
+    use crate::base::SharedEncoding;
+    use crate::base::encoding::ALL_ENCODINGS;
 
     #[test]
     fn test_encoding_round_trip() {

@@ -1,6 +1,6 @@
 use super::*;
-use crate::parser::state_machine::StateMachineActions;
 use crate::parser::ActionError;
+use crate::parser::state_machine::StateMachineActions;
 
 use NonTagContentTokenOutline::*;
 use TagTokenOutline::{EndTag, StartTag};

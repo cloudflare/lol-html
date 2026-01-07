@@ -53,7 +53,7 @@ impl HTMLRewriter {
     pub fn new(
         encoding: String,
         #[wasm_bindgen(unchecked_param_type = "(chunk: Uint8Array) => void")]
-        output_sink: &JsFunction
+        output_sink: &JsFunction,
     ) -> JsResult<Self> {
         let encoding = Encoding::for_label(encoding.as_bytes())
             .and_then(AsciiCompatibleEncoding::new)

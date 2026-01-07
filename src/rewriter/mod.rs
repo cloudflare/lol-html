@@ -318,7 +318,7 @@ mod tests {
     use super::*;
     use crate::html::TextType;
     use crate::html_content::ContentType;
-    use crate::test_utils::{Output, ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS};
+    use crate::test_utils::{ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS, Output};
     use encoding_rs::Encoding;
     use itertools::Itertools;
     use static_assertions::assert_impl_all;

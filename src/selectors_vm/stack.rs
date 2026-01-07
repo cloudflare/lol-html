@@ -1,10 +1,10 @@
+use super::SelectorState;
 use super::ast::NthChild;
 use super::program::AddressRange;
-use super::SelectorState;
 use crate::html::{LocalName, Namespace, Tag};
 use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
 // use hashbrown for raw entry, switch back to std once it stablizes there
-use hashbrown::{hash_map::RawEntryMut, DefaultHashBuilder, HashMap, HashSet};
+use hashbrown::{DefaultHashBuilder, HashMap, HashSet, hash_map::RawEntryMut};
 use std::fmt::Debug;
 use std::hash::{BuildHasher, Hash};
 

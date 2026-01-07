@@ -1,5 +1,5 @@
-use lol_html_native::html_content::SourceLocation;
 use lol_html_native::html_content::ContentType as NativeContentType;
+use lol_html_native::html_content::SourceLocation;
 use std::cell::Cell;
 use std::convert::Into;
 use std::marker::PhantomData;
@@ -166,7 +166,10 @@ macro_rules! impl_mutations {
 macro_rules! impl_from_native {
     ($Ty:ty => $JsTy:path) => {
         impl $JsTy {
-            pub(crate) fn with_native<'r, R>(inner: &'r mut $Ty, callback: impl FnOnce(&JsValue) -> R) -> R {
+            pub(crate) fn with_native<'r, R>(
+                inner: &'r mut $Ty,
+                callback: impl FnOnce(&JsValue) -> R,
+            ) -> R {
                 let (ref_wrap, _anchor) = unsafe { NativeRefWrap::wrap(inner) };
                 let js_value = JsValue::from($JsTy(ref_wrap));
 

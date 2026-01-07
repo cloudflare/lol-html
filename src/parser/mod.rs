@@ -111,7 +111,7 @@ impl<S: ParserOutputSink> Parser<S> {
                 }
                 ActionError::RewritingError(err) => return Err(err),
                 ActionError::Internal(err) => {
-                    return Err(RewritingError::ContentHandlerError(err.into()))
+                    return Err(RewritingError::ContentHandlerError(err.into()));
                 }
             }
         }

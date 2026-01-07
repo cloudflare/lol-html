@@ -100,7 +100,7 @@ pub(crate) trait StateMachineActions {
         input: &[u8],
     ) -> ActionResult;
     fn emit_raw_without_token(&mut self, context: &mut Self::Context, input: &[u8])
-        -> ActionResult;
+    -> ActionResult;
     fn emit_raw_without_token_and_eof(
         &mut self,
         context: &mut Self::Context,

@@ -155,11 +155,7 @@ pub unsafe extern "C" fn lol_html_element_has_attribute(
     let element = to_ref!(element);
     let name = unwrap_or_ret_err_code! { to_str!(name, name_len) };
 
-    if element.has_attribute(name) {
-        1
-    } else {
-        0
-    }
+    if element.has_attribute(name) { 1 } else { 0 }
 }
 
 /// Updates the attribute value if attribute with the given name already exists on
