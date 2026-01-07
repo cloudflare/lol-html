@@ -50,8 +50,8 @@ pub struct Parser<S> {
 // public only for integration tests
 #[allow(private_bounds, private_interfaces)]
 impl<S: ParserOutputSink> Parser<S> {
-    #[inline]
     #[must_use]
+    #[inline(never)]
     pub fn new(output_sink: S, initial_directive: ParserDirective, strict: bool) -> Self {
         let context = ParserContext {
             output_sink,

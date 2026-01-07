@@ -183,6 +183,7 @@ where
     C: TransformController,
     O: OutputSink,
 {
+    #[inline]
     pub fn new(transform_controller: C, output_sink: O, encoding: SharedEncoding) -> Self {
         let capture_flags = transform_controller.initial_capture_flags();
 
