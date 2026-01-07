@@ -89,12 +89,12 @@ pub fn run_c_api_rewriter(data: &[u8]) {
 }
 
 fn get_random_encoding() -> &'static Encoding {
-    let random_encoding_index = rand::thread_rng().gen_range(0..ASCII_COMPATIBLE_ENCODINGS.len());
+    let random_encoding_index = rand::rng().random_range(0..ASCII_COMPATIBLE_ENCODINGS.len());
     ASCII_COMPATIBLE_ENCODINGS[random_encoding_index]
 }
 
 fn get_random_selector() -> &'static str {
-    let random_selector_index = rand::thread_rng().gen_range(0..SUPPORTED_SELECTORS.len());
+    let random_selector_index = rand::rng().random_range(0..SUPPORTED_SELECTORS.len());
     SUPPORTED_SELECTORS[random_selector_index]
 }
 

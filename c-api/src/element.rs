@@ -2,7 +2,7 @@ use super::*;
 use std::slice::Iter;
 
 /// Returns the tag name of the element.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_tag_name_get(element: *const Element) -> Str {
     let element = to_ref!(element);
 
@@ -10,7 +10,7 @@ pub unsafe extern "C" fn lol_html_element_tag_name_get(element: *const Element) 
 }
 
 /// Returns the tag name of the element, preserving its case.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_tag_name_get_preserve_case(
     element: *const Element,
 ) -> Str {
@@ -25,7 +25,7 @@ pub unsafe extern "C" fn lol_html_element_tag_name_get_preserve_case(
 ///
 /// Returns 0 in case of success and -1 otherwise. The actual error message
 /// can be obtained using `lol_html_take_last_error` function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_tag_name_set(
     element: *mut Element,
     name: *const c_char,
@@ -43,7 +43,7 @@ pub unsafe extern "C" fn lol_html_element_tag_name_set(
 ///
 /// NOTE: This method returns static zero-terminated C string, so it don't
 /// need to be freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_namespace_uri_get(
     element: *mut Element,
 ) -> *const c_char {
@@ -64,7 +64,7 @@ pub unsafe extern "C" fn lol_html_element_namespace_uri_get(
 ///
 /// Use `lol_html_attributes_iterator_free` function to deallocate
 /// returned iterator.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
     element: *const Element<'r, 't>,
 ) -> *mut Iter<'r, Attribute<'t>> {
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
 //
 // WARNING: Returned attribute is valid only during the handler
 // execution and should never be leaked outside of it.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attributes_iterator_next<'t>(
     iterator: *mut Iter<'_, Attribute<'t>>,
 ) -> *const Attribute<'t> {
@@ -92,13 +92,13 @@ pub unsafe extern "C" fn lol_html_attributes_iterator_next<'t>(
 }
 
 // Frees the memory held by the attribute iterator.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
     drop(to_box!(iterator));
 }
 
 /// Returns the attribute name.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
@@ -106,7 +106,7 @@ pub unsafe extern "C" fn lol_html_attribute_name_get(attribute: *const Attribute
 }
 
 /// Returns the attribute name, preserving its case.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attribute_name_get_preserve_case(
     attribute: *const Attribute,
 ) -> Str {
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn lol_html_attribute_name_get_preserve_case(
 }
 
 /// Returns the attribute value.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attribute_value_get(attribute: *const Attribute) -> Str {
     let attribute = to_ref!(attribute);
 
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn lol_html_attribute_value_get(attribute: *const Attribut
 ///
 /// If the provided name is invalid UTF8-string the function returns NULL as well.
 /// Therefore one should always check `lol_html_take_last_error` result after the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_get_attribute(
     element: *const Element,
     name: *const c_char,
@@ -146,7 +146,7 @@ pub unsafe extern "C" fn lol_html_element_get_attribute(
 /// Returns -1 in case of an error.
 ///
 /// Name should be a valid UTF8-string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_has_attribute(
     element: *const Element,
     name: *const c_char,
@@ -169,7 +169,7 @@ pub unsafe extern "C" fn lol_html_element_has_attribute(
 ///
 /// Returns 0 in case of success and -1 otherwise. The actual error message
 /// can be obtained using `lol_html_take_last_error` function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_set_attribute(
     element: *mut Element,
     name: *const c_char,
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn lol_html_element_set_attribute(
 ///
 /// Returns 0 in case of success and -1 otherwise. The actual error message
 /// can be obtained using `lol_html_take_last_error` function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_remove_attribute(
     element: *mut Element,
     name: *const c_char,
@@ -285,7 +285,7 @@ impl_content_mutation_handlers! { element: Element [
 /// The same element can be passed to multiple handlers if it has been
 /// captured by multiple selectors. It might be handy to store some processing
 /// state on the element, so it can be shared between handlers.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_user_data_set(
     element: *mut Element,
     user_data: *mut c_void,
@@ -294,7 +294,7 @@ pub unsafe extern "C" fn lol_html_element_user_data_set(
 }
 
 /// Returns user data attached to the element.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_user_data_get(element: *mut Element) -> *mut c_void {
     get_user_data!(element)
 }
@@ -323,7 +323,7 @@ type EndTagHandler = unsafe extern "C" fn(*mut EndTag, *mut c_void) -> RewriterD
 ///
 /// WARNING: Pointers passed to handlers are valid only during the
 /// handler execution. So they should never be leaked outside of handlers.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_add_end_tag_handler(
     element: *mut Element,
     handler: EndTagHandler,
@@ -346,7 +346,7 @@ pub unsafe extern "C" fn lol_html_element_add_end_tag_handler(
 }
 
 /// Clears the handlers that would run on the end tag of the given element.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_element_clear_end_tag_handlers(element: *mut Element) {
     let element = to_ref_mut!(element);
     if let Some(handlers) = element.end_tag_handlers() {
@@ -379,14 +379,14 @@ impl_content_mutation_handlers! { end_tag: EndTag [
 ] }
 
 /// Returns the end tag name.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_end_tag_name_get(end_tag: *mut EndTag) -> Str {
     let tag = to_ref_mut!(end_tag);
     Str::new(tag.name())
 }
 
 /// Returns the end tag name, preserving its case.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_end_tag_name_get_preserve_case(end_tag: *mut EndTag) -> Str {
     let tag = to_ref_mut!(end_tag);
     Str::new(tag.name_preserve_case())
@@ -398,7 +398,7 @@ pub unsafe extern "C" fn lol_html_end_tag_name_get_preserve_case(end_tag: *mut E
 ///
 /// Returns 0 in case of success and -1 otherwise. The actual error message
 /// can be obtained using `lol_html_take_last_error` function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_end_tag_name_set(
     end_tag: *mut EndTag,
     name: *const c_char,

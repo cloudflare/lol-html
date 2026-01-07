@@ -1,11 +1,11 @@
 use super::*;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_comment_text_get(comment: *const Comment) -> Str {
     Str::new(to_ref!(comment).text())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_comment_text_set(
     comment: *mut Comment,
     text: *const c_char,
@@ -57,7 +57,7 @@ impl_content_mutation_handlers! { comment: Comment [
 /// The same comment can be passed to multiple handlers if it has been
 /// captured by multiple selectors. It might be handy to store some
 /// processing state on the comment, so it can be shared between handlers.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_comment_user_data_set(
     comment: *mut Comment,
     user_data: *mut c_void,
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn lol_html_comment_user_data_set(
     to_ref_mut!(comment).set_user_data(user_data);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_comment_user_data_get(comment: *const Comment) -> *mut c_void {
     get_user_data!(comment)
 }

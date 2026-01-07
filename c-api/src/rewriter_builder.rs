@@ -119,12 +119,12 @@ impl HtmlRewriterBuilder {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_builder_new() -> *mut HtmlRewriterBuilder {
     to_ptr_mut(HtmlRewriterBuilder::default())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_builder_add_document_content_handlers(
     builder: *mut HtmlRewriterBuilder,
     doctype_handler: Option<DoctypeHandler>,
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn lol_html_rewriter_builder_add_document_content_handlers
     builder.document_content_handlers.push(handlers);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_builder_add_element_content_handlers(
     builder: *mut HtmlRewriterBuilder,
     selector: *const Selector,
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn lol_html_rewriter_builder_add_element_content_handlers(
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_builder_free(builder: *mut HtmlRewriterBuilder) {
     drop(to_box!(builder));
 }

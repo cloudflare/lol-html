@@ -1,9 +1,9 @@
 [package]
 name = "lol_html_c_api"
-version = "1.3.0"
+version = "1.3.1"
 description = "Low output latency streaming HTML parser/rewriter"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>", "Joshua Nelson <jnelson@cloudflare.com>"]
-edition = "2021"
+edition = "2024"
 links = "lolhtml"
 publish = false
 

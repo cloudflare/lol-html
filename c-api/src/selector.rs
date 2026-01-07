@@ -1,6 +1,6 @@
 use super::*;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_selector_parse(
     selector: *const c_char,
     selector_len: size_t,
@@ -11,7 +11,7 @@ pub unsafe extern "C" fn lol_html_selector_parse(
     to_ptr_mut(selector)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_selector_free(selector: *mut Selector) {
     drop(to_box!(selector));
 }

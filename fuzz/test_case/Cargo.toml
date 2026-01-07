@@ -1,15 +1,13 @@
 [package]
 name = "test_case"
-version = "0.1.0"
 authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
-edition = "2021"
-
+edition = "2024"
 publish = false
 
 [dependencies]
 lol_html = { path = "../../" }
 lol_html_c_api = { path = "../../c-api" }
-rand = "0.8.4"
+rand = "0.9"
 encoding_rs = "0.8.35"
 libc = "0.2.174"
 

@@ -1,9 +1,7 @@
 [package]
 name = "hongg"
-version = "0.1.0"
 authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
-edition = "2021"
-
+edition = "2024"
 publish = false
 
 [dependencies]
