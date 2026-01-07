@@ -737,6 +737,13 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     pub fn source_location(&self) -> SourceLocation {
         self.start_tag.source_location()
     }
+
+    /// [Self::namespace_uri], but as a `CStr`
+    #[inline]
+    #[must_use]
+    pub fn namespace_uri_c_str(&self) -> &'static std::ffi::CStr {
+        self.start_tag.namespace_uri_c_str()
+    }
 }
 
 impl_user_data!(Element<'_, '_>);

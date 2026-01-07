@@ -263,6 +263,13 @@ impl<'input_token> StartTag<'input_token> {
     pub fn source_location(&self) -> SourceLocation {
         self.raw.source_location()
     }
+
+    /// [Self::namespace_uri], but as a `CStr`
+    #[inline]
+    #[must_use]
+    pub fn namespace_uri_c_str(&self) -> &'static std::ffi::CStr {
+        self.ns.uri_c_str()
+    }
 }
 
 impl_serialize!(StartTag);

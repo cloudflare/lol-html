@@ -49,12 +49,7 @@ pub unsafe extern "C" fn lol_html_element_namespace_uri_get(
 ) -> *const c_char {
     let element = to_ref!(element);
 
-    match element.namespace_uri() {
-        "http://www.w3.org/1999/xhtml" => static_c_str!("http://www.w3.org/1999/xhtml"),
-        "http://www.w3.org/2000/svg" => static_c_str!("http://www.w3.org/2000/svg"),
-        "http://www.w3.org/1998/Math/MathML" => static_c_str!("http://www.w3.org/1998/Math/MathML"),
-        _ => unreachable!("Unknown namespace URI"),
-    }
+    element.namespace_uri_c_str().as_ptr()
 }
 
 /// Returns the iterator over the element attributes.
