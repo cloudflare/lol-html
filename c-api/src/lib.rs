@@ -108,7 +108,7 @@ macro_rules! impl_content_mutation_handlers {
         /// Returns [`SourceLocationBytes`].
         ///
         #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn $fn_name($name: *mut $typ) -> SourceLocationBytes {
             let loc = to_ref_mut!($name).source_location().bytes();
             SourceLocationBytes {
@@ -128,7 +128,7 @@ macro_rules! impl_content_mutation_handlers {
         /// Returns 0 on success.
         ///
         #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
             content: *const c_char,
@@ -153,7 +153,7 @@ macro_rules! impl_content_mutation_handlers {
         /// Returns 0 on success.
         ///
         #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
             streaming_writer: *mut CStreamingHandler,
@@ -166,7 +166,7 @@ macro_rules! impl_content_mutation_handlers {
         #[doc = concat!(" `", stringify!($name), "` must be valid and non-`NULL`.")]
         ///
         #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
         ) {
@@ -179,7 +179,7 @@ macro_rules! impl_content_mutation_handlers {
         /// Returns `_Bool`.
         ///
         #[doc = concat!(" Calls [`", stringify!($typ), "::", stringify!($method), "`].")]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn $fn_name(
             $name: *mut $typ,
         ) -> bool {

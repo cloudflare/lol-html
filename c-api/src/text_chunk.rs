@@ -23,7 +23,7 @@ impl TextChunkContent {
 ///
 /// WARNING: The pointer is valid only during the handler execution and
 /// should never be leaked outside of handlers.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_text_chunk_content_get(
     chunk: *mut TextChunk,
 ) -> TextChunkContent {
@@ -70,7 +70,7 @@ impl_content_mutation_handlers! { text_chunk: TextChunk [
 /// The same text chunk can be passed to multiple handlers if it has been
 /// captured by multiple selectors. It might be handy to store some processing
 /// state on the chunk, so it can be shared between handlers.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_text_chunk_user_data_set(
     chunk: *mut TextChunk,
     user_data: *mut c_void,
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn lol_html_text_chunk_user_data_set(
 }
 
 /// Returns user data attached to the text chunk.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_text_chunk_user_data_get(chunk: *const TextChunk) -> *mut c_void {
     get_user_data!(chunk)
 }

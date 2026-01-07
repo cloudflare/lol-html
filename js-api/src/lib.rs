@@ -168,8 +168,9 @@ macro_rules! impl_from_native {
         impl $JsTy {
             pub(crate) fn with_native<'r, R>(inner: &'r mut $Ty, callback: impl FnOnce(&JsValue) -> R) -> R {
                 let (ref_wrap, _anchor) = unsafe { NativeRefWrap::wrap(inner) };
+                let js_value = JsValue::from($JsTy(ref_wrap));
 
-                (callback)(&JsValue::from($JsTy(ref_wrap)))
+                (callback)(&js_value)
             }
         }
     };

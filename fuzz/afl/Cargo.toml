@@ -1,11 +1,9 @@
 [package]
 name = "afl-fuzz"
-version = "0.1.0"
 authors = ["Yevgen Safronov <yevgen@cloudflare.com>"]
-edition = "2021"
-
+edition = "2024"
 publish = false
 
 [dependencies]
 test_case = { path = "../test_case" }
-afl = "0.15.19"
+afl = "0.17.0"

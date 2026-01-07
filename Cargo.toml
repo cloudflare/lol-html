@@ -1,6 +1,6 @@
 [package]
 name = "lol_html"
-version = "2.7.0"
+version = "2.7.1"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com, ifaaan@gmail.com>"]
 license = "BSD-3-Clause"
 description = "Streaming HTML rewriter/parser with CSS selector-based API"
@@ -10,8 +10,8 @@ categories = ["parser-implementations", "web-programming"]
 keywords = ["html", "css-selectors", "parser", "rewriter", "streaming"]
 readme = "README.md"
 include = ["/Cargo.toml", "/LICENSE", "/README.md", "/media", "/src"]
-edition = "2021"
-rust-version = "1.80"
+edition = "2024"
+rust-version = "1.85"
 
 [lib]
 # Disable libtest to make sure criterion can parse the command line flags.
@@ -42,7 +42,7 @@ thiserror = "2.0"
 precomputed-hash = "0.1.1"
 
 [dev-dependencies]
-criterion = "0.7.0"
+criterion = "0.8.0"
 glob = "0.3.2"
 html5ever = "0.36"
 markup5ever_rcdom = "0.36.0"

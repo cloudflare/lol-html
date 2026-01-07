@@ -43,7 +43,7 @@ export interface ElementContentHandlers {
 }"#;
 
 #[wasm_bindgen]
-extern "C" {
+unsafe extern "C" {
     #[wasm_bindgen(typescript_type = "ElementContentHandlers")]
     pub type ElementContentHandlers;
 
@@ -87,7 +87,7 @@ export interface DocumentContentHandlers {
 }"#;
 
 #[wasm_bindgen]
-extern "C" {
+unsafe extern "C" {
     #[wasm_bindgen(typescript_type = "DocumentContentHandlers")]
     pub type DocumentContentHandlers;
 

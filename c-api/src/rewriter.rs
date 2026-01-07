@@ -34,7 +34,7 @@ impl OutputSink for ExternOutputSink {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_build(
     builder: *mut HtmlRewriterBuilder,
     encoding: *const c_char,
@@ -66,7 +66,7 @@ pub unsafe extern "C" fn lol_html_rewriter_build(
     to_ptr_mut(HtmlRewriter(Some(rewriter)))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn unstable_lol_html_rewriter_build_with_esi_tags(
     builder: *mut HtmlRewriterBuilder,
     encoding: *const c_char,
@@ -98,7 +98,7 @@ pub unsafe extern "C" fn unstable_lol_html_rewriter_build_with_esi_tags(
     to_ptr_mut(HtmlRewriter(Some(rewriter)))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_write(
     rewriter: *mut HtmlRewriter,
     chunk: *const c_char,
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn lol_html_rewriter_write(
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_end(rewriter: *mut HtmlRewriter) -> c_int {
     let rewriter = to_ref_mut!(rewriter)
         .0
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn lol_html_rewriter_end(rewriter: *mut HtmlRewriter) -> c
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_rewriter_free(rewriter: *mut HtmlRewriter) {
     // SAFETY: `to_box` includes a check that `rewriter` is non-null.
     // The caller is required to ensure that `rewriter` is aligned and that `free` has not been called before.

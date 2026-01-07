@@ -44,7 +44,7 @@ impl Drop for Str {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_str_free(string: Str) {
     drop(string);
 }

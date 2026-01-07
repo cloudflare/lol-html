@@ -3,7 +3,7 @@
 // ensure it's linked
 use lolhtml as _;
 
-extern "C" {
+unsafe extern "C" {
     fn run_tests() -> i32;
 }
 

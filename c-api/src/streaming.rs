@@ -8,7 +8,7 @@ pub type CStreamingHandlerSink<'tmp> = StreamingHandlerSink<'tmp>;
 
 /// Write another piece of UTF-8 data to the output. Returns `0` on success, and `-1` if it wasn't valid UTF-8.
 /// All pointers must be non-NULL.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_streaming_sink_write_str(
     sink: *mut CStreamingHandlerSink<'_>,
     string_utf8: *const c_char,
@@ -39,7 +39,7 @@ pub unsafe extern "C" fn lol_html_streaming_sink_write_str(
 ///
 /// Returns `0` on success, and `-1` if it wasn't valid UTF-8.
 /// All pointers must be non-`NULL`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_streaming_sink_write_utf8_chunk(
     sink: *mut CStreamingHandlerSink<'_>,
     bytes_utf8: *const c_char,
