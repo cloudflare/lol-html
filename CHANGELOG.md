@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.7.1
+
+- Performance improvements.
+- Updated dependencies.
+
 ## v2.7.0
 
 - Improve type generation in js-api.
