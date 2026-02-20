@@ -86,10 +86,10 @@ impl TextEncoder {
             if written > 0 && written <= buffer.len() {
                 (output_handler)(&buffer[..written]);
             }
-            if read >= content.len() {
-                return;
-            }
-            content = &content[read..];
+            content = match content.get(read..) {
+                Some(rest) if !rest.is_empty() => rest,
+                _ => return,
+            };
 
             match result {
                 CoderResult::InputEmpty => {
@@ -99,11 +99,11 @@ impl TextEncoder {
                 // we've made progress, and can try again without growing the buffer
                 CoderResult::OutputFull if written > 0 => {}
                 CoderResult::OutputFull => {
-                    // encoding_rs only needs a dozen bytes. If a large buffer is insufficient, it must be a bug.
-                    assert!(
-                        buffer.len() < Buffer::DEFAULT_HEAP_BUFFER_SIZE,
-                        "encoding_rs infinite loop"
-                    );
+                    // this never happens, encoding_rs only needs a dozen bytes.
+                    if buffer.len() >= Buffer::DEFAULT_HEAP_BUFFER_SIZE {
+                        debug_assert!(false, "encoding_rs stalled");
+                        return;
+                    }
                     self.buffer = Buffer::Heap(vec![0; Buffer::DEFAULT_HEAP_BUFFER_SIZE]);
                 }
             }
