@@ -62,19 +62,16 @@ impl<'i> AttributeMatcher<'i> {
         self.attributes
             .iter()
             .find(|&a| {
-                if lowercased_name.len() != a.name.end - a.name.start {
+                let Some(attr_name) = self.input.opt_slice(Some(a.name)) else {
+                    return false;
+                };
+                if attr_name.len() != lowercased_name.len() {
                     return false;
                 }
-
-                let attr_name = self.input.slice(a.name);
-
-                for i in 0..attr_name.len() {
-                    if attr_name[i].to_ascii_lowercase() != lowercased_name[i] {
-                        return false;
-                    }
-                }
-
-                true
+                attr_name
+                    .iter()
+                    .map(|c| c.to_ascii_lowercase())
+                    .eq(lowercased_name.iter().copied())
             })
             .copied()
     }
@@ -144,7 +141,9 @@ impl<'i> AttributeMatcher<'i> {
 
             !actual_value.is_empty()
                 && actual_value.len() >= prefix_len
-                && case_sensitivity.eq(&actual_value[..prefix_len], &operand.value)
+                && actual_value
+                    .get(..prefix_len)
+                    .is_some_and(|prefix| case_sensitivity.eq(prefix, &operand.value))
         })
     }
 
@@ -160,7 +159,9 @@ impl<'i> AttributeMatcher<'i> {
             let prefix_len = operand.value.len();
 
             actual_value.get(prefix_len) == Some(&b'-')
-                && case_sensitivity.eq(&actual_value[..prefix_len], &operand.value)
+                && actual_value
+                    .get(..prefix_len)
+                    .is_some_and(|prefix| case_sensitivity.eq(prefix, &operand.value))
         })
     }
 
@@ -174,45 +175,42 @@ impl<'i> AttributeMatcher<'i> {
 
             !actual_value.is_empty()
                 && value_len >= suffix_len
-                && case_sensitivity.eq(&actual_value[value_len - suffix_len..], &operand.value)
+                && actual_value
+                    .get(value_len - suffix_len..)
+                    .is_some_and(|prefix| case_sensitivity.eq(prefix, &operand.value))
         })
     }
 
     #[inline]
     pub fn has_attr_with_substring(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
-            let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
-
             let Some((&first_byte, rest)) = operand.value.split_first() else {
                 return false;
             };
 
-            let first_byte_searcher: &dyn Fn(_) -> _ = match case_sensitivity {
-                CaseSensitivity::CaseSensitive => &move |h| memchr(first_byte, h),
-                CaseSensitivity::AsciiCaseInsensitive => {
+            fn search(
+                mut haystack: &[u8],
+                rest: &[u8],
+                case_sensitivity: CaseSensitivity,
+                first_byte_searcher: impl Fn(&[u8]) -> Option<usize>,
+            ) -> Option<()> {
+                loop {
+                    haystack = haystack.get(first_byte_searcher(haystack)? + 1..)?;
+                    if case_sensitivity.eq(haystack.get(..rest.len())?, rest) {
+                        return Some(());
+                    }
+                }
+            }
+
+            match to_unconditional(operand.case_sensitivity, self.is_html_element) {
+                case @ CaseSensitivity::CaseSensitive => {
+                    search(actual_value, rest, case, move |h| memchr(first_byte, h)).is_some()
+                }
+                case @ CaseSensitivity::AsciiCaseInsensitive => {
                     let lo = first_byte.to_ascii_lowercase();
                     let up = first_byte.to_ascii_uppercase();
 
-                    &move |h| memchr2(lo, up, h)
-                }
-            };
-
-            let mut haystack = actual_value;
-
-            loop {
-                match first_byte_searcher(haystack) {
-                    Some(pos) => {
-                        haystack = &haystack[pos + 1..];
-
-                        if haystack.len() < rest.len() {
-                            return false;
-                        }
-
-                        if case_sensitivity.eq(&haystack[..rest.len()], rest) {
-                            return true;
-                        }
-                    }
-                    None => return false,
+                    search(actual_value, rest, case, move |h| memchr2(lo, up, h)).is_some()
                 }
             }
         })
