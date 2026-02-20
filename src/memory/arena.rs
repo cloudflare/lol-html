@@ -10,12 +10,20 @@ pub(crate) struct Arena {
 
 impl Arena {
     pub fn new(limiter: SharedMemoryLimiter, preallocated_size: usize) -> Self {
-        limiter.preallocate(preallocated_size);
+        let mut data = Vec::new();
 
-        Self {
-            limiter,
-            data: Vec::with_capacity(preallocated_size),
-        }
+        let preallocated = limiter
+            .increase_usage(preallocated_size)
+            .ok()
+            .and_then(|_| data.try_reserve_exact(preallocated_size).ok())
+            .is_some();
+        // HtmlRewriter::new() has no way to report this
+        debug_assert!(
+            preallocated,
+            "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`."
+        );
+
+        Self { limiter, data }
     }
 
     pub fn append(&mut self, slice: &[u8]) -> Result<(), MemoryLimitExceededError> {

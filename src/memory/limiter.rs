@@ -45,13 +45,6 @@ impl SharedMemoryLimiter {
     }
 
     #[inline]
-    pub fn preallocate(&self, byte_count: usize) {
-        self.increase_usage(byte_count).expect(
-            "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`.",
-        );
-    }
-
-    #[inline]
     pub fn decrease_usage(&self, byte_count: usize) {
         self.current_usage.fetch_sub(byte_count, Ordering::Relaxed);
     }
@@ -79,18 +72,5 @@ mod tests {
         let err = limiter.increase_usage(15).unwrap_err();
 
         assert_eq!(err, MemoryLimitExceededError);
-    }
-
-    #[test]
-    #[should_panic(
-        expected = "Total preallocated memory size should be less than `MemorySettings::max_allowed_memory_usage`."
-    )]
-    fn preallocate() {
-        let limiter = SharedMemoryLimiter::new(10);
-
-        limiter.preallocate(8);
-        assert_eq!(limiter.current_usage(), 8);
-
-        limiter.preallocate(10);
     }
 }
