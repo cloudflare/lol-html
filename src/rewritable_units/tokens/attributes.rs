@@ -215,14 +215,27 @@ impl<'i> Attributes<'i> {
         false
     }
 
+    #[inline(never)]
     fn init_items(&self) -> Vec<Attribute<'i>> {
+        let cant_fail = || {
+            debug_assert!(false);
+            Bytes::default()
+        };
         self.attribute_buffer
             .iter()
             .map(|a| {
                 Attribute::new(
-                    self.input.slice(a.name).into(),
-                    self.input.slice(a.value).into(),
-                    self.input.slice(a.raw_range),
+                    self.input
+                        .opt_slice(Some(a.name))
+                        .unwrap_or_else(cant_fail)
+                        .into(),
+                    self.input
+                        .opt_slice(Some(a.value))
+                        .unwrap_or_else(cant_fail)
+                        .into(),
+                    self.input
+                        .opt_slice(Some(a.raw_range))
+                        .unwrap_or_else(cant_fail),
                     self.encoding,
                 )
             })
@@ -231,9 +244,13 @@ impl<'i> Attributes<'i> {
 
     #[inline]
     fn as_mut_vec(&mut self) -> &mut Vec<Attribute<'i>> {
-        let _ = self.items.get_or_init(|| self.init_items());
-
-        self.items.get_mut().expect("Items should be initialized")
+        if self.items.get().is_none() {
+            // `get_mut_or_init` is unstable and has a pointless re-entrancy check
+            let cell = OnceCell::new();
+            let _ = cell.set(self.init_items());
+            self.items = cell; // optimizes out get_mut()
+        }
+        self.items.get_mut().unwrap_or_else(|| unreachable!())
     }
 
     #[cfg(test)]

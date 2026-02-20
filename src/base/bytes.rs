@@ -11,7 +11,7 @@ use std::str;
 pub struct HasReplacementsError;
 
 /// A thin wrapper around byte slice with handy APIs attached
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
 #[repr(transparent)]
 pub(crate) struct Bytes<'b>(&'b [u8]);
 
