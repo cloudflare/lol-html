@@ -48,13 +48,23 @@ impl<H> HandlerVec<H> {
 
     #[inline]
     pub fn inc_user_count(&mut self, idx: usize) {
-        self.items[idx].user_count += 1;
+        let Some(item) = self.items.get_mut(idx) else {
+            debug_assert!(false);
+            return;
+        };
+        item.user_count += 1;
         self.user_count += 1;
     }
 
     #[inline]
     pub fn dec_user_count(&mut self, idx: usize) {
-        self.items[idx].user_count -= 1;
+        let Some(item) = self.items.get_mut(idx) else {
+            debug_assert!(false);
+            return;
+        };
+        debug_assert!(item.user_count > 0);
+        debug_assert!(self.user_count > 0);
+        item.user_count -= 1;
         self.user_count -= 1;
     }
 
