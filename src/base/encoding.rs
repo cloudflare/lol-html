@@ -49,13 +49,16 @@ static ALL_ENCODINGS: [&Encoding; 40] = [
     &encoding_rs::ISO_2022_JP_INIT,
 ];
 
+#[cfg_attr(debug_assertions, track_caller)]
 fn encoding_to_index(encoding: AsciiCompatibleEncoding) -> usize {
     let encoding: &'static Encoding = encoding.into();
 
-    ALL_ENCODINGS
-        .iter()
-        .position(|&e| e == encoding)
-        .expect("the ALL_ENCODINGS is not complete and needs to be updated")
+    let index = ALL_ENCODINGS.iter().position(|&e| e == encoding);
+    debug_assert!(
+        index.is_some(),
+        "the ALL_ENCODINGS is not complete and needs to be updated"
+    );
+    index.unwrap_or(0)
 }
 
 /// A charset encoding that can be shared and modified.
@@ -71,6 +74,7 @@ pub struct SharedEncoding {
 
 impl SharedEncoding {
     #[must_use]
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn new(encoding: AsciiCompatibleEncoding) -> Self {
         Self {
             encoding: Arc::new(AtomicUsize::new(encoding_to_index(encoding))),
@@ -84,6 +88,7 @@ impl SharedEncoding {
         ALL_ENCODINGS.get(encoding).unwrap_or(&ALL_ENCODINGS[0])
     }
 
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn set(&self, encoding: AsciiCompatibleEncoding) {
         self.encoding
             .store(encoding_to_index(encoding), Ordering::Relaxed);
