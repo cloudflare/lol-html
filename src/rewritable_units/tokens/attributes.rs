@@ -6,7 +6,6 @@ use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
 use std::cell::OnceCell;
 use std::fmt::{self, Debug};
-use std::ops::Deref;
 use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the attribute name.
@@ -215,6 +214,14 @@ impl<'i> Attributes<'i> {
         false
     }
 
+    pub fn is_empty(&self) -> bool {
+        // check without materializing items
+        self.items
+            .get()
+            .map(|items| items.is_empty())
+            .unwrap_or(self.attribute_buffer.is_empty())
+    }
+
     #[inline(never)]
     fn init_items(&self) -> Vec<Attribute<'i>> {
         let cant_fail = || {
@@ -242,6 +249,10 @@ impl<'i> Attributes<'i> {
             .collect()
     }
 
+    pub(crate) fn to_slice(&self) -> &[Attribute<'i>] {
+        self.items.get_or_init(|| self.init_items())
+    }
+
     #[inline]
     fn as_mut_vec(&mut self) -> &mut Vec<Attribute<'i>> {
         if self.items.get().is_none() {
@@ -259,28 +270,12 @@ impl<'i> Attributes<'i> {
     }
 }
 
-impl<'i> Deref for Attributes<'i> {
-    type Target = [Attribute<'i>];
-
-    #[inline]
-    fn deref(&self) -> &[Attribute<'i>] {
-        self.items.get_or_init(|| self.init_items())
-    }
-}
-
-impl Serialize for &Attributes<'_> {
+impl Serialize for &mut Attributes<'_> {
     #[inline]
     fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
-        if !self.is_empty() {
-            let last = self.len() - 1;
-
-            for (idx, attr) in self.iter().enumerate() {
-                attr.into_bytes(output_handler)?;
-
-                if idx != last {
-                    output_handler(b" ");
-                }
-            }
+        for attr in self.as_mut_vec() {
+            output_handler(b" ");
+            attr.into_bytes(output_handler)?;
         }
         Ok(())
     }

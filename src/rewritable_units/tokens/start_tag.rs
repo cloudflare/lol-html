@@ -94,7 +94,7 @@ impl<'input_token> StartTag<'input_token> {
     /// Returns an immutable collection of tag's attributes.
     #[inline]
     pub fn attributes(&self) -> &[Attribute<'input_token>] {
-        &self.attributes
+        self.attributes.to_slice()
     }
 
     /// Sets `value` of tag's attribute with `name`. The value may have HTML/XML entities.
@@ -215,7 +215,10 @@ impl<'input_token> StartTag<'input_token> {
         self.mutations.mutate().remove();
     }
 
-    fn serialize_self(&self, sink: &mut StreamingHandlerSink<'_>) -> Result<(), RewritingError> {
+    fn serialize_self(
+        &mut self,
+        sink: &mut StreamingHandlerSink<'_>,
+    ) -> Result<(), RewritingError> {
         let output_handler = sink.output_handler();
 
         if let Some(raw) = self.raw.original() {
@@ -227,8 +230,6 @@ impl<'input_token> StartTag<'input_token> {
         output_handler(&self.name);
 
         if !self.attributes.is_empty() {
-            output_handler(b" ");
-
             self.attributes.into_bytes(output_handler)?;
 
             // NOTE: attributes can be modified the way that
