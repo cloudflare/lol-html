@@ -150,9 +150,13 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
             // pseudo class-related. Ideally none of them should appear in
             // the parsed selector as we should bail earlier in the parser.
             // Otherwise, we'll have AST in invalid state in case of error.
-            bad_selector => unreachable!(
-                "Unsupported selector components should be filtered out by the parser: {bad_selector:?}"
-            ),
+            bad_selector => {
+                debug_assert!(
+                    false,
+                    "Unsupported selector components should be filtered out by the parser: {bad_selector:?}"
+                );
+                Self::OnTagName(OnTagNameExpr::Unmatchable)
+            }
         }
     }
 }

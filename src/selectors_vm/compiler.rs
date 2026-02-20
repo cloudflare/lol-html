@@ -354,7 +354,7 @@ mod tests {
         }};
     }
 
-    fn compile(
+    fn test_compile(
         selectors: &[&str],
         encoding: &'static Encoding,
         expected_entry_point_count: usize,
@@ -433,7 +433,7 @@ mod tests {
         encoding: &'static Encoding,
         test_cases: &[(&str, bool)],
     ) {
-        let program = compile(&[selector], encoding, 1);
+        let program = test_compile(&[selector], encoding, 1);
         let instr = &program.instructions[program.entry_points.start];
 
         for_each_test_case(
@@ -463,7 +463,7 @@ mod tests {
         test_cases: &[(&str, bool)],
     ) {
         for (selector, test_cases) in with_negated(selector, test_cases) {
-            let program = compile(&[&selector], encoding, 1);
+            let program = test_compile(&[&selector], encoding, 1);
             let instr = &program.instructions[program.entry_points.start];
 
             for_each_test_case(
@@ -522,7 +522,7 @@ mod tests {
         encoding: &'static Encoding,
         test_cases: &[(&str, bool)],
     ) {
-        let program = compile(&[selector], encoding, 1);
+        let program = test_compile(&[selector], encoding, 1);
         let instr = &program.instructions[program.entry_points.start];
 
         for_each_test_case(
@@ -589,7 +589,7 @@ mod tests {
         expected_entry_point_count: usize,
         test_cases: &[(&str, Vec<usize>)],
     ) {
-        let program = compile(selectors, UTF_8, expected_entry_point_count);
+        let program = test_compile(selectors, UTF_8, expected_entry_point_count);
 
         // NOTE: encoding of the individual components is tested by other tests,
         // so we use only UTF-8 here.
@@ -975,7 +975,7 @@ mod tests {
             "[foo=bar] #id1 > #id2",
         ];
 
-        let program = compile(&selectors, UTF_8, 2);
+        let program = test_compile(&selectors, UTF_8, 2);
 
         macro_rules! exec {
             ($html:expr, $add_range:expr, $expected_payload:expr) => {{
