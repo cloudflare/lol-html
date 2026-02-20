@@ -78,9 +78,9 @@ pub unsafe extern "C" fn lol_html_rewriter_build(
     output_sink_user_data: *mut c_void,
     strict: bool,
 ) -> *mut HtmlRewriter {
-    to_ptr_mut(unwrap_or_ret_null! {
+    to_ptr_mut(unwrap_or_ret_null! { catch_panic(move || {
         lol_html_rewriter_build_inner(builder, encoding, encoding_len, memory_settings, output_sink, output_sink_user_data, strict, false)
-    })
+    })})
 }
 
 #[unsafe(no_mangle)]
@@ -93,9 +93,9 @@ pub unsafe extern "C" fn unstable_lol_html_rewriter_build_with_esi_tags(
     output_sink_user_data: *mut c_void,
     strict: bool,
 ) -> *mut HtmlRewriter {
-    to_ptr_mut(unwrap_or_ret_null! {
+    to_ptr_mut(unwrap_or_ret_null! { catch_panic(move || {
         lol_html_rewriter_build_inner(builder, encoding, encoding_len, memory_settings, output_sink, output_sink_user_data, strict, true)
-    })
+    })})
 }
 
 #[unsafe(no_mangle)]
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn lol_html_rewriter_write(
         .as_mut()
         .expect("cannot call `lol_html_rewriter_write` after calling `end()`");
 
-    unwrap_or_ret_err_code! { rewriter.write(chunk) };
+    unwrap_or_ret_err_code! { catch_panic(move || rewriter.write(chunk)) };
 
     0
 }
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn lol_html_rewriter_end(rewriter: *mut HtmlRewriter) -> c
         .take() // Using `take()` allows calling `free()` afterwards (it will be a no-op).
         .expect("cannot call `lol_html_rewriter_end` after calling `end()`");
 
-    unwrap_or_ret_err_code! { rewriter.end() };
+    unwrap_or_ret_err_code! { catch_panic(move || rewriter.end()) };
 
     0
 }

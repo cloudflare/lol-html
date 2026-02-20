@@ -74,6 +74,26 @@ macro_rules! unwrap_or_ret_null {
     };
 }
 
+#[cold]
+fn panic_err(payload: Box<dyn std::any::Any + Send>) -> Box<dyn std::error::Error> {
+    if let Some(&s) = payload.downcast_ref::<&str>() {
+        Box::from(s)
+    } else if let Ok(s) = payload.downcast::<String>() {
+        Box::from(*s)
+    } else {
+        Box::from("panic") // never happens
+    }
+}
+
+fn catch_panic<T, E>(
+    callback: impl FnOnce() -> Result<T, E>,
+) -> Result<T, Box<dyn std::error::Error>>
+where
+    Box<dyn std::error::Error>: From<E>,
+{
+    Ok(std::panic::catch_unwind(std::panic::AssertUnwindSafe(callback)).map_err(panic_err)??)
+}
+
 macro_rules! impl_content_mutation_handlers {
     ($name:ident: $typ:ty [ $($(#[$meta:meta])* $(@$kind:ident)? $fn_name:ident => $method:ident),+$(,)? ]) => {
         $(
