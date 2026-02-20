@@ -9,11 +9,17 @@ pub struct Str {
 }
 
 impl Str {
+    pub const EMPTY: Self = Self {
+        data: std::ptr::null(),
+        len: 0,
+    };
+
     #[must_use]
-    pub fn new(string: String) -> Self {
+    pub fn new(string: impl Into<Box<str>>) -> Self {
+        let string = string.into();
         Self {
             len: string.len(),
-            data: Box::into_raw(string.into_boxed_str()) as *const c_char,
+            data: Box::into_raw(string).cast::<c_char>(),
         }
     }
 
@@ -22,7 +28,7 @@ impl Str {
     /// If `string` is `None`, `data` will be set to `NULL`.
     #[inline]
     #[must_use]
-    pub fn from_opt(string: Option<String>) -> Self {
+    pub fn from_opt(string: Option<impl Into<Box<str>>>) -> Self {
         match string {
             Some(string) => Self::new(string),
             None => Self {

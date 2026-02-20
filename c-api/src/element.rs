@@ -132,7 +132,7 @@ pub unsafe extern "C" fn lol_html_element_get_attribute(
     name_len: size_t,
 ) -> Str {
     let element = to_ref!(element);
-    let name = unwrap_or_ret!(to_str!(name, name_len), Str::from_opt(None));
+    let name = unwrap_or_ret!(to_str!(name, name_len), Str::EMPTY);
 
     Str::from_opt(element.get_attribute(name))
 }

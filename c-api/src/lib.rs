@@ -55,7 +55,7 @@ macro_rules! unwrap_or_ret {
         match $expr {
             Ok(v) => v,
             Err(err) => {
-                crate::errors::LAST_ERROR.with(|e| *e.borrow_mut() = Some(err.into()));
+                crate::errors::save_last_error(err.to_string());
                 return $ret_val;
             }
         }
