@@ -1,7 +1,7 @@
 use crate::harness::suites::html5lib_tests::Unescape;
 use encoding_rs::Encoding;
 use lol_html::AsciiCompatibleEncoding;
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde_json::error::Error as SerdeError;
 use std::env;

@@ -37,21 +37,21 @@ hashbrown = "0.16.0"
 foldhash = { version = "0.2.0", features = ["std"] }
 memchr = "2.7.5"
 mime = "0.3.17"
-selectors = "0.33"
+selectors = "0.35"
 thiserror = "2.0"
 precomputed-hash = "0.1.1"
 
 [dev-dependencies]
 criterion = "0.8.0"
 glob = "0.3.2"
-html5ever = "0.36"
-markup5ever_rcdom = "0.36.0"
+html5ever = "0.38"
+markup5ever_rcdom = "0.38.0"
 hashbrown = { version = "0.16.0", features = ["serde"] }
 serde = "1.0.219"
 serde_derive = "1.0.219"
 serde_json = "1.0.140"
 static_assertions = "1.1.0"
-rand = "0.9.2"
+rand = "0.10"
 itertools = "0.14"
 
 [lints.rust]
