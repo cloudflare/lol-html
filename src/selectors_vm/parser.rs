@@ -126,7 +126,7 @@ impl SelectorsParser {
         match component {
             Component::Combinator(combinator) if inside_any_negation => {
                 // the stack vm can only support positive matches
-                return Err(SelectorError::UnsupportedPseudoClassOrElement);
+                Err(SelectorError::UnsupportedPseudoClassOrElement)
             }
             Component::Combinator(combinator) => match combinator {
                 // Supported

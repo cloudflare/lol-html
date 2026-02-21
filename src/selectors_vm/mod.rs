@@ -1757,4 +1757,37 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn nested_not_matching() {
+        let mut vm = create_vm!(&[":not(:not(div))"]);
+
+        // Stack after: - <div>
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: true,
+                matched_payload: set![0],
+            }
+        );
+
+        exec_for_end_tag_and_assert!(vm, "</div>", map![(0, 1)]);
+
+        let mut vm2 = create_vm!(&[":not(:not(:not(div)))"]);
+
+        // <div> should NOT match :not(:not(:not(div)))
+        exec_for_start_tag_and_assert!(
+            vm2,
+            "<div>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: false,
+                should_match_with_content: false,
+                matched_payload: set![],
+            }
+        );
+    }
 }

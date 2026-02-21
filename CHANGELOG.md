@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.8.0
+
+- Added support for nested `:not()` with simple selectors.
+- Updated `selectors`
+
 ## v2.7.2
 
 - Replaced several panicking assertions with gracefully reported errors, especially in the C API

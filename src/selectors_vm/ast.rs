@@ -205,6 +205,25 @@ impl Predicate {
             Condition::OnAttributes(e) => add_expr_to_list(&mut self.on_attr_exprs, e, negation),
         }
     }
+
+    fn add_selector_components(
+        &mut self,
+        selector: &selectors::parser::Selector<SelectorImplDescriptor>,
+        negation: bool,
+    ) {
+        for component in selector.iter() {
+            match component {
+                Component::Negation(nested_selectors) => {
+                    for nested_selector in nested_selectors.slice() {
+                        self.add_selector_components(nested_selector, !negation);
+                    }
+                }
+                _ => {
+                    self.add_component(component, negation);
+                }
+            }
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -297,9 +316,9 @@ where
                         host_and_switch_branch_vec!(descendants);
                     }
                     Component::Negation(ss) => {
-                        ss.slice()
-                            .iter()
-                            .for_each(|s| s.iter().for_each(|c| predicate.add_component(c, true)));
+                        for s in ss.slice() {
+                            predicate.add_selector_components(s, true);
+                        }
                     }
                     _ => predicate.add_component(component, false),
                 }
@@ -924,6 +943,69 @@ mod tests {
         assert_err(
             ":not(:nth-last-child(even))",
             SelectorError::UnsupportedPseudoClassOrElement,
+        );
+    }
+
+    #[test]
+    fn nested_not_selector() {
+        assert_ast(
+            &[":not(:not(div))"],
+            Ast {
+                root: vec![AstNode {
+                    predicate: Predicate {
+                        on_tag_name_exprs: vec![Expr {
+                            simple_expr: OnTagNameExpr::LocalName("div".into()),
+                            negation: false, // simplified double negation
+                        }],
+                        ..Default::default()
+                    },
+                    children: vec![],
+                    descendants: vec![],
+                    payload: set![0],
+                }],
+                cumulative_node_count: 1,
+            },
+        );
+
+        assert_ast(
+            &[":not(:not(:not(div)))"],
+            Ast {
+                root: vec![AstNode {
+                    predicate: Predicate {
+                        on_tag_name_exprs: vec![Expr {
+                            simple_expr: OnTagNameExpr::LocalName("div".into()),
+                            negation: true,
+                        }],
+                        ..Default::default()
+                    },
+                    children: vec![],
+                    descendants: vec![],
+                    payload: set![0],
+                }],
+                cumulative_node_count: 1,
+            },
+        );
+
+        assert_ast(
+            &["div:not(:not(.foo))"],
+            Ast {
+                root: vec![AstNode {
+                    predicate: Predicate {
+                        on_tag_name_exprs: vec![Expr {
+                            simple_expr: OnTagNameExpr::LocalName("div".into()),
+                            negation: false,
+                        }],
+                        on_attr_exprs: vec![Expr {
+                            simple_expr: OnAttributesExpr::Class("foo".into()),
+                            negation: false, // simplified double negation
+                        }],
+                    },
+                    children: vec![],
+                    descendants: vec![],
+                    payload: set![0],
+                }],
+                cumulative_node_count: 1,
+            },
         );
     }
 
