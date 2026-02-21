@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.7.2
+
+- Replaced several panicking assertions with gracefully reported errors, especially in the C API
+
 ## v2.7.1
 
 - Performance improvements.
