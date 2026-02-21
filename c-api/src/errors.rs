@@ -1,7 +1,7 @@
 use super::*;
 
 thread_local! {
-    pub static LAST_ERROR: RefCell<Option<Box<str>>> = RefCell::new(None);
+    pub static LAST_ERROR: RefCell<Option<Box<str>>> = const { RefCell::new(None) };
 }
 
 #[unsafe(no_mangle)]

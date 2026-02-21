@@ -34,6 +34,7 @@ impl OutputSink for ExternOutputSink {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn lol_html_rewriter_build_inner(
     builder: *mut HtmlRewriterBuilder,
     encoding: *const c_char,

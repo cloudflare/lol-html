@@ -15,7 +15,7 @@ impl Arena {
         let preallocated = limiter
             .increase_usage(preallocated_size)
             .ok()
-            .and_then(|_| data.try_reserve_exact(preallocated_size).ok())
+            .and_then(|()| data.try_reserve_exact(preallocated_size).ok())
             .is_some();
         // HtmlRewriter::new() has no way to report this
         debug_assert!(
