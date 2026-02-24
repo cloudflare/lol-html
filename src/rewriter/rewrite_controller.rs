@@ -3,6 +3,7 @@ use super::{HandlerTypes, RewritingError, Settings};
 use crate::base::SharedEncoding;
 use crate::html::{LocalName, Namespace};
 use crate::memory::SharedMemoryLimiter;
+use crate::parser::ActionError;
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::Ast;
 use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
@@ -107,12 +108,14 @@ impl<H: HandlerTypes> HtmlRewriteController<'_, H> {
     ) -> StartTagHandlingResult<Self> {
         Err(DispatcherError::InfoRequest(Box::new(
             move |this, aux_info| {
-                if let Some(ref mut vm) = this.selector_matching_vm {
-                    let mut match_handler = |m| this.handlers_dispatcher.start_matching(&m);
+                let Some(vm) = &mut this.selector_matching_vm else {
+                    debug_assert!(false);
+                    return Err(ActionError::internal("vm req without vm"));
+                };
+                let mut match_handler = |m| this.handlers_dispatcher.start_matching(&m);
 
-                    aux_info_req(vm, aux_info, &mut match_handler)
-                        .map_err(RewritingError::MemoryLimitExceeded)?;
-                }
+                aux_info_req(vm, aux_info, &mut match_handler)
+                    .map_err(RewritingError::MemoryLimitExceeded)?;
 
                 Ok(this.get_capture_flags())
             },
