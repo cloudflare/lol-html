@@ -1,6 +1,7 @@
 use super::Tag;
 use crate::base::{Bytes, BytesCow, HasReplacementsError, Range};
 use encoding_rs::Encoding;
+use std::borrow::Cow;
 use std::fmt;
 
 // NOTE: All standard tag names contain only ASCII alpha characters
@@ -161,11 +162,12 @@ impl<'i> LocalName<'i> {
     }
 
     #[inline]
-    pub fn from_str_without_replacements<'s>(
-        string: &'s str,
+    pub(crate) fn from_str_without_replacements<'s>(
+        string: impl Into<Cow<'s, str>>,
         encoding: &'static Encoding,
     ) -> Result<LocalName<'s>, HasReplacementsError> {
-        let hash = LocalNameHash::from(string);
+        let string = string.into();
+        let hash = LocalNameHash::from(&*string);
 
         if hash.is_empty() {
             BytesCow::from_str_without_replacements(string, encoding).map(LocalName::Bytes)
