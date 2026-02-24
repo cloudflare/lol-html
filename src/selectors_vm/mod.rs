@@ -672,7 +672,7 @@ mod tests {
 
     macro_rules! local_name {
         ($t:expr) => {
-            LocalName::from_str_without_replacements(&$t.name(), UTF_8).unwrap()
+            LocalName::from_str_without_replacements($t.name(), UTF_8).unwrap()
         };
     }
 

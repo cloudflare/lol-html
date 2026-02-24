@@ -67,7 +67,7 @@ impl Compilable for Expr<OnTagNameExpr> {
             OnTagNameExpr::ExplicitAny => self.compile_expr(|_, _| true),
             OnTagNameExpr::Unmatchable => self.compile_expr(|_, _| false),
             OnTagNameExpr::LocalName(local_name) => {
-                match LocalName::from_str_without_replacements(local_name, encoding)
+                match LocalName::from_str_without_replacements(&**local_name, encoding)
                     .map(LocalName::into_owned)
                 {
                     Ok(local_name) => self.compile_expr(move |_, actual| *actual == local_name),
@@ -400,10 +400,9 @@ mod tests {
         test_with_token(html, encoding, |t| match t {
             Token::StartTag(t) => {
                 let (input, attrs) = t.raw_attributes();
-                let tag_name = t.name();
                 let attr_matcher = AttributeMatcher::new(*input, attrs, Namespace::Html);
                 let local_name =
-                    LocalName::from_str_without_replacements(&tag_name, encoding).unwrap();
+                    LocalName::from_str_without_replacements(t.name(), encoding).unwrap();
 
                 action(local_name, attr_matcher);
             }

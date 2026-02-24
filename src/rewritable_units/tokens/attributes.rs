@@ -60,9 +60,8 @@ impl<'i> Attribute<'i> {
         }
     }
 
-    #[inline]
-    fn name_from_str(
-        name: &str,
+    fn name_from_string(
+        name: String,
         encoding: &'static Encoding,
     ) -> Result<BytesCow<'static>, AttributeNameError> {
         if name.is_empty() {
@@ -87,12 +86,12 @@ impl<'i> Attribute<'i> {
 
     #[inline]
     fn try_from(
-        name: &str,
+        name: String,
         value: &str,
         encoding: &'static Encoding,
     ) -> Result<Self, AttributeNameError> {
         Ok(Attribute {
-            name: Attribute::name_from_str(name, encoding)?,
+            name: Attribute::name_from_string(name, encoding)?,
             value: BytesCow::from_str(value, encoding).into_owned(),
             raw: None,
             encoding,
@@ -190,7 +189,7 @@ impl<'i> Attributes<'i> {
         match items.iter_mut().find(|attr| attr.name() == name.as_str()) {
             Some(attr) => attr.set_value(value),
             None => {
-                items.push(Attribute::try_from(&name, value, encoding)?);
+                items.push(Attribute::try_from(name, value, encoding)?);
             }
         }
 

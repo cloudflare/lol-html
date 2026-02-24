@@ -42,15 +42,22 @@ impl<'b> BytesCow<'b> {
 
     #[inline]
     pub fn from_str_without_replacements(
-        string: &'b str,
+        string: impl Into<Cow<'b, str>>,
         encoding: &'static Encoding,
     ) -> Result<Self, HasReplacementsError> {
-        let (res, _, has_replacements) = encoding.encode(string);
+        let string = string.into();
+        let (res, _, has_replacements) = encoding.encode(&string);
 
         if has_replacements {
             Err(HasReplacementsError)
         } else {
-            Ok(res.into())
+            Ok(Self(match res {
+                Cow::Borrowed(_) => match string {
+                    Cow::Borrowed(s) => Cow::Borrowed(s.as_bytes()),
+                    Cow::Owned(s) => Cow::Owned(s.into_bytes()),
+                },
+                Cow::Owned(bytes) => Cow::Owned(bytes),
+            }))
         }
     }
 
