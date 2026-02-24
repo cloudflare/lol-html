@@ -189,7 +189,7 @@ where
 
         let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags, self.hasher.clone());
 
-        match Stack::get_stack_directive(&ctx.stack_item, ns, ctx.enable_esi_tags) {
+        match Stack::get_stack_directive(&ctx.stack_item, ctx.ns, ctx.enable_esi_tags) {
             PopImmediately => {
                 ctx.with_content = false;
                 self.exec_without_attrs(ctx, match_handler)
@@ -198,7 +198,7 @@ where
                 let ctx = ctx.into_owned();
 
                 aux_info_request!(move |this, aux_info, match_handler| this
-                    .exec_after_immediate_aux_info_request(ctx, ns, aux_info, match_handler))
+                    .exec_after_immediate_aux_info_request(ctx, aux_info, match_handler))
             }
             Push => self.exec_without_attrs(ctx, match_handler),
         }
@@ -222,11 +222,10 @@ where
     fn exec_after_immediate_aux_info_request(
         &mut self,
         mut ctx: ExecutionCtx<'static, E>,
-        ns: Namespace,
         aux_info: AuxStartTagInfo<'_>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), MemoryLimitExceededError> {
-        let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ns);
+        let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ctx.ns);
 
         ctx.with_content = !aux_info.self_closing;
 
