@@ -117,12 +117,17 @@ struct SelectorsParser;
 impl SelectorsParser {
     fn validate_component(
         component: &Component<SelectorImplDescriptor>,
+        inside_any_negation: bool,
     ) -> Result<(), SelectorError> {
         // NOTE: always use explicit variants in this match, so we
         // get compile-time error if new component types were added to
         // the parser.
         #[deny(clippy::wildcard_enum_match_arm)]
         match component {
+            Component::Combinator(combinator) if inside_any_negation => {
+                // the stack vm can only support positive matches
+                return Err(SelectorError::UnsupportedPseudoClassOrElement);
+            }
             Component::Combinator(combinator) => match combinator {
                 // Supported
                 Combinator::Child | Combinator::Descendant => Ok(()),
@@ -148,10 +153,7 @@ impl SelectorsParser {
 
             Component::Nth(data) => Self::validate_nth(data),
 
-            Component::Negation(selectors) => selectors
-                .slice()
-                .iter()
-                .try_for_each(|s| s.iter().try_for_each(Self::validate_component)),
+            Component::Negation(selectors) => Self::validate_selectors(selectors.slice(), true),
 
             // Unsupported
             Component::Empty
@@ -184,16 +186,17 @@ impl SelectorsParser {
     fn validate(
         selector_list: SelectorList<SelectorImplDescriptor>,
     ) -> Result<SelectorList<SelectorImplDescriptor>, SelectorError> {
-        Self::validate_selectors(selector_list.slice())?;
+        Self::validate_selectors(selector_list.slice(), false)?;
         Ok(selector_list)
     }
 
     fn validate_selectors(
         selector_list: &[selectors::parser::Selector<SelectorImplDescriptor>],
+        inside_any_negation: bool,
     ) -> Result<(), SelectorError> {
         for selector in selector_list {
             for component in selector.iter_raw_match_order() {
-                Self::validate_component(component)?;
+                Self::validate_component(component, inside_any_negation)?;
             }
         }
         Ok(())

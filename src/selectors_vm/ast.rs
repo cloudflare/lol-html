@@ -891,6 +891,9 @@ mod tests {
             ":valid",
             ":visited",
             ":where(p)",
+            ":not(foo bar)",
+            ":not(foo > bar)",
+            ":not(* > .x)",
         ] {
             assert_err(s, SelectorError::UnsupportedPseudoClassOrElement);
         }
