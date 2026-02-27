@@ -454,6 +454,23 @@ macro_rules! element {
     }};
 }
 
+/// Handler for [`element.on_end_tag()`](Element::on_end_tag).
+#[macro_export(local_inner_macros)]
+macro_rules! end_tag {
+    ($handler:expr) => {{
+        // Without this rust won't be able to always infer the type of the handler.
+        #[inline(always)]
+        const fn type_hint<'h, T>(h: T) -> T
+        where
+            T: FnMut(&mut $crate::html_content::EndTag<'_>) -> $crate::HandlerResult + 'h,
+        {
+            h
+        }
+
+        Box::new(type_hint($handler)) as _
+    }};
+}
+
 /// A convenience macro to construct a [rewriting handler](ElementContentHandlers) for fragments of text in the inner content of an
 /// element that can be matched by the specified CSS selector. Beware: this is tricky to use.
 ///
