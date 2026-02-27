@@ -3,6 +3,7 @@ use super::{
     Attribute, AttributeNameError, ContentType, EndTag, Mutations, StartTag, StreamingHandler,
     StringChunk,
 };
+use crate::HandlerResult;
 use crate::base::{BytesCow, SourceLocation};
 use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
 use encoding_rs::Encoding;
@@ -638,7 +639,7 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// You can use this to add your "on end tag" handlers.
     ///
-    /// This will return `None` if the element does not have an end tag.
+    /// This will return `None` if the element can't have an end tag.
     ///
     /// # Example
     ///
@@ -689,6 +690,46 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
             Some(&mut self.end_tag_handlers)
         } else {
             None
+        }
+    }
+
+    /// Adds a handler to run when the end tag is reached. Returns `Err` when `element.can_have_content()` is `false`.
+    ///
+    /// Note: currently end tag handlers are not invoked for implicitly-closed elements.
+    ///
+    /// Use [`end_tag!`](crate::end_tag!) macro to provide type hint for the closure's argument.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use lol_html::html_content::{ContentType, Element};
+    /// use lol_html::{element, end_tag, rewrite_str, text, RewriteStrSettings};
+    /// let html = rewrite_str(
+    ///     "<span>hi</span>",
+    ///     RewriteStrSettings {
+    ///         element_content_handlers: vec![
+    ///             element!("span", |el: &mut Element| {
+    ///                 el.on_end_tag(end_tag!(move |end| {
+    ///                     end.before("?", ContentType::Text);
+    ///                     end.after("!", ContentType::Text);
+    ///                     Ok(())
+    ///                 }))
+    ///             }),
+    ///         ],
+    ///         ..RewriteStrSettings::new()
+    ///     },
+    /// )
+    /// .unwrap();
+    ///
+    /// assert_eq!(html, "<span>hi?</span>!");
+    /// ```
+    #[inline]
+    pub fn on_end_tag(&mut self, handler: H::EndTagHandler<'static>) -> HandlerResult {
+        if let Some(h) = self.end_tag_handlers() {
+            h.push(handler);
+            Ok(())
+        } else {
+            Err(format!("{} can't have content", self.tag_name()).into())
         }
     }
 
@@ -1487,15 +1528,22 @@ mod tests {
                 Ok(())
             }));
 
-            el.end_tag_handlers().unwrap().push(Box::new(move |end| {
+            el.on_end_tag(Box::new(move |end| {
                 end.before("Y", ContentType::Html);
                 Ok(())
-            }));
+            }))
+            .unwrap();
+
+            el.on_end_tag(Box::new(move |end| {
+                end.before("Z", ContentType::Html);
+                Ok(())
+            }))
+            .unwrap();
         };
 
         let res = rewrite_element(b"<div>foo</div>", UTF_8, "div", handler);
 
-        assert_eq!(res, "<div>fooXY</div>");
+        assert_eq!(res, "<div>fooXYZ</div>");
     }
 
     mod serialization {
@@ -1761,13 +1809,13 @@ mod tests {
                     let loc = el.source_location();
                     el.set_attribute("at", &loc.to_string()).unwrap();
                     el.set_attribute("look", &raw_input[loc.bytes()]).unwrap();
-                    if let Some(end) = el.end_tag_handlers() {
-                        end.push(Box::new(|end| {
+                    if el.can_have_content() {
+                        el.on_end_tag(Box::new(|end| {
                             let tag = &raw_input[end.source_location().bytes()];
                             assert_eq!("</", &tag[0..2]);
                             assert_eq!(b'>', *tag.as_bytes().last().unwrap());
                             Ok(())
-                        }));
+                        }))?;
                     }
                     Ok(())
                 })],
