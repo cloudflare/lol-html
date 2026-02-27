@@ -10,7 +10,6 @@ use encoding_rs::Encoding;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::iter;
 
 type BytesOwned = Box<[u8]>;
 
@@ -198,7 +197,7 @@ where
     P: PartialEq + Eq + Copy + Debug + Hash,
 {
     encoding: &'static Encoding,
-    instructions: Box<[Option<Instruction<P>>]>,
+    instructions: Vec<Option<Instruction<P>>>,
     free_space_start: usize,
 }
 
@@ -305,19 +304,12 @@ where
     #[inline(never)]
     pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
         let mut enable_nth_of_type = false;
-        self.instructions = iter::repeat_with(|| None)
-            .take(ast.cumulative_node_count)
-            .collect();
+        self.instructions = (0..ast.cumulative_node_count).map(|_| None).collect();
 
         let entry_points = self.compile_nodes(ast.root, &mut enable_nth_of_type);
 
         Program {
-            instructions: self
-                .instructions
-                .into_vec()
-                .into_iter()
-                .map(|o| o.unwrap())
-                .collect(),
+            instructions: self.instructions.into_iter().map(|o| o.unwrap()).collect(),
             entry_points,
             enable_nth_of_type,
         }
