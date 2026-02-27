@@ -31,6 +31,18 @@ pub(crate) struct Instruction {
 }
 
 impl Instruction {
+    pub fn noop() -> Self {
+        Self {
+            associated_branch: ExecutionBranch {
+                matched_ids: DenseHashSet::Inline(0),
+                jumps: None,
+                hereditary_jumps: None,
+            },
+            local_name_exprs: Default::default(),
+            attribute_exprs: Default::default(),
+        }
+    }
+
     pub fn try_exec_without_attrs<'i>(
         &'i self,
         state: &SelectorState<'_>,

@@ -8,7 +8,6 @@ use crate::base::{BytesCow, HasReplacementsError};
 use crate::html::LocalName;
 use encoding_rs::Encoding;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
-use std::iter;
 
 type BytesOwned = Box<[u8]>;
 
@@ -193,7 +192,7 @@ impl Compilable for Expr<OnAttributesExpr> {
 
 pub(crate) struct Compiler {
     encoding: &'static Encoding,
-    instructions: Box<[Option<Instruction>]>,
+    instructions: Box<[Instruction]>,
     free_space_start: usize,
 }
 
@@ -282,9 +281,13 @@ impl Compiler {
                 jumps: self.compile_descendants(node.children, enable_nth_of_type),
                 hereditary_jumps: self.compile_descendants(node.descendants, enable_nth_of_type),
             };
+            let compiled = self.compile_predicate(node.predicate, branch, enable_nth_of_type);
 
-            self.instructions[position] =
-                Some(self.compile_predicate(node.predicate, branch, enable_nth_of_type));
+            debug_assert!(self.instructions[position].local_name_exprs.is_empty());
+            debug_assert!(self.instructions[position].attribute_exprs.is_empty());
+            if let Some(inst) = self.instructions.get_mut(position) {
+                *inst = compiled;
+            }
         }
 
         addr_range
@@ -297,20 +300,20 @@ impl Compiler {
     #[inline(never)]
     pub fn compile(mut self, ast: Ast) -> Program {
         let mut enable_nth_of_type = false;
-        self.instructions = iter::repeat_with(|| None)
-            .take(ast.cumulative_node_count)
+        self.instructions = (0..ast.cumulative_node_count)
+            .map(|_| Instruction::noop())
             .collect();
 
         let entry_points = self.compile_nodes(ast.root, &mut enable_nth_of_type);
+        debug_assert!(
+            self.instructions
+                .iter()
+                .all(|i| !i.local_name_exprs.is_empty() || !i.attribute_exprs.is_empty())
+        );
 
         Program {
-            instructions: self
-                .instructions
-                .into_vec()
-                .into_iter()
-                .map(|o| o.unwrap())
-                .collect(),
             entry_points,
+            instructions: self.instructions,
             enable_nth_of_type,
         }
     }
