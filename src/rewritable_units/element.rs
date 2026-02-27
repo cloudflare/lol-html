@@ -805,6 +805,64 @@ mod tests {
     }
 
     #[test]
+    fn many_end_tags() {
+        let output = rewrite_html(
+            "<div><div class=c>…<unclosed class=c></div> <unclosed class=c></div>".as_bytes(),
+            UTF_8,
+            vec![
+                element!("*", |el| {
+                    let tag_name = el.tag_name();
+                    el.before(&format!("*{tag_name}"), ContentType::Text);
+                    el.end_tag_handlers()
+                        .unwrap()
+                        .push(Box::new(|_: &mut EndTag<'_>| Ok(())) as _);
+                    el.end_tag_handlers()
+                        .unwrap()
+                        .push(Box::new(move |end: &mut EndTag<'_>| {
+                            end.before(&format!("*{tag_name}+"), ContentType::Text);
+                            end.after(&format!("/*{tag_name}"), ContentType::Text);
+                            Ok(())
+                        }) as _);
+                    Ok(())
+                }),
+                element!("#notmatch", |_el| { Ok(()) }),
+                element!(".c", |el| {
+                    let tag_name = el.tag_name();
+                    el.before(&format!(".{tag_name}"), ContentType::Text);
+                    el.end_tag_handlers()
+                        .unwrap()
+                        .push(Box::new(move |end: &mut EndTag<'_>| {
+                            end.before(&format!(".{tag_name}+"), ContentType::Text);
+                            end.after(&format!("/.{tag_name}"), ContentType::Text);
+                            Ok(())
+                        }) as _);
+                    Ok(())
+                }),
+                element!("div", |el| {
+                    el.before("@div", ContentType::Text);
+                    el.end_tag_handlers()
+                        .unwrap()
+                        .push(Box::new(|end: &mut EndTag<'_>| {
+                            end.before("div+", ContentType::Text);
+                            end.after("/div", ContentType::Text);
+                            Ok(())
+                        }) as _);
+                    el.end_tag_handlers()
+                        .unwrap()
+                        .push(Box::new(|_: &mut EndTag<'_>| Ok(())) as _);
+                    Ok(())
+                }),
+            ],
+            vec![],
+        );
+
+        assert_eq!(
+            "*div@div<div>*div.div@div<div class=c>…*unclosed.unclosed<unclosed class=c>*unclosed+.unclosed+*div+.div+div+</div>/div/.div/*div/.unclosed/*unclosed *unclosed.unclosed<unclosed class=c>*unclosed+.unclosed+*div+div+</div>/div/*div/.unclosed/*unclosed",
+            output
+        );
+    }
+
+    #[test]
     fn empty_tag_name() {
         rewrite_element(b"<div>", UTF_8, "div", |el| {
             let err = el.set_tag_name("").unwrap_err();
