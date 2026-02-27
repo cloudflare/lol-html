@@ -2,22 +2,30 @@ use super::ElementDescriptor;
 use super::settings::*;
 use crate::rewritable_units::{DocumentEnd, Element, StartTag, Token, TokenCaptureFlags};
 use crate::selectors_vm::MatchInfo;
+use std::num::NonZero;
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct SelectorHandlersLocator {
-    pub element_handler_idx: Option<usize>,
-    pub comment_handler_idx: Option<usize>,
-    pub text_handler_idx: Option<usize>,
+    pub element_handler_idx: Option<Locator>,
+    pub comment_handler_idx: Option<Locator>,
+    pub text_handler_idx: Option<Locator>,
+}
+
+/// It's index+1, allows efficient Option<Locator> (unfortunately Rust has no non-FFFF type)
+pub(crate) type Locator = NonZero<u32>;
+
+fn locator_to_idx(locator: Locator) -> usize {
+    (locator.get() - 1) as usize
 }
 
 struct HandlerVecItem<H> {
     handler: H,
-    user_count: usize,
+    user_count: u32,
 }
 
 struct HandlerVec<H> {
     items: Vec<HandlerVecItem<H>>,
-    user_count: usize,
+    user_count: u32,
 }
 
 impl<H> Default for HandlerVec<H> {
@@ -31,24 +39,23 @@ impl<H> Default for HandlerVec<H> {
 
 impl<H> HandlerVec<H> {
     #[inline]
-    pub fn push(&mut self, handler: H, always_active: bool) {
+    pub fn push(&mut self, handler: H, always_active: bool) -> Option<Locator> {
         let item = HandlerVecItem {
             handler,
-            user_count: usize::from(always_active),
+            user_count: u32::from(always_active),
         };
 
         self.user_count += item.user_count;
         self.items.push(item);
+
+        let locator = self.items.len().try_into().ok().and_then(NonZero::new);
+        debug_assert!(locator.is_some());
+        locator
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-
-    #[inline]
-    pub fn inc_user_count(&mut self, idx: usize) {
-        let Some(item) = self.items.get_mut(idx) else {
+    pub fn inc_user_count(&mut self, idx: Locator) {
+        let Some(item) = self.items.get_mut(locator_to_idx(idx)) else {
             debug_assert!(false);
             return;
         };
@@ -57,8 +64,8 @@ impl<H> HandlerVec<H> {
     }
 
     #[inline]
-    pub fn dec_user_count(&mut self, idx: usize) {
-        let Some(item) = self.items.get_mut(idx) else {
+    pub fn dec_user_count(&mut self, idx: Locator) {
+        let Some(item) = self.items.get_mut(locator_to_idx(idx)) else {
             debug_assert!(false);
             return;
         };
@@ -175,18 +182,15 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
         handlers: ElementContentHandlers<'h, H>,
     ) -> SelectorHandlersLocator {
         SelectorHandlersLocator {
-            element_handler_idx: handlers.element.map(|h| {
-                self.element_handlers.push(h, false);
-                self.element_handlers.len() - 1
-            }),
-            comment_handler_idx: handlers.comments.map(|h| {
-                self.comment_handlers.push(h, false);
-                self.comment_handlers.len() - 1
-            }),
-            text_handler_idx: handlers.text.map(|h| {
-                self.text_handlers.push(h, false);
-                self.text_handlers.len() - 1
-            }),
+            element_handler_idx: handlers
+                .element
+                .and_then(|h| self.element_handlers.push(h, false)),
+            comment_handler_idx: handlers
+                .comments
+                .and_then(|h| self.comment_handlers.push(h, false)),
+            text_handler_idx: handlers
+                .text
+                .and_then(|h| self.text_handlers.push(h, false)),
         }
     }
 
@@ -260,9 +264,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 
                 debug_assert!(element.can_have_content());
                 if let Some(handler) = element.into_end_tag_handler() {
-                    elem_desc.end_tag_handler_idx = Some(self.end_tag_handlers.len());
-
-                    self.end_tag_handlers.push(handler, false);
+                    elem_desc.end_tag_handler_idx = self.end_tag_handlers.push(handler, false);
                 }
             }
         }
@@ -317,4 +319,9 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 
         flags
     }
+}
+
+#[test]
+fn locator_size() {
+    assert!(size_of::<SelectorHandlersLocator>() <= 12);
 }
