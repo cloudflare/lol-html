@@ -1,4 +1,4 @@
-use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
+use super::handlers_dispatcher::{ContentHandlersDispatcher, Locator, SelectorHandlersLocator};
 use super::{HandlerTypes, RewritingError, Settings};
 use crate::base::SharedEncoding;
 use crate::html::{LocalName, Namespace};
@@ -12,7 +12,7 @@ use hashbrown::{DefaultHashBuilder, HashSet};
 
 pub(crate) struct ElementDescriptor {
     pub matched_content_handlers: HashSet<SelectorHandlersLocator>,
-    pub end_tag_handler_idx: Option<usize>,
+    pub end_tag_handler_idx: Option<Locator>,
     pub remove_content: bool,
 }
 
