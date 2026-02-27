@@ -103,21 +103,22 @@ impl<H> HandlerVec<H> {
         Ok(())
     }
 
-    #[inline]
-    pub fn do_for_each_active_and_remove(
+    pub fn do_for_each_active_and_remove_tail(
         &mut self,
         mut cb: impl FnMut(H) -> HandlerResult,
     ) -> HandlerResult {
-        for i in (0..self.items.len()).rev() {
-            if self.items[i].user_count > 0 {
-                let item = self.items.remove(i);
-
-                self.user_count -= item.user_count;
-
-                cb(item.handler)?;
+        // already-handled end tag handlers may be first, and they must not be removed
+        if let Some(first) = self.items.iter().position(|item| item.user_count > 0) {
+            // Must drop everything after, as remove() would change indexes anyway, breaking locators.
+            // rev() is for backwards-compat with previous implementation.
+            for item in self.items.drain(first..).rev() {
+                if item.user_count > 0 {
+                    self.user_count -= item.user_count;
+                    cb(item.handler)?;
+                }
             }
         }
-
+        debug_assert_eq!(self.user_count, 0);
         Ok(())
     }
 }
@@ -279,7 +280,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
             Token::StartTag(start_tag) => self.handle_start_tag(start_tag, current_element_data),
             Token::EndTag(end_tag) => self
                 .end_tag_handlers
-                .do_for_each_active_and_remove(|h| h(end_tag)),
+                .do_for_each_active_and_remove_tail(|h| h(end_tag)),
             Token::TextChunk(text) => self.text_handlers.for_each_active(|h| h(text)),
             Token::Comment(comment) => self.comment_handlers.for_each_active(|h| h(comment)),
         }
@@ -287,7 +288,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 
     pub fn handle_end(&mut self, document_end: &mut DocumentEnd<'_>) -> HandlerResult {
         self.end_handlers
-            .do_for_each_active_and_remove(|h| h(document_end))
+            .do_for_each_active_and_remove_tail(|h| h(document_end))
     }
 
     #[inline]
