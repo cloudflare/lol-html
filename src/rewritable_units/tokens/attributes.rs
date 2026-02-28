@@ -84,20 +84,6 @@ impl<'i> Attribute<'i> {
         }
     }
 
-    #[inline]
-    fn try_from(
-        name: String,
-        value: &str,
-        encoding: &'static Encoding,
-    ) -> Result<Self, AttributeNameError> {
-        Ok(Attribute {
-            name: Attribute::name_from_string(name, encoding)?,
-            value: BytesCow::from_str(value, encoding).into_owned(),
-            raw: None,
-            encoding,
-        })
-    }
-
     /// Returns the name of the attribute, always ASCII lowercased.
     #[inline]
     #[must_use]
@@ -212,13 +198,20 @@ impl<'i> Attributes<'i> {
         value: &str,
         encoding: &'static Encoding,
     ) -> Result<(), AttributeNameError> {
-        let name = name.to_ascii_lowercase();
+        let name = Attribute::name_from_string(name.to_ascii_lowercase(), encoding)?;
         let items = self.as_mut_vec();
-
-        match items.iter_mut().find(|attr| attr.name() == name.as_str()) {
+        match items
+            .iter_mut()
+            .find(|attr| eq_case_insensitive(&attr.name.as_ref(), &name.as_ref()))
+        {
             Some(attr) => attr.set_value(value),
             None => {
-                items.push(Attribute::try_from(name, value, encoding)?);
+                items.push(Attribute {
+                    name,
+                    value: BytesCow::from_str(value, encoding).into_owned(),
+                    raw: None,
+                    encoding,
+                });
             }
         }
 
@@ -226,20 +219,13 @@ impl<'i> Attributes<'i> {
     }
 
     pub fn remove_attribute(&mut self, name: &str) -> bool {
-        let name = name.to_ascii_lowercase();
+        let Ok(name) = Attribute::name_from_string(name.to_ascii_lowercase(), self.encoding) else {
+            return false;
+        };
         let items = self.as_mut_vec();
-        let mut i = 0;
-
-        while i < items.len() {
-            if items[i].name() == name.as_str() {
-                items.remove(i);
-                return true;
-            }
-
-            i += 1;
-        }
-
-        false
+        let len_before = items.len();
+        items.retain(|attr| !eq_case_insensitive(&attr.name.as_ref(), &name.as_ref()));
+        len_before != items.len()
     }
 
     pub fn is_empty(&self) -> bool {
