@@ -185,6 +185,8 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     }
 
     /// Returns an immutable collection of element's attributes.
+    ///
+    /// `get_attribute` is faster if you only need to read few attributes.
     #[inline]
     #[must_use]
     pub fn attributes(&self) -> &[Attribute<'input_token>] {
@@ -197,24 +199,14 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     #[inline]
     #[must_use]
     pub fn get_attribute(&self, name: &str) -> Option<String> {
-        let name = name.to_ascii_lowercase();
-
-        self.attributes().iter().find_map(|attr| {
-            if attr.name() == name {
-                Some(attr.value())
-            } else {
-                None
-            }
-        })
+        self.start_tag.get_attribute(name)
     }
 
     /// Returns `true` if the element has an attribute with `name`.
     #[inline]
     #[must_use]
     pub fn has_attribute(&self, name: &str) -> bool {
-        let name = name.to_ascii_lowercase();
-
-        self.attributes().iter().any(|attr| attr.name() == name)
+        self.start_tag.has_attribute(name)
     }
 
     /// Sets `value` of element's attribute with `name`. The value may have HTML/XML entities.

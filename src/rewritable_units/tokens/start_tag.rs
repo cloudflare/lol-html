@@ -91,7 +91,25 @@ impl<'input_token> StartTag<'input_token> {
         self.ns.uri()
     }
 
+    /// Returns the value of an attribute with the `name`. The value may have HTML/XML entities.
+    ///
+    /// Returns `None` if the element doesn't have an attribute with the `name`.
+    #[inline]
+    #[must_use]
+    pub fn get_attribute(&self, name: &str) -> Option<String> {
+        self.attributes.get_attribute(name)
+    }
+
+    /// Returns `true` if the element has an attribute with `name`.
+    #[inline]
+    #[must_use]
+    pub fn has_attribute(&self, name: &str) -> bool {
+        self.attributes.has_attribute(name)
+    }
+
     /// Returns an immutable collection of tag's attributes.
+    ///
+    /// `get_attribute` is faster if you only need to read few attributes.
     #[inline]
     pub fn attributes(&self) -> &[Attribute<'input_token>] {
         self.attributes.to_slice()

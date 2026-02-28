@@ -1,4 +1,4 @@
-use crate::base::{Bytes, BytesCow};
+use crate::base::{Bytes, BytesCow, eq_case_insensitive};
 use crate::errors::RewritingError;
 use crate::html::escape_double_quotes_only;
 use crate::parser::AttributeBuffer;
@@ -174,6 +174,35 @@ impl<'i> Attributes<'i> {
         }
     }
 
+    pub(crate) fn map_attribute<R>(
+        &self,
+        name: &str,
+        map: impl Fn(&Attribute<'_>) -> R,
+    ) -> Option<R> {
+        let name = Attribute::name_from_string(name.to_ascii_lowercase(), self.encoding).ok()?;
+        let check = move |attr: &Attribute<'_>| {
+            if eq_case_insensitive(&attr.name.as_ref(), &name.as_ref()) {
+                Some(map(attr))
+            } else {
+                None
+            }
+        };
+        match self.items.get() {
+            Some(items) => items.iter().find_map(check),
+            None => self.iter_attrs().find_map(|a| check(&a)),
+        }
+    }
+
+    #[inline(never)]
+    pub(crate) fn get_attribute(&self, name: &str) -> Option<String> {
+        self.map_attribute(name, |attr| attr.value())
+    }
+
+    #[inline(never)]
+    pub(crate) fn has_attribute(&self, name: &str) -> bool {
+        self.map_attribute(name, |_| true).unwrap_or(false)
+    }
+
     /// Adds or replaces the attribute. The value may have HTML/XML entities.
     ///
     /// Quotes will be escaped if needed. Other entities won't be changed.
@@ -221,31 +250,32 @@ impl<'i> Attributes<'i> {
             .unwrap_or(self.attribute_buffer.is_empty())
     }
 
-    #[inline(never)]
-    fn init_items(&self) -> Vec<Attribute<'i>> {
+    fn iter_attrs(&self) -> impl Iterator<Item = Attribute<'i>> {
         let cant_fail = || {
             debug_assert!(false);
             Bytes::default()
         };
-        self.attribute_buffer
-            .iter()
-            .map(|a| {
-                Attribute::new(
-                    self.input
-                        .opt_slice(Some(a.name))
-                        .unwrap_or_else(cant_fail)
-                        .into(),
-                    self.input
-                        .opt_slice(Some(a.value))
-                        .unwrap_or_else(cant_fail)
-                        .into(),
-                    self.input
-                        .opt_slice(Some(a.raw_range))
-                        .unwrap_or_else(cant_fail),
-                    self.encoding,
-                )
-            })
-            .collect()
+        self.attribute_buffer.iter().map(move |a| {
+            Attribute::new(
+                self.input
+                    .opt_slice(Some(a.name))
+                    .unwrap_or_else(cant_fail)
+                    .into(),
+                self.input
+                    .opt_slice(Some(a.value))
+                    .unwrap_or_else(cant_fail)
+                    .into(),
+                self.input
+                    .opt_slice(Some(a.raw_range))
+                    .unwrap_or_else(cant_fail),
+                self.encoding,
+            )
+        })
+    }
+
+    #[inline(never)]
+    fn init_items(&self) -> Vec<Attribute<'i>> {
+        self.iter_attrs().collect()
     }
 
     pub(crate) fn to_slice(&self) -> &[Attribute<'i>] {
