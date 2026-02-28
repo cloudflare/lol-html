@@ -43,13 +43,8 @@ pub(crate) enum VmError<E: ElementData, MatchPayload> {
     MemoryLimitExceeded(MemoryLimitExceededError),
 }
 
-type RecoveryPointHandler<T, E, P> = fn(
-    &mut SelectorMatchingVm<E>,
-    &mut ExecutionCtx<'static, E>,
-    &AttributeMatcher<'_>,
-    T,
-    &mut dyn FnMut(MatchInfo<P>),
-);
+type RecoveryPointHandler<T, E> =
+    fn(&mut SelectorMatchingVm<E>, &mut ExecutionCtx<'static, E>, &AttributeMatcher<'_>, T);
 
 #[derive(Default)]
 struct JumpPtr {
@@ -98,22 +93,12 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
         }
     }
 
-    pub fn add_execution_branch(
-        &mut self,
-        branch: &ExecutionBranch<E::MatchPayload>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) {
+    pub fn add_execution_branch(&mut self, branch: &ExecutionBranch<E::MatchPayload>) {
         for &payload in &branch.matched_payload {
-            let element_payload = self.stack_item.element_data.matched_payload_mut();
-
-            if !element_payload.contains(&payload) {
-                match_handler(MatchInfo {
-                    payload,
-                    with_content: self.with_content,
-                });
-
-                element_payload.insert(payload);
-            }
+            self.stack_item
+                .element_data
+                .matched_payload_mut()
+                .insert(payload);
         }
 
         if self.with_content {
@@ -126,6 +111,18 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
                     .hereditary_jumps
                     .push(hereditary_jumps.to_owned());
             }
+        }
+    }
+
+    pub fn flush_matched_payloads(
+        &mut self,
+        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
+    ) {
+        for &payload in self.stack_item.element_data.matched_payload_mut().iter() {
+            match_handler(MatchInfo {
+                payload,
+                with_content: self.with_content,
+            });
         }
     }
 
@@ -229,22 +226,17 @@ where
 
         ctx.with_content = !aux_info.self_closing;
 
-        self.exec_instr_set_with_attrs(
-            &self.program.entry_points,
-            &attr_matcher,
-            &mut ctx,
-            0,
-            match_handler,
-        );
+        self.exec_instr_set_with_attrs(&self.program.entry_points, &attr_matcher, &mut ctx, 0);
 
-        self.exec_jumps_with_attrs(&attr_matcher, &mut ctx, JumpPtr::default(), match_handler);
+        self.exec_jumps_with_attrs(&attr_matcher, &mut ctx, JumpPtr::default());
 
         self.exec_hereditary_jumps_with_attrs(
             &attr_matcher,
             &mut ctx,
             HereditaryJumpPtr::default(),
-            match_handler,
         );
+
+        ctx.flush_matched_payloads(match_handler);
 
         if ctx.with_content {
             self.stack.push_item(ctx.stack_item)?;
@@ -256,27 +248,18 @@ where
     fn bailout<T: 'static + Send>(
         ctx: ExecutionCtx<'_, E>,
         bailout: Bailout<T>,
-        recovery_point_handler: RecoveryPointHandler<T, E, E::MatchPayload>,
+        recovery_point_handler: RecoveryPointHandler<T, E>,
     ) -> Result<(), VmError<E, E::MatchPayload>> {
         let mut ctx = ctx.into_owned();
 
         aux_info_request!(move |this, aux_info, match_handler| {
             let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ctx.ns);
 
-            this.complete_instr_execution_with_attrs(
-                bailout.at_addr,
-                &attr_matcher,
-                &mut ctx,
-                match_handler,
-            );
+            this.complete_instr_execution_with_attrs(bailout.at_addr, &attr_matcher, &mut ctx);
 
-            recovery_point_handler(
-                this,
-                &mut ctx,
-                &attr_matcher,
-                bailout.recovery_point,
-                match_handler,
-            );
+            recovery_point_handler(this, &mut ctx, &attr_matcher, bailout.recovery_point);
+
+            ctx.flush_matched_payloads(match_handler);
 
             if ctx.with_content {
                 this.stack.push_item(ctx.stack_item)?;
@@ -291,24 +274,17 @@ where
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher<'_>,
         recovery_point: usize,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         self.exec_instr_set_with_attrs(
             &self.program.entry_points,
             attr_matcher,
             ctx,
             recovery_point,
-            match_handler,
         );
 
-        self.exec_jumps_with_attrs(attr_matcher, ctx, JumpPtr::default(), match_handler);
+        self.exec_jumps_with_attrs(attr_matcher, ctx, JumpPtr::default());
 
-        self.exec_hereditary_jumps_with_attrs(
-            attr_matcher,
-            ctx,
-            HereditaryJumpPtr::default(),
-            match_handler,
-        );
+        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, HereditaryJumpPtr::default());
     }
 
     fn recover_after_bailout_in_jumps(
@@ -316,16 +292,10 @@ where
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher<'_>,
         recovery_point: JumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        self.exec_jumps_with_attrs(attr_matcher, ctx, recovery_point, match_handler);
+        self.exec_jumps_with_attrs(attr_matcher, ctx, recovery_point);
 
-        self.exec_hereditary_jumps_with_attrs(
-            attr_matcher,
-            ctx,
-            HereditaryJumpPtr::default(),
-            match_handler,
-        );
+        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, HereditaryJumpPtr::default());
     }
 
     #[inline]
@@ -334,9 +304,8 @@ where
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher<'_>,
         recovery_point: HereditaryJumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, recovery_point, match_handler);
+        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, recovery_point);
     }
 
     fn exec_without_attrs(
@@ -344,21 +313,21 @@ where
         mut ctx: ExecutionCtx<'_, E>,
         match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), VmError<E, E::MatchPayload>> {
-        if let Err(b) = self.try_exec_instr_set_without_attrs(
-            self.program.entry_points.clone(),
-            &mut ctx,
-            match_handler,
-        ) {
+        if let Err(b) =
+            self.try_exec_instr_set_without_attrs(self.program.entry_points.clone(), &mut ctx)
+        {
             return Self::bailout(ctx, b, Self::recover_after_bailout_in_entry_points);
         }
 
-        if let Err(b) = self.try_exec_jumps_without_attrs(&mut ctx, match_handler) {
+        if let Err(b) = self.try_exec_jumps_without_attrs(&mut ctx) {
             return Self::bailout(ctx, b, Self::recover_after_bailout_in_jumps);
         }
 
-        if let Err(b) = self.try_exec_hereditary_jumps_without_attrs(&mut ctx, match_handler) {
+        if let Err(b) = self.try_exec_hereditary_jumps_without_attrs(&mut ctx) {
             return Self::bailout(ctx, b, Self::recover_after_bailout_in_hereditary_jumps);
         }
+
+        ctx.flush_matched_payloads(match_handler);
 
         if ctx.with_content {
             self.stack
@@ -375,13 +344,12 @@ where
         addr: usize,
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         let state = self.stack.build_state(&ctx.stack_item.local_name);
         if let Some(branch) =
             self.program.instructions[addr].complete_exec_with_attrs(&state, attr_matcher)
         {
-            ctx.add_execution_branch(branch, match_handler);
+            ctx.add_execution_branch(branch);
         }
     }
 
@@ -390,7 +358,6 @@ where
         &self,
         addr_range: AddressRange,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<usize>> {
         let start = addr_range.start;
         let state = self.stack.build_state(&ctx.stack_item.local_name);
@@ -399,7 +366,7 @@ where
             match self.program.instructions[addr]
                 .try_exec_without_attrs(&state, &ctx.stack_item.local_name)
             {
-                TryExecResult::Branch(branch) => ctx.add_execution_branch(branch, match_handler),
+                TryExecResult::Branch(branch) => ctx.add_execution_branch(branch),
                 TryExecResult::AttributesRequired => {
                     return Err(Bailout {
                         at_addr: addr,
@@ -420,14 +387,13 @@ where
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
         offset: usize,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         let state = self.stack.build_state(&ctx.stack_item.local_name);
         for addr in addr_range.start + offset..addr_range.end {
             let instr = &self.program.instructions[addr];
 
             if let Some(branch) = instr.exec(&state, &ctx.stack_item.local_name, attr_matcher) {
-                ctx.add_execution_branch(branch, match_handler);
+                ctx.add_execution_branch(branch);
             }
         }
     }
@@ -435,11 +401,10 @@ where
     fn try_exec_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<JumpPtr>> {
         if let Some(parent) = self.stack.items().last() {
             for (i, jumps) in parent.jumps.iter().enumerate() {
-                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx, match_handler)
+                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
                     .map_err(|b| Bailout {
                         at_addr: b.at_addr,
                         recovery_point: JumpPtr {
@@ -458,22 +423,15 @@ where
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
         ptr: JumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         // NOTE: find pointed jumps instruction set and execute it with the offset.
         if let Some(parent) = self.stack.items().last() {
             if let Some(ptr_jumps) = parent.jumps.get(ptr.instr_set_idx) {
-                self.exec_instr_set_with_attrs(
-                    ptr_jumps,
-                    attr_matcher,
-                    ctx,
-                    ptr.offset,
-                    match_handler,
-                );
+                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
 
                 // NOTE: execute remaining jumps instruction sets as usual.
                 for jumps in parent.jumps.iter().skip(ptr.instr_set_idx + 1) {
-                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0, match_handler);
+                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
                 }
             }
         }
@@ -482,11 +440,10 @@ where
     fn try_exec_hereditary_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<HereditaryJumpPtr>> {
         for (i, ancestor) in self.stack.items().iter().rev().enumerate() {
             for (j, jumps) in ancestor.hereditary_jumps.iter().enumerate() {
-                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx, match_handler)
+                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
                     .map_err(move |b| Bailout {
                         at_addr: b.at_addr,
                         recovery_point: HereditaryJumpPtr {
@@ -510,7 +467,6 @@ where
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
         ptr: HereditaryJumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         let items = self.stack.items();
 
@@ -524,13 +480,7 @@ where
         // set and execute it with the offset.
         if let Some(ptr_ancestor) = items.get(ptr_ancestor_idx) {
             if let Some(ptr_jumps) = ptr_ancestor.hereditary_jumps.get(ptr.instr_set_idx) {
-                self.exec_instr_set_with_attrs(
-                    ptr_jumps,
-                    attr_matcher,
-                    ctx,
-                    ptr.offset,
-                    match_handler,
-                );
+                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
 
                 // NOTE: execute the rest of jump instruction sets in the pointed ancestor as usual.
                 for jumps in ptr_ancestor
@@ -538,7 +488,7 @@ where
                     .iter()
                     .skip(ptr.instr_set_idx + 1)
                 {
-                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0, match_handler);
+                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
                 }
             }
 
@@ -546,7 +496,7 @@ where
             if ptr_ancestor.has_ancestor_with_hereditary_jumps {
                 for ancestor in items.iter().rev().skip(ptr.stack_offset + 1) {
                     for jumps in &ancestor.hereditary_jumps {
-                        self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0, match_handler);
+                        self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
                     }
 
                     if !ancestor.has_ancestor_with_hereditary_jumps {
@@ -1836,12 +1786,7 @@ mod tests {
             // // Sort for deterministic comparison (HashSet iteration order varies)
             // calls.sort();
 
-            // Each payload must appear exactly once
-            assert_eq!(
-                calls,
-                vec![0, 1],
-                "Each payload should be reported exactly once, got: {calls:?}"
-            );
+            assert_eq!(calls, [0, 1], "Each payload should be reported exactly once");
         });
     }
 }
