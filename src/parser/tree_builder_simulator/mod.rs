@@ -14,6 +14,7 @@
 mod ambiguity_guard;
 
 use self::ambiguity_guard::AmbiguityGuard;
+use crate::base::eq_case_insensitive;
 use crate::html::{LocalNameHash, Namespace, Tag, TextType};
 use crate::parser::{TagLexeme, TagTokenOutline};
 use TagTokenOutline::{EndTag, StartTag};
@@ -57,22 +58,6 @@ macro_rules! expect_tag {
             }
         }
     };
-}
-
-/// Unlike eq_ignore_ascii_case it only lowercases `actual`
-#[inline]
-fn eq_case_insensitive(actual: &[u8], expected: &[u8]) -> bool {
-    if actual.len() != expected.len() {
-        return false;
-    }
-
-    for i in 0..actual.len() {
-        if actual[i].to_ascii_lowercase() != expected[i] {
-            return false;
-        }
-    }
-
-    true
 }
 
 #[inline]
