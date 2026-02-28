@@ -8,6 +8,8 @@ echo "===  Running library tests... ==="
 cargo test --features=integration_test "$@"
 
 echo "=== Running C API tests... ==="
+(cd ./c-api/ && cargo check --locked)
+(cd ./js-api/ && cargo check --locked)
 prove -e 'cargo' run ::  --manifest-path=./c-api/c-tests/Cargo.toml
 
 echo "=== Building fuzzing test case code to ensure that it uses current API... ==="
