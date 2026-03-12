@@ -2,15 +2,14 @@ use super::SelectorState;
 use super::attribute_matcher::AttributeMatcher;
 use super::compiler::{CompiledAttributeExpr, CompiledLocalNameExpr};
 use crate::html::LocalName;
-use crate::selectors_vm::MatchId;
-use hashbrown::HashSet;
+use crate::selectors_vm::DenseHashSet;
 use std::ops::Range;
 
 pub(crate) type AddressRange = Range<usize>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ExecutionBranch {
-    pub matched_ids: HashSet<MatchId>,
+    pub matched_ids: DenseHashSet,
     pub jumps: Option<AddressRange>,
     pub hereditary_jumps: Option<AddressRange>,
 }
