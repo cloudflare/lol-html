@@ -1789,4 +1789,59 @@ mod tests {
             }
         );
     }
+
+    /// Test that match_handler is called exactly once per matched payload,
+    /// even when the same payload can be reached through multiple instruction paths.
+    /// For example, `"span, [foo$=bar]"` is one selector (payload 0) with two
+    /// comma-separated entries — both match `<span foo=bar>`, but payload 0
+    /// must be reported only once.
+    #[test]
+    fn no_duplicate_match_handler_calls() {
+        let mut ast = Ast::default();
+        let hasher = DefaultHashBuilder::default();
+        ast.add_selector(&"span, [foo$=bar]".parse().unwrap(), 0, hasher.clone());
+        // Add a second selector "span" with payload 1 — should also match <span foo=bar>.
+        ast.add_selector(&"span".parse().unwrap(), 1, hasher);
+
+        let memory_limiter = SharedMemoryLimiter::new(2048);
+        let mut vm: SelectorMatchingVm<TestElementData> =
+            SelectorMatchingVm::new(ast, UTF_8, memory_limiter, false);
+
+        test_with_token("<span foo=bar>", UTF_8, |t| {
+            let Token::StartTag(t) = t else {
+                panic!("must be start tag");
+            };
+            let mut calls = Vec::new();
+
+            let mut match_handler = |m: MatchInfo<_>| {
+                calls.push(m.payload);
+            };
+
+            let result = vm.exec_for_start_tag(local_name!(t), Namespace::Html, &mut match_handler);
+
+            if let Err(VmError::InfoRequest(inforeq)) = result {
+                let (input, attr_buffer) = t.raw_attributes();
+                inforeq(
+                    &mut vm,
+                    AuxStartTagInfo {
+                        input,
+                        attr_buffer,
+                        self_closing: t.self_closing(),
+                    },
+                    &mut match_handler,
+                )
+                .unwrap();
+            };
+
+            // // Sort for deterministic comparison (HashSet iteration order varies)
+            // calls.sort();
+
+            // Each payload must appear exactly once
+            assert_eq!(
+                calls,
+                vec![0, 1],
+                "Each payload should be reported exactly once, got: {calls:?}"
+            );
+        });
+    }
 }
