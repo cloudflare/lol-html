@@ -230,7 +230,7 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 
     #[inline]
     pub fn stop_matching(&mut self, elem_desc: ElementDescriptor) {
-        for &match_id in elem_desc.matched_content_handlers.iter() {
+        for match_id in elem_desc.matched_content_handlers.iter() {
             let Some(locator) = self.locators.get(match_id as usize) else {
                 debug_assert!(false);
                 continue;

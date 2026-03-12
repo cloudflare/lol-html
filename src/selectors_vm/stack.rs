@@ -3,9 +3,10 @@ use super::ast::NthChild;
 use super::program::AddressRange;
 use crate::html::{LocalName, Namespace, Tag};
 use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
-use crate::selectors_vm::MatchId;
+use crate::selectors_vm::DenseHashSet;
 // use hashbrown for raw entry, switch back to std once it stablizes there
-use hashbrown::{DefaultHashBuilder, HashMap, HashSet, hash_map::RawEntryMut};
+use hashbrown::HashMap;
+use hashbrown::hash_map::RawEntryMut;
 use std::hash::BuildHasher;
 
 #[inline]
@@ -38,8 +39,8 @@ fn is_void_element(local_name: &LocalName<'_>, enable_esi_tags: bool) -> bool {
 }
 
 pub(crate) trait ElementData: 'static {
-    fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId>;
-    fn new(hasher: DefaultHashBuilder) -> Self;
+    fn matched_ids_mut(&mut self) -> &mut DenseHashSet;
+    fn new() -> Self;
 }
 
 pub(crate) enum StackDirective {
@@ -103,8 +104,8 @@ pub(crate) struct TypedChildCounterMap(HashMap<LocalName<'static>, CounterList>)
 impl TypedChildCounterMap {
     #[must_use]
     #[inline]
-    pub(crate) fn new(hasher: DefaultHashBuilder) -> Self {
-        Self(HashMap::with_hasher(hasher))
+    pub(crate) fn new() -> Self {
+        Self(HashMap::new())
     }
 
     fn hash_name(&self, name: &LocalName<'_>) -> u64 {
@@ -183,10 +184,10 @@ pub(crate) struct StackItem<'i, E: ElementData> {
 impl<'i, E: ElementData> StackItem<'i, E> {
     #[inline]
     #[must_use]
-    pub fn new(local_name: LocalName<'i>, hasher: DefaultHashBuilder) -> Self {
+    pub fn new(local_name: LocalName<'i>) -> Self {
         StackItem {
             local_name,
-            element_data: E::new(hasher),
+            element_data: E::new(),
             jumps: Vec::default(),
             hereditary_jumps: Vec::default(),
             child_counter: Default::default(),
@@ -220,13 +221,10 @@ pub(crate) struct Stack<E: ElementData> {
 impl<E: ElementData> Stack<E> {
     #[must_use]
     #[inline]
-    pub fn new(
-        memory_limiter: SharedMemoryLimiter,
-        enable_nth_of_type: Option<DefaultHashBuilder>,
-    ) -> Self {
+    pub fn new(memory_limiter: SharedMemoryLimiter, enable_nth_of_type: bool) -> Self {
         Self {
             root_child_counter: Default::default(),
-            typed_child_counters: enable_nth_of_type.map(TypedChildCounterMap::new),
+            typed_child_counters: enable_nth_of_type.then(TypedChildCounterMap::new),
             items: LimitedVec::new(memory_limiter),
         }
     }
@@ -331,17 +329,17 @@ impl<E: ElementData> Stack<E> {
 mod tests {
     use super::*;
     use crate::memory::SharedMemoryLimiter;
-    use crate::selectors_vm::MatchId;
+    use crate::selectors_vm::DenseHashSet;
     use encoding_rs::UTF_8;
 
     #[derive(Default)]
     struct TestElementData(usize);
 
     impl ElementData for TestElementData {
-        fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId> {
+        fn matched_ids_mut(&mut self) -> &mut DenseHashSet {
             unreachable!();
         }
-        fn new(_: DefaultHashBuilder) -> Self {
+        fn new() -> Self {
             Self::default()
         }
     }
@@ -351,7 +349,7 @@ mod tests {
     }
 
     fn item(name: &'static str, data: usize) -> StackItem<'static, TestElementData> {
-        let mut item = StackItem::new(local_name(name), DefaultHashBuilder::default());
+        let mut item = StackItem::new(local_name(name));
 
         item.element_data = TestElementData(data);
 
@@ -361,7 +359,7 @@ mod tests {
     #[test]
     #[allow(clippy::reversed_empty_ranges)]
     fn hereditary_jumps_flag() {
-        let mut stack = Stack::new(SharedMemoryLimiter::new(2048), None);
+        let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
 
         stack.push_item(item("item1", 0)).unwrap();
 
@@ -389,7 +387,7 @@ mod tests {
     fn pop_up_to() {
         macro_rules! assert_pop_result {
             ($up_to:expr, $expected_unmatched:expr, $expected_items:expr) => {{
-                let mut stack = Stack::new(SharedMemoryLimiter::new(2048), None);
+                let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
 
                 stack.push_item(item("html", 0)).unwrap();
                 stack.push_item(item("body", 1)).unwrap();
@@ -431,7 +429,7 @@ mod tests {
 
     #[test]
     fn pop_up_to_on_empty_stack() {
-        let mut stack = Stack::new(SharedMemoryLimiter::new(2048), None);
+        let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
         let mut handler_called = false;
 
         stack.pop_up_to(local_name("div"), |_: TestElementData| {

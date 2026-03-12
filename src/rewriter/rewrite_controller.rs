@@ -6,27 +6,26 @@ use crate::memory::SharedMemoryLimiter;
 use crate::parser::ActionError;
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::{
-    Ast, AuxStartTagInfoRequest, ElementData, MatchId, SelectorMatchingVm, VmError,
+    Ast, AuxStartTagInfoRequest, DenseHashSet, ElementData, SelectorMatchingVm, VmError,
 };
 use crate::transform_stream::{DispatcherError, StartTagHandlingResult, TransformController};
-use hashbrown::{DefaultHashBuilder, HashSet};
 
 pub(crate) struct ElementDescriptor {
-    pub matched_content_handlers: HashSet<MatchId>,
+    pub matched_content_handlers: DenseHashSet,
     pub end_tag_handler_idx: Option<Locator>,
     pub remove_content: bool,
 }
 
 impl ElementData for ElementDescriptor {
     #[inline]
-    fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId> {
+    fn matched_ids_mut(&mut self) -> &mut DenseHashSet {
         &mut self.matched_content_handlers
     }
 
     #[inline]
-    fn new(hasher: DefaultHashBuilder) -> Self {
+    fn new() -> Self {
         Self {
-            matched_content_handlers: HashSet::with_hasher(hasher),
+            matched_content_handlers: DenseHashSet::new(),
             end_tag_handler_idx: None,
             remove_content: false,
         }
@@ -63,11 +62,10 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
             .into_iter()
             .chain(settings.element_content_handlers);
 
-        let hasher = DefaultHashBuilder::default();
         for (selector, handlers) in element_content_handlers {
-            let locator = dispatcher.add_selector_associated_handlers(handlers);
+            let match_id = dispatcher.add_selector_associated_handlers(handlers);
 
-            selectors_ast.add_selector(&selector, locator, hasher.clone());
+            selectors_ast.add_selector(&selector, match_id);
         }
 
         for handlers in settings.document_content_handlers {

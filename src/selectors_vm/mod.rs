@@ -4,6 +4,7 @@ mod ast;
 mod attribute_matcher;
 mod compiler;
 mod error;
+mod match_info;
 mod parser;
 mod program;
 mod stack;
@@ -14,22 +15,15 @@ use crate::html::{LocalName, Namespace};
 use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
-use hashbrown::DefaultHashBuilder;
-
-pub type MatchId = u32;
 
 pub use self::ast::*;
 pub(crate) use self::attribute_matcher::AttributeMatcher;
 pub(crate) use self::compiler::Compiler;
 pub use self::error::SelectorError;
+pub(crate) use self::match_info::{DenseHashSet, MatchId, MatchInfo};
 pub use self::parser::Selector;
 pub(crate) use self::program::{ExecutionBranch, Program, TryExecResult};
 pub(crate) use self::stack::{ChildCounter, ElementData, Stack, StackItem};
-
-pub(crate) struct MatchInfo {
-    pub match_id: MatchId,
-    pub with_content: bool,
-}
 
 pub(crate) type AuxStartTagInfoRequest<E> = Box<
     dyn FnOnce(
@@ -81,27 +75,21 @@ struct ExecutionCtx<'i, E: ElementData> {
 
 impl<'i, E: ElementData> ExecutionCtx<'i, E> {
     #[inline]
-    pub fn new(
-        local_name: LocalName<'i>,
-        ns: Namespace,
-        enable_esi_tags: bool,
-        hasher: DefaultHashBuilder,
-    ) -> Self {
+    pub fn new(local_name: LocalName<'i>, ns: Namespace, enable_esi_tags: bool) -> Self {
         ExecutionCtx {
-            stack_item: StackItem::new(local_name, hasher),
+            stack_item: StackItem::new(local_name),
             with_content: true,
             ns,
             enable_esi_tags,
         }
     }
 
+    #[inline(never)]
     pub fn add_execution_branch(&mut self, branch: &ExecutionBranch) {
-        for &payload in &branch.matched_ids {
-            self.stack_item
-                .element_data
-                .matched_ids_mut()
-                .insert(payload);
-        }
+        self.stack_item
+            .element_data
+            .matched_ids_mut()
+            .union(&branch.matched_ids);
 
         if self.with_content {
             if let Some(ref jumps) = branch.jumps {
@@ -118,7 +106,7 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
 
     #[inline(never)]
     pub fn handle_matched_ids(&mut self, match_handler: &mut dyn FnMut(MatchInfo)) {
-        for &match_id in self.stack_item.element_data.matched_ids_mut().iter() {
+        for match_id in self.stack_item.element_data.matched_ids_mut().iter() {
             match_handler(MatchInfo {
                 match_id,
                 with_content: self.with_content,
@@ -147,7 +135,6 @@ pub(crate) struct SelectorMatchingVm<E: ElementData> {
     program: Program,
     stack: Stack<E>,
     enable_esi_tags: bool,
-    hasher: DefaultHashBuilder,
 }
 
 impl<E> SelectorMatchingVm<E>
@@ -163,14 +150,11 @@ where
         enable_esi_tags: bool,
     ) -> Self {
         let program = Compiler::new(encoding).compile(ast);
-        let enable_nth_of_type = program.enable_nth_of_type;
-        let hasher = DefaultHashBuilder::default();
 
         Self {
+            stack: Stack::new(memory_limiter, program.enable_nth_of_type),
             program,
-            stack: Stack::new(memory_limiter, enable_nth_of_type.then(|| hasher.clone())),
             enable_esi_tags,
-            hasher,
         }
     }
 
@@ -184,7 +168,7 @@ where
 
         self.stack.add_child(&local_name);
 
-        let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags, self.hasher.clone());
+        let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags);
 
         match Stack::get_stack_directive(&ctx.stack_item, ctx.ns, ctx.enable_esi_tags) {
             PopImmediately => {
@@ -521,23 +505,23 @@ mod tests {
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
     };
     use encoding_rs::{Encoding, UTF_8};
-    use hashbrown::{HashMap, HashSet};
+    use hashbrown::HashMap;
 
     struct Expectation {
         should_bailout: bool,
         should_match_with_content: bool,
         /// The indexes of selectors that match this tag
-        matched_ids: HashSet<MatchId>,
+        matched_ids: DenseHashSet,
     }
 
-    struct TestElementData(HashSet<MatchId>);
+    struct TestElementData(DenseHashSet);
 
     impl ElementData for TestElementData {
-        fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId> {
+        fn matched_ids_mut(&mut self) -> &mut DenseHashSet {
             &mut self.0
         }
-        fn new(h: DefaultHashBuilder) -> Self {
-            Self(HashSet::with_hasher(h))
+        fn new() -> Self {
+            Self(DenseHashSet::new())
         }
     }
 
@@ -605,12 +589,6 @@ mod tests {
         transform_stream.end().unwrap();
     }
 
-    macro_rules! set {
-        ($($items:expr),*) => {
-            vec![$($items),*].into_iter().collect::<HashSet<MatchId>>()
-        };
-    }
-
     macro_rules! map {
         ($($items:expr),*) => {
             vec![$($items),*].into_iter().collect::<HashMap<_, _>>()
@@ -628,9 +606,8 @@ mod tests {
         ($selectors:expr) => {{
             let mut ast = Ast::default();
 
-            let hasher = DefaultHashBuilder::default();
             for (selector, match_id) in $selectors.iter().zip(0..) {
-                ast.add_selector(&selector.parse().unwrap(), match_id, hasher.clone());
+                ast.add_selector(&selector.parse().unwrap(), match_id);
             }
 
             let memory_limiter = SharedMemoryLimiter::new(2048);
@@ -647,7 +624,7 @@ mod tests {
             test_with_token($tag_html, UTF_8, |t| {
                 match t {
                     Token::StartTag(t) => {
-                        let mut matched_ids = HashSet::default();
+                        let mut matched_ids = DenseHashSet::new();
 
                         {
                             let mut match_handler = |m: MatchInfo| {
@@ -701,7 +678,7 @@ mod tests {
                     let mut unmatched_ids = HashMap::default();
 
                     $vm.exec_for_end_tag(local_name!(t), |elem_data: TestElementData| {
-                        for &match_id in elem_data.0.iter() {
+                        for match_id in elem_data.0.iter() {
                             unmatched_ids
                                 .entry(match_id)
                                 .and_modify(|c| *c += 1)
@@ -729,7 +706,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -743,7 +720,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -757,7 +734,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_ids: set![1, 2],
+                matched_ids: DenseHashSet::from([1, 2]),
             }
         );
 
@@ -771,7 +748,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -786,7 +763,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![2],
+                matched_ids: DenseHashSet::from([2]),
             }
         );
 
@@ -802,7 +779,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![2],
+                matched_ids: DenseHashSet::from([2]),
             }
         );
 
@@ -839,7 +816,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -853,7 +830,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -868,7 +845,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -887,7 +864,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -898,7 +875,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -909,7 +886,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -920,7 +897,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![1, 2],
+                matched_ids: DenseHashSet::from([1, 2]),
             }
         );
 
@@ -938,7 +915,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -949,7 +926,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 1, 2],
+                matched_ids: DenseHashSet::from([0, 1, 2]),
             }
         );
     }
@@ -967,7 +944,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -981,7 +958,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -999,7 +976,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1017,7 +994,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1032,7 +1009,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1062,7 +1039,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1076,7 +1053,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1094,7 +1071,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1112,7 +1089,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1127,7 +1104,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1150,7 +1127,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1165,7 +1142,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1195,7 +1172,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1209,7 +1186,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1224,7 +1201,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1247,7 +1224,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1262,7 +1239,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 2],
+                matched_ids: DenseHashSet::from([0, 2]),
             }
         );
 
@@ -1283,7 +1260,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1297,7 +1274,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 1, 2],
+                matched_ids: DenseHashSet::from([0, 1, 2]),
             }
         );
 
@@ -1315,7 +1292,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1333,7 +1310,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![1, 3],
+                matched_ids: DenseHashSet::from([1, 3]),
             }
         );
     }
@@ -1351,7 +1328,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1365,7 +1342,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1380,7 +1357,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1396,7 +1373,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1413,7 +1390,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1432,7 +1409,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
     }
@@ -1455,7 +1432,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1469,7 +1446,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1483,7 +1460,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1498,7 +1475,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 1, 2, 3],
+                matched_ids: DenseHashSet::from([0, 1, 2, 3]),
             }
         );
 
@@ -1514,7 +1491,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 2],
+                matched_ids: DenseHashSet::from([0, 2]),
             }
         );
 
@@ -1535,7 +1512,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1549,7 +1526,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1564,7 +1541,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 1, 2],
+                matched_ids: DenseHashSet::from([0, 1, 2]),
             }
         );
 
@@ -1580,7 +1557,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0, 2],
+                matched_ids: DenseHashSet::from([0, 2]),
             }
         );
 
@@ -1601,7 +1578,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1615,7 +1592,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1633,7 +1610,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1648,7 +1625,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1664,7 +1641,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1681,7 +1658,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1699,7 +1676,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
     }
@@ -1716,7 +1693,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_ids: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1732,23 +1709,22 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_ids: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
     }
 
-    /// Test that match_handler is called exactly once per matched payload,
-    /// even when the same payload can be reached through multiple instruction paths.
-    /// For example, `"span, [foo$=bar]"` is one selector (payload 0) with two
-    /// comma-separated entries — both match `<span foo=bar>`, but payload 0
+    /// Test that match_handler is called exactly once per matched id,
+    /// even when the same match_ids can be reached through multiple instruction paths.
+    /// For example, `"span, [foo$=bar]"` is one selector (match_id 0) with two
+    /// comma-separated entries — both match `<span foo=bar>`, but match_id 0
     /// must be reported only once.
     #[test]
     fn no_duplicate_match_handler_calls() {
         let mut ast = Ast::default();
-        let hasher = DefaultHashBuilder::default();
-        ast.add_selector(&"span, [foo$=bar]".parse().unwrap(), 0, hasher.clone());
-        // Add a second selector "span" with payload 1 — should also match <span foo=bar>.
-        ast.add_selector(&"span".parse().unwrap(), 1, hasher);
+        ast.add_selector(&"span, [foo$=bar]".parse().unwrap(), 0);
+        // Add a second selector "span" with match_id 1 — should also match <span foo=bar>.
+        ast.add_selector(&"span".parse().unwrap(), 1);
 
         let memory_limiter = SharedMemoryLimiter::new(2048);
         let mut vm: SelectorMatchingVm<TestElementData> =
@@ -1778,7 +1754,7 @@ mod tests {
                     &mut match_handler,
                 )
                 .unwrap();
-            };
+            }
 
             // // Sort for deterministic comparison (HashSet iteration order varies)
             // calls.sort();
@@ -1786,7 +1762,7 @@ mod tests {
             assert_eq!(
                 calls,
                 [0, 1],
-                "Each payload should be reported exactly once"
+                "Each match_id should be reported exactly once"
             );
         });
     }

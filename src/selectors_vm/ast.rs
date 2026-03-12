@@ -1,6 +1,5 @@
-use super::MatchId;
 use super::parser::{Selector, SelectorImplDescriptor};
-use hashbrown::{DefaultHashBuilder, HashSet};
+use crate::selectors_vm::{DenseHashSet, MatchId};
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component, NthType};
 use std::fmt::{self, Debug, Formatter};
@@ -231,18 +230,18 @@ pub(crate) struct AstNode {
     pub predicate: Predicate,
     pub children: Vec<Self>,
     pub descendants: Vec<Self>,
-    pub match_ids: HashSet<MatchId>,
+    pub match_ids: DenseHashSet,
 }
 
 impl AstNode {
     #[inline]
     #[must_use]
-    fn new(predicate: Predicate, hasher: DefaultHashBuilder) -> Self {
+    fn new(predicate: Predicate) -> Self {
         Self {
             predicate,
             children: Vec::default(),
             descendants: Vec::default(),
-            match_ids: HashSet::with_hasher(hasher),
+            match_ids: DenseHashSet::new(),
         }
     }
 }
@@ -261,7 +260,6 @@ impl Ast {
         predicate: Predicate,
         branches: &mut Vec<AstNode>,
         cumulative_node_count: &mut usize,
-        hasher: DefaultHashBuilder,
     ) -> usize {
         branches
             .iter()
@@ -269,7 +267,7 @@ impl Ast {
             .find(|(_, n)| n.predicate == predicate)
             .map(|(i, _)| i)
             .unwrap_or_else(move || {
-                branches.push(AstNode::new(predicate, hasher));
+                branches.push(AstNode::new(predicate));
                 *cumulative_node_count += 1;
 
                 branches.len() - 1
@@ -277,12 +275,7 @@ impl Ast {
     }
 
     /// `match_id` is a small integer chosen by the caller. It will be returned back in `MatchInfo`
-    pub fn add_selector(
-        &mut self,
-        selector: &Selector,
-        match_id: MatchId,
-        hasher: DefaultHashBuilder,
-    ) {
+    pub fn add_selector(&mut self, selector: &Selector, match_id: MatchId) {
         for selector_item in (selector.0).slice() {
             let mut predicate = Predicate::default();
             let mut branches = &mut self.root;
@@ -293,7 +286,6 @@ impl Ast {
                         predicate,
                         branches,
                         &mut self.cumulative_node_count,
-                        hasher.clone(),
                     );
 
                     branches = &mut branches[node_idx].$branches;
@@ -318,12 +310,8 @@ impl Ast {
                 }
             }
 
-            let node_idx = Self::host_expressions(
-                predicate,
-                branches,
-                &mut self.cumulative_node_count,
-                hasher.clone(),
-            );
+            let node_idx =
+                Self::host_expressions(predicate, branches, &mut self.cumulative_node_count);
 
             branches[node_idx].match_ids.insert(match_id);
         }
@@ -333,20 +321,14 @@ impl Ast {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::selectors_vm::SelectorError;
-
-    macro_rules! set {
-        ($($items:expr),*) => {
-            vec![$($items),*].into_iter().collect::<HashSet<_>>()
-        };
-    }
+    use crate::selectors_vm::{DenseHashSet, SelectorError};
 
     #[track_caller]
     fn assert_ast(selectors: &[&str], expected: Ast) {
         let mut ast = Ast::default();
 
         for (selector, match_id) in selectors.iter().zip(0..) {
-            ast.add_selector(&selector.parse().unwrap(), match_id, Default::default());
+            ast.add_selector(&selector.parse().unwrap(), match_id);
         }
 
         assert_eq!(ast, expected);
@@ -392,7 +374,7 @@ mod tests {
                         },
                         children: vec![],
                         descendants: vec![],
-                        match_ids: set![0],
+                        match_ids: DenseHashSet::from([0]),
                     }],
                     cumulative_node_count: 1,
                 },
@@ -547,7 +529,7 @@ mod tests {
                         },
                         children: vec![],
                         descendants: vec![],
-                        match_ids: set![0],
+                        match_ids: DenseHashSet::from([0]),
                     }],
                     cumulative_node_count: 1,
                 },
@@ -583,7 +565,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    match_ids: set![0],
+                    match_ids: DenseHashSet::from([0]),
                 }],
                 cumulative_node_count: 1,
             },
@@ -605,7 +587,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    match_ids: set![0, 1],
+                    match_ids: DenseHashSet::from([0, 1]),
                 }],
                 cumulative_node_count: 1,
             },
@@ -636,7 +618,7 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            match_ids: set![0],
+                            match_ids: DenseHashSet::from([0]),
                         },
                         AstNode {
                             predicate: Predicate {
@@ -648,7 +630,7 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            match_ids: set![0],
+                            match_ids: DenseHashSet::from([0]),
                         },
                         AstNode {
                             predicate: Predicate {
@@ -660,7 +642,7 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            match_ids: set![1],
+                            match_ids: DenseHashSet::from([1]),
                         },
                         AstNode {
                             predicate: Predicate {
@@ -672,11 +654,11 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            match_ids: set![1],
+                            match_ids: DenseHashSet::from([1]),
                         },
                     ],
                     descendants: vec![],
-                    match_ids: set![],
+                    match_ids: DenseHashSet::from([]),
                 }],
                 cumulative_node_count: 5,
             },
@@ -734,9 +716,9 @@ mod tests {
                                             },
                                             children: vec![],
                                             descendants: vec![],
-                                            match_ids: set![0],
+                                            match_ids: DenseHashSet::from([0]),
                                         }],
-                                        match_ids: set![],
+                                        match_ids: DenseHashSet::from([]),
                                     },
                                     AstNode {
                                         predicate: Predicate {
@@ -748,10 +730,10 @@ mod tests {
                                         },
                                         children: vec![],
                                         descendants: vec![],
-                                        match_ids: set![1],
+                                        match_ids: DenseHashSet::from([1]),
                                     },
                                 ],
-                                match_ids: set![],
+                                match_ids: DenseHashSet::from([]),
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -763,7 +745,7 @@ mod tests {
                                 },
                                 children: vec![],
                                 descendants: vec![],
-                                match_ids: set![2],
+                                match_ids: DenseHashSet::from([2]),
                             },
                         ],
                         descendants: vec![
@@ -777,7 +759,7 @@ mod tests {
                                 },
                                 children: vec![],
                                 descendants: vec![],
-                                match_ids: set![3],
+                                match_ids: DenseHashSet::from([3]),
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -802,12 +784,12 @@ mod tests {
                                     },
                                     children: vec![],
                                     descendants: vec![],
-                                    match_ids: set![4],
+                                    match_ids: DenseHashSet::from([4]),
                                 }],
-                                match_ids: set![],
+                                match_ids: DenseHashSet::from([]),
                             },
                         ],
-                        match_ids: set![],
+                        match_ids: DenseHashSet::from([]),
                     },
                     AstNode {
                         predicate: Predicate {
@@ -819,7 +801,7 @@ mod tests {
                         },
                         children: vec![],
                         descendants: vec![],
-                        match_ids: set![5],
+                        match_ids: DenseHashSet::from([5]),
                     },
                 ],
                 cumulative_node_count: 10,
@@ -955,7 +937,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    match_ids: set![0],
+                    match_ids: DenseHashSet::from([0]),
                 }],
                 cumulative_node_count: 1,
             },
@@ -974,7 +956,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    match_ids: set![0],
+                    match_ids: DenseHashSet::from([0]),
                 }],
                 cumulative_node_count: 1,
             },
@@ -996,7 +978,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    match_ids: set![0],
+                    match_ids: DenseHashSet::from([0]),
                 }],
                 cumulative_node_count: 1,
             },

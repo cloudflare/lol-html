@@ -318,16 +318,15 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::Token;
-    use crate::selectors_vm::MatchId;
+    use crate::selectors_vm::{DenseHashSet, MatchId};
     use crate::selectors_vm::{TryExecResult, tests::test_with_token};
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
-    use hashbrown::{DefaultHashBuilder, HashSet};
 
     macro_rules! assert_instr_res {
         ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
             let expected_ids = if *$should_match {
-                Some(vec![0].into_iter().collect::<HashSet<_>>())
+                Some(DenseHashSet::from([0]))
             } else {
                 None
             };
@@ -354,9 +353,8 @@ mod tests {
     ) -> Program {
         let mut ast = Ast::default();
 
-        let hasher = DefaultHashBuilder::default();
         for (selector, match_id) in selectors.iter().zip(0..) {
-            ast.add_selector(&selector.parse().unwrap(), match_id, hasher.clone());
+            ast.add_selector(&selector.parse().unwrap(), match_id);
         }
 
         let program = Compiler::new(encoding).compile(ast);
@@ -530,7 +528,7 @@ mod tests {
 
     macro_rules! exec_instr_range {
         ($range:expr, $program:expr, $state:expr, $local_name:expr, $attr_matcher:expr) => {{
-            let mut matched_ids = HashSet::default();
+            let mut matched_ids = DenseHashSet::new();
             let mut jumps = Vec::default();
             let mut hereditary_jumps = Vec::default();
 
@@ -543,9 +541,7 @@ mod tests {
                 );
 
                 if let Some(res) = res {
-                    for &p in res.matched_ids.iter() {
-                        matched_ids.insert(p);
-                    }
+                    matched_ids.union(&res.matched_ids);
 
                     if let Some(ref j) = res.jumps {
                         jumps.push(j.to_owned());
@@ -565,7 +561,7 @@ mod tests {
         ($actual:expr, $expected:expr, $selectors:expr, $input:expr) => {
             assert_eq!(
                 $actual,
-                $expected.iter().cloned().collect::<HashSet<_>>(),
+                DenseHashSet::from($expected.iter().cloned()),
                 "Instructions didn't produce expected payload\n\
                  selectors: {:#?}\n\
                  input: {:#?}\n\

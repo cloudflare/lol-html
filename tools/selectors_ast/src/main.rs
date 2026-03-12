@@ -16,7 +16,7 @@ fn main() {
             let selector = s.parse().map_err(|e| format!("{e}")).unwrap();
 
             // private API
-            ast.add_selector(&selector, i, Default::default());
+            ast.add_selector(&selector, i);
         });
 
     println!("{ast:#?}");
