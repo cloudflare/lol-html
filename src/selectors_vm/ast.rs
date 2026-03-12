@@ -1,9 +1,9 @@
+use super::MatchId;
 use super::parser::{Selector, SelectorImplDescriptor};
 use hashbrown::{DefaultHashBuilder, HashSet};
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component, NthType};
 use std::fmt::{self, Debug, Formatter};
-use std::hash::Hash;
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub(crate) struct NthChild {
@@ -227,20 +227,14 @@ impl Predicate {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) struct AstNode<P>
-where
-    P: Hash + Eq,
-{
+pub(crate) struct AstNode {
     pub predicate: Predicate,
     pub children: Vec<Self>,
     pub descendants: Vec<Self>,
-    pub payload: HashSet<P>,
+    pub match_ids: HashSet<MatchId>,
 }
 
-impl<P> AstNode<P>
-where
-    P: Hash + Eq,
-{
+impl AstNode {
     #[inline]
     #[must_use]
     fn new(predicate: Predicate, hasher: DefaultHashBuilder) -> Self {
@@ -248,30 +242,24 @@ where
             predicate,
             children: Vec::default(),
             descendants: Vec::default(),
-            payload: HashSet::with_hasher(hasher),
+            match_ids: HashSet::with_hasher(hasher),
         }
     }
 }
 
 // exposed for selectors_ast tool
 #[derive(Default, PartialEq, Eq, Debug)]
-pub struct Ast<P>
-where
-    P: PartialEq + Eq + Copy + Debug + Hash,
-{
-    pub(crate) root: Vec<AstNode<P>>,
+pub struct Ast {
+    pub(crate) root: Vec<AstNode>,
     // NOTE: used to preallocate instruction vector during compilation.
     pub(crate) cumulative_node_count: usize,
 }
 
-impl<P> Ast<P>
-where
-    P: PartialEq + Eq + Copy + Debug + Hash,
-{
+impl Ast {
     #[inline]
     fn host_expressions(
         predicate: Predicate,
-        branches: &mut Vec<AstNode<P>>,
+        branches: &mut Vec<AstNode>,
         cumulative_node_count: &mut usize,
         hasher: DefaultHashBuilder,
     ) -> usize {
@@ -288,7 +276,13 @@ where
             })
     }
 
-    pub fn add_selector(&mut self, selector: &Selector, payload: P, hasher: DefaultHashBuilder) {
+    /// `match_id` is a small integer chosen by the caller. It will be returned back in `MatchInfo`
+    pub fn add_selector(
+        &mut self,
+        selector: &Selector,
+        match_id: MatchId,
+        hasher: DefaultHashBuilder,
+    ) {
         for selector_item in (selector.0).slice() {
             let mut predicate = Predicate::default();
             let mut branches = &mut self.root;
@@ -331,7 +325,7 @@ where
                 hasher.clone(),
             );
 
-            branches[node_idx].payload.insert(payload);
+            branches[node_idx].match_ids.insert(match_id);
         }
     }
 }
@@ -348,11 +342,11 @@ mod tests {
     }
 
     #[track_caller]
-    fn assert_ast(selectors: &[&str], expected: Ast<usize>) {
+    fn assert_ast(selectors: &[&str], expected: Ast) {
         let mut ast = Ast::default();
 
-        for (idx, selector) in selectors.iter().enumerate() {
-            ast.add_selector(&selector.parse().unwrap(), idx, Default::default());
+        for (selector, match_id) in selectors.iter().zip(0..) {
+            ast.add_selector(&selector.parse().unwrap(), match_id, Default::default());
         }
 
         assert_eq!(ast, expected);
@@ -398,7 +392,7 @@ mod tests {
                         },
                         children: vec![],
                         descendants: vec![],
-                        payload: set![0],
+                        match_ids: set![0],
                     }],
                     cumulative_node_count: 1,
                 },
@@ -553,7 +547,7 @@ mod tests {
                         },
                         children: vec![],
                         descendants: vec![],
-                        payload: set![0],
+                        match_ids: set![0],
                     }],
                     cumulative_node_count: 1,
                 },
@@ -589,7 +583,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    payload: set![0],
+                    match_ids: set![0],
                 }],
                 cumulative_node_count: 1,
             },
@@ -611,7 +605,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    payload: set![0, 1],
+                    match_ids: set![0, 1],
                 }],
                 cumulative_node_count: 1,
             },
@@ -642,7 +636,7 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: set![0],
+                            match_ids: set![0],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -654,7 +648,7 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: set![0],
+                            match_ids: set![0],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -666,7 +660,7 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: set![1],
+                            match_ids: set![1],
                         },
                         AstNode {
                             predicate: Predicate {
@@ -678,11 +672,11 @@ mod tests {
                             },
                             children: vec![],
                             descendants: vec![],
-                            payload: set![1],
+                            match_ids: set![1],
                         },
                     ],
                     descendants: vec![],
-                    payload: set![],
+                    match_ids: set![],
                 }],
                 cumulative_node_count: 5,
             },
@@ -740,9 +734,9 @@ mod tests {
                                             },
                                             children: vec![],
                                             descendants: vec![],
-                                            payload: set![0],
+                                            match_ids: set![0],
                                         }],
-                                        payload: set![],
+                                        match_ids: set![],
                                     },
                                     AstNode {
                                         predicate: Predicate {
@@ -754,10 +748,10 @@ mod tests {
                                         },
                                         children: vec![],
                                         descendants: vec![],
-                                        payload: set![1],
+                                        match_ids: set![1],
                                     },
                                 ],
-                                payload: set![],
+                                match_ids: set![],
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -769,7 +763,7 @@ mod tests {
                                 },
                                 children: vec![],
                                 descendants: vec![],
-                                payload: set![2],
+                                match_ids: set![2],
                             },
                         ],
                         descendants: vec![
@@ -783,7 +777,7 @@ mod tests {
                                 },
                                 children: vec![],
                                 descendants: vec![],
-                                payload: set![3],
+                                match_ids: set![3],
                             },
                             AstNode {
                                 predicate: Predicate {
@@ -808,12 +802,12 @@ mod tests {
                                     },
                                     children: vec![],
                                     descendants: vec![],
-                                    payload: set![4],
+                                    match_ids: set![4],
                                 }],
-                                payload: set![],
+                                match_ids: set![],
                             },
                         ],
-                        payload: set![],
+                        match_ids: set![],
                     },
                     AstNode {
                         predicate: Predicate {
@@ -825,7 +819,7 @@ mod tests {
                         },
                         children: vec![],
                         descendants: vec![],
-                        payload: set![5],
+                        match_ids: set![5],
                     },
                 ],
                 cumulative_node_count: 10,
@@ -961,7 +955,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    payload: set![0],
+                    match_ids: set![0],
                 }],
                 cumulative_node_count: 1,
             },
@@ -980,7 +974,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    payload: set![0],
+                    match_ids: set![0],
                 }],
                 cumulative_node_count: 1,
             },
@@ -1002,7 +996,7 @@ mod tests {
                     },
                     children: vec![],
                     descendants: vec![],
-                    payload: set![0],
+                    match_ids: set![0],
                 }],
                 cumulative_node_count: 1,
             },

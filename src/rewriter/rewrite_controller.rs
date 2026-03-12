@@ -1,26 +1,25 @@
-use super::handlers_dispatcher::{ContentHandlersDispatcher, Locator, SelectorHandlersLocator};
+use super::handlers_dispatcher::{ContentHandlersDispatcher, Locator};
 use super::{HandlerTypes, RewritingError, Settings};
 use crate::base::SharedEncoding;
 use crate::html::{LocalName, Namespace};
 use crate::memory::SharedMemoryLimiter;
 use crate::parser::ActionError;
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
-use crate::selectors_vm::Ast;
-use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
+use crate::selectors_vm::{
+    Ast, AuxStartTagInfoRequest, ElementData, MatchId, SelectorMatchingVm, VmError,
+};
 use crate::transform_stream::{DispatcherError, StartTagHandlingResult, TransformController};
 use hashbrown::{DefaultHashBuilder, HashSet};
 
 pub(crate) struct ElementDescriptor {
-    pub matched_content_handlers: HashSet<SelectorHandlersLocator>,
+    pub matched_content_handlers: HashSet<MatchId>,
     pub end_tag_handler_idx: Option<Locator>,
     pub remove_content: bool,
 }
 
 impl ElementData for ElementDescriptor {
-    type MatchPayload = SelectorHandlersLocator;
-
     #[inline]
-    fn matched_payload_mut(&mut self) -> &mut HashSet<SelectorHandlersLocator> {
+    fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId> {
         &mut self.matched_content_handlers
     }
 
@@ -104,7 +103,7 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
 impl<H: HandlerTypes> HtmlRewriteController<'_, H> {
     #[inline]
     fn respond_to_aux_info_request(
-        aux_info_req: AuxStartTagInfoRequest<ElementDescriptor, SelectorHandlersLocator>,
+        aux_info_req: AuxStartTagInfoRequest<ElementDescriptor>,
     ) -> StartTagHandlingResult<Self> {
         Err(DispatcherError::InfoRequest(Box::new(
             move |this, aux_info| {

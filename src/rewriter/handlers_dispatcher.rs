@@ -1,7 +1,7 @@
 use super::ElementDescriptor;
 use super::settings::*;
 use crate::rewritable_units::{DocumentEnd, Element, StartTag, Token, TokenCaptureFlags};
-use crate::selectors_vm::MatchInfo;
+use crate::selectors_vm::{MatchId, MatchInfo};
 use std::num::NonZero;
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
@@ -139,6 +139,8 @@ pub(crate) struct ContentHandlersDispatcher<'h, H: HandlerTypes> {
     end_handlers: HandlerVec<H::EndHandler<'h>>,
     next_element_can_have_content: bool,
     matched_elements_with_removed_content: usize,
+    /// Dense index by match_id
+    locators: Vec<SelectorHandlersLocator>,
 }
 
 impl<H: HandlerTypes> Default for ContentHandlersDispatcher<'_, H> {
@@ -152,6 +154,7 @@ impl<H: HandlerTypes> Default for ContentHandlersDispatcher<'_, H> {
             end_handlers: Default::default(),
             next_element_can_have_content: false,
             matched_elements_with_removed_content: 0,
+            locators: Vec::new(),
         }
     }
 }
@@ -180,8 +183,9 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
     pub fn add_selector_associated_handlers(
         &mut self,
         handlers: ElementContentHandlers<'h, H>,
-    ) -> SelectorHandlersLocator {
-        SelectorHandlersLocator {
+    ) -> MatchId {
+        let match_id = self.locators.len() as MatchId;
+        self.locators.push(SelectorHandlersLocator {
             element_handler_idx: handlers
                 .element
                 .and_then(|h| self.element_handlers.push(h, false)),
@@ -191,7 +195,8 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
             text_handler_idx: handlers
                 .text
                 .and_then(|h| self.text_handlers.push(h, false)),
-        }
+        });
+        match_id
     }
 
     #[inline]
@@ -200,8 +205,11 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
     }
 
     #[inline]
-    pub fn start_matching(&mut self, match_info: &MatchInfo<SelectorHandlersLocator>) {
-        let locator = match_info.payload;
+    pub fn start_matching(&mut self, match_info: &MatchInfo) {
+        let Some(locator) = self.locators.get(match_info.match_id as usize) else {
+            debug_assert!(false);
+            return;
+        };
 
         if match_info.with_content {
             if let Some(idx) = locator.comment_handler_idx {
@@ -222,7 +230,12 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 
     #[inline]
     pub fn stop_matching(&mut self, elem_desc: ElementDescriptor) {
-        for locator in elem_desc.matched_content_handlers {
+        for &match_id in elem_desc.matched_content_handlers.iter() {
+            let Some(locator) = self.locators.get(match_id as usize) else {
+                debug_assert!(false);
+                continue;
+            };
+
             if let Some(idx) = locator.comment_handler_idx {
                 self.comment_handlers.dec_user_count(idx);
             }

@@ -11,8 +11,8 @@ fn main() {
     serde_json::from_str::<Vec<String>>(&arg)
         .expect("Expected JSON-list of selector strings")
         .iter()
-        .enumerate()
-        .for_each(|(i, s)| {
+        .zip(0..)
+        .for_each(|(s, i)| {
             let selector = s.parse().map_err(|e| format!("{e}")).unwrap();
 
             // private API
