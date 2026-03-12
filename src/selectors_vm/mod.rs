@@ -16,6 +16,8 @@ use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
 use hashbrown::DefaultHashBuilder;
 
+pub type MatchId = u32;
+
 pub use self::ast::*;
 pub(crate) use self::attribute_matcher::AttributeMatcher;
 pub(crate) use self::compiler::Compiler;
@@ -24,22 +26,22 @@ pub use self::parser::Selector;
 pub(crate) use self::program::{ExecutionBranch, Program, TryExecResult};
 pub(crate) use self::stack::{ChildCounter, ElementData, Stack, StackItem};
 
-pub(crate) struct MatchInfo<P> {
-    pub payload: P,
+pub(crate) struct MatchInfo {
+    pub match_id: MatchId,
     pub with_content: bool,
 }
 
-pub(crate) type AuxStartTagInfoRequest<E, P> = Box<
+pub(crate) type AuxStartTagInfoRequest<E> = Box<
     dyn FnOnce(
             &mut SelectorMatchingVm<E>,
             AuxStartTagInfo<'_>,
-            &mut dyn FnMut(MatchInfo<P>),
+            &mut dyn FnMut(MatchInfo),
         ) -> Result<(), MemoryLimitExceededError>
         + Send,
 >;
 
-pub(crate) enum VmError<E: ElementData, MatchPayload> {
-    InfoRequest(AuxStartTagInfoRequest<E, MatchPayload>),
+pub(crate) enum VmError<E: ElementData> {
+    InfoRequest(AuxStartTagInfoRequest<E>),
     MemoryLimitExceeded(MemoryLimitExceededError),
 }
 
@@ -93,11 +95,11 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
         }
     }
 
-    pub fn add_execution_branch(&mut self, branch: &ExecutionBranch<E::MatchPayload>) {
-        for &payload in &branch.matched_payload {
+    pub fn add_execution_branch(&mut self, branch: &ExecutionBranch) {
+        for &payload in &branch.matched_ids {
             self.stack_item
                 .element_data
-                .matched_payload_mut()
+                .matched_ids_mut()
                 .insert(payload);
         }
 
@@ -114,13 +116,11 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
         }
     }
 
-    pub fn flush_matched_payloads(
-        &mut self,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) {
-        for &payload in self.stack_item.element_data.matched_payload_mut().iter() {
+    #[inline(never)]
+    pub fn handle_matched_ids(&mut self, match_handler: &mut dyn FnMut(MatchInfo)) {
+        for &match_id in self.stack_item.element_data.matched_ids_mut().iter() {
             match_handler(MatchInfo {
-                payload,
+                match_id,
                 with_content: self.with_content,
             });
         }
@@ -144,7 +144,7 @@ macro_rules! aux_info_request {
 }
 
 pub(crate) struct SelectorMatchingVm<E: ElementData> {
-    program: Program<E::MatchPayload>,
+    program: Program,
     stack: Stack<E>,
     enable_esi_tags: bool,
     hasher: DefaultHashBuilder,
@@ -157,7 +157,7 @@ where
     #[inline]
     #[must_use]
     pub fn new(
-        ast: Ast<E::MatchPayload>,
+        ast: Ast,
         encoding: &'static Encoding,
         memory_limiter: SharedMemoryLimiter,
         enable_esi_tags: bool,
@@ -178,8 +178,8 @@ where
         &mut self,
         local_name: LocalName<'_>,
         ns: Namespace,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) -> Result<(), VmError<E, E::MatchPayload>> {
+        match_handler: &mut dyn FnMut(MatchInfo),
+    ) -> Result<(), VmError<E>> {
         use StackDirective::*;
 
         self.stack.add_child(&local_name);
@@ -220,7 +220,7 @@ where
         &mut self,
         mut ctx: ExecutionCtx<'static, E>,
         aux_info: AuxStartTagInfo<'_>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
+        match_handler: &mut dyn FnMut(MatchInfo),
     ) -> Result<(), MemoryLimitExceededError> {
         let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ctx.ns);
 
@@ -236,7 +236,7 @@ where
             HereditaryJumpPtr::default(),
         );
 
-        ctx.flush_matched_payloads(match_handler);
+        ctx.handle_matched_ids(match_handler);
 
         if ctx.with_content {
             self.stack.push_item(ctx.stack_item)?;
@@ -249,7 +249,7 @@ where
         ctx: ExecutionCtx<'_, E>,
         bailout: Bailout<T>,
         recovery_point_handler: RecoveryPointHandler<T, E>,
-    ) -> Result<(), VmError<E, E::MatchPayload>> {
+    ) -> Result<(), VmError<E>> {
         let mut ctx = ctx.into_owned();
 
         aux_info_request!(move |this, aux_info, match_handler| {
@@ -259,7 +259,7 @@ where
 
             recovery_point_handler(this, &mut ctx, &attr_matcher, bailout.recovery_point);
 
-            ctx.flush_matched_payloads(match_handler);
+            ctx.handle_matched_ids(match_handler);
 
             if ctx.with_content {
                 this.stack.push_item(ctx.stack_item)?;
@@ -311,8 +311,8 @@ where
     fn exec_without_attrs(
         &mut self,
         mut ctx: ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) -> Result<(), VmError<E, E::MatchPayload>> {
+        match_handler: &mut dyn FnMut(MatchInfo),
+    ) -> Result<(), VmError<E>> {
         if let Err(b) =
             self.try_exec_instr_set_without_attrs(self.program.entry_points.clone(), &mut ctx)
         {
@@ -327,7 +327,7 @@ where
             return Self::bailout(ctx, b, Self::recover_after_bailout_in_hereditary_jumps);
         }
 
-        ctx.flush_matched_payloads(match_handler);
+        ctx.handle_matched_ids(match_handler);
 
         if ctx.with_content {
             self.stack
@@ -527,20 +527,17 @@ mod tests {
         should_bailout: bool,
         should_match_with_content: bool,
         /// The indexes of selectors that match this tag
-        matched_payload: HashSet<usize>,
+        matched_ids: HashSet<MatchId>,
     }
 
-    #[derive(Default)]
-    struct TestElementData(HashSet<usize>);
+    struct TestElementData(HashSet<MatchId>);
 
     impl ElementData for TestElementData {
-        type MatchPayload = usize;
-
-        fn matched_payload_mut(&mut self) -> &mut HashSet<usize> {
+        fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId> {
             &mut self.0
         }
-        fn new(_: DefaultHashBuilder) -> Self {
-            Self::default()
+        fn new(h: DefaultHashBuilder) -> Self {
+            Self(HashSet::with_hasher(h))
         }
     }
 
@@ -610,7 +607,7 @@ mod tests {
 
     macro_rules! set {
         ($($items:expr),*) => {
-            vec![$($items),*].into_iter().collect::<HashSet<_>>()
+            vec![$($items),*].into_iter().collect::<HashSet<MatchId>>()
         };
     }
 
@@ -632,8 +629,8 @@ mod tests {
             let mut ast = Ast::default();
 
             let hasher = DefaultHashBuilder::default();
-            for (i, selector) in $selectors.iter().enumerate() {
-                ast.add_selector(&selector.parse().unwrap(), i, hasher.clone());
+            for (selector, match_id) in $selectors.iter().zip(0..) {
+                ast.add_selector(&selector.parse().unwrap(), match_id, hasher.clone());
             }
 
             let memory_limiter = SharedMemoryLimiter::new(2048);
@@ -650,12 +647,12 @@ mod tests {
             test_with_token($tag_html, UTF_8, |t| {
                 match t {
                     Token::StartTag(t) => {
-                        let mut matched_payload = HashSet::default();
+                        let mut matched_ids = HashSet::default();
 
                         {
-                            let mut match_handler = |m: MatchInfo<_>| {
+                            let mut match_handler = |m: MatchInfo| {
                                 assert_eq!(m.with_content, $expectation.should_match_with_content);
-                                matched_payload.insert(m.payload);
+                                matched_ids.insert(m.match_id);
                             };
 
                             let result =
@@ -689,7 +686,7 @@ mod tests {
                             }
                         }
 
-                        assert_eq!(matched_payload, $expectation.matched_payload);
+                        assert_eq!(matched_ids, $expectation.matched_ids);
                     }
                     _ => panic!("Start tag expected"),
                 }
@@ -698,21 +695,21 @@ mod tests {
     }
 
     macro_rules! exec_for_end_tag_and_assert {
-        ($vm:expr, $tag_html:expr, $expected_unmatched_payload:expr) => {
+        ($vm:expr, $tag_html:expr, $expected_unmatched_ids:expr) => {
             test_with_token($tag_html, UTF_8, |t| match t {
                 Token::EndTag(t) => {
-                    let mut unmatched_payload = HashMap::default();
+                    let mut unmatched_ids = HashMap::default();
 
                     $vm.exec_for_end_tag(local_name!(t), |elem_data: TestElementData| {
-                        for payload in elem_data.0 {
-                            unmatched_payload
-                                .entry(payload)
+                        for &match_id in elem_data.0.iter() {
+                            unmatched_ids
+                                .entry(match_id)
                                 .and_modify(|c| *c += 1)
                                 .or_insert(1);
                         }
                     });
 
-                    assert_eq!(unmatched_payload, $expected_unmatched_payload);
+                    assert_eq!(unmatched_ids, $expected_unmatched_ids);
                 }
                 _ => panic!("End tag expected"),
             });
@@ -732,7 +729,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -746,7 +743,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -760,7 +757,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![1, 2],
+                matched_ids: set![1, 2],
             }
         );
 
@@ -774,7 +771,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -789,7 +786,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![2],
+                matched_ids: set![2],
             }
         );
 
@@ -805,7 +802,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![2],
+                matched_ids: set![2],
             }
         );
 
@@ -842,7 +839,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -856,7 +853,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -871,7 +868,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -890,7 +887,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -901,7 +898,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -912,7 +909,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: set![1],
             }
         );
 
@@ -923,7 +920,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1, 2],
+                matched_ids: set![1, 2],
             }
         );
 
@@ -941,7 +938,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -952,7 +949,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2],
+                matched_ids: set![0, 1, 2],
             }
         );
     }
@@ -970,7 +967,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -984,7 +981,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -1002,7 +999,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1020,7 +1017,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: set![1],
             }
         );
 
@@ -1035,7 +1032,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -1065,7 +1062,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1079,7 +1076,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -1097,7 +1094,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1115,7 +1112,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1130,7 +1127,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -1153,7 +1150,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: set![1],
             }
         );
 
@@ -1168,7 +1165,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -1198,7 +1195,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1212,7 +1209,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -1227,7 +1224,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1250,7 +1247,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: set![1],
             }
         );
 
@@ -1265,7 +1262,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 2],
+                matched_ids: set![0, 2],
             }
         );
 
@@ -1286,7 +1283,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1300,7 +1297,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2],
+                matched_ids: set![0, 1, 2],
             }
         );
 
@@ -1318,7 +1315,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: set![1],
             }
         );
 
@@ -1336,7 +1333,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1, 3],
+                matched_ids: set![1, 3],
             }
         );
     }
@@ -1354,7 +1351,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1368,7 +1365,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -1383,7 +1380,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -1399,7 +1396,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: set![1],
             }
         );
 
@@ -1416,7 +1413,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: set![0, 1],
             }
         );
 
@@ -1435,7 +1432,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
     }
@@ -1458,7 +1455,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1472,7 +1469,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1486,7 +1483,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -1501,7 +1498,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2, 3],
+                matched_ids: set![0, 1, 2, 3],
             }
         );
 
@@ -1517,7 +1514,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 2],
+                matched_ids: set![0, 2],
             }
         );
 
@@ -1538,7 +1535,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1552,7 +1549,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -1567,7 +1564,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2],
+                matched_ids: set![0, 1, 2],
             }
         );
 
@@ -1583,7 +1580,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 2],
+                matched_ids: set![0, 2],
             }
         );
 
@@ -1604,7 +1601,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1618,7 +1615,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1636,7 +1633,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1651,7 +1648,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1667,7 +1664,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1684,7 +1681,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
 
@@ -1702,7 +1699,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
     }
@@ -1719,7 +1716,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: set![0],
             }
         );
 
@@ -1735,7 +1732,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: set![],
             }
         );
     }
@@ -1763,8 +1760,8 @@ mod tests {
             };
             let mut calls = Vec::new();
 
-            let mut match_handler = |m: MatchInfo<_>| {
-                calls.push(m.payload);
+            let mut match_handler = |m: MatchInfo| {
+                calls.push(m.match_id);
             };
 
             let result = vm.exec_for_start_tag(local_name!(t), Namespace::Html, &mut match_handler);
@@ -1786,7 +1783,11 @@ mod tests {
             // // Sort for deterministic comparison (HashSet iteration order varies)
             // calls.sort();
 
-            assert_eq!(calls, [0, 1], "Each payload should be reported exactly once");
+            assert_eq!(
+                calls,
+                [0, 1],
+                "Each payload should be reported exactly once"
+            );
         });
     }
 }

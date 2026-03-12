@@ -3,10 +3,10 @@ use super::ast::NthChild;
 use super::program::AddressRange;
 use crate::html::{LocalName, Namespace, Tag};
 use crate::memory::{LimitedVec, MemoryLimitExceededError, SharedMemoryLimiter};
+use crate::selectors_vm::MatchId;
 // use hashbrown for raw entry, switch back to std once it stablizes there
 use hashbrown::{DefaultHashBuilder, HashMap, HashSet, hash_map::RawEntryMut};
-use std::fmt::Debug;
-use std::hash::{BuildHasher, Hash};
+use std::hash::BuildHasher;
 
 #[inline]
 fn is_void_element(local_name: &LocalName<'_>, enable_esi_tags: bool) -> bool {
@@ -38,9 +38,7 @@ fn is_void_element(local_name: &LocalName<'_>, enable_esi_tags: bool) -> bool {
 }
 
 pub(crate) trait ElementData: 'static {
-    type MatchPayload: PartialEq + Eq + Copy + Debug + Hash + 'static;
-
-    fn matched_payload_mut(&mut self) -> &mut HashSet<Self::MatchPayload>;
+    fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId>;
     fn new(hasher: DefaultHashBuilder) -> Self;
 }
 
@@ -333,15 +331,14 @@ impl<E: ElementData> Stack<E> {
 mod tests {
     use super::*;
     use crate::memory::SharedMemoryLimiter;
+    use crate::selectors_vm::MatchId;
     use encoding_rs::UTF_8;
 
     #[derive(Default)]
     struct TestElementData(usize);
 
     impl ElementData for TestElementData {
-        type MatchPayload = ();
-
-        fn matched_payload_mut(&mut self) -> &mut HashSet<()> {
+        fn matched_ids_mut(&mut self) -> &mut HashSet<MatchId> {
             unreachable!();
         }
         fn new(_: DefaultHashBuilder) -> Self {
