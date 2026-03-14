@@ -1,33 +1,31 @@
-use super::handlers_dispatcher::{ContentHandlersDispatcher, SelectorHandlersLocator};
+use super::handlers_dispatcher::{ContentHandlersDispatcher, Locator};
 use super::{HandlerTypes, RewritingError, Settings};
 use crate::base::SharedEncoding;
 use crate::html::{LocalName, Namespace};
 use crate::memory::SharedMemoryLimiter;
 use crate::parser::ActionError;
 use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
-use crate::selectors_vm::Ast;
-use crate::selectors_vm::{AuxStartTagInfoRequest, ElementData, SelectorMatchingVm, VmError};
+use crate::selectors_vm::{
+    Ast, AuxStartTagInfoRequest, DenseHashSet, ElementData, SelectorMatchingVm, VmError,
+};
 use crate::transform_stream::{DispatcherError, StartTagHandlingResult, TransformController};
-use hashbrown::{DefaultHashBuilder, HashSet};
 
 pub(crate) struct ElementDescriptor {
-    pub matched_content_handlers: HashSet<SelectorHandlersLocator>,
-    pub end_tag_handler_idx: Option<usize>,
+    pub matched_content_handlers: DenseHashSet,
+    pub end_tag_handler_idx: Option<Locator>,
     pub remove_content: bool,
 }
 
 impl ElementData for ElementDescriptor {
-    type MatchPayload = SelectorHandlersLocator;
-
     #[inline]
-    fn matched_payload_mut(&mut self) -> &mut HashSet<SelectorHandlersLocator> {
+    fn matched_ids_mut(&mut self) -> &mut DenseHashSet {
         &mut self.matched_content_handlers
     }
 
     #[inline]
-    fn new(hasher: DefaultHashBuilder) -> Self {
+    fn new() -> Self {
         Self {
-            matched_content_handlers: HashSet::with_hasher(hasher),
+            matched_content_handlers: DenseHashSet::new(),
             end_tag_handler_idx: None,
             remove_content: false,
         }
@@ -64,11 +62,10 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
             .into_iter()
             .chain(settings.element_content_handlers);
 
-        let hasher = DefaultHashBuilder::default();
         for (selector, handlers) in element_content_handlers {
-            let locator = dispatcher.add_selector_associated_handlers(handlers);
+            let match_id = dispatcher.add_selector_associated_handlers(handlers);
 
-            selectors_ast.add_selector(&selector, locator, hasher.clone());
+            selectors_ast.add_selector(&selector, match_id);
         }
 
         for handlers in settings.document_content_handlers {
@@ -104,7 +101,7 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
 impl<H: HandlerTypes> HtmlRewriteController<'_, H> {
     #[inline]
     fn respond_to_aux_info_request(
-        aux_info_req: AuxStartTagInfoRequest<ElementDescriptor, SelectorHandlersLocator>,
+        aux_info_req: AuxStartTagInfoRequest<ElementDescriptor>,
     ) -> StartTagHandlingResult<Self> {
         Err(DispatcherError::InfoRequest(Box::new(
             move |this, aux_info| {

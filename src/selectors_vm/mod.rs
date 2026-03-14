@@ -4,6 +4,7 @@ mod ast;
 mod attribute_matcher;
 mod compiler;
 mod error;
+mod match_info;
 mod parser;
 mod program;
 mod stack;
@@ -14,42 +15,32 @@ use crate::html::{LocalName, Namespace};
 use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};
 use crate::transform_stream::AuxStartTagInfo;
 use encoding_rs::Encoding;
-use hashbrown::DefaultHashBuilder;
 
 pub use self::ast::*;
 pub(crate) use self::attribute_matcher::AttributeMatcher;
 pub(crate) use self::compiler::Compiler;
 pub use self::error::SelectorError;
+pub(crate) use self::match_info::{DenseHashSet, MatchId, MatchInfo};
 pub use self::parser::Selector;
 pub(crate) use self::program::{ExecutionBranch, Program, TryExecResult};
 pub(crate) use self::stack::{ChildCounter, ElementData, Stack, StackItem};
 
-pub(crate) struct MatchInfo<P> {
-    pub payload: P,
-    pub with_content: bool,
-}
-
-pub(crate) type AuxStartTagInfoRequest<E, P> = Box<
+pub(crate) type AuxStartTagInfoRequest<E> = Box<
     dyn FnOnce(
             &mut SelectorMatchingVm<E>,
             AuxStartTagInfo<'_>,
-            &mut dyn FnMut(MatchInfo<P>),
+            &mut dyn FnMut(MatchInfo),
         ) -> Result<(), MemoryLimitExceededError>
         + Send,
 >;
 
-pub(crate) enum VmError<E: ElementData, MatchPayload> {
-    InfoRequest(AuxStartTagInfoRequest<E, MatchPayload>),
+pub(crate) enum VmError<E: ElementData> {
+    InfoRequest(AuxStartTagInfoRequest<E>),
     MemoryLimitExceeded(MemoryLimitExceededError),
 }
 
-type RecoveryPointHandler<T, E, P> = fn(
-    &mut SelectorMatchingVm<E>,
-    &mut ExecutionCtx<'static, E>,
-    &AttributeMatcher<'_>,
-    T,
-    &mut dyn FnMut(MatchInfo<P>),
-);
+type RecoveryPointHandler<T, E> =
+    fn(&mut SelectorMatchingVm<E>, &mut ExecutionCtx<'static, E>, &AttributeMatcher<'_>, T);
 
 #[derive(Default)]
 struct JumpPtr {
@@ -84,37 +75,21 @@ struct ExecutionCtx<'i, E: ElementData> {
 
 impl<'i, E: ElementData> ExecutionCtx<'i, E> {
     #[inline]
-    pub fn new(
-        local_name: LocalName<'i>,
-        ns: Namespace,
-        enable_esi_tags: bool,
-        hasher: DefaultHashBuilder,
-    ) -> Self {
+    pub fn new(local_name: LocalName<'i>, ns: Namespace, enable_esi_tags: bool) -> Self {
         ExecutionCtx {
-            stack_item: StackItem::new(local_name, hasher),
+            stack_item: StackItem::new(local_name),
             with_content: true,
             ns,
             enable_esi_tags,
         }
     }
 
-    pub fn add_execution_branch(
-        &mut self,
-        branch: &ExecutionBranch<E::MatchPayload>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) {
-        for &payload in &branch.matched_payload {
-            let element_payload = self.stack_item.element_data.matched_payload_mut();
-
-            if !element_payload.contains(&payload) {
-                match_handler(MatchInfo {
-                    payload,
-                    with_content: self.with_content,
-                });
-
-                element_payload.insert(payload);
-            }
-        }
+    #[inline(never)]
+    pub fn add_execution_branch(&mut self, branch: &ExecutionBranch) {
+        self.stack_item
+            .element_data
+            .matched_ids_mut()
+            .union(&branch.matched_ids);
 
         if self.with_content {
             if let Some(ref jumps) = branch.jumps {
@@ -126,6 +101,16 @@ impl<'i, E: ElementData> ExecutionCtx<'i, E> {
                     .hereditary_jumps
                     .push(hereditary_jumps.to_owned());
             }
+        }
+    }
+
+    #[inline(never)]
+    pub fn handle_matched_ids(&mut self, match_handler: &mut dyn FnMut(MatchInfo)) {
+        for match_id in self.stack_item.element_data.matched_ids_mut().iter() {
+            match_handler(MatchInfo {
+                match_id,
+                with_content: self.with_content,
+            });
         }
     }
 
@@ -147,10 +132,9 @@ macro_rules! aux_info_request {
 }
 
 pub(crate) struct SelectorMatchingVm<E: ElementData> {
-    program: Program<E::MatchPayload>,
+    program: Program,
     stack: Stack<E>,
     enable_esi_tags: bool,
-    hasher: DefaultHashBuilder,
 }
 
 impl<E> SelectorMatchingVm<E>
@@ -160,20 +144,17 @@ where
     #[inline]
     #[must_use]
     pub fn new(
-        ast: Ast<E::MatchPayload>,
+        ast: Ast,
         encoding: &'static Encoding,
         memory_limiter: SharedMemoryLimiter,
         enable_esi_tags: bool,
     ) -> Self {
         let program = Compiler::new(encoding).compile(ast);
-        let enable_nth_of_type = program.enable_nth_of_type;
-        let hasher = DefaultHashBuilder::default();
 
         Self {
+            stack: Stack::new(memory_limiter, program.enable_nth_of_type),
             program,
-            stack: Stack::new(memory_limiter, enable_nth_of_type.then(|| hasher.clone())),
             enable_esi_tags,
-            hasher,
         }
     }
 
@@ -181,13 +162,13 @@ where
         &mut self,
         local_name: LocalName<'_>,
         ns: Namespace,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) -> Result<(), VmError<E, E::MatchPayload>> {
+        match_handler: &mut dyn FnMut(MatchInfo),
+    ) -> Result<(), VmError<E>> {
         use StackDirective::*;
 
         self.stack.add_child(&local_name);
 
-        let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags, self.hasher.clone());
+        let mut ctx = ExecutionCtx::new(local_name, ns, self.enable_esi_tags);
 
         match Stack::get_stack_directive(&ctx.stack_item, ctx.ns, ctx.enable_esi_tags) {
             PopImmediately => {
@@ -223,28 +204,23 @@ where
         &mut self,
         mut ctx: ExecutionCtx<'static, E>,
         aux_info: AuxStartTagInfo<'_>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
+        match_handler: &mut dyn FnMut(MatchInfo),
     ) -> Result<(), MemoryLimitExceededError> {
         let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ctx.ns);
 
         ctx.with_content = !aux_info.self_closing;
 
-        self.exec_instr_set_with_attrs(
-            &self.program.entry_points,
-            &attr_matcher,
-            &mut ctx,
-            0,
-            match_handler,
-        );
+        self.exec_instr_set_with_attrs(&self.program.entry_points, &attr_matcher, &mut ctx, 0);
 
-        self.exec_jumps_with_attrs(&attr_matcher, &mut ctx, JumpPtr::default(), match_handler);
+        self.exec_jumps_with_attrs(&attr_matcher, &mut ctx, JumpPtr::default());
 
         self.exec_hereditary_jumps_with_attrs(
             &attr_matcher,
             &mut ctx,
             HereditaryJumpPtr::default(),
-            match_handler,
         );
+
+        ctx.handle_matched_ids(match_handler);
 
         if ctx.with_content {
             self.stack.push_item(ctx.stack_item)?;
@@ -256,27 +232,18 @@ where
     fn bailout<T: 'static + Send>(
         ctx: ExecutionCtx<'_, E>,
         bailout: Bailout<T>,
-        recovery_point_handler: RecoveryPointHandler<T, E, E::MatchPayload>,
-    ) -> Result<(), VmError<E, E::MatchPayload>> {
+        recovery_point_handler: RecoveryPointHandler<T, E>,
+    ) -> Result<(), VmError<E>> {
         let mut ctx = ctx.into_owned();
 
         aux_info_request!(move |this, aux_info, match_handler| {
             let attr_matcher = AttributeMatcher::new(*aux_info.input, aux_info.attr_buffer, ctx.ns);
 
-            this.complete_instr_execution_with_attrs(
-                bailout.at_addr,
-                &attr_matcher,
-                &mut ctx,
-                match_handler,
-            );
+            this.complete_instr_execution_with_attrs(bailout.at_addr, &attr_matcher, &mut ctx);
 
-            recovery_point_handler(
-                this,
-                &mut ctx,
-                &attr_matcher,
-                bailout.recovery_point,
-                match_handler,
-            );
+            recovery_point_handler(this, &mut ctx, &attr_matcher, bailout.recovery_point);
+
+            ctx.handle_matched_ids(match_handler);
 
             if ctx.with_content {
                 this.stack.push_item(ctx.stack_item)?;
@@ -291,24 +258,17 @@ where
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher<'_>,
         recovery_point: usize,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         self.exec_instr_set_with_attrs(
             &self.program.entry_points,
             attr_matcher,
             ctx,
             recovery_point,
-            match_handler,
         );
 
-        self.exec_jumps_with_attrs(attr_matcher, ctx, JumpPtr::default(), match_handler);
+        self.exec_jumps_with_attrs(attr_matcher, ctx, JumpPtr::default());
 
-        self.exec_hereditary_jumps_with_attrs(
-            attr_matcher,
-            ctx,
-            HereditaryJumpPtr::default(),
-            match_handler,
-        );
+        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, HereditaryJumpPtr::default());
     }
 
     fn recover_after_bailout_in_jumps(
@@ -316,16 +276,10 @@ where
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher<'_>,
         recovery_point: JumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        self.exec_jumps_with_attrs(attr_matcher, ctx, recovery_point, match_handler);
+        self.exec_jumps_with_attrs(attr_matcher, ctx, recovery_point);
 
-        self.exec_hereditary_jumps_with_attrs(
-            attr_matcher,
-            ctx,
-            HereditaryJumpPtr::default(),
-            match_handler,
-        );
+        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, HereditaryJumpPtr::default());
     }
 
     #[inline]
@@ -334,31 +288,30 @@ where
         ctx: &mut ExecutionCtx<'static, E>,
         attr_matcher: &AttributeMatcher<'_>,
         recovery_point: HereditaryJumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
-        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, recovery_point, match_handler);
+        self.exec_hereditary_jumps_with_attrs(attr_matcher, ctx, recovery_point);
     }
 
     fn exec_without_attrs(
         &mut self,
         mut ctx: ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
-    ) -> Result<(), VmError<E, E::MatchPayload>> {
-        if let Err(b) = self.try_exec_instr_set_without_attrs(
-            self.program.entry_points.clone(),
-            &mut ctx,
-            match_handler,
-        ) {
+        match_handler: &mut dyn FnMut(MatchInfo),
+    ) -> Result<(), VmError<E>> {
+        if let Err(b) =
+            self.try_exec_instr_set_without_attrs(self.program.entry_points.clone(), &mut ctx)
+        {
             return Self::bailout(ctx, b, Self::recover_after_bailout_in_entry_points);
         }
 
-        if let Err(b) = self.try_exec_jumps_without_attrs(&mut ctx, match_handler) {
+        if let Err(b) = self.try_exec_jumps_without_attrs(&mut ctx) {
             return Self::bailout(ctx, b, Self::recover_after_bailout_in_jumps);
         }
 
-        if let Err(b) = self.try_exec_hereditary_jumps_without_attrs(&mut ctx, match_handler) {
+        if let Err(b) = self.try_exec_hereditary_jumps_without_attrs(&mut ctx) {
             return Self::bailout(ctx, b, Self::recover_after_bailout_in_hereditary_jumps);
         }
+
+        ctx.handle_matched_ids(match_handler);
 
         if ctx.with_content {
             self.stack
@@ -375,13 +328,12 @@ where
         addr: usize,
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         let state = self.stack.build_state(&ctx.stack_item.local_name);
         if let Some(branch) =
             self.program.instructions[addr].complete_exec_with_attrs(&state, attr_matcher)
         {
-            ctx.add_execution_branch(branch, match_handler);
+            ctx.add_execution_branch(branch);
         }
     }
 
@@ -390,7 +342,6 @@ where
         &self,
         addr_range: AddressRange,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<usize>> {
         let start = addr_range.start;
         let state = self.stack.build_state(&ctx.stack_item.local_name);
@@ -399,7 +350,7 @@ where
             match self.program.instructions[addr]
                 .try_exec_without_attrs(&state, &ctx.stack_item.local_name)
             {
-                TryExecResult::Branch(branch) => ctx.add_execution_branch(branch, match_handler),
+                TryExecResult::Branch(branch) => ctx.add_execution_branch(branch),
                 TryExecResult::AttributesRequired => {
                     return Err(Bailout {
                         at_addr: addr,
@@ -420,14 +371,13 @@ where
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
         offset: usize,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         let state = self.stack.build_state(&ctx.stack_item.local_name);
         for addr in addr_range.start + offset..addr_range.end {
             let instr = &self.program.instructions[addr];
 
             if let Some(branch) = instr.exec(&state, &ctx.stack_item.local_name, attr_matcher) {
-                ctx.add_execution_branch(branch, match_handler);
+                ctx.add_execution_branch(branch);
             }
         }
     }
@@ -435,11 +385,10 @@ where
     fn try_exec_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<JumpPtr>> {
         if let Some(parent) = self.stack.items().last() {
             for (i, jumps) in parent.jumps.iter().enumerate() {
-                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx, match_handler)
+                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
                     .map_err(|b| Bailout {
                         at_addr: b.at_addr,
                         recovery_point: JumpPtr {
@@ -458,22 +407,15 @@ where
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
         ptr: JumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         // NOTE: find pointed jumps instruction set and execute it with the offset.
         if let Some(parent) = self.stack.items().last() {
             if let Some(ptr_jumps) = parent.jumps.get(ptr.instr_set_idx) {
-                self.exec_instr_set_with_attrs(
-                    ptr_jumps,
-                    attr_matcher,
-                    ctx,
-                    ptr.offset,
-                    match_handler,
-                );
+                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
 
                 // NOTE: execute remaining jumps instruction sets as usual.
                 for jumps in parent.jumps.iter().skip(ptr.instr_set_idx + 1) {
-                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0, match_handler);
+                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
                 }
             }
         }
@@ -482,11 +424,10 @@ where
     fn try_exec_hereditary_jumps_without_attrs(
         &self,
         ctx: &mut ExecutionCtx<'_, E>,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) -> Result<(), Bailout<HereditaryJumpPtr>> {
         for (i, ancestor) in self.stack.items().iter().rev().enumerate() {
             for (j, jumps) in ancestor.hereditary_jumps.iter().enumerate() {
-                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx, match_handler)
+                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
                     .map_err(move |b| Bailout {
                         at_addr: b.at_addr,
                         recovery_point: HereditaryJumpPtr {
@@ -510,7 +451,6 @@ where
         attr_matcher: &AttributeMatcher<'_>,
         ctx: &mut ExecutionCtx<'_, E>,
         ptr: HereditaryJumpPtr,
-        match_handler: &mut dyn FnMut(MatchInfo<E::MatchPayload>),
     ) {
         let items = self.stack.items();
 
@@ -524,13 +464,7 @@ where
         // set and execute it with the offset.
         if let Some(ptr_ancestor) = items.get(ptr_ancestor_idx) {
             if let Some(ptr_jumps) = ptr_ancestor.hereditary_jumps.get(ptr.instr_set_idx) {
-                self.exec_instr_set_with_attrs(
-                    ptr_jumps,
-                    attr_matcher,
-                    ctx,
-                    ptr.offset,
-                    match_handler,
-                );
+                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
 
                 // NOTE: execute the rest of jump instruction sets in the pointed ancestor as usual.
                 for jumps in ptr_ancestor
@@ -538,7 +472,7 @@ where
                     .iter()
                     .skip(ptr.instr_set_idx + 1)
                 {
-                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0, match_handler);
+                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
                 }
             }
 
@@ -546,7 +480,7 @@ where
             if ptr_ancestor.has_ancestor_with_hereditary_jumps {
                 for ancestor in items.iter().rev().skip(ptr.stack_offset + 1) {
                     for jumps in &ancestor.hereditary_jumps {
-                        self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0, match_handler);
+                        self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
                     }
 
                     if !ancestor.has_ancestor_with_hereditary_jumps {
@@ -571,26 +505,23 @@ mod tests {
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
     };
     use encoding_rs::{Encoding, UTF_8};
-    use hashbrown::{HashMap, HashSet};
+    use hashbrown::HashMap;
 
     struct Expectation {
         should_bailout: bool,
         should_match_with_content: bool,
         /// The indexes of selectors that match this tag
-        matched_payload: HashSet<usize>,
+        matched_ids: DenseHashSet,
     }
 
-    #[derive(Default)]
-    struct TestElementData(HashSet<usize>);
+    struct TestElementData(DenseHashSet);
 
     impl ElementData for TestElementData {
-        type MatchPayload = usize;
-
-        fn matched_payload_mut(&mut self) -> &mut HashSet<usize> {
+        fn matched_ids_mut(&mut self) -> &mut DenseHashSet {
             &mut self.0
         }
-        fn new(_: DefaultHashBuilder) -> Self {
-            Self::default()
+        fn new() -> Self {
+            Self(DenseHashSet::new())
         }
     }
 
@@ -658,12 +589,6 @@ mod tests {
         transform_stream.end().unwrap();
     }
 
-    macro_rules! set {
-        ($($items:expr),*) => {
-            vec![$($items),*].into_iter().collect::<HashSet<_>>()
-        };
-    }
-
     macro_rules! map {
         ($($items:expr),*) => {
             vec![$($items),*].into_iter().collect::<HashMap<_, _>>()
@@ -681,9 +606,8 @@ mod tests {
         ($selectors:expr) => {{
             let mut ast = Ast::default();
 
-            let hasher = DefaultHashBuilder::default();
-            for (i, selector) in $selectors.iter().enumerate() {
-                ast.add_selector(&selector.parse().unwrap(), i, hasher.clone());
+            for (selector, match_id) in $selectors.iter().zip(0..) {
+                ast.add_selector(&selector.parse().unwrap(), match_id);
             }
 
             let memory_limiter = SharedMemoryLimiter::new(2048);
@@ -700,12 +624,12 @@ mod tests {
             test_with_token($tag_html, UTF_8, |t| {
                 match t {
                     Token::StartTag(t) => {
-                        let mut matched_payload = HashSet::default();
+                        let mut matched_ids = DenseHashSet::new();
 
                         {
-                            let mut match_handler = |m: MatchInfo<_>| {
+                            let mut match_handler = |m: MatchInfo| {
                                 assert_eq!(m.with_content, $expectation.should_match_with_content);
-                                matched_payload.insert(m.payload);
+                                matched_ids.insert(m.match_id);
                             };
 
                             let result =
@@ -739,7 +663,7 @@ mod tests {
                             }
                         }
 
-                        assert_eq!(matched_payload, $expectation.matched_payload);
+                        assert_eq!(matched_ids, $expectation.matched_ids);
                     }
                     _ => panic!("Start tag expected"),
                 }
@@ -748,21 +672,21 @@ mod tests {
     }
 
     macro_rules! exec_for_end_tag_and_assert {
-        ($vm:expr, $tag_html:expr, $expected_unmatched_payload:expr) => {
+        ($vm:expr, $tag_html:expr, $expected_unmatched_ids:expr) => {
             test_with_token($tag_html, UTF_8, |t| match t {
                 Token::EndTag(t) => {
-                    let mut unmatched_payload = HashMap::default();
+                    let mut unmatched_ids = HashMap::default();
 
                     $vm.exec_for_end_tag(local_name!(t), |elem_data: TestElementData| {
-                        for payload in elem_data.0 {
-                            unmatched_payload
-                                .entry(payload)
+                        for match_id in elem_data.0.iter() {
+                            unmatched_ids
+                                .entry(match_id)
                                 .and_modify(|c| *c += 1)
                                 .or_insert(1);
                         }
                     });
 
-                    assert_eq!(unmatched_payload, $expected_unmatched_payload);
+                    assert_eq!(unmatched_ids, $expected_unmatched_ids);
                 }
                 _ => panic!("End tag expected"),
             });
@@ -782,7 +706,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -796,7 +720,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -810,7 +734,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![1, 2],
+                matched_ids: DenseHashSet::from([1, 2]),
             }
         );
 
@@ -824,7 +748,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -839,7 +763,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![2],
+                matched_ids: DenseHashSet::from([2]),
             }
         );
 
@@ -855,7 +779,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![2],
+                matched_ids: DenseHashSet::from([2]),
             }
         );
 
@@ -892,7 +816,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -906,7 +830,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -921,7 +845,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -940,7 +864,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -951,7 +875,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -962,7 +886,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -973,7 +897,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1, 2],
+                matched_ids: DenseHashSet::from([1, 2]),
             }
         );
 
@@ -991,7 +915,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1002,7 +926,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2],
+                matched_ids: DenseHashSet::from([0, 1, 2]),
             }
         );
     }
@@ -1020,7 +944,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1034,7 +958,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1052,7 +976,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1070,7 +994,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1085,7 +1009,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1115,7 +1039,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1129,7 +1053,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1147,7 +1071,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1165,7 +1089,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1180,7 +1104,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1203,7 +1127,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1218,7 +1142,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1248,7 +1172,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1262,7 +1186,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1277,7 +1201,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1300,7 +1224,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1315,7 +1239,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 2],
+                matched_ids: DenseHashSet::from([0, 2]),
             }
         );
 
@@ -1336,7 +1260,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1350,7 +1274,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2],
+                matched_ids: DenseHashSet::from([0, 1, 2]),
             }
         );
 
@@ -1368,7 +1292,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1386,7 +1310,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1, 3],
+                matched_ids: DenseHashSet::from([1, 3]),
             }
         );
     }
@@ -1404,7 +1328,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1418,7 +1342,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1433,7 +1357,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1449,7 +1373,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![1],
+                matched_ids: DenseHashSet::from([1]),
             }
         );
 
@@ -1466,7 +1390,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1],
+                matched_ids: DenseHashSet::from([0, 1]),
             }
         );
 
@@ -1485,7 +1409,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
     }
@@ -1508,7 +1432,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1522,7 +1446,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1536,7 +1460,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: false,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1551,7 +1475,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2, 3],
+                matched_ids: DenseHashSet::from([0, 1, 2, 3]),
             }
         );
 
@@ -1567,7 +1491,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 2],
+                matched_ids: DenseHashSet::from([0, 2]),
             }
         );
 
@@ -1588,7 +1512,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1602,7 +1526,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1617,7 +1541,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 1, 2],
+                matched_ids: DenseHashSet::from([0, 1, 2]),
             }
         );
 
@@ -1633,7 +1557,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0, 2],
+                matched_ids: DenseHashSet::from([0, 2]),
             }
         );
 
@@ -1654,7 +1578,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1668,7 +1592,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1686,7 +1610,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1701,7 +1625,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1717,7 +1641,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1734,7 +1658,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
 
@@ -1752,7 +1676,7 @@ mod tests {
             Expectation {
                 should_bailout: true,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
     }
@@ -1769,7 +1693,7 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: true,
-                matched_payload: set![0],
+                matched_ids: DenseHashSet::from([0]),
             }
         );
 
@@ -1785,8 +1709,61 @@ mod tests {
             Expectation {
                 should_bailout: false,
                 should_match_with_content: false,
-                matched_payload: set![],
+                matched_ids: DenseHashSet::from([]),
             }
         );
+    }
+
+    /// Test that match_handler is called exactly once per matched id,
+    /// even when the same match_ids can be reached through multiple instruction paths.
+    /// For example, `"span, [foo$=bar]"` is one selector (match_id 0) with two
+    /// comma-separated entries — both match `<span foo=bar>`, but match_id 0
+    /// must be reported only once.
+    #[test]
+    fn no_duplicate_match_handler_calls() {
+        let mut ast = Ast::default();
+        ast.add_selector(&"span, [foo$=bar]".parse().unwrap(), 0);
+        // Add a second selector "span" with match_id 1 — should also match <span foo=bar>.
+        ast.add_selector(&"span".parse().unwrap(), 1);
+
+        let memory_limiter = SharedMemoryLimiter::new(2048);
+        let mut vm: SelectorMatchingVm<TestElementData> =
+            SelectorMatchingVm::new(ast, UTF_8, memory_limiter, false);
+
+        test_with_token("<span foo=bar>", UTF_8, |t| {
+            let Token::StartTag(t) = t else {
+                panic!("must be start tag");
+            };
+            let mut calls = Vec::new();
+
+            let mut match_handler = |m: MatchInfo| {
+                calls.push(m.match_id);
+            };
+
+            let result = vm.exec_for_start_tag(local_name!(t), Namespace::Html, &mut match_handler);
+
+            if let Err(VmError::InfoRequest(inforeq)) = result {
+                let (input, attr_buffer) = t.raw_attributes();
+                inforeq(
+                    &mut vm,
+                    AuxStartTagInfo {
+                        input,
+                        attr_buffer,
+                        self_closing: t.self_closing(),
+                    },
+                    &mut match_handler,
+                )
+                .unwrap();
+            }
+
+            // // Sort for deterministic comparison (HashSet iteration order varies)
+            // calls.sort();
+
+            assert_eq!(
+                calls,
+                [0, 1],
+                "Each match_id should be reported exactly once"
+            );
+        });
     }
 }

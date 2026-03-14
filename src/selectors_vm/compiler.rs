@@ -8,8 +8,6 @@ use crate::base::{BytesCow, HasReplacementsError};
 use crate::html::LocalName;
 use encoding_rs::Encoding;
 use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::iter;
 
 type BytesOwned = Box<[u8]>;
@@ -190,19 +188,13 @@ impl Compilable for Expr<OnAttributesExpr> {
     }
 }
 
-pub(crate) struct Compiler<P>
-where
-    P: PartialEq + Eq + Copy + Debug + Hash,
-{
+pub(crate) struct Compiler {
     encoding: &'static Encoding,
-    instructions: Box<[Option<Instruction<P>>]>,
+    instructions: Box<[Option<Instruction>]>,
     free_space_start: usize,
 }
 
-impl<P: 'static> Compiler<P>
-where
-    P: PartialEq + Eq + Copy + Debug + Hash,
-{
+impl Compiler {
     #[must_use]
     pub fn new(encoding: &'static Encoding) -> Self {
         Self {
@@ -218,9 +210,9 @@ where
             on_tag_name_exprs,
             on_attr_exprs,
         }: &Predicate,
-        branch: ExecutionBranch<P>,
+        branch: ExecutionBranch,
         enable_nth_of_type: &mut bool,
-    ) -> Instruction<P> {
+    ) -> Instruction {
         let mut exprs = ExprSet::default();
 
         for c in on_tag_name_exprs {
@@ -249,7 +241,7 @@ where
 
     /// Reserves space for a set of nodes, returning the range for the nodes to be placed
     #[inline]
-    fn reserve(&mut self, nodes: &[AstNode<P>]) -> AddressRange {
+    fn reserve(&mut self, nodes: &[AstNode]) -> AddressRange {
         let addr_range = self.free_space_start..self.free_space_start + nodes.len();
 
         self.free_space_start = addr_range.end;
@@ -262,7 +254,7 @@ where
     #[inline]
     fn compile_descendants(
         &mut self,
-        nodes: Vec<AstNode<P>>,
+        nodes: Vec<AstNode>,
         enable_nth_of_type: &mut bool,
     ) -> Option<AddressRange> {
         if nodes.is_empty() {
@@ -274,7 +266,7 @@ where
 
     fn compile_nodes(
         &mut self,
-        nodes: Vec<AstNode<P>>,
+        nodes: Vec<AstNode>,
         enable_nth_of_type: &mut bool,
     ) -> AddressRange {
         // NOTE: we need sibling nodes to be in a contiguous region, so
@@ -283,7 +275,7 @@ where
 
         for (node, position) in nodes.into_iter().zip(addr_range.clone()) {
             let branch = ExecutionBranch {
-                matched_payload: node.payload,
+                matched_ids: node.match_ids,
                 jumps: self.compile_descendants(node.children, enable_nth_of_type),
                 hereditary_jumps: self.compile_descendants(node.descendants, enable_nth_of_type),
             };
@@ -300,7 +292,7 @@ where
     // It's better to outline it, and let its callers be inlined.
     #[must_use]
     #[inline(never)]
-    pub fn compile(mut self, ast: Ast<P>) -> Program<P> {
+    pub fn compile(mut self, ast: Ast) -> Program {
         let mut enable_nth_of_type = false;
         self.instructions = iter::repeat_with(|| None)
             .take(ast.cumulative_node_count)
@@ -326,22 +318,22 @@ mod tests {
     use super::*;
     use crate::html::Namespace;
     use crate::rewritable_units::Token;
+    use crate::selectors_vm::{DenseHashSet, MatchId};
     use crate::selectors_vm::{TryExecResult, tests::test_with_token};
     use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
     use encoding_rs::UTF_8;
-    use hashbrown::{DefaultHashBuilder, HashSet};
 
     macro_rules! assert_instr_res {
         ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
-            let expected_payload = if *$should_match {
-                Some(vec![0].into_iter().collect::<HashSet<_>>())
+            let expected_ids = if *$should_match {
+                Some(DenseHashSet::from([0]))
             } else {
                 None
             };
 
             assert_eq!(
-                $res.map(|b| b.matched_payload.to_owned()),
-                expected_payload,
+                $res.map(|b| b.matched_ids.to_owned()),
+                expected_ids,
                 "Instruction didn't produce expected matching result\n\
                  selector: {:#?}\n\
                  input: {:#?}\n\
@@ -358,12 +350,11 @@ mod tests {
         selectors: &[&str],
         encoding: &'static Encoding,
         expected_entry_point_count: usize,
-    ) -> Program<usize> {
+    ) -> Program {
         let mut ast = Ast::default();
 
-        let hasher = DefaultHashBuilder::default();
-        for (idx, selector) in selectors.iter().enumerate() {
-            ast.add_selector(&selector.parse().unwrap(), idx, hasher.clone());
+        for (selector, match_id) in selectors.iter().zip(0..) {
+            ast.add_selector(&selector.parse().unwrap(), match_id);
         }
 
         let program = Compiler::new(encoding).compile(ast);
@@ -537,7 +528,7 @@ mod tests {
 
     macro_rules! exec_instr_range {
         ($range:expr, $program:expr, $state:expr, $local_name:expr, $attr_matcher:expr) => {{
-            let mut matched_payload = HashSet::default();
+            let mut matched_ids = DenseHashSet::new();
             let mut jumps = Vec::default();
             let mut hereditary_jumps = Vec::default();
 
@@ -550,9 +541,7 @@ mod tests {
                 );
 
                 if let Some(res) = res {
-                    for &p in res.matched_payload.iter() {
-                        matched_payload.insert(p);
-                    }
+                    matched_ids.union(&res.matched_ids);
 
                     if let Some(ref j) = res.jumps {
                         jumps.push(j.to_owned());
@@ -564,7 +553,7 @@ mod tests {
                 }
             }
 
-            (matched_payload, jumps, hereditary_jumps)
+            (matched_ids, jumps, hereditary_jumps)
         }};
     }
 
@@ -572,7 +561,7 @@ mod tests {
         ($actual:expr, $expected:expr, $selectors:expr, $input:expr) => {
             assert_eq!(
                 $actual,
-                $expected.iter().cloned().collect::<HashSet<_>>(),
+                DenseHashSet::from($expected.iter().cloned()),
                 "Instructions didn't produce expected payload\n\
                  selectors: {:#?}\n\
                  input: {:#?}\n\
@@ -586,7 +575,7 @@ mod tests {
     fn assert_entry_points_match(
         selectors: &[&str],
         expected_entry_point_count: usize,
-        test_cases: &[(&str, Vec<usize>)],
+        test_cases: &[(&str, Vec<MatchId>)],
     ) {
         let program = test_compile(selectors, UTF_8, expected_entry_point_count);
 
@@ -595,8 +584,8 @@ mod tests {
         for_each_test_case(
             test_cases,
             UTF_8,
-            |input, expected_payload, state, local_name, attr_matcher| {
-                let (matched_payload, _, _) = exec_instr_range!(
+            |input, expected_ids, state, local_name, attr_matcher| {
+                let (matched_ids, _, _) = exec_instr_range!(
                     program.entry_points,
                     program,
                     state,
@@ -604,7 +593,7 @@ mod tests {
                     attr_matcher
                 );
 
-                assert_payload!(matched_payload, expected_payload, selectors, input);
+                assert_payload!(matched_ids, expected_ids, selectors, input);
             },
         );
     }
@@ -977,7 +966,7 @@ mod tests {
         let program = test_compile(&selectors, UTF_8, 2);
 
         macro_rules! exec {
-            ($html:expr, $add_range:expr, $expected_payload:expr) => {{
+            ($html:expr, $add_range:expr, $expected_ids:expr) => {{
                 let mut jumps = Vec::default();
                 let mut hereditary_jumps = Vec::default();
                 let counter = Default::default();
@@ -990,7 +979,7 @@ mod tests {
                     let res =
                         exec_instr_range!($add_range, program, &state, local_name, attr_matcher);
 
-                    assert_payload!(res.0, $expected_payload, selectors, $html);
+                    assert_payload!(res.0, $expected_ids, selectors, $html);
 
                     jumps = res.1;
                     hereditary_jumps = res.2;
