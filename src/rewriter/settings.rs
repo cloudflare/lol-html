@@ -968,6 +968,8 @@ pub struct Settings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> 
     /// If enabled the rewriter enables support for [Edge Side Includes] tags, treating them as
     /// [void elements] and allowing them to be replaced with desired content.
     ///
+    /// `false` when constructed with `Settings::new()`.
+    ///
     /// [Edge Side Includes]: https://www.w3.org/TR/esi-lang/
     /// [void elements]: https://developer.mozilla.org/en-US/docs/Glossary/Void_element
     pub enable_esi_tags: bool,
@@ -1153,6 +1155,8 @@ pub struct RewriteStrSettings<'handlers, 'selectors, H: HandlerTypes = LocalHand
 
     /// If enabled the rewriter enables support for [Edge Side Includes] tags, treating them as
     /// [void elements] and allowing them to be replaced with desired content.
+    ///
+    /// `true` when constructed with `RewriteStrSettings::new()`.
     ///
     /// [Edge Side Includes]: https://www.w3.org/TR/esi-lang/
     /// [void elements]: https://developer.mozilla.org/en-US/docs/Glossary/Void_element
