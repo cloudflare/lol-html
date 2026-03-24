@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use thiserror::Error;
 
-/// An error that occures when rewriter exceedes the memory limit specified in the
+/// An error that occurs when the rewriter exceeds the memory limit specified in the
 /// [`MemorySettings`].
 ///
 /// [`MemorySettings`]: ../struct.MemorySettings.html

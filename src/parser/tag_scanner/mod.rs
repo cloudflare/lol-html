@@ -159,7 +159,7 @@ impl<S: TagHintSink> StateMachine for TagScanner<S> {
         // to block from the position where matching starts. We don't
         // need to do that manually in the lexer because it
         // always blocks all bytes starting from lexeme start and it's
-        // guaranteed that character sequence matching occurs withih
+        // guaranteed that character sequence matching occurs within
         // lexeme boundaries.
         match (self.tag_start, self.ch_sequence_matching_start) {
             (Some(tag_start), Some(ch_sequence_matching_start)) => {
