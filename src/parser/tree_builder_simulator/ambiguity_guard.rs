@@ -66,27 +66,64 @@ use thiserror::Error;
 /// correct parsing context.
 ///
 /// [`strict`]: ../struct.Settings.html#structfield.strict
-#[derive(Error, Debug, Eq, PartialEq)]
+#[derive(Error, Eq, PartialEq)]
 pub struct ParsingAmbiguityError {
-    on_tag_name: Box<str>,
+    cause: Cause,
+}
+
+impl ParsingAmbiguityError {
+    pub(crate) fn depth_exceeded() -> Self {
+        Self {
+            cause: Cause::DepthExceeded,
+        }
+    }
+}
+
+#[derive(Eq, PartialEq)]
+pub(crate) enum Cause {
+    AmbiguousTextTypeSwitch(Box<str>),
+    DepthExceeded,
+}
+
+impl Display for Cause {
+    #[cold]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AmbiguousTextTypeSwitch(on_tag_name) => write!(
+                f,
+                concat!(
+                    "The parser has encountered a text content tag (`<{}>`) in the context where it is ",
+                    "ambiguous whether this tag should be ignored or not. And, thus, it is unclear whether ",
+                    "consequent content should be parsed as raw text or HTML markup.",
+                    "\n\n",
+                    "This error occurs due to the limited capabilities of the streaming parsing. However, ",
+                    "almost all of the cases of this error are caused by a non-conforming markup (e.g. a ",
+                    "`<script>` element in `<select>` element)."
+                ),
+                on_tag_name
+            ),
+            Self::DepthExceeded => {
+                f.write_str("Too much HTML/XML nesting while simulating the tree builder.")
+            }
+        }
+    }
 }
 
 impl Display for ParsingAmbiguityError {
-    #[cold]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            concat!(
-                "The parser has encountered a text content tag (`<{}>`) in the context where it is ",
-                "ambiguous whether this tag should be ignored or not. And, thus, it is unclear whether ",
-                "consequent content should be parsed as raw text or HTML markup.",
-                "\n\n",
-                "This error occurs due to the limited capabilities of the streaming parsing. However, ",
-                "almost all of the cases of this error are caused by a non-conforming markup (e.g. a ",
-                "`<script>` element in `<select>` element)."
-            ),
-            self.on_tag_name
-        )
+        Display::fmt(&self.cause, f)
+    }
+}
+
+impl fmt::Debug for ParsingAmbiguityError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.cause, f)
+    }
+}
+
+impl fmt::Debug for Cause {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(self, f)
     }
 }
 
@@ -112,7 +149,7 @@ macro_rules! create_assert_for_tags {
         ) -> Result<(), ParsingAmbiguityError> {
             if tag_is_one_of!(tag_name, [ $($tag),+ ]) {
                 Err(ParsingAmbiguityError {
-                    on_tag_name: tag_hash_to_string(tag_name)
+                    cause: Cause::AmbiguousTextTypeSwitch(tag_hash_to_string(tag_name))
                 })
             } else {
                 Ok(())

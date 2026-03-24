@@ -91,7 +91,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         self.set_last_text_type(TextType::Data);
 
         if let Some(feedback) = feedback {
-            self.handle_tree_builder_feedback(context, feedback, &lexeme);
+            self.handle_tree_builder_feedback(context, feedback, &lexeme)?;
         }
 
         if let StartTag {
