@@ -1,4 +1,4 @@
-//! There are few ambigious cases where we can't determine correct
+//! There are a few ambiguous cases where we can't determine correct
 //! parsing context having a limited information about the current
 //! state of tree builder. This caused issues in the past where
 //! Cloudflare's security features were used as XSS gadgets
@@ -10,7 +10,7 @@
 //! of standalone text parsing state machines if we encounter some
 //! specific tags. E.g. if we encounter `<script>` start tag we should
 //! treat all content up to the closing `</script>` tag as text.
-//! Without having a full-featured tree construction stage there is way
+//! Without having a full-featured tree construction stage there is a way
 //! to trick parser into parsing content that has actual tags in it
 //! as text. E.g. by putting `<script>` start tag into context where
 //! it will be ignored.
@@ -37,7 +37,7 @@ use crate::html::{LocalNameHash, Tag};
 use std::fmt::{self, Display};
 use thiserror::Error;
 
-/// An error that occurs when HTML parser runs into an ambigious state in the [`strict`] mode.
+/// An error that occurs when HTML parser runs into an ambiguous state in the [`strict`] mode.
 ///
 /// Since the rewriter operates on a token stream and doesn't have access to a full
 /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
@@ -78,7 +78,7 @@ impl Display for ParsingAmbiguityError {
             f,
             concat!(
                 "The parser has encountered a text content tag (`<{}>`) in the context where it is ",
-                "ambiguous whether this tag should be ignored or not. And, thus, is is unclear is ",
+                "ambiguous whether this tag should be ignored or not. And, thus, it is unclear whether ",
                 "consequent content should be parsed as raw text or HTML markup.",
                 "\n\n",
                 "This error occurs due to the limited capabilities of the streaming parsing. However, ",
@@ -107,7 +107,7 @@ macro_rules! create_assert_for_tags {
         }
 
         #[inline]
-        fn assert_not_ambigious_text_type_switch(
+        fn assert_not_ambiguous_text_type_switch(
             tag_name: LocalNameHash,
         ) -> Result<(), ParsingAmbiguityError> {
             if tag_is_one_of!(tag_name, [ $($tag),+ ]) {
@@ -168,20 +168,20 @@ impl AmbiguityGuard {
                 }
                 // NOTE: <script> is allowed in "in select" insertion mode.
                 else if tag_name != Tag::Script {
-                    assert_not_ambigious_text_type_switch(tag_name)?;
+                    assert_not_ambiguous_text_type_switch(tag_name)?;
                 }
             }
             State::InTemplateInSelect(depth) => {
                 if tag_name == Tag::Template {
                     self.state = State::InTemplateInSelect(depth + 1);
                 } else {
-                    assert_not_ambigious_text_type_switch(tag_name)?;
+                    assert_not_ambiguous_text_type_switch(tag_name)?;
                 }
             }
             State::InOrAfterFrameset => {
                 // NOTE: <noframes> is allowed in and after <frameset>.
                 if tag_name != Tag::Noframes {
-                    assert_not_ambigious_text_type_switch(tag_name)?;
+                    assert_not_ambiguous_text_type_switch(tag_name)?;
                 }
             }
         }

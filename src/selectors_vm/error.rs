@@ -87,7 +87,7 @@ impl From<SelectorParseError<'_>> for SelectorError {
                 | SelectorParseErrorKind::PseudoElementExpectedColon(_)
                 | SelectorParseErrorKind::PseudoElementExpectedIdent(_)
                 | SelectorParseErrorKind::NoIdentForPseudo(_)
-                // NOTE: according to the parser code this error occures only during
+                // NOTE: according to the parser code this error occurs only during
                 // the parsing of vendor-specific pseudo-classes.
                 | SelectorParseErrorKind::NonCompoundSelector => {
                     Self::UnsupportedPseudoClassOrElement

@@ -4,7 +4,7 @@
 //! state of the stack of open elements (HTML is a context-sensitive grammar).
 //!
 //! Luckily, in the majority of cases this tree construction stage feedback
-//! can be simulated without the stack of open elements and comlicated rules
+//! can be simulated without the stack of open elements and complicated rules
 //! required to maintain its state.
 //!
 //! This module implements such feedback simulation. However, there are few

@@ -322,7 +322,7 @@ impl<'h, H: HandlerTypes> ElementContentHandlers<'h, H> {
 
 /// Specifies document-level content handlers.
 ///
-/// Some content can't be captured by CSS selectors as it lays outside of content of any
+/// Some content can't be captured by CSS selectors as it lies outside the content of any
 /// of the HTML elements. Document-level handlers allow capture such a content:
 ///
 /// ```html
@@ -932,7 +932,7 @@ pub struct Settings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> 
     pub memory_settings: MemorySettings,
 
     /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
-    /// into ambigious state.
+    /// into ambiguous state.
     ///
     /// Since the rewriter operates on a token stream and doesn't have access to a full
     /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
@@ -1118,7 +1118,7 @@ pub struct RewriteStrSettings<'handlers, 'selectors, H: HandlerTypes = LocalHand
     pub document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
 
     /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
-    /// into ambigious state.
+    /// into ambiguous state.
     ///
     /// Since the rewriter operates on a token stream and doesn't have access to a full
     /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be

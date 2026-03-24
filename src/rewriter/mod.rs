@@ -196,7 +196,7 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
     ///
     /// # Panics
     ///  * If previous invocation of the method returned a [`RewritingError`]
-    ///    (these errors are unrecovarable).
+    ///    (these errors are unrecoverable).
     ///
     /// [`RewritingError`]: errors/enum.RewritingError.html
     /// [`end`]: struct.HtmlRewriter.html#method.end
@@ -211,7 +211,7 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
     ///
     /// # Panics
     ///  * If previous invocation of [`write`] returned a [`RewritingError`] (these errors
-    ///    are unrecovarable).
+    ///    are unrecoverable).
     ///
     /// [`RewritingError`]: errors/enum.RewritingError.html
     /// [`write`]: struct.HtmlRewriter.html#method.write
