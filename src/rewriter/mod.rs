@@ -724,6 +724,29 @@ mod tests {
     }
 
     #[test]
+    fn extra_svg_nesting() {
+        let nested = "<svg><foreign-content>".repeat(32);
+        let res = rewrite_str(
+            &nested,
+            RewriteStrSettings {
+                element_content_handlers: vec![element!("svg", |_| Ok(()))],
+                ..RewriteStrSettings::new()
+            },
+        );
+        assert_eq!(nested, res.unwrap());
+
+        let extra_nested = nested.repeat(32);
+        let res = rewrite_str(
+            &extra_nested,
+            RewriteStrSettings {
+                element_content_handlers: vec![element!("svg", |_| Ok(()))],
+                ..RewriteStrSettings::new()
+            },
+        );
+        assert!(matches!(res, Err(RewritingError::ParsingAmbiguity(_))));
+    }
+
+    #[test]
     fn handler_invocation_order() {
         let handlers_executed = Arc::new(Mutex::new(Vec::default()));
 
