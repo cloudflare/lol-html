@@ -606,7 +606,7 @@ mod tests {
         ($selectors:expr) => {{
             let mut ast = Ast::default();
 
-            for (selector, match_id) in $selectors.iter().zip(0..) {
+            for (selector, match_id) in $selectors.into_iter().zip(0..) {
                 ast.add_selector(&selector.parse().unwrap(), match_id);
             }
 
@@ -1710,6 +1710,27 @@ mod tests {
                 should_bailout: false,
                 should_match_with_content: false,
                 matched_ids: DenseHashSet::from([]),
+            }
+        );
+    }
+
+    #[test]
+    fn lots_of_selectors() {
+        let mut vm = create_vm!(
+            ('a'..='z')
+                .map(|c| c.to_string())
+                .chain(('A'..='Z').map(|c| format!("#{c}")))
+                .chain(('0'..='9').map(|c| format!("[data{c}]")))
+        );
+
+        exec_for_start_tag_and_assert!(
+            vm,
+            "<a id=Z>",
+            Namespace::Html,
+            Expectation {
+                should_bailout: true,
+                should_match_with_content: true,
+                matched_ids: DenseHashSet::from([0, 51]),
             }
         );
     }
