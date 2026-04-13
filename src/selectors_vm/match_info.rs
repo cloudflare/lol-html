@@ -79,7 +79,7 @@ impl DenseHashSet {
     fn resize(&mut self, new_len: usize) -> &mut [u32] {
         let bits = self.slice_mut();
         let mut new = Vec::with_capacity(new_len);
-        new.copy_from_slice(bits);
+        new.extend_from_slice(bits);
         let cap = new.capacity();
         new.resize(cap, 0);
         *self = Self::Heap(new.into_boxed_slice());
