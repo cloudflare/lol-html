@@ -75,12 +75,8 @@ impl<'input_token> StartTag<'input_token> {
     /// The new tag name must be in the same namespace, have the same content model, and be valid in its location.
     /// Otherwise change of the tag name may cause the resulting document to be parsed in an unexpected way,
     /// out of sync with this library.
-    #[doc(hidden)]
-    #[deprecated(
-        note = "this method won't convert the string encoding, and the type of the argument is a private implementation detail. Use Element::set_tag_name() instead"
-    )]
-    pub fn set_name(&mut self, name: BytesCow<'static>) {
-        self.set_name_raw(name);
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.set_name_raw(BytesCow::from_string(name.into(), self.encoding()));
     }
 
     /// Returns the [namespace URI] of the tag's element.

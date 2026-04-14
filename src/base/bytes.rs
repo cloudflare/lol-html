@@ -7,8 +7,7 @@ use std::str;
 
 /// An error used to indicate that an encoded string has replacements and can't be converted losslessly.
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(unnameable_types)] // accidentally exposed via `tag.set_name()`
-pub struct HasReplacementsError;
+pub(crate) struct HasReplacementsError;
 
 /// A thin wrapper around byte slice with handy APIs attached
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
@@ -17,7 +16,7 @@ pub(crate) struct Bytes<'b>(&'b [u8]);
 
 /// A thin wrapper around either byte slice or owned bytes with some handy APIs attached
 #[derive(Clone, PartialEq, Eq, Hash)]
-#[allow(unnameable_types)] // accidentally exposed via `tag.set_name()`
+#[allow(unnameable_types)] // it's pub only for integration test
 #[repr(transparent)]
 pub struct BytesCow<'b>(Cow<'b, [u8]>);
 
@@ -41,7 +40,7 @@ impl<'b> BytesCow<'b> {
     }
 
     #[inline]
-    pub fn from_str_without_replacements(
+    pub(crate) fn from_str_without_replacements(
         string: impl Into<Cow<'b, str>>,
         encoding: &'static Encoding,
     ) -> Result<Self, HasReplacementsError> {
