@@ -170,7 +170,7 @@ impl<'i> LocalName<'i> {
         let hash = LocalNameHash::from(&*string);
 
         if hash.is_empty() {
-            BytesCow::from_str_without_replacements(string, encoding).map(LocalName::Bytes)
+            BytesCow::borrow_from_str_without_replacements(string, encoding).map(LocalName::Bytes)
         } else {
             Ok(LocalName::Hash(hash))
         }

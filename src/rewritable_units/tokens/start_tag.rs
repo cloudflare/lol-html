@@ -76,7 +76,7 @@ impl<'input_token> StartTag<'input_token> {
     /// Otherwise change of the tag name may cause the resulting document to be parsed in an unexpected way,
     /// out of sync with this library.
     pub fn set_name(&mut self, name: impl Into<String>) {
-        self.set_name_raw(BytesCow::from_string(name.into(), self.encoding()));
+        self.set_name_raw(BytesCow::owned_from_str(name.into(), self.encoding()));
     }
 
     /// Returns the [namespace URI] of the tag's element.

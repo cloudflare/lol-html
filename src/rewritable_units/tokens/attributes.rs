@@ -78,9 +78,8 @@ impl<'i> Attribute<'i> {
             // encoding then encoding_rs replaces it with a numeric
             // character reference. Character references are not
             // supported in attribute names, so we need to bail.
-            BytesCow::from_str_without_replacements(name, encoding)
+            BytesCow::owned_from_str_without_replacements(name, encoding)
                 .map_err(|_| AttributeNameError::UnencodableCharacter)
-                .map(BytesCow::into_owned)
         }
     }
 
@@ -107,7 +106,7 @@ impl<'i> Attribute<'i> {
 
     #[inline]
     fn set_value(&mut self, value: &str) {
-        self.value = BytesCow::from_str(value, self.encoding).into_owned();
+        self.value = BytesCow::owned_from_str(value, self.encoding);
         self.raw = None;
     }
 }
@@ -208,7 +207,7 @@ impl<'i> Attributes<'i> {
             None => {
                 items.push(Attribute {
                     name,
-                    value: BytesCow::from_str(value, encoding).into_owned(),
+                    value: BytesCow::owned_from_str(value, encoding),
                     raw: None,
                     encoding,
                 });

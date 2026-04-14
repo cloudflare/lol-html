@@ -88,9 +88,8 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
                     // encoding then encoding_rs replaces it with a numeric
                     // character reference. Character references are not
                     // supported in tag names, so we need to bail.
-                    BytesCow::from_str_without_replacements(name, self.encoding)
+                    BytesCow::owned_from_str_without_replacements(name, self.encoding)
                         .map_err(|_| TagNameError::UnencodableCharacter)
-                        .map(BytesCow::into_owned)
                 }
             }
             None => Err(TagNameError::Empty),
