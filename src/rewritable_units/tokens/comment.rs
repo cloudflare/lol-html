@@ -75,9 +75,9 @@ impl<'i> Comment<'i> {
             // encoding then encoding_rs replaces it with a numeric
             // character reference. Character references are not
             // supported in comments, so we need to bail.
-            match BytesCow::from_str_without_replacements(text, self.encoding) {
+            match BytesCow::owned_from_str_without_replacements(text, self.encoding) {
                 Ok(text) => {
-                    self.text = text.into_owned();
+                    self.text = text;
                     self.raw.set_modified();
 
                     Ok(())

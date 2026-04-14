@@ -78,7 +78,7 @@ impl<'i> EndTag<'i> {
     /// the rest of the generated document will be parsed differently than during rewriting.
     #[doc(hidden)]
     pub fn set_name_str(&mut self, name: String) {
-        self.set_name_raw(BytesCow::from_string(name, self.encoding));
+        self.set_name_raw(BytesCow::owned_from_str(name, self.encoding));
     }
 
     /// Inserts `content` before the end tag.

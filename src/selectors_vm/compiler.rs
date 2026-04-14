@@ -113,7 +113,7 @@ fn compile_literal(
     encoding: &'static Encoding,
     lit: &str,
 ) -> Result<BytesOwned, HasReplacementsError> {
-    Ok(BytesCow::from_str_without_replacements(lit, encoding)?.into())
+    Ok(BytesCow::owned_from_str_without_replacements(lit, encoding)?.into())
 }
 
 #[inline]

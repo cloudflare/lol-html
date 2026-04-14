@@ -21,47 +21,36 @@ pub(crate) struct Bytes<'b>(&'b [u8]);
 pub struct BytesCow<'b>(Cow<'b, [u8]>);
 
 impl<'b> BytesCow<'b> {
-    #[inline]
-    pub fn from_str(string: &'b str, encoding: &'static Encoding) -> Self {
-        encoding.encode(string).0.into()
-    }
-
-    /// Same as `BytesCow::from_str(&string).into_owned()`, but avoids copying in the common case where
-    /// the output and input encodings are the same.
-    pub fn from_string<'tmp>(
-        string: impl Into<Cow<'tmp, str>>,
-        encoding: &'static Encoding,
-    ) -> BytesCow<'static> {
-        let string = string.into();
-        BytesCow(Cow::Owned(match encoding.encode(string.as_ref()).0 {
-            Cow::Owned(bytes) => bytes,
-            Cow::Borrowed(_) => string.into_owned().into_bytes(),
-        }))
-    }
-
-    #[inline]
-    pub(crate) fn from_str_without_replacements(
+    pub(crate) fn borrow_from_str_without_replacements(
         string: impl Into<Cow<'b, str>>,
         encoding: &'static Encoding,
     ) -> Result<Self, HasReplacementsError> {
+        let (has_replacements, bytes) = Self::borrowed(string, encoding);
+        if !has_replacements {
+            Ok(bytes)
+        } else {
+            Err(HasReplacementsError)
+        }
+    }
+
+    fn borrowed(string: impl Into<Cow<'b, str>>, encoding: &'static Encoding) -> (bool, Self) {
         let string = string.into();
         let (res, _, has_replacements) = encoding.encode(&string);
 
-        if has_replacements {
-            Err(HasReplacementsError)
-        } else {
-            Ok(Self(match res {
+        (
+            has_replacements,
+            Self(match res {
                 Cow::Borrowed(_) => match string {
                     Cow::Borrowed(s) => Cow::Borrowed(s.as_bytes()),
                     Cow::Owned(s) => Cow::Owned(s.into_bytes()),
                 },
                 Cow::Owned(bytes) => Cow::Owned(bytes),
-            }))
-        }
+            }),
+        )
     }
 
     #[inline]
-    pub fn into_owned(self) -> BytesCow<'static> {
+    pub(crate) fn into_owned(self) -> BytesCow<'static> {
         BytesCow(Cow::Owned(self.0.into_owned()))
     }
 
@@ -70,12 +59,48 @@ impl<'b> BytesCow<'b> {
         Bytes(&self.0)
     }
 
-    pub fn as_string(&self, encoding: &'static Encoding) -> String {
+    pub(crate) fn as_string(&self, encoding: &'static Encoding) -> String {
         self.as_ref().as_string(encoding)
     }
 
-    pub fn as_lowercase_string(&self, encoding: &'static Encoding) -> String {
+    pub(crate) fn as_lowercase_string(&self, encoding: &'static Encoding) -> String {
         self.as_ref().as_lowercase_string(encoding)
+    }
+}
+
+impl BytesCow<'static> {
+    #[inline]
+    pub(crate) fn owned_from_str<'copied>(
+        string: impl Into<Cow<'copied, str>>,
+        encoding: &'static Encoding,
+    ) -> Self {
+        Self::owned(string, encoding).1
+    }
+
+    #[inline]
+    pub(crate) fn owned_from_str_without_replacements<'copied>(
+        string: impl Into<Cow<'copied, str>>,
+        encoding: &'static Encoding,
+    ) -> Result<Self, HasReplacementsError> {
+        let (has_replacements, bytes) = Self::owned(string, encoding);
+        if !has_replacements {
+            Ok(bytes)
+        } else {
+            Err(HasReplacementsError)
+        }
+    }
+
+    fn owned<'tmp>(string: impl Into<Cow<'tmp, str>>, encoding: &'static Encoding) -> (bool, Self) {
+        let string = string.into();
+        let (res, _, has_replacements) = encoding.encode(&string);
+
+        (
+            has_replacements,
+            BytesCow(Cow::Owned(match res {
+                Cow::Owned(bytes) => bytes,
+                Cow::Borrowed(_) => string.into_owned().into_bytes(),
+            })),
+        )
     }
 }
 
