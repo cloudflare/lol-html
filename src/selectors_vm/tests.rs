@@ -1,11 +1,11 @@
 mod vm_tests {
-    use crate::selectors_vm::*;
     use crate::base::SharedEncoding;
     use crate::errors::RewritingError;
     use crate::html::Namespace;
     use crate::memory::SharedMemoryLimiter;
     use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
     use crate::rewriter::AsciiCompatibleEncoding;
+    use crate::selectors_vm::*;
     use crate::transform_stream::{
         StartTagHandlingResult, TransformController, TransformStream, TransformStreamSettings,
     };
@@ -133,7 +133,10 @@ mod vm_tests {
 
                         {
                             let mut match_handler = |m: MatchInfo| {
-                                assert_eq!(m.with_content, $expectation.should_match_with_content);
+                                assert_eq!(
+                                    m.with_content, $expectation.should_match_with_content,
+                                    "with_content"
+                                );
                                 matched_ids.insert(m.match_id);
                             };
 
@@ -168,7 +171,12 @@ mod vm_tests {
                             }
                         }
 
-                        assert_eq!(matched_ids, $expectation.matched_ids);
+                        assert_eq!(
+                            matched_ids,
+                            $expectation.matched_ids,
+                            "{:?}",
+                            matched_ids.iter().collect::<Vec<_>>()
+                        );
                     }
                     _ => panic!("Start tag expected"),
                 }
@@ -1291,5 +1299,737 @@ mod vm_tests {
                 "Each match_id should be reported exactly once"
             );
         });
+    }
+}
+
+mod compiler {
+    use super::vm_tests::test_with_token;
+    use crate::html::Namespace;
+    use crate::rewritable_units::Token;
+    use crate::selectors_vm::*;
+    use crate::test_utils::ASCII_COMPATIBLE_ENCODINGS;
+    use encoding_rs::UTF_8;
+
+    macro_rules! assert_instr_res {
+        ($res:expr, $should_match:expr, $selector:expr, $input:expr, $encoding:expr) => {{
+            let expected_ids = if *$should_match {
+                Some(DenseHashSet::from([0]))
+            } else {
+                None
+            };
+
+            assert_eq!(
+                $res.map(|b| b.matched_ids.to_owned()),
+                expected_ids,
+                "Instruction didn't produce expected matching result\n\
+                 selector: {:#?}\n\
+                 input: {:#?}\n\
+                 encoding: {:?}\n\
+                 ",
+                $selector,
+                $input,
+                $encoding.name()
+            );
+        }};
+    }
+
+    fn test_compile(
+        selectors: &[&str],
+        encoding: &'static Encoding,
+        expected_entry_point_count: usize,
+    ) -> Program {
+        let mut ast = Ast::default();
+
+        for (selector, match_id) in selectors.iter().zip(0..) {
+            ast.add_selector(&selector.parse().unwrap(), match_id);
+        }
+
+        let program = Compiler::new(encoding).compile(ast);
+
+        assert_eq!(
+            program.entry_points.end - program.entry_points.start,
+            expected_entry_point_count
+        );
+
+        program
+    }
+
+    fn with_negated<'i>(
+        selector: &str,
+        test_cases: &[(&'i str, bool)],
+    ) -> Vec<(String, Vec<(&'i str, bool)>)> {
+        vec![
+            (selector.to_string(), test_cases.to_owned()),
+            (
+                format!(":not({selector})"),
+                test_cases
+                    .iter()
+                    .map(|(input, should_match)| (*input, !should_match))
+                    .collect(),
+            ),
+        ]
+    }
+
+    fn with_start_tag(
+        html: &str,
+        encoding: &'static Encoding,
+        mut action: impl FnMut(LocalName<'_>, AttributeMatcher<'_>),
+    ) {
+        test_with_token(html, encoding, |t| match t {
+            Token::StartTag(t) => {
+                let (input, attrs) = t.raw_attributes();
+                let attr_matcher = AttributeMatcher::new(*input, attrs, Namespace::Html);
+                let local_name =
+                    LocalName::from_str_without_replacements(t.name(), encoding).unwrap();
+
+                action(local_name, attr_matcher);
+            }
+            _ => panic!("Start tag expected"),
+        });
+    }
+
+    fn for_each_test_case<T>(
+        test_cases: &[(&str, T)],
+        encoding: &'static Encoding,
+        action: impl Fn(&str, &T, &SelectorState<'_>, LocalName<'_>, AttributeMatcher<'_>),
+    ) {
+        for (input, matching_data) in test_cases {
+            with_start_tag(input, encoding, |local_name, attr_matcher| {
+                let counter = Default::default();
+                let state = SelectorState {
+                    cumulative: &counter,
+                    typed: None,
+                };
+                action(input, matching_data, &state, local_name, attr_matcher);
+            });
+        }
+    }
+
+    fn assert_attr_expr_matches(
+        selector: &str,
+        encoding: &'static Encoding,
+        test_cases: &[(&str, bool)],
+    ) {
+        let program = test_compile(&[selector], encoding, 1);
+        let instr = &program.instructions[program.entry_points.start];
+
+        for_each_test_case(
+            test_cases,
+            encoding,
+            |input, should_match, state, local_name, attr_matcher| {
+                assert!(
+                    matches!(
+                        instr.try_exec_without_attrs(state, &local_name),
+                        TryExecResult::AttributesRequired
+                    ),
+                    "Instruction should not execute without attributes"
+                );
+
+                let multi_step_res = instr.complete_exec_with_attrs(state, &attr_matcher);
+                let res = instr.exec(state, &local_name, &attr_matcher);
+
+                assert_eq!(multi_step_res, res);
+                assert_instr_res!(res, should_match, selector, input, encoding);
+            },
+        );
+    }
+
+    fn assert_non_attr_expr_matches_and_negation_reverses_match(
+        selector: &str,
+        encoding: &'static Encoding,
+        test_cases: &[(&str, bool)],
+    ) {
+        for (selector, test_cases) in with_negated(selector, test_cases) {
+            let program = test_compile(&[&selector], encoding, 1);
+            let instr = &program.instructions[program.entry_points.start];
+
+            for_each_test_case(
+                &test_cases,
+                encoding,
+                |input, should_match, state, local_name, attr_matcher| {
+                    #[allow(clippy::match_wild_err_arm)]
+                    let multi_step_res = match instr.try_exec_without_attrs(state, &local_name) {
+                        TryExecResult::Branch(b) => Some(b),
+                        TryExecResult::Fail => None,
+                        TryExecResult::AttributesRequired => {
+                            panic!("Should match without attribute request")
+                        }
+                    };
+
+                    let res = instr.exec(state, &local_name, &attr_matcher);
+
+                    assert_eq!(multi_step_res, res);
+
+                    assert_instr_res!(res, should_match, selector, input, encoding);
+                },
+            );
+        }
+    }
+
+    fn assert_attr_expr_matches_and_negation_reverses_match(
+        selector: &str,
+        encoding: &'static Encoding,
+        test_cases: &[(&str, bool)],
+    ) {
+        for (selector, test_cases) in &with_negated(selector, test_cases) {
+            assert_attr_expr_matches(selector, encoding, test_cases);
+        }
+    }
+
+    macro_rules! exec_generic_instr {
+        ($instr:expr, $state:expr, $local_name:expr, $attr_matcher:expr) => {{
+            let res = $instr.exec($state, &$local_name, &$attr_matcher);
+
+            let multi_step_res = match $instr.try_exec_without_attrs($state, &$local_name) {
+                TryExecResult::Branch(b) => Some(b),
+                TryExecResult::Fail => None,
+                TryExecResult::AttributesRequired => {
+                    $instr.complete_exec_with_attrs(&*$state, &$attr_matcher)
+                }
+            };
+
+            assert_eq!(res, multi_step_res);
+
+            res
+        }};
+    }
+
+    fn assert_generic_expr_matches(
+        selector: &str,
+        encoding: &'static Encoding,
+        test_cases: &[(&str, bool)],
+    ) {
+        let program = test_compile(&[selector], encoding, 1);
+        let instr = &program.instructions[program.entry_points.start];
+
+        for_each_test_case(
+            test_cases,
+            encoding,
+            |input, should_match, state, local_name, attr_matcher| {
+                let res = exec_generic_instr!(instr, state, local_name, attr_matcher);
+
+                assert_instr_res!(res, should_match, selector, input, encoding);
+            },
+        );
+    }
+
+    macro_rules! exec_instr_range {
+        ($range:expr, $program:expr, $state:expr, $local_name:expr, $attr_matcher:expr) => {{
+            let mut matched_ids = DenseHashSet::new();
+            let mut jumps = Vec::default();
+            let mut hereditary_jumps = Vec::default();
+
+            for addr in $range.clone() {
+                let res = exec_generic_instr!(
+                    $program.instructions[addr],
+                    $state,
+                    $local_name,
+                    $attr_matcher
+                );
+
+                if let Some(res) = res {
+                    matched_ids.union(&res.matched_ids);
+
+                    if let Some(ref j) = res.jumps {
+                        jumps.push(j.to_owned());
+                    }
+
+                    if let Some(ref j) = res.hereditary_jumps {
+                        hereditary_jumps.push(j.to_owned());
+                    }
+                }
+            }
+
+            (matched_ids, jumps, hereditary_jumps)
+        }};
+    }
+
+    macro_rules! assert_payload {
+        ($actual:expr, $expected:expr, $selectors:expr, $input:expr) => {
+            assert_eq!(
+                $actual,
+                DenseHashSet::from($expected.iter().cloned()),
+                "Instructions didn't produce expected payload\n\
+                 selectors: {:#?}\n\
+                 input: {:#?}\n\
+                 ",
+                $selectors,
+                $input
+            );
+        };
+    }
+
+    fn assert_entry_points_match(
+        selectors: &[&str],
+        expected_entry_point_count: usize,
+        test_cases: &[(&str, Vec<MatchId>)],
+    ) {
+        let program = test_compile(selectors, UTF_8, expected_entry_point_count);
+
+        // NOTE: encoding of the individual components is tested by other tests,
+        // so we use only UTF-8 here.
+        for_each_test_case(
+            test_cases,
+            UTF_8,
+            |input, expected_ids, state, local_name, attr_matcher| {
+                let (matched_ids, _, _) = exec_instr_range!(
+                    program.entry_points,
+                    program,
+                    state,
+                    local_name,
+                    attr_matcher
+                );
+
+                assert_payload!(matched_ids, expected_ids, selectors, input);
+            },
+        );
+    }
+
+    #[test]
+    fn compiled_non_attr_expression() {
+        for encoding in &ASCII_COMPATIBLE_ENCODINGS {
+            assert_non_attr_expr_matches_and_negation_reverses_match(
+                "*",
+                encoding,
+                &[
+                    ("<div>", true),
+                    ("<span>", true),
+                    ("<anything-else>", true),
+                    ("<FуБар>", true),
+                ],
+            );
+
+            assert_non_attr_expr_matches_and_negation_reverses_match(
+                "div",
+                encoding,
+                &[
+                    ("<div>", true),
+                    ("<Div>", true),
+                    ("<divnotdiv>", false),
+                    ("<span>", false),
+                    ("<anything-else>", false),
+                ],
+            );
+
+            // NOTE: case-insensitivity for local names that can't be represented by a hash.
+            assert_non_attr_expr_matches_and_negation_reverses_match(
+                "fooƔ",
+                encoding,
+                &[("<fooƔ", true), ("<FooƔ>", true)],
+            );
+
+            assert_non_attr_expr_matches_and_negation_reverses_match(
+                "span",
+                encoding,
+                &[
+                    ("<div>", false),
+                    ("<span>", true),
+                    ("<spanϰ>", false),
+                    ("<anything-else>", false),
+                ],
+            );
+
+            assert_non_attr_expr_matches_and_negation_reverses_match(
+                "anything-else",
+                encoding,
+                &[
+                    ("<div>", false),
+                    ("<span>", false),
+                    ("<anything-else>", true),
+                ],
+            );
+        }
+    }
+
+    #[test]
+    fn compiled_attr_expression() {
+        for encoding in &ASCII_COMPATIBLE_ENCODINGS {
+            assert_attr_expr_matches_and_negation_reverses_match(
+                "#foo⾕",
+                encoding,
+                &[
+                    ("<div bar=baz qux id='foo⾕'>", true),
+                    ("<div iD='foo⾕'>", true),
+                    ("<div bar=baz qux id='foo1'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                ".c2",
+                encoding,
+                &[
+                    ("<div bar=baz class='c1 c2 c3 c4' qux>", true),
+                    ("<div CLASS='c1 c2 c3 c4'>", true),
+                    ("<div class='c1 c23 c4'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                "[foo⽅]",
+                encoding,
+                &[
+                    ("<div foo1 foo2 foo⽅>", true),
+                    ("<div FOo⽅=123>", true),
+                    ("<div id='baz'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo="barα"]"#,
+                encoding,
+                &[
+                    ("<div fOo='barα'>", true),
+                    ("<div foo=barα>", true),
+                    ("<div foo='BaRα'>", false),
+                    ("<div foo='42'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo="barα" i]"#,
+                encoding,
+                &[
+                    ("<div fOo='barα'>", true),
+                    ("<div foo=barα>", true),
+                    ("<div foo='BaRα'>", true),
+                    ("<div foo='42'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo*=""]"#,
+                encoding,
+                &[
+                    ("<div>", false),
+                    ("<span>", false),
+                    ("<anything-else>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo~="μbar3"]"#,
+                encoding,
+                &[
+                    ("<div fOo='bar1\nbar2 μbar3\tbar4'>", true),
+                    ("<div foo='μbar3'>", true),
+                    ("<div foo='bar1 bar2 μBAR3'>", false),
+                    ("<div foo='42'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo~="μbar3" i]"#,
+                encoding,
+                &[
+                    ("<div fOo='bar1\nbar2 μbar3\tbar4'>", true),
+                    ("<div foo='μbar3'>", true),
+                    ("<div foo='bar1 bar2 μBAR3'>", true),
+                    ("<div foo='42'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            // NOTE: "lang" attribute always case-insesitive for HTML elements.
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[lang|="en" s]"#,
+                encoding,
+                &[
+                    ("<div lang='en-GB'>", true),
+                    ("<div lang='en-US'>", true),
+                    ("<div lang='en'>", true),
+                    ("<div lang='En'>", false),
+                    ("<div lang='En-GB'>", false),
+                    ("<div lang='fr'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[lang|="en"]"#,
+                encoding,
+                &[
+                    ("<div lang='en-GB'>", true),
+                    ("<div lang='en-US'>", true),
+                    ("<div lang='en'>", true),
+                    ("<div lang='En'>", true),
+                    ("<div lang='En-GB'>", true),
+                    ("<div lang='fr'>", false),
+                    ("<div bar=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo^="barБ"]"#,
+                encoding,
+                &[
+                    ("<div fOo='barБ1\nbar2 bar3\tbar4'>", true),
+                    ("<div foo='barБ'>", true),
+                    ("<div foo='BaRБ'>", false),
+                    ("<div foo='bazbarБ'>", false),
+                    ("<div foo='42'>", false),
+                    ("<div barБ=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo^="bar㕦" i]"#,
+                encoding,
+                &[
+                    ("<div fOo='bar㕦1\nbar2 bar3\tbar4'>", true),
+                    ("<div foo='bar㕦'>", true),
+                    ("<div foo='BaR㕦'>", true),
+                    ("<div foo='bazbar㕦'>", false),
+                    ("<div foo='42'>", false),
+                    ("<div bar㕦=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo*="barφ"]"#,
+                encoding,
+                &[
+                    ("<div fOo='bar1\nbarφ2 bar3\tbar4'>", true),
+                    ("<div foo='barφ'>", true),
+                    ("<div foo='Barφ'>", false),
+                    ("<div foo='42BaRφ42'>", false),
+                    ("<div foo='bazbatbarφ'>", true),
+                    ("<div foo='42'>", false),
+                    ("<div barφ=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo*="barφ" i]"#,
+                encoding,
+                &[
+                    ("<div fOo='bar1\nbarφ2 bar3\tbar4'>", true),
+                    ("<div Foo='barφ'>", true),
+                    ("<div foo='42BaRφ42'>", true),
+                    ("<div foo='bazbatbarφ'>", true),
+                    ("<div foo='42'>", false),
+                    ("<div barφ=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo$="barЫ"]"#,
+                encoding,
+                &[
+                    ("<div fOo='bar1\nbar2 bar3\tbarЫ'>", true),
+                    ("<div foo='barЫ'>", true),
+                    ("<div foo='bazbarЫ'>", true),
+                    ("<div foo='BaRЫ'>", false),
+                    ("<div foo='42'>", false),
+                    ("<div barЫ=baz qux>", false),
+                    ("<div foo='bar'>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[foo$="barЫ" i]"#,
+                encoding,
+                &[
+                    ("<div fOo='bar1\nbar2 bar3\tbarЫ'>", true),
+                    ("<div foo='barЫ'>", true),
+                    ("<div foo='bazbarЫ'>", true),
+                    ("<div foo='BaRЫ'>", true),
+                    ("<div foo='42'>", false),
+                    ("<div barЫ=baz qux>", false),
+                ],
+            );
+
+            assert_attr_expr_matches(
+                r#"#foo1.c1.c2[foo3][foo2$="barЫ"]"#,
+                encoding,
+                &[
+                    (
+                        "<div id='foo1' class='c4 c2 c3 c1' foo3 foo2=heybarЫ>",
+                        true,
+                    ),
+                    (
+                        "<div ID='foo1' class='c4 c2 c3 c1' foo3=test foo2=barЫ>",
+                        true,
+                    ),
+                    ("<div id='foo1' class='c4 c2 c3 c1' foo3>", false),
+                    (
+                        "<div id='foo1' class='c4 c2 c3 c5' foo3 foo2=heybarЫ>",
+                        false,
+                    ),
+                    (
+                        "<div id='foo12' class='c4 c2 c3 c5' foo3 foo2=heybarЫ>",
+                        false,
+                    ),
+                ],
+            );
+        }
+    }
+
+    #[test]
+    fn generic_expressions() {
+        for encoding in &ASCII_COMPATIBLE_ENCODINGS {
+            assert_generic_expr_matches(
+                r#"div#foo1.c1.c2[foo3੦][foo2$="bar"]"#,
+                encoding,
+                &[
+                    (
+                        "<div id='foo1' class='c4 c2 c3 c1' foo3੦ foo2=heybar>",
+                        true,
+                    ),
+                    (
+                        "<span id='foo1' class='c4 c2 c3 c1' foo3੦ foo2=heybar>",
+                        false,
+                    ),
+                    (
+                        "<div ID='foo1' class='c4 c2 c3 c1' foo3੦=test foo2=bar>",
+                        true,
+                    ),
+                    ("<div id='foo1' class='c4 c2 c3 c1' foo3੦>", false),
+                    (
+                        "<div id='foo1' class='c4 c2 c3 c5' foo3੦ foo2=heybar>",
+                        false,
+                    ),
+                    (
+                        "<div id='foo12' class='c4 c2 c3 c5' foo3੦ foo2=heybar>",
+                        false,
+                    ),
+                ],
+            );
+
+            assert_generic_expr_matches(
+                r"some-thing[lang|=en]",
+                encoding,
+                &[
+                    ("<some-thing lang='en-GB'", true),
+                    ("<some-thing lang='en-US'", true),
+                    ("<some-thing lang='fr'>", false),
+                    ("<some-thing lang>", false),
+                    ("<span lang='en-GB'", false),
+                ],
+            );
+        }
+    }
+
+    #[test]
+    fn multiple_entry_points() {
+        assert_entry_points_match(
+            &["div", "div.c1.c2", "#foo", ".c1#foo"],
+            4,
+            &[
+                ("<div>", vec![0]),
+                ("<div class='c3 c2  c1'>", vec![0, 1]),
+                ("<div class='c1 c2' id=foo>", vec![0, 1, 2, 3]),
+                ("<div class='c1' id=foo>", vec![0, 2, 3]),
+                ("<span class='c1 c2'>", vec![]),
+            ],
+        );
+
+        assert_entry_points_match(
+            &["span, [foo$=bar]"],
+            2,
+            &[
+                ("<span>", vec![0]),
+                ("<div fOo=testbar>", vec![0]),
+                ("<span foo=bar>", vec![0]),
+            ],
+        );
+    }
+
+    #[test]
+    fn jumps() {
+        let selectors = [
+            "div > .c1",
+            "div > .c2",
+            "div #d1",
+            "div #d2",
+            "[foo=bar] #id1 > #id2",
+        ];
+
+        let program = test_compile(&selectors, UTF_8, 2);
+
+        macro_rules! exec {
+            ($html:expr, $add_range:expr, $expected_ids:expr) => {{
+                let mut jumps = Vec::default();
+                let mut hereditary_jumps = Vec::default();
+                let counter = Default::default();
+                let state = SelectorState {
+                    cumulative: &counter,
+                    typed: None,
+                };
+
+                with_start_tag($html, UTF_8, |local_name, attr_matcher| {
+                    let res =
+                        exec_instr_range!($add_range, program, &state, local_name, attr_matcher);
+
+                    assert_payload!(res.0, $expected_ids, selectors, $html);
+
+                    jumps = res.1;
+                    hereditary_jumps = res.2;
+                });
+
+                (jumps, hereditary_jumps)
+            }};
+        }
+
+        {
+            let (jumps, hereditary_jumps) = exec!("<div>", program.entry_points, []);
+
+            assert_eq!(jumps.len(), 1);
+            assert_eq!(hereditary_jumps.len(), 1);
+
+            {
+                let (jumps, hereditary_jumps) = exec!("<span class='c1 c2'>", jumps[0], [0, 1]);
+
+                assert_eq!(jumps.len(), 0);
+                assert_eq!(hereditary_jumps.len(), 0);
+            }
+
+            {
+                let (jumps, hereditary_jumps) = exec!("<span class='c2'>", jumps[0], [1]);
+
+                assert_eq!(jumps.len(), 0);
+                assert_eq!(hereditary_jumps.len(), 0);
+            }
+
+            {
+                let (jumps, hereditary_jumps) = exec!("<h1 id=d2>", hereditary_jumps[0], [3]);
+
+                assert_eq!(jumps.len(), 0);
+                assert_eq!(hereditary_jumps.len(), 0);
+            }
+        }
+
+        {
+            let (jumps, hereditary_jumps) = exec!("<div foo=bar>", program.entry_points, []);
+
+            assert_eq!(jumps.len(), 1);
+            assert_eq!(hereditary_jumps.len(), 2);
+        }
+
+        {
+            let (jumps, hereditary_jumps) = exec!("<span foo=bar>", program.entry_points, []);
+
+            assert_eq!(jumps.len(), 0);
+            assert_eq!(hereditary_jumps.len(), 1);
+
+            {
+                let (jumps, hereditary_jumps) = exec!("<table id=id1>", hereditary_jumps[0], []);
+
+                assert_eq!(jumps.len(), 1);
+                assert_eq!(hereditary_jumps.len(), 0);
+
+                {
+                    let (jumps, hereditary_jumps) = exec!("<span id=id2>", jumps[0], [4]);
+
+                    assert_eq!(jumps.len(), 0);
+                    assert_eq!(hereditary_jumps.len(), 0);
+                }
+            }
+        }
     }
 }
