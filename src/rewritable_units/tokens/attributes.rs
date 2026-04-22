@@ -1,4 +1,4 @@
-use crate::base::{Bytes, BytesCow, eq_case_insensitive};
+use crate::base::{Bytes, BytesCow, SourceLocation, eq_case_insensitive};
 use crate::errors::RewritingError;
 use crate::html::escape_double_quotes_only;
 use crate::parser::AttributeBuffer;
@@ -41,6 +41,8 @@ pub struct Attribute<'i> {
     value: BytesCow<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
+    name_range: Option<std::ops::Range<usize>>,
+    value_range: Option<std::ops::Range<usize>>,
 }
 
 impl<'i> Attribute<'i> {
@@ -51,12 +53,16 @@ impl<'i> Attribute<'i> {
         value: BytesCow<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
+        name_range: Option<std::ops::Range<usize>>,
+        value_range: Option<std::ops::Range<usize>>,
     ) -> Self {
         Attribute {
             name,
             value,
             raw: Some(raw),
             encoding,
+            name_range,
+            value_range,
         }
     }
 
@@ -104,10 +110,37 @@ impl<'i> Attribute<'i> {
         self.value.as_string(self.encoding)
     }
 
+    /// Returns the source location of the attribute name in the original document.
+    ///
+    /// Returns `None` for attributes added programmatically via
+    /// [`Element::set_attribute`][crate::html_content::Element::set_attribute].
+    #[inline]
+    #[must_use]
+    pub fn name_source_location(&self) -> Option<SourceLocation> {
+        self.name_range
+            .as_ref()
+            .map(|r| SourceLocation::from_start_len(r.start, r.end - r.start))
+    }
+
+    /// Returns the source location of the attribute value in the original document.
+    ///
+    /// The range covers only the value itself, excluding any quotes or the `=` sign.
+    ///
+    /// Returns `None` for attributes added programmatically via
+    /// [`Element::set_attribute`][crate::html_content::Element::set_attribute].
+    #[inline]
+    #[must_use]
+    pub fn value_source_location(&self) -> Option<SourceLocation> {
+        self.value_range
+            .as_ref()
+            .map(|r| SourceLocation::from_start_len(r.start, r.end - r.start))
+    }
+
     #[inline]
     fn set_value(&mut self, value: &str) {
         self.value = BytesCow::owned_from_str(value, self.encoding);
         self.raw = None;
+        self.value_range = None;
     }
 }
 
@@ -141,6 +174,7 @@ pub(crate) struct Attributes<'i> {
     attribute_buffer: &'i AttributeBuffer,
     items: OnceCell<Vec<Attribute<'i>>>,
     pub(crate) encoding: &'static Encoding,
+    source_byte_offset: usize,
 }
 
 impl<'i> Attributes<'i> {
@@ -150,12 +184,14 @@ impl<'i> Attributes<'i> {
         input: &'i Bytes<'i>,
         attribute_buffer: &'i AttributeBuffer,
         encoding: &'static Encoding,
+        source_byte_offset: usize,
     ) -> Self {
         Attributes {
             input,
             attribute_buffer,
             items: OnceCell::default(),
             encoding,
+            source_byte_offset,
         }
     }
 
@@ -210,6 +246,8 @@ impl<'i> Attributes<'i> {
                     value: BytesCow::owned_from_str(value, encoding),
                     raw: None,
                     encoding,
+                    name_range: None,
+                    value_range: None,
                 });
             }
         }
@@ -240,6 +278,7 @@ impl<'i> Attributes<'i> {
             debug_assert!(false);
             Bytes::default()
         };
+        let base = self.source_byte_offset;
         self.attribute_buffer.iter().map(move |a| {
             Attribute::new(
                 self.input
@@ -254,6 +293,8 @@ impl<'i> Attributes<'i> {
                     .opt_slice(Some(a.raw_range))
                     .unwrap_or_else(cant_fail),
                 self.encoding,
+                Some(base + a.name.start..base + a.name.end),
+                Some(base + a.value.start..base + a.value.end),
             )
         })
     }

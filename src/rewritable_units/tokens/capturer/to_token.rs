@@ -37,7 +37,7 @@ impl ToToken for TagLexeme<'_> {
                 capture_flags.remove(TokenCaptureFlags::NEXT_START_TAG);
                 ToTokenResult::Token(StartTag::new_token(
                     self.part(name),
-                    Attributes::new(self.input(), attributes, encoding),
+                    Attributes::new(self.input(), attributes, encoding, self.input_byte_offset()),
                     ns,
                     self_closing,
                     self.spanned().into(),
