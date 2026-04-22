@@ -1105,5 +1105,79 @@ mod tests {
                 "Error in element text handler",
             );
         }
+
+        #[test]
+        fn attribute_source_locations() {
+            let html = r#"<div class="foo" id='bar' data-x=baz>"#;
+            let locations = Arc::new(Mutex::new(Vec::new()));
+            let locations_clone = Arc::clone(&locations);
+
+            rewrite_str::<LocalHandlerTypes>(
+                html,
+                RewriteStrSettings {
+                    element_content_handlers: vec![element!("div", move |el| {
+                        for attr in el.attributes() {
+                            let name_loc = attr.name_source_location();
+                            let value_loc = attr.value_source_location();
+                            locations_clone.lock().unwrap().push((
+                                attr.name(),
+                                attr.value(),
+                                name_loc.map(|l| l.bytes()),
+                                value_loc.map(|l| l.bytes()),
+                            ));
+                        }
+                        Ok(())
+                    })],
+                    ..RewriteStrSettings::new()
+                },
+            )
+            .unwrap();
+
+            let locs = locations.lock().unwrap();
+            // class="foo"
+            assert_eq!(locs[0].0, "class");
+            assert_eq!(locs[0].1, "foo");
+            assert_eq!(&html[locs[0].2.clone().unwrap()], "class");
+            assert_eq!(&html[locs[0].3.clone().unwrap()], "foo");
+
+            // id='bar'
+            assert_eq!(locs[1].0, "id");
+            assert_eq!(locs[1].1, "bar");
+            assert_eq!(&html[locs[1].2.clone().unwrap()], "id");
+            assert_eq!(&html[locs[1].3.clone().unwrap()], "bar");
+
+            // data-x=baz (unquoted)
+            assert_eq!(locs[2].0, "data-x");
+            assert_eq!(locs[2].1, "baz");
+            assert_eq!(&html[locs[2].2.clone().unwrap()], "data-x");
+            assert_eq!(&html[locs[2].3.clone().unwrap()], "baz");
+        }
+
+        #[test]
+        fn attribute_source_locations_none_for_programmatic_attributes() {
+            rewrite_str::<LocalHandlerTypes>(
+                "<div></div>",
+                RewriteStrSettings {
+                    element_content_handlers: vec![element!("div", |el| {
+                        el.set_attribute("added", "val").unwrap();
+                        for attr in el.attributes() {
+                            if attr.name() == "added" {
+                                assert!(
+                                    attr.name_source_location().is_none(),
+                                    "programmatic attribute should have no name source location",
+                                );
+                                assert!(
+                                    attr.value_source_location().is_none(),
+                                    "programmatic attribute should have no value source location",
+                                );
+                            }
+                        }
+                        Ok(())
+                    })],
+                    ..RewriteStrSettings::new()
+                },
+            )
+            .unwrap();
+        }
     }
 }

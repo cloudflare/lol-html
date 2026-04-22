@@ -39,6 +39,11 @@ impl<'i, T> Lexeme<'i, T> {
     }
 
     #[inline]
+    pub const fn input_byte_offset(&self) -> usize {
+        self.previously_consumed_byte_count
+    }
+
+    #[inline]
     pub const fn token_outline(&self) -> &T {
         &self.token_outline
     }
