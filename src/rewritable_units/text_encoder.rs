@@ -208,6 +208,21 @@ impl IncompleteUtf8Resync {
             false
         }
     }
+
+    pub fn write_utf8_chunk(
+        &mut self,
+        mut content: &[u8],
+        mut flush: impl FnMut(&str),
+    ) -> Result<(), Utf8Error> {
+        while !content.is_empty() {
+            let (valid_chunk, rest) = self.utf8_bytes_to_slice(content)?;
+            content = rest;
+            if !valid_chunk.is_empty() {
+                flush(valid_chunk);
+            }
+        }
+        Ok(())
+    }
 }
 
 #[test]

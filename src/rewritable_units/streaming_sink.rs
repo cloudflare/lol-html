@@ -68,17 +68,13 @@ impl<'output_handler> StreamingHandlerSink<'output_handler> {
     #[inline]
     pub fn write_utf8_chunk(
         &mut self,
-        mut content: &[u8],
+        content: &[u8],
         content_type: ContentType,
     ) -> Result<(), Utf8Error> {
-        while !content.is_empty() {
-            let (valid_chunk, rest) = self.incomplete_utf8.utf8_bytes_to_slice(content)?;
-            content = rest;
-            if !valid_chunk.is_empty() {
+        self.incomplete_utf8
+            .write_utf8_chunk(content, |valid_chunk| {
                 self.inner.write_str(valid_chunk, content_type);
-            }
-        }
-        Ok(())
+            })
     }
 }
 
