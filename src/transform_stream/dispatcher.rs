@@ -59,6 +59,11 @@ pub trait OutputSink {
     /// # Note
     /// The last chunk of the output has zero length.
     fn handle_chunk(&mut self, chunk: &[u8]);
+
+    /// Called before the first `handle_chunk` and once when `<meta charset>` is applied.
+    ///
+    /// Implementations for closures won't be able to access this method
+    fn set_encoding(&mut self, _new_encoding: AsciiCompatibleEncoding) {}
 }
 
 impl<F: FnMut(&[u8])> OutputSink for F {
@@ -188,11 +193,12 @@ where
     #[inline]
     pub fn new(
         transform_controller: C,
-        output_sink: O,
+        mut output_sink: O,
         encoding: AsciiCompatibleEncoding,
         next_encoding: SharedEncoding,
     ) -> Self {
         let capture_flags = transform_controller.initial_capture_flags();
+        output_sink.set_encoding(encoding);
 
         Self {
             delegate: DispatcherDelegate {
@@ -217,6 +223,7 @@ where
         {
             self.encoding = next_encoding;
             self.text_decoder.set_encoding(next_encoding);
+            self.delegate.output_sink.set_encoding(next_encoding);
         }
     }
 

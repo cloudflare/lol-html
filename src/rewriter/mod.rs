@@ -343,7 +343,7 @@ mod tests {
     use crate::html::TextType;
     use crate::html_content::ContentType;
     use crate::test_utils::{ASCII_COMPATIBLE_ENCODINGS, NON_ASCII_COMPATIBLE_ENCODINGS, Output};
-    use encoding_rs::Encoding;
+    use encoding_rs::{Encoding, WINDOWS_1252};
     use itertools::Itertools;
     use static_assertions::assert_impl_all;
     use std::convert::TryInto;
@@ -835,8 +835,28 @@ mod tests {
     #[test]
     fn test_charset_switch_latency() {
         let html = b"<title>\xC3\xB0</title>\xC3\xB0<meta charset=latin1 attr='\xC3\xB0'>\xF0<meta attr='\xF0'>\xF0";
-        let rewritten = rewrite_html_bytes(
-            html,
+
+        struct Sink {
+            out: Vec<u8>,
+            charsets: Vec<(usize, AsciiCompatibleEncoding)>,
+        }
+
+        impl OutputSink for &mut Sink {
+            fn handle_chunk(&mut self, chunk: &[u8]) {
+                self.out.extend_from_slice(chunk);
+            }
+
+            fn set_encoding(&mut self, enc: AsciiCompatibleEncoding) {
+                self.charsets.push((self.out.len(), enc));
+            }
+        }
+
+        let mut sink = Sink {
+            out: Vec::with_capacity(html.len()),
+            charsets: vec![],
+        };
+
+        let mut rewriter = HtmlRewriter::new(
             Settings {
                 element_content_handlers: vec![element!("[attr]", |el| {
                     assert_eq!(el.get_attribute("attr").unwrap(), "ð");
@@ -850,8 +870,20 @@ mod tests {
                 adjust_charset_on_meta_tag: true,
                 ..Default::default()
             },
+            &mut sink,
         );
-        assert_eq!(html, rewritten.as_slice());
+
+        rewriter.write(html).unwrap();
+        rewriter.end().unwrap();
+
+        assert_eq!(html, sink.out.as_slice());
+        assert_eq!(
+            &[
+                (0, AsciiCompatibleEncoding::utf_8()),
+                (50, WINDOWS_1252.try_into().unwrap())
+            ],
+            sink.charsets.as_slice()
+        );
     }
 
     #[test]
