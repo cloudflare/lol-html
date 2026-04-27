@@ -4,6 +4,7 @@ use self::dispatcher::Dispatcher;
 pub use self::dispatcher::OutputSink;
 pub(crate) use self::dispatcher::{AuxStartTagInfo, DispatcherError};
 pub use self::dispatcher::{StartTagHandlingResult, TransformController};
+use crate::AsciiCompatibleEncoding;
 use crate::base::SharedEncoding;
 use crate::memory::{Arena, SharedMemoryLimiter};
 use crate::parser::{Parser, ParserDirective};
@@ -19,7 +20,8 @@ where
     pub output_sink: O,
     pub preallocated_parsing_buffer_size: usize,
     pub memory_limiter: SharedMemoryLimiter,
-    pub encoding: SharedEncoding,
+    pub encoding: AsciiCompatibleEncoding,
+    pub next_encoding: SharedEncoding,
     pub strict: bool,
 }
 
@@ -54,6 +56,7 @@ where
             settings.transform_controller,
             settings.output_sink,
             settings.encoding,
+            settings.next_encoding,
         );
 
         let buffer = Arena::new(
