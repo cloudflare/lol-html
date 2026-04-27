@@ -794,6 +794,46 @@ mod tests {
     }
 
     #[test]
+    fn test_charset_switch_latency() {
+        let html = b"<title>\xC3\xB0</title>\xC3\xB0<meta charset=latin1 attr='\xC3\xB0'>\xF0<meta attr='\xF0'>\xF0";
+        let rewritten = rewrite_html_bytes(
+            html,
+            Settings {
+                element_content_handlers: vec![element!("[attr]", |el| {
+                    assert_eq!(el.get_attribute("attr").unwrap(), "ð");
+                    Ok(())
+                })],
+                document_content_handlers: vec![doc_text!(|text| {
+                    assert!(matches!(text.as_str(), "ð" | ""));
+                    Ok(())
+                })],
+                encoding: AsciiCompatibleEncoding::utf_8(),
+                adjust_charset_on_meta_tag: true,
+                ..Default::default()
+            }
+        );
+        assert_eq!(html, rewritten.as_slice());
+    }
+
+    #[test]
+    fn test_flush_before_charset_switch() {
+        let html = b"<head>\xC3<meta charset=latin1>\xB0</head>";
+        let rewritten = rewrite_html_bytes(
+            html,
+            Settings {
+                document_content_handlers: vec![doc_text!(|text| {
+                    assert_ne!(text.as_str(), "ð");
+                    Ok(())
+                })],
+                encoding: AsciiCompatibleEncoding::utf_8(),
+                adjust_charset_on_meta_tag: true,
+                ..Default::default()
+            }
+        );
+        assert_eq!("<head>ï¿½<meta charset=latin1>°</head>", rewritten.iter().map(|&c| char::from(c)).collect::<String>());
+    }
+
+    #[test]
     fn test_rewrite_adjust_charset_on_meta_tag_attribute_content_type() {
         use crate::html_content::{ContentType, TextChunk};
 
@@ -814,11 +854,11 @@ mod tests {
 
         let expected: Vec<u8> = html
             .iter()
-            .copied()
             .flat_map(|c| match c {
-                b'!' => vec![b'!', b'!', b'!'],
-                c => vec![c],
+                b'!' => b"!!!",
+                c => std::slice::from_ref(c),
             })
+            .copied()
             .collect();
 
         let transformed_no_charset_adjustment: Vec<u8> = rewrite_html_bytes(
