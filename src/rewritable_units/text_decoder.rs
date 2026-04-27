@@ -72,9 +72,9 @@ impl TextDecoder {
         }
 
         if self.pending_text_streaming_decoder.is_none() && self.text_buffer.is_empty() {
-            // repeat() avoids utf8 check comapred to `String::from_utf8(vec![0; len])`
-            self.text_buffer = "\0".repeat(DEFAULT_BUFFER_LEN);
+            self.init_text_buffer();
         }
+
         let decoder = self
             .pending_text_streaming_decoder
             .get_or_insert_with(|| encoding.new_decoder_without_bom_handling());
@@ -113,6 +113,12 @@ impl TextDecoder {
             }
             raw_input = raw_input.get(read..).unwrap_or_default();
         }
+    }
+
+    #[cold]
+    fn init_text_buffer(&mut self) {
+        // repeat() avoids utf8 check comapred to `String::from_utf8(vec![0; len])`
+        self.text_buffer = "\0".repeat(DEFAULT_BUFFER_LEN);
     }
 
     /// Fast path for UTF-8 or ASCII prefix
