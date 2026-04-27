@@ -9,7 +9,7 @@ pub use self::settings::*;
 use crate::base::SharedEncoding;
 use crate::memory::{MemoryLimitExceededError, SharedMemoryLimiter};
 use crate::parser::ParsingAmbiguityError;
-use crate::rewritable_units::Element;
+use crate::rewritable_units::{Element, IncompleteUtf8Resync};
 use crate::transform_stream::*;
 use encoding_rs::Encoding;
 use mime::Mime;
@@ -300,17 +300,34 @@ pub fn rewrite_str<'h, 's, H: HandlerTypes>(
     html: &str,
     settings: impl Into<Settings<'h, 's, H>>,
 ) -> Result<String, RewritingError> {
-    let mut output = vec![];
+    let mut settings = settings.into();
+    settings.adjust_charset_on_meta_tag = false;
+    settings.encoding = AsciiCompatibleEncoding::utf_8();
 
-    let mut rewriter = HtmlRewriter::new(settings.into(), |c: &[u8]| {
-        output.extend_from_slice(c);
+    rewrite_str_utf8(html, settings)
+}
+
+#[inline(never)]
+fn rewrite_str_utf8<H: HandlerTypes>(
+    html: &str,
+    settings: Settings<'_, '_, H>,
+) -> Result<String, RewritingError> {
+    let mut out = String::new();
+    out.try_reserve(html.len())
+        .map_err(|_| RewritingError::MemoryLimitExceeded(MemoryLimitExceededError))?;
+
+    let mut resync = IncompleteUtf8Resync::new();
+    let mut rewriter = HtmlRewriter::new(settings, |chunk: &[u8]| {
+        if resync.write_utf8_chunk(chunk, |s| out.push_str(s)).is_err() {
+            // this shouldn't fail, because we've got UTF-8 input and blocked encoding changes
+            out.push('\u{FFFD}');
+        }
     });
 
     rewriter.write(html.as_bytes())?;
     rewriter.end()?;
 
-    // NOTE: it's ok to unwrap here as we guarantee encoding validity of the output
-    Ok(String::from_utf8(output).unwrap())
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -441,6 +458,21 @@ mod tests {
     fn rewrite_arbitrary_settings() {
         let res = rewrite_str("<span>Some text</span>", Settings::new()).unwrap();
         assert_eq!(res, "<span>Some text</span>");
+    }
+
+    #[test]
+    fn rewrite_non_utf8() {
+        let text = "前<meta charset=latin1><span>中</span><!-- 後 -->";
+        let rewritten = rewrite_str(
+            text,
+            Settings {
+                encoding: encoding_rs::BIG5.try_into().unwrap(),
+                adjust_charset_on_meta_tag: true,
+                ..Settings::new()
+            },
+        )
+        .unwrap();
+        assert_eq!(rewritten, text);
     }
 
     #[test]
