@@ -4,9 +4,8 @@ use lol_html::errors::RewritingError;
 use lol_html::html_content::{DocumentEnd, TextType};
 use lol_html::test_utils::Output;
 use lol_html::{
-    LocalName, LocalNameHash, Namespace, SharedEncoding, SharedMemoryLimiter,
-    StartTagHandlingResult, Token, TokenCaptureFlags, TransformController, TransformStream,
-    TransformStreamSettings,
+    LocalName, LocalNameHash, Namespace, SharedMemoryLimiter, StartTagHandlingResult, Token,
+    TokenCaptureFlags, TransformController, TransformStream, TransformStreamSettings,
 };
 
 macro_rules! expect_eql {
@@ -104,7 +103,8 @@ pub fn parse(
         output_sink: |chunk: &[u8]| output.push(chunk),
         preallocated_parsing_buffer_size: 0,
         memory_limiter,
-        encoding: SharedEncoding::new(encoding),
+        encoding,
+        next_encoding: Default::default(),
         strict: true,
     });
 

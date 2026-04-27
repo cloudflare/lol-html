@@ -1,3 +1,4 @@
+use crate::AsciiCompatibleEncoding;
 use crate::base::{Bytes, Range, SharedEncoding, SourceLocation};
 use crate::html::{LocalName, Namespace};
 use crate::html_content::{TextChunk, TextType};
@@ -73,7 +74,8 @@ pub struct Dispatcher<C, O> {
     last_text_type: TextType,
     got_flags_from_hint: bool,
     pending_element_aux_info_req: Option<AuxStartTagInfoRequest<C>>,
-    encoding: SharedEncoding,
+    encoding: AsciiCompatibleEncoding,
+    next_encoding: SharedEncoding,
 }
 
 /// Fields split out of `Dispatcher` for borrow checking of event handlers
@@ -184,7 +186,12 @@ where
     O: OutputSink,
 {
     #[inline]
-    pub fn new(transform_controller: C, output_sink: O, encoding: SharedEncoding) -> Self {
+    pub fn new(
+        transform_controller: C,
+        output_sink: O,
+        encoding: AsciiCompatibleEncoding,
+        next_encoding: SharedEncoding,
+    ) -> Self {
         let capture_flags = transform_controller.initial_capture_flags();
 
         Self {
@@ -195,11 +202,21 @@ where
                 remaining_content_start: 0,
                 emission_enabled: true,
             },
-            text_decoder: TextDecoder::new(SharedEncoding::clone(&encoding)),
+            text_decoder: TextDecoder::new(encoding),
             last_text_type: TextType::Data,
             encoding,
             got_flags_from_hint: false,
             pending_element_aux_info_req: None,
+            next_encoding,
+        }
+    }
+
+    fn flush_encoding_change(&mut self) {
+        if let Some(&next_encoding) = self.next_encoding.get()
+            && next_encoding != self.encoding
+        {
+            self.encoding = next_encoding;
+            self.text_decoder.set_encoding(next_encoding);
         }
     }
 
@@ -212,6 +229,8 @@ where
             ToTokenResult::Token(token) => {
                 self.delegate.lexeme_consumed(lexeme);
                 self.delegate.token_produced(token)?;
+                // handler for <meta charset> may have changed encoding
+                self.flush_encoding_change();
             }
             ToTokenResult::Text(text_type) => {
                 self.delegate.lexeme_consumed(lexeme);

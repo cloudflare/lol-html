@@ -1,4 +1,3 @@
-use encoding_rs::UTF_8;
 use getopts::{Matches, Options};
 use lol_html::errors::*;
 use lol_html::html_content::*;
@@ -102,7 +101,8 @@ fn main() {
         output_sink: |_: &[u8]| {},
         preallocated_parsing_buffer_size: 0,
         memory_limiter: SharedMemoryLimiter::new(2048),
-        encoding: SharedEncoding::new(AsciiCompatibleEncoding::new(UTF_8).unwrap()),
+        encoding: AsciiCompatibleEncoding::utf_8(),
+        next_encoding: Default::default(),
         strict: true,
     });
 

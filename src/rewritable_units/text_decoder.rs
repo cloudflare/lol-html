@@ -1,11 +1,12 @@
-use crate::base::{Bytes, SharedEncoding, SourceLocation, Spanned};
+use crate::AsciiCompatibleEncoding;
+use crate::base::{Bytes, SourceLocation, Spanned};
 use crate::rewriter::RewritingError;
 use encoding_rs::{CoderResult, Decoder, Encoding, UTF_8};
 
 const DEFAULT_BUFFER_LEN: usize = if cfg!(test) { 13 } else { 1024 };
 
 pub(crate) struct TextDecoder {
-    encoding: SharedEncoding,
+    encoding: AsciiCompatibleEncoding,
     pending_source_location_bytes_start: usize,
     pending_text_streaming_decoder: Option<Decoder>,
     text_buffer: String,
@@ -17,7 +18,7 @@ pub(crate) type OutputHandlerCallback<'tmp> =
 impl TextDecoder {
     #[inline]
     #[must_use]
-    pub fn new(encoding: SharedEncoding) -> Self {
+    pub fn new(encoding: AsciiCompatibleEncoding) -> Self {
         Self {
             pending_source_location_bytes_start: 0,
             encoding,
@@ -26,6 +27,11 @@ impl TextDecoder {
             // because encoding_rs wants a slice
             text_buffer: String::new(),
         }
+    }
+
+    /// Unflushed text will use its old encoding
+    pub fn set_encoding(&mut self, encoding: AsciiCompatibleEncoding) {
+        self.encoding = encoding;
     }
 
     #[inline]
@@ -78,6 +84,7 @@ impl TextDecoder {
         let decoder = self
             .pending_text_streaming_decoder
             .get_or_insert_with(|| encoding.new_decoder_without_bom_handling());
+        let encoding = decoder.encoding();
 
         loop {
             let buffer = self.text_buffer.as_mut_str();

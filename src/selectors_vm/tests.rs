@@ -85,7 +85,8 @@ mod vm_tests {
             transform_controller: TestTransformController(test_fn),
             output_sink: |_: &[u8]| {},
             preallocated_parsing_buffer_size: 0,
-            encoding: SharedEncoding::new(AsciiCompatibleEncoding::new(encoding).unwrap()),
+            encoding: AsciiCompatibleEncoding::new(encoding).unwrap(),
+            next_encoding: SharedEncoding::default(),
             memory_limiter: SharedMemoryLimiter::new(2048),
             strict: true,
         });

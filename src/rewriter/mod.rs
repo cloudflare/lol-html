@@ -42,6 +42,11 @@ impl AsciiCompatibleEncoding {
     pub fn utf_8() -> Self {
         Self(encoding_rs::UTF_8)
     }
+
+    #[must_use]
+    pub(crate) fn get(self) -> &'static Encoding {
+        self.0
+    }
 }
 
 impl From<AsciiCompatibleEncoding> for &'static Encoding {
@@ -161,7 +166,8 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
             settings.memory_settings.preallocated_parsing_buffer_size;
         let strict = settings.strict;
 
-        let encoding = SharedEncoding::new(settings.encoding);
+        let encoding = settings.encoding;
+        let next_encoding = SharedEncoding::default();
 
         let memory_limiter =
             SharedMemoryLimiter::new(settings.memory_settings.max_allowed_memory_usage);
@@ -170,12 +176,13 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
             transform_controller: HtmlRewriteController::from_settings(
                 settings,
                 &memory_limiter,
-                &encoding,
+                &next_encoding,
             ),
             output_sink,
             preallocated_parsing_buffer_size,
             memory_limiter,
             encoding,
+            next_encoding,
             strict,
         });
 
@@ -251,7 +258,7 @@ fn handler_adjust_charset_on_meta_tag<'h, H: HandlerTypes>(
 
         if let Some(charset) = charset {
             found = true;
-            encoding.set(charset);
+            let _ = encoding.set(charset);
         }
 
         Ok(())
@@ -842,7 +849,7 @@ mod tests {
                 encoding: AsciiCompatibleEncoding::utf_8(),
                 adjust_charset_on_meta_tag: true,
                 ..Default::default()
-            }
+            },
         );
         assert_eq!(html, rewritten.as_slice());
     }
@@ -860,9 +867,12 @@ mod tests {
                 encoding: AsciiCompatibleEncoding::utf_8(),
                 adjust_charset_on_meta_tag: true,
                 ..Default::default()
-            }
+            },
         );
-        assert_eq!("<head>ï¿½<meta charset=latin1>°</head>", rewritten.iter().map(|&c| char::from(c)).collect::<String>());
+        assert_eq!(
+            "<head>ï¿½<meta charset=latin1>°</head>",
+            rewritten.iter().map(|&c| char::from(c)).collect::<String>()
+        );
     }
 
     #[test]
