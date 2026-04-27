@@ -62,10 +62,8 @@ impl<Sink: TokenSink> TokenSink for TokenSinkProxy<'_, Sink> {
                     .borrow_mut()
                     .push(TestToken::Comment(s.to_string()));
             }
-            Token::CharacterTokens(ref s) => {
-                if !s.is_empty() {
-                    self.push_text_token(s);
-                }
+            Token::CharacterTokens(ref s) if !s.is_empty() => {
+                self.push_text_token(s);
             }
             Token::NullCharacterToken => {
                 self.push_text_token("\0");
