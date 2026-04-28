@@ -6,6 +6,7 @@ use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
 use std::cell::OnceCell;
 use std::fmt::{self, Debug};
+use std::num::NonZero;
 use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the attribute name.
@@ -41,8 +42,8 @@ pub struct Attribute<'i> {
     value: BytesCow<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    name_range: Option<std::ops::Range<usize>>,
-    value_range: Option<std::ops::Range<usize>>,
+    /// absolute document position of attribute name and attribute value
+    name_value_start: Option<(usize, NonZero<usize>)>,
 }
 
 impl<'i> Attribute<'i> {
@@ -53,16 +54,14 @@ impl<'i> Attribute<'i> {
         value: BytesCow<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
-        name_range: Option<std::ops::Range<usize>>,
-        value_range: Option<std::ops::Range<usize>>,
+        name_value_start: Option<(usize, NonZero<usize>)>,
     ) -> Self {
         Attribute {
             name,
             value,
             raw: Some(raw),
             encoding,
-            name_range,
-            value_range,
+            name_value_start,
         }
     }
 
@@ -112,35 +111,31 @@ impl<'i> Attribute<'i> {
 
     /// Returns the source location of the attribute name in the original document.
     ///
-    /// Returns `None` for attributes added programmatically via
-    /// [`Element::set_attribute`][crate::html_content::Element::set_attribute].
+    /// Returns `None` for attributes that were added or modified.
     #[inline]
     #[must_use]
     pub fn name_source_location(&self) -> Option<SourceLocation> {
-        self.name_range
-            .as_ref()
-            .map(|r| SourceLocation::from_start_len(r.start, r.end - r.start))
+        self.name_value_start
+            .map(|(name, _)| SourceLocation::from_start_len(name, self.name.len()))
     }
 
     /// Returns the source location of the attribute value in the original document.
     ///
     /// The range covers only the value itself, excluding any quotes or the `=` sign.
     ///
-    /// Returns `None` for attributes added programmatically via
-    /// [`Element::set_attribute`][crate::html_content::Element::set_attribute].
+    /// Returns `None` for attributes that were added or modified.
     #[inline]
     #[must_use]
     pub fn value_source_location(&self) -> Option<SourceLocation> {
-        self.value_range
-            .as_ref()
-            .map(|r| SourceLocation::from_start_len(r.start, r.end - r.start))
+        self.name_value_start
+            .map(|(_, value)| SourceLocation::from_start_len(value.get(), self.value.len()))
     }
 
     #[inline]
     fn set_value(&mut self, value: &str) {
         self.value = BytesCow::owned_from_str(value, self.encoding);
         self.raw = None;
-        self.value_range = None;
+        self.name_value_start = None;
     }
 }
 
@@ -246,8 +241,7 @@ impl<'i> Attributes<'i> {
                     value: BytesCow::owned_from_str(value, encoding),
                     raw: None,
                     encoding,
-                    name_range: None,
-                    value_range: None,
+                    name_value_start: None,
                 });
             }
         }
@@ -293,8 +287,7 @@ impl<'i> Attributes<'i> {
                     .opt_slice(Some(a.raw_range))
                     .unwrap_or_else(cant_fail),
                 self.encoding,
-                Some(base + a.name.start..base + a.name.end),
-                Some(base + a.value.start..base + a.value.end),
+                NonZero::new(base + a.value.start).map(|val| (base + a.name.start, val)),
             )
         })
     }
