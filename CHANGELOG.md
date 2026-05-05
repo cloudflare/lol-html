@@ -1,7 +1,19 @@
 # Changelog
 
+## v2.9.0
+
+- Added `OutputSink::set_encoding`
+- Fixed `rewrite_str` to ignore non-UTF-8 encoding declarations (it takes a UTF-8 string)
+- Added source locations to individual attributes
+- Updated `selectors` dependency
+
+## v2.8.1
+
+- Reduced allocations
+
 ## v2.8.0
 
+- Added `on_end_tag` convenience method
 - Added support for nested `:not()` with simple selectors.
 - Updated `selectors`
 

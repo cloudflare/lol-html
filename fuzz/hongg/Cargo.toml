@@ -5,5 +5,5 @@ edition = "2024"
 publish = false
 
 [dependencies]
-honggfuzz = "0.5.45"
+honggfuzz = "0.5.60"
 test_case = { path = "../test_case" }

@@ -2,23 +2,22 @@
 name = "lol-html"
 description = "Streaming HTML rewriter/parser with CSS selector-based API"
 license = "BSD-3-Clause"
-version = "2.8.1"
+version = "2.9.0"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com>", "Gus Caplan <me@gus.host>"]
 repository = "https://github.com/cloudflare/lol-html"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.89"
 publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-js-sys = "0.3.77"
-lol_html_native = { package = "lol_html", path = "../", version = "2.7.1" }
-serde = { version = "1.0.219", features = ["derive"] }
+js-sys = "0.3.97"
+lol_html_native = { package = "lol_html", path = "../", version = "2.9.0" }
+serde = { version = "1.0.228", features = ["derive"] }
 encoding_rs = "0.8.35"
 serde-wasm-bindgen = "0.6.5"
 thiserror = "2.0"
-wasm-bindgen = "0.2.100"
-servo_arc = { version = "0.4.1", features = ["track_alloc_size"] }
+wasm-bindgen = "0.2.120"
 
