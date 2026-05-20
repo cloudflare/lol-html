@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.0.0
 
 - Added `MemorySettings::graceful_bail_out_on_memory_limit_exceeded`: when set, the rewriter
   flushes every input byte it has received but not yet emitted to the sink (as-is) before
@@ -10,6 +10,8 @@
   above, but for `RewritingError::ContentHandlerError`. When set, the rewriter flushes
   remaining input bytes before propagating a handler error, preserving the response.
   Currently exposed via the Rust API only; the C API still uses the original behavior.
+- Adding new fields to `MemorySettings` and `Settings` is a SemVer-breaking change for
+  existing struct-literal construction, hence the major version bump.
 
 ## v2.9.0
 
