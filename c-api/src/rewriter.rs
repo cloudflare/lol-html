@@ -61,6 +61,10 @@ fn lol_html_rewriter_build_inner(
         strict,
         enable_esi_tags,
         adjust_charset_on_meta_tag: false,
+        // TODO: expose `graceful_bail_out_on_content_handler_error` through the C API. Adding
+        // a new parameter to `lol_html_rewriter_build()` is a breaking ABI change, so it
+        // belongs behind a new function variant or a settings struct.
+        graceful_bail_out_on_content_handler_error: false,
     };
 
     let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);

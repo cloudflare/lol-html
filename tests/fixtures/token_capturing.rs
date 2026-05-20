@@ -107,6 +107,7 @@ pub fn parse(
         next_encoding: Default::default(),
         strict: true,
         graceful_bail_out_on_memory_limit_exceeded: false,
+        graceful_bail_out_on_content_handler_error: false,
     });
 
     let parser = transform_stream.parser();

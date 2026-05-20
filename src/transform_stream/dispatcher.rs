@@ -124,7 +124,18 @@ where
         Ok(())
     }
 
-    fn lexeme_consumed<T>(&mut self, lexeme: &Lexeme<'_, T>) {
+    /// Emit the raw chunk of input that lies between the previously emitted byte and the
+    /// start of `lexeme`, and move `remaining_content_start` to the start of `lexeme`.
+    ///
+    /// This is the first half of what used to be `lexeme_consumed()`. It is split out so that
+    /// the second half ([`consume_lexeme()`]) can be deferred until after the lexeme's token
+    /// has been successfully emitted; that way, if token emission fails (e.g. a content
+    /// handler returns an error), `remaining_content_start` still points at the failing
+    /// lexeme's start and a graceful bail-out can flush the lexeme bytes raw rather than
+    /// losing them.
+    ///
+    /// [`consume_lexeme()`]: Self::consume_lexeme
+    fn emit_chunk_before_lexeme<T>(&mut self, lexeme: &Lexeme<'_, T>) {
         let lexeme_range = lexeme.raw_range();
 
         let chunk_range = Range {
@@ -138,7 +149,16 @@ where
             self.output_sink.handle_chunk(&chunk);
         }
 
-        self.remaining_content_start = lexeme_range.end;
+        self.remaining_content_start = lexeme_range.start;
+    }
+
+    /// Advance `remaining_content_start` past the end of `lexeme`, marking it as committed.
+    /// Must only be called after the lexeme's token has been successfully emitted; see
+    /// [`emit_chunk_before_lexeme()`].
+    ///
+    /// [`emit_chunk_before_lexeme()`]: Self::emit_chunk_before_lexeme
+    fn consume_lexeme<T>(&mut self, lexeme: &Lexeme<'_, T>) {
+        self.remaining_content_start = lexeme.raw_range().end;
     }
 
     #[inline]
@@ -234,13 +254,14 @@ where
     {
         match lexeme.to_token(&mut self.delegate.capture_flags, self.encoding.get()) {
             ToTokenResult::Token(token) => {
-                self.delegate.lexeme_consumed(lexeme);
+                self.delegate.emit_chunk_before_lexeme(lexeme);
                 self.delegate.token_produced(token)?;
+                self.delegate.consume_lexeme(lexeme);
                 // handler for <meta charset> may have changed encoding
                 self.flush_encoding_change();
             }
             ToTokenResult::Text(text_type) => {
-                self.delegate.lexeme_consumed(lexeme);
+                self.delegate.emit_chunk_before_lexeme(lexeme);
                 self.last_text_type = text_type;
                 self.text_decoder.feed_text(
                     lexeme.spanned(),
@@ -255,6 +276,7 @@ where
                         )
                     },
                 )?;
+                self.delegate.consume_lexeme(lexeme);
             }
             ToTokenResult::None => {}
         }

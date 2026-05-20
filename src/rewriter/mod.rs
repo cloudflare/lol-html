@@ -167,6 +167,8 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
         let graceful_bail_out_on_memory_limit_exceeded = settings
             .memory_settings
             .graceful_bail_out_on_memory_limit_exceeded;
+        let graceful_bail_out_on_content_handler_error =
+            settings.graceful_bail_out_on_content_handler_error;
         let strict = settings.strict;
 
         let encoding = settings.encoding;
@@ -188,6 +190,7 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
             next_encoding,
             strict,
             graceful_bail_out_on_memory_limit_exceeded,
+            graceful_bail_out_on_content_handler_error,
         });
 
         HtmlRewriter {
@@ -1440,6 +1443,194 @@ mod tests {
                 reconstructed,
                 html.as_bytes(),
                 "response with unclosed tags must be reconstructable",
+            );
+        }
+
+        // --- Content-handler-error bail-out tests ---
+        //
+        // These mirror the memory bail-out tests but with handler errors as the trigger. The
+        // contract is the same: when `graceful_bail_out_on_content_handler_error = true`, the
+        // sink receives every input byte the rewriter had been given before the error.
+
+        /// An element handler that returns `Err` aborts the rewriter. With graceful bail-out
+        /// enabled, the sink keeps every byte the caller had fed in, with the failing element
+        /// and everything after it flushed raw (no transformation), and earlier elements
+        /// transformed normally.
+        #[test]
+        fn test_graceful_bail_out_on_element_handler_error() {
+            let html = b"<a>first</a><stop>middle</stop><b>last</b>";
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![
+                        element!("a", |el| {
+                            el.set_attribute("rewritten", "yes").unwrap();
+                            Ok(())
+                        }),
+                        element!("stop", |_| Err("handler refused".into())),
+                    ],
+                    graceful_bail_out_on_content_handler_error: true,
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let err = rewriter.write(html).unwrap_err();
+
+            assert!(
+                matches!(err, RewritingError::ContentHandlerError(_)),
+                "expected ContentHandlerError, got {err}",
+            );
+
+            // The full original bytes from `<stop>` onwards are present raw, and the `<a>` tag
+            // before that has been transformed.
+            let output_str = std::str::from_utf8(&output).unwrap();
+
+            assert!(
+                output_str.starts_with("<a rewritten=\"yes\">first</a>"),
+                "expected transformed prefix, got {output_str:?}",
+            );
+            assert!(
+                output_str.ends_with("<stop>middle</stop><b>last</b>"),
+                "expected raw bytes from the failing tag onwards, got {output_str:?}",
+            );
+        }
+
+        /// Without the opt-in flag, an element-handler error still aborts processing without
+        /// flushing remaining bytes (existing behavior preserved).
+        #[test]
+        fn test_no_graceful_bail_out_on_content_handler_error_by_default() {
+            let html = b"<a>first</a><stop>middle</stop>";
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![element!("stop", |_| Err(
+                        "handler refused".into()
+                    ))],
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let err = rewriter.write(html).unwrap_err();
+
+            assert!(matches!(err, RewritingError::ContentHandlerError(_)));
+            assert!(
+                !output.ends_with(b"<stop>middle</stop>"),
+                "without graceful bail-out the sink must NOT contain the failing tag, got {output:?}",
+            );
+        }
+
+        /// A comment handler that returns `Err` is recoverable too. Comments live on the same
+        /// `lexeme_consumed` path as elements, so this exercises the same restructured ordering.
+        #[test]
+        fn test_graceful_bail_out_on_comment_handler_error() {
+            let html = b"<div>Before<!--FAIL-->After</div>";
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![comments!("div", |_| {
+                        Err("comment refused".into())
+                    })],
+                    graceful_bail_out_on_content_handler_error: true,
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let err = rewriter.write(html).unwrap_err();
+            assert!(matches!(err, RewritingError::ContentHandlerError(_)));
+
+            // The whole document is in the sink (handler error doesn't lose bytes).
+            assert_eq!(output, html);
+        }
+
+        /// A handler error from `handle_end` arrives after `flush_remaining_input` has already
+        /// emitted every input byte, so the sink already has the complete document. Bail-out
+        /// just propagates the error without losing anything.
+        #[test]
+        fn test_graceful_bail_out_on_end_handler_error() {
+            let html = b"<div>content</div>";
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    document_content_handlers: vec![end!(|_| Err("end refused".into()))],
+                    graceful_bail_out_on_content_handler_error: true,
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            rewriter.write(html).unwrap();
+
+            let err = rewriter.end().unwrap_err();
+
+            assert!(matches!(err, RewritingError::ContentHandlerError(_)));
+            // All input bytes already in sink before `handle_end()` runs.
+            assert_eq!(output, html);
+        }
+
+        /// Reconstruction test: when a handler in the middle of a document errors, the sink
+        /// output plus any unfed bytes must equal the original document.
+        #[test]
+        fn test_bail_out_reconstruct_handler_error_midstream() {
+            let html = b"<p>before</p><div>middle</div><span>after</span>";
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![element!("div", |_| {
+                        Err("div refused".into())
+                    })],
+                    graceful_bail_out_on_content_handler_error: true,
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let err = rewriter.write(html).unwrap_err();
+            assert!(matches!(err, RewritingError::ContentHandlerError(_)));
+
+            assert_eq!(
+                output, html,
+                "response must be reconstructable byte-for-byte when handler errors midstream",
+            );
+        }
+
+        /// The two bail-out flags are independent: enabling content-handler bail-out does not
+        /// affect memory-limit behavior, and vice versa.
+        #[test]
+        fn test_bail_out_flags_independent() {
+            // Memory limit error with content-handler bail-out only: should NOT bail out.
+            const MAX: usize = 100;
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: MemorySettings {
+                        max_allowed_memory_usage: MAX,
+                        preallocated_parsing_buffer_size: 0,
+                        graceful_bail_out_on_memory_limit_exceeded: false,
+                    },
+                    graceful_bail_out_on_content_handler_error: true,
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let chunk_1 = format!("<img alt=\"{}", "l".repeat(MAX / 2));
+            let chunk_2 = format!("{}\" />", "r".repeat(MAX / 2));
+            rewriter.write(chunk_1.as_bytes()).unwrap();
+            let err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
+
+            assert!(matches!(err, RewritingError::MemoryLimitExceeded(_)));
+            assert!(
+                output.is_empty(),
+                "content-handler flag must not enable memory bail-out, got {output:?}",
             );
         }
 
