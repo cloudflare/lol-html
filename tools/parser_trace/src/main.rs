@@ -104,6 +104,7 @@ fn main() {
         encoding: AsciiCompatibleEncoding::utf_8(),
         next_encoding: Default::default(),
         strict: true,
+        graceful_bail_out_on_memory_limit_exceeded: false,
     });
 
     let parser = transform_stream.parser();

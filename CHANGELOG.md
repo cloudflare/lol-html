@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Added `MemorySettings::graceful_bail_out_on_memory_limit_exceeded`: when set, the rewriter
+  flushes every input byte it has received but not yet emitted to the sink (as-is) before
+  returning `MemoryLimitExceededError`, so callers can continue the response by writing
+  subsequent bytes directly to their downstream sink instead of breaking it.
+
 ## v2.9.0
 
 - Added `OutputSink::set_encoding`

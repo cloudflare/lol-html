@@ -255,6 +255,27 @@ typedef struct {
     // `lol_html_rewriter_write` and `lol_html_rewriter_end` will return an error
     // if this limit is exceeded.
     size_t max_allowed_memory_usage;
+    // Controls how the rewriter recovers when `max_allowed_memory_usage` is
+    // exceeded.
+    //
+    // When `false` (the default), the rewriter aborts processing the response,
+    // returns an error, and leaves the output sink in a potentially inconsistent
+    // state (i.e. the sink will have received the transformed bytes the rewriter
+    // had already produced, but the remaining input bytes are lost). This
+    // typically results in a truncated, broken response.
+    //
+    // When `true`, before returning the error the rewriter flushes every input
+    // byte it has received but not yet emitted to the sink, *as-is* (i.e.
+    // without any transformation). The caller can then continue the response by
+    // writing any subsequent input bytes directly to its own downstream sink,
+    // bypassing the (now poisoned) rewriter. The resulting response will have
+    // the rewriter's transformations applied up to some boundary, followed by
+    // the original bytes after that boundary, but the response will not be
+    // broken.
+    //
+    // The rewriter is still poisoned after the error and must not be used again,
+    // regardless of this setting.
+    bool graceful_bail_out_on_memory_limit_exceeded;
 } lol_html_memory_settings_t;
 
 // Builds HTML-rewriter out of the provided builder. Can be called

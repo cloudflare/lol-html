@@ -164,6 +164,9 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
     pub fn new<'s>(settings: Settings<'h, 's, H>, output_sink: O) -> Self {
         let preallocated_parsing_buffer_size =
             settings.memory_settings.preallocated_parsing_buffer_size;
+        let graceful_bail_out_on_memory_limit_exceeded = settings
+            .memory_settings
+            .graceful_bail_out_on_memory_limit_exceeded;
         let strict = settings.strict;
 
         let encoding = settings.encoding;
@@ -184,6 +187,7 @@ impl<'h, O: OutputSink, H: HandlerTypes> HtmlRewriter<'h, O, H> {
             encoding,
             next_encoding,
             strict,
+            graceful_bail_out_on_memory_limit_exceeded,
         });
 
         HtmlRewriter {
@@ -976,6 +980,7 @@ mod tests {
                     memory_settings: MemorySettings {
                         max_allowed_memory_usage,
                         preallocated_parsing_buffer_size: 0,
+                        ..MemorySettings::new()
                     },
                     ..Settings::new()
                 },
@@ -1014,6 +1019,428 @@ mod tests {
 
             rewriter.write(chunk.as_bytes()).unwrap_err();
             rewriter.end().unwrap_err();
+        }
+
+        fn create_rewriter_with_graceful_bail_out<O: OutputSink>(
+            max_allowed_memory_usage: usize,
+            output_sink: O,
+        ) -> HtmlRewriter<'static, O> {
+            HtmlRewriter::new(
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: MemorySettings {
+                        max_allowed_memory_usage,
+                        preallocated_parsing_buffer_size: 0,
+                        graceful_bail_out_on_memory_limit_exceeded: true,
+                    },
+                    ..Settings::new()
+                },
+                output_sink,
+            )
+        }
+
+        /// Exercises the bail-out path inside `Arena::append()`: with two chunks where the open
+        /// tag spans both, the parser can't consume chunk 1, so it gets buffered. Chunk 2's
+        /// append then exceeds the memory limit. The graceful bail-out should flush both chunks
+        /// to the sink as-is, so the caller can continue the response.
+        #[test]
+        fn test_graceful_bail_out_in_buffer_append() {
+            const MAX: usize = 100;
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = create_rewriter_with_graceful_bail_out(MAX, |c: &[u8]| {
+                output.extend_from_slice(c);
+            });
+
+            let chunk_1 = format!("<img alt=\"{}", "l".repeat(MAX / 2));
+            let chunk_2 = format!("{}\" />", "r".repeat(MAX / 2));
+
+            rewriter.write(chunk_1.as_bytes()).unwrap();
+
+            let err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
+
+            match err {
+                RewritingError::MemoryLimitExceeded(e) => assert_eq!(e, MemoryLimitExceededError),
+                _ => panic!("{}", err),
+            }
+
+            let expected: Vec<u8> = [chunk_1.as_bytes(), chunk_2.as_bytes()].concat();
+
+            assert_eq!(output, expected);
+        }
+
+        /// Exercises the bail-out path inside `Arena::init_with()`: with no buffered data, the
+        /// parser can't consume a chunk that ends with an unfinished tag *name* (the tag
+        /// scanner keeps `tag_start` set, so everything from there onwards is unconsumed). The
+        /// unconsumed bytes are bigger than the limit, so `init_with` fails. The graceful
+        /// bail-out should flush the entire chunk to the sink as-is.
+        #[test]
+        fn test_graceful_bail_out_in_buffer_init_with() {
+            const MAX: usize = 1;
+
+            let mut output = Vec::<u8>::new();
+            // No element handlers, so we avoid allocating the selectors VM stack which would
+            // fail first with such a tight limit.
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    memory_settings: MemorySettings {
+                        max_allowed_memory_usage: MAX,
+                        preallocated_parsing_buffer_size: 0,
+                        graceful_bail_out_on_memory_limit_exceeded: true,
+                    },
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            // Unfinished tag name: the scanner can't call `finish_tag_name()` (no space or
+            // `>`), so `tag_start` stays set and the whole chunk becomes unconsumed.
+            let chunk = b"<im";
+
+            let err = rewriter.write(chunk).unwrap_err();
+
+            match err {
+                RewritingError::MemoryLimitExceeded(e) => assert_eq!(e, MemoryLimitExceededError),
+                _ => panic!("{}", err),
+            }
+
+            assert_eq!(output, chunk);
+        }
+
+        /// Exercises the bail-out path inside `Parser::parse()`: the selectors VM stack push
+        /// exceeds the memory limit while processing the very first start tag, so the parser
+        /// returns an error mid-chunk. The graceful bail-out flushes everything from
+        /// `remaining_content_start` onwards, which (since no lexeme has been consumed yet)
+        /// covers the whole chunk.
+        #[test]
+        fn test_graceful_bail_out_in_parser() {
+            // Too small for even the initial selectors VM stack allocation.
+            const MAX: usize = 16;
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = create_rewriter_with_graceful_bail_out(MAX, |c: &[u8]| {
+                output.extend_from_slice(c);
+            });
+
+            let chunk = b"<div>foo</div>";
+
+            let err = rewriter.write(chunk).unwrap_err();
+
+            match err {
+                RewritingError::MemoryLimitExceeded(e) => assert_eq!(e, MemoryLimitExceededError),
+                _ => panic!("{}", err),
+            }
+
+            assert_eq!(output, chunk);
+        }
+
+        /// Verifies that transformations applied to tokens processed before the failure point
+        /// are preserved, and that the rest of the input is flushed as-is. This mirrors the
+        /// contract the caller relies on: the sink contains the transformed prefix and the raw
+        /// suffix, and feeding the next chunk of the original response continues it correctly.
+        ///
+        /// Uses a document-level comment handler (no selectors VM, so we don't burn memory on
+        /// the VM stack) and the buffer-append bail-out path: chunk 1 contains a complete
+        /// comment that the handler transforms, plus the start of an unfinished tag that gets
+        /// buffered; chunk 2 then overflows the buffer.
+        #[test]
+        fn test_graceful_bail_out_preserves_prefix_transformations() {
+            const MAX: usize = 100;
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings {
+                    document_content_handlers: vec![doc_comments!(|c| {
+                        let text = c.text();
+                        c.set_text(&format!("REWRITTEN-{text}")).unwrap();
+                        Ok(())
+                    })],
+                    memory_settings: MemorySettings {
+                        max_allowed_memory_usage: MAX,
+                        preallocated_parsing_buffer_size: 0,
+                        graceful_bail_out_on_memory_limit_exceeded: true,
+                    },
+                    ..Settings::new()
+                },
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            // chunk_1: a complete comment that the handler will transform, followed by an
+            // unfinished tag whose remaining bytes get buffered for the next write.
+            let chunk_1 = format!("<!--hello--><img alt=\"{}", "l".repeat(50));
+            // chunk_2: trying to append this to the buffer exceeds the limit.
+            let chunk_2 = format!("{}\" />", "r".repeat(50));
+
+            rewriter.write(chunk_1.as_bytes()).unwrap();
+
+            let err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
+
+            assert!(
+                matches!(err, RewritingError::MemoryLimitExceeded(_)),
+                "expected MemoryLimitExceeded, got {err}",
+            );
+
+            let output_str = std::str::from_utf8(&output).unwrap();
+
+            // The comment must have been transformed (proves the prefix kept its handler
+            // changes).
+            assert!(
+                output_str.contains("<!--REWRITTEN-hello-->"),
+                "expected transformed comment, got {output_str:?}",
+            );
+
+            // The unfinished tag's bytes must be present raw (proves the bail-out flushed the
+            // buffered + new bytes the caller had handed in).
+            assert!(
+                output_str.contains("<img alt=\""),
+                "expected raw unfinished tag bytes, got {output_str:?}",
+            );
+
+            assert!(
+                output_str.ends_with("\" />"),
+                "expected raw closing of the tag at the end, got {output_str:?}",
+            );
+
+            // Sanity check: the bytes from the original input (minus what the handler
+            // transformed) are all present. The transformed comment grew by some bytes; the
+            // rest is byte-for-byte.
+            let original_input_minus_comment =
+                format!("<img alt=\"{}{}\" />", "l".repeat(50), "r".repeat(50),);
+
+            assert!(
+                output_str.contains(&original_input_minus_comment),
+                "expected original (raw) suffix in output, got {output_str:?}",
+            );
+        }
+
+        /// Sanity check: without the opt-in flag, the existing behavior is preserved (the
+        /// sink does NOT receive the unprocessed bytes after a memory error).
+        #[test]
+        fn test_no_graceful_bail_out_by_default() {
+            const MAX: usize = 100;
+
+            let mut output = Vec::<u8>::new();
+            // `create_rewriter` uses default MemorySettings: graceful bail-out is off.
+            let mut rewriter = create_rewriter(MAX, |c: &[u8]| output.extend_from_slice(c));
+
+            let chunk_1 = format!("<img alt=\"{}", "l".repeat(MAX / 2));
+            let chunk_2 = format!("{}\" />", "r".repeat(MAX / 2));
+
+            rewriter.write(chunk_1.as_bytes()).unwrap();
+            let err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
+
+            assert!(matches!(err, RewritingError::MemoryLimitExceeded(_)));
+            // Sink received nothing: chunk_1 was buffered (never emitted), chunk_2 couldn't be
+            // appended, and we didn't bail out gracefully.
+            assert!(
+                output.is_empty(),
+                "without graceful bail-out the sink should be empty, got {output:?}",
+            );
+        }
+
+        // --- Response reconstruction tests ---
+        //
+        // Each test below verifies that, after a `MemoryLimitExceeded` bail-out, the caller
+        // can reconstruct the complete response by concatenating:
+        //
+        //   sink_output  +  unfed_remaining_bytes  ==  original_html
+        //
+        // The handlers used are no-ops, so serialized tokens are byte-for-byte identical to
+        // the original input, and the assertion is an exact byte comparison.
+        //
+        // Note: CDATA sections (`<![CDATA[...]]>`) are not tested here because CDATA content
+        // is emitted incrementally by the lexer (it only needs to buffer the partial `]]>`
+        // closing marker, not the whole section), so it doesn't cause Arena growth.
+
+        fn bail_out_settings(max_memory: usize) -> MemorySettings {
+            MemorySettings {
+                max_allowed_memory_usage: max_memory,
+                preallocated_parsing_buffer_size: 0,
+                graceful_bail_out_on_memory_limit_exceeded: true,
+            }
+        }
+
+        /// Feeds `html` to a graceful-bail-out rewriter in `chunk_size`-byte pieces. When
+        /// `MemoryLimitExceeded` fires (during `write()` or `end()`), the remaining unfed
+        /// bytes are appended verbatim to the sink output, simulating what a caller would do:
+        /// stop using the poisoned rewriter and pipe the rest of the response directly.
+        ///
+        /// Panics if no `MemoryLimitExceeded` error fires (test misconfiguration).
+        fn reconstruct_response_on_oom(
+            html: &[u8],
+            chunk_size: usize,
+            settings: Settings<'_, '_>,
+        ) -> Vec<u8> {
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(settings, |c: &[u8]| output.extend_from_slice(c));
+
+            let mut fed_bytes = 0;
+            let mut hit_limit = false;
+
+            for chunk in html.chunks(chunk_size) {
+                match rewriter.write(chunk) {
+                    Ok(()) => fed_bytes += chunk.len(),
+                    Err(RewritingError::MemoryLimitExceeded(_)) => {
+                        fed_bytes += chunk.len();
+                        hit_limit = true;
+                        break;
+                    }
+                    Err(e) => panic!("unexpected error: {e}"),
+                }
+            }
+
+            if !hit_limit {
+                // All writes succeeded; try `end()` which may trigger the error during final
+                // buffer processing.
+                if let Err(e) = rewriter.end() {
+                    match e {
+                        RewritingError::MemoryLimitExceeded(_) => hit_limit = true,
+                        e => panic!("unexpected error: {e}"),
+                    }
+                }
+            }
+
+            assert!(
+                hit_limit,
+                "expected MemoryLimitExceeded but processing completed \
+                 (memory limit too generous for this test)",
+            );
+
+            // Append bytes we never fed to the rewriter.
+            output.extend_from_slice(&html[fed_bytes..]);
+
+            output
+        }
+
+        /// Tag with a huge base64-encoded attribute value, the shape that caused
+        /// INCIDENT-6638. The lexer buffers the entire tag until `>` is found; the buffer
+        /// exceeds the memory limit before that.
+        #[test]
+        fn test_bail_out_reconstruct_huge_attribute() {
+            let html = format!(
+                "<p>Hello</p><img src=\"data:image/png;base64,{}\"><p>World</p>",
+                "A".repeat(16384),
+            );
+
+            let reconstructed = reconstruct_response_on_oom(
+                html.as_bytes(),
+                512,
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: bail_out_settings(8192),
+                    ..Settings::new()
+                },
+            );
+
+            assert_eq!(
+                reconstructed,
+                html.as_bytes(),
+                "response with huge attribute must be reconstructable",
+            );
+        }
+
+        /// Tag with hundreds of small attributes whose total length exceeds the memory limit.
+        /// Same mechanism as the huge-attribute test (the lexer buffers the whole tag), just a
+        /// different real-world shape.
+        #[test]
+        fn test_bail_out_reconstruct_many_attributes() {
+            let attrs: String = (0..500)
+                .map(|i| format!(" data-attr-{i}=\"value-{i}\""))
+                .collect();
+            let html = format!("<p>Hello</p><div{attrs}>inner</div><p>World</p>");
+
+            let reconstructed = reconstruct_response_on_oom(
+                html.as_bytes(),
+                512,
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: bail_out_settings(8192),
+                    ..Settings::new()
+                },
+            );
+
+            assert_eq!(
+                reconstructed,
+                html.as_bytes(),
+                "response with many attributes must be reconstructable",
+            );
+        }
+
+        /// Huge HTML comment (`<!-- ... -->`). The lexer buffers from `<!--` to `-->`, so a
+        /// comment body larger than the limit overflows the Arena the same way a huge tag does.
+        /// The comment handler puts the parser in lex mode for comments inside the outer
+        /// `<div>`.
+        #[test]
+        fn test_bail_out_reconstruct_huge_comment() {
+            let html = format!("<div>Before<!-- {} -->After</div>", "X".repeat(16384),);
+
+            let reconstructed = reconstruct_response_on_oom(
+                html.as_bytes(),
+                512,
+                Settings {
+                    element_content_handlers: vec![comments!("div", |_| Ok(()))],
+                    memory_settings: bail_out_settings(8192),
+                    ..Settings::new()
+                },
+            );
+
+            assert_eq!(
+                reconstructed,
+                html.as_bytes(),
+                "response with huge comment must be reconstructable",
+            );
+        }
+
+        /// Deeply nested non-void elements. Each `<div>` pushes a `StackItem` onto the
+        /// selectors-VM stack; eventually the `LimitedVec` growth exceeds the memory limit.
+        #[test]
+        fn test_bail_out_reconstruct_deeply_nested() {
+            let depth = 200;
+            let open_tags: String = (0..depth).map(|_| "<div>".to_owned()).collect();
+            let close_tags: String = (0..depth).map(|_| "</div>".to_owned()).collect();
+            let html = format!("{open_tags}leaf{close_tags}");
+
+            let reconstructed = reconstruct_response_on_oom(
+                html.as_bytes(),
+                512,
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: bail_out_settings(4096),
+                    ..Settings::new()
+                },
+            );
+
+            assert_eq!(
+                reconstructed,
+                html.as_bytes(),
+                "deeply nested response must be reconstructable",
+            );
+        }
+
+        /// Many non-void start tags that are never closed: the selectors-VM stack grows
+        /// without any pops, the same as deep nesting but a pattern more likely seen in
+        /// broken or malicious HTML.
+        #[test]
+        fn test_bail_out_reconstruct_unclosed_tags() {
+            let html: String = (0..200)
+                .map(|i| format!("<span class=\"s{i}\">text "))
+                .collect();
+
+            let reconstructed = reconstruct_response_on_oom(
+                html.as_bytes(),
+                512,
+                Settings {
+                    element_content_handlers: vec![element!("*", |_| Ok(()))],
+                    memory_settings: bail_out_settings(4096),
+                    ..Settings::new()
+                },
+            );
+
+            assert_eq!(
+                reconstructed,
+                html.as_bytes(),
+                "response with unclosed tags must be reconstructable",
+            );
         }
 
         #[test]
