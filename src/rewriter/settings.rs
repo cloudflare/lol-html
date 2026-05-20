@@ -1034,6 +1034,54 @@ pub struct Settings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> 
     ///
     /// `false` when constructed with `Settings::new()`.
     pub adjust_charset_on_meta_tag: bool,
+
+    /// Controls how the rewriter recovers when a content handler returns an `Err`.
+    ///
+    /// When `false` (the default), the rewriter aborts processing the response, returns the
+    /// handler's [`RewritingError::ContentHandlerError`], and leaves the output sink in a
+    /// potentially inconsistent state. Downstream this typically manifests as a truncated,
+    /// broken response.
+    ///
+    /// When `true`, before propagating [`RewritingError::ContentHandlerError`] the rewriter
+    /// flushes every input byte it has received but not yet emitted to the sink, *as-is*. The
+    /// caller can then continue the response by writing any subsequent input bytes directly
+    /// to its own downstream sink, bypassing the (now poisoned) rewriter. The resulting
+    /// response will have the rewriter's transformations applied up to some boundary,
+    /// followed by the original bytes after that boundary, but the response will not be
+    /// broken.
+    ///
+    /// The rewriter is still poisoned after the error and must not be used again, regardless
+    /// of this setting.
+    ///
+    /// This is symmetric with
+    /// [`MemorySettings::graceful_bail_out_on_memory_limit_exceeded`], but kept as a separate
+    /// flag because the underlying error has different semantics: a memory limit is an
+    /// environmental constraint, whereas a content handler returning `Err` is an explicit
+    /// signal from the application that something is wrong with the input. Some callers will
+    /// want graceful recovery for one but not the other.
+    ///
+    /// ### Caveats
+    ///
+    /// 1. If a handler was actively removing element content (e.g. via [`Element::remove()`])
+    ///    at the time of the bail-out, the surrounding tags can end up mismatched in the
+    ///    resulting response. In practice removing content is uncommon, and a
+    ///    well-formed-but-imperfect response is still much better than a truncated one.
+    /// 2. If a text content handler returns an error after some chunks of the same text node
+    ///    have already been emitted (rare; typically only happens with multi-chunk
+    ///    encoding-converted text), the bail-out flush will re-emit the input bytes raw,
+    ///    duplicating the already-emitted chunks. The response is byte-bigger but not
+    ///    truncated.
+    ///
+    /// ### Default
+    ///
+    /// `false` when constructed with `Settings::new()`.
+    ///
+    /// [`MemorySettings::graceful_bail_out_on_memory_limit_exceeded`]:
+    ///     struct.MemorySettings.html#structfield.graceful_bail_out_on_memory_limit_exceeded
+    /// [`RewritingError::ContentHandlerError`]:
+    ///     errors/enum.RewritingError.html#variant.ContentHandlerError
+    /// [`Element::remove()`]: html_content/struct.Element.html#method.remove
+    pub graceful_bail_out_on_content_handler_error: bool,
 }
 
 impl Default for Settings<'_, '_, LocalHandlerTypes> {
@@ -1074,6 +1122,7 @@ impl<H: HandlerTypes> Settings<'_, '_, H> {
             strict: true,
             enable_esi_tags: false,
             adjust_charset_on_meta_tag: false,
+            graceful_bail_out_on_content_handler_error: false,
         }
     }
 }

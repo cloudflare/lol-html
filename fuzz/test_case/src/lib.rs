@@ -176,6 +176,7 @@ fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) {
             memory_settings: MemorySettings::new(),
             strict: false,
             adjust_charset_on_meta_tag: false,
+            graceful_bail_out_on_content_handler_error: false,
         },
         |_: &[u8]| {},
     );

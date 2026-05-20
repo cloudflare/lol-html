@@ -6,6 +6,10 @@
   flushes every input byte it has received but not yet emitted to the sink (as-is) before
   returning `MemoryLimitExceededError`, so callers can continue the response by writing
   subsequent bytes directly to their downstream sink instead of breaking it.
+- Added `Settings::graceful_bail_out_on_content_handler_error`: symmetric to the memory flag
+  above, but for `RewritingError::ContentHandlerError`. When set, the rewriter flushes
+  remaining input bytes before propagating a handler error, preserving the response.
+  Currently exposed via the Rust API only; the C API still uses the original behavior.
 
 ## v2.9.0
 

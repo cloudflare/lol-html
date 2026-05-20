@@ -24,6 +24,7 @@ where
     pub next_encoding: SharedEncoding,
     pub strict: bool,
     pub graceful_bail_out_on_memory_limit_exceeded: bool,
+    pub graceful_bail_out_on_content_handler_error: bool,
 }
 
 // Pub only for integration tests
@@ -36,6 +37,7 @@ where
     buffer: Arena,
     has_buffered_data: bool,
     graceful_bail_out_on_memory_limit_exceeded: bool,
+    graceful_bail_out_on_content_handler_error: bool,
 }
 
 impl<C, O> TransformStream<C, O>
@@ -74,6 +76,23 @@ where
             has_buffered_data: false,
             graceful_bail_out_on_memory_limit_exceeded: settings
                 .graceful_bail_out_on_memory_limit_exceeded,
+            graceful_bail_out_on_content_handler_error: settings
+                .graceful_bail_out_on_content_handler_error,
+        }
+    }
+
+    /// Returns whether the current settings allow bailing out gracefully on `err`. Memory and
+    /// content-handler errors are gated by independent flags; parsing-ambiguity errors are
+    /// never recovered from (the whole point of strict mode is to refuse uncertain markup).
+    fn should_bail_out_for(&self, err: &RewritingError) -> bool {
+        match err {
+            RewritingError::MemoryLimitExceeded(_) => {
+                self.graceful_bail_out_on_memory_limit_exceeded
+            }
+            RewritingError::ContentHandlerError(_) => {
+                self.graceful_bail_out_on_content_handler_error
+            }
+            RewritingError::ParsingAmbiguity(_) => false,
         }
     }
 
@@ -106,13 +125,12 @@ where
         let consumed_byte_count = match self.parser.parse(chunk, false) {
             Ok(c) => c,
             Err(e) => {
-                // The parser ran out of memory mid-chunk (e.g. the selectors VM stack hit the
-                // limit). The dispatcher's `remaining_content_start` points to the first byte of
-                // `chunk` that hasn't been emitted yet, so on a graceful bail-out flushing from
+                // The parser failed mid-chunk. The dispatcher's `remaining_content_start`
+                // points to the first byte of `chunk` that hasn't been emitted yet (memory
+                // errors happen before `lexeme_consumed()`; content handler errors happen
+                // between `emit_chunk_before_lexeme()` and `consume_lexeme()`). Flushing from
                 // there preserves all bytes the caller fed us.
-                if matches!(e, RewritingError::MemoryLimitExceeded(_))
-                    && self.graceful_bail_out_on_memory_limit_exceeded
-                {
+                if self.should_bail_out_for(&e) {
                     self.parser.get_dispatcher().flush_for_bail_out(chunk);
                 }
 
@@ -164,15 +182,17 @@ where
         if let Err(e) = self.parser.parse(chunk, true) {
             // Same reasoning as in `write()`: if we can bail out gracefully, make sure the sink
             // has all the input bytes before propagating the error.
-            if matches!(e, RewritingError::MemoryLimitExceeded(_))
-                && self.graceful_bail_out_on_memory_limit_exceeded
-            {
+            if self.should_bail_out_for(&e) {
                 self.parser.get_dispatcher().flush_for_bail_out(chunk);
             }
 
             return Err(e);
         }
 
+        // `finish()` flushes any remaining input *first* and only then calls `handle_end()`,
+        // so a `ContentHandlerError` from the end handler arrives after the sink already has
+        // every input byte. No additional flush needed; the caller continues from where the
+        // rewriter left off.
         self.parser.get_dispatcher().finish(chunk)
     }
 

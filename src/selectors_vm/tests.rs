@@ -90,6 +90,7 @@ mod vm_tests {
             memory_limiter: SharedMemoryLimiter::new(2048),
             strict: true,
             graceful_bail_out_on_memory_limit_exceeded: false,
+            graceful_bail_out_on_content_handler_error: false,
         });
 
         transform_stream.write(&html).unwrap();
