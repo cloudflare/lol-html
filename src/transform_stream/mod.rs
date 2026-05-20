@@ -23,6 +23,7 @@ where
     pub encoding: AsciiCompatibleEncoding,
     pub next_encoding: SharedEncoding,
     pub strict: bool,
+    pub graceful_bail_out_on_memory_limit_exceeded: bool,
 }
 
 // Pub only for integration tests
@@ -34,6 +35,7 @@ where
     parser: Parser<Dispatcher<C, O>>,
     buffer: Arena,
     has_buffered_data: bool,
+    graceful_bail_out_on_memory_limit_exceeded: bool,
 }
 
 impl<C, O> TransformStream<C, O>
@@ -70,6 +72,8 @@ where
             parser,
             buffer,
             has_buffered_data: false,
+            graceful_bail_out_on_memory_limit_exceeded: settings
+                .graceful_bail_out_on_memory_limit_exceeded,
         }
     }
 
@@ -77,18 +81,44 @@ where
         trace!(@write data);
 
         let chunk = if self.has_buffered_data {
-            self.buffer
-                .append(data)
-                .map_err(RewritingError::MemoryLimitExceeded)?;
+            match self.buffer.append(data) {
+                Ok(()) => self.buffer.bytes(),
+                Err(e) => {
+                    // We can't fit `data` next to the buffered (still-unparsed) bytes from
+                    // previous calls. Neither chunk has been emitted to the sink yet, so on a
+                    // graceful bail-out we flush both as-is and let the caller continue the
+                    // response from where they were.
+                    if self.graceful_bail_out_on_memory_limit_exceeded {
+                        let dispatcher = self.parser.get_dispatcher();
+                        dispatcher.flush_for_bail_out(self.buffer.bytes());
+                        dispatcher.flush_for_bail_out(data);
+                    }
 
-            self.buffer.bytes()
+                    return Err(RewritingError::MemoryLimitExceeded(e));
+                }
+            }
         } else {
             data
         };
 
         trace!(@chunk chunk);
 
-        let consumed_byte_count = self.parser.parse(chunk, false)?;
+        let consumed_byte_count = match self.parser.parse(chunk, false) {
+            Ok(c) => c,
+            Err(e) => {
+                // The parser ran out of memory mid-chunk (e.g. the selectors VM stack hit the
+                // limit). The dispatcher's `remaining_content_start` points to the first byte of
+                // `chunk` that hasn't been emitted yet, so on a graceful bail-out flushing from
+                // there preserves all bytes the caller fed us.
+                if matches!(e, RewritingError::MemoryLimitExceeded(_))
+                    && self.graceful_bail_out_on_memory_limit_exceeded
+                {
+                    self.parser.get_dispatcher().flush_for_bail_out(chunk);
+                }
+
+                return Err(e);
+            }
+        };
 
         self.parser
             .get_dispatcher()
@@ -98,9 +128,16 @@ where
             if self.has_buffered_data {
                 self.buffer.shift(consumed_byte_count);
             } else if let Some(unconsumed) = data.get(consumed_byte_count..) {
-                self.buffer
-                    .init_with(unconsumed)
-                    .map_err(RewritingError::MemoryLimitExceeded)?;
+                if let Err(e) = self.buffer.init_with(unconsumed) {
+                    // Parsing succeeded but we can't buffer the leftover bytes for the next
+                    // call. On a graceful bail-out we flush the leftover raw so the response
+                    // stays whole.
+                    if self.graceful_bail_out_on_memory_limit_exceeded {
+                        self.parser.get_dispatcher().flush_for_bail_out(unconsumed);
+                    }
+
+                    return Err(RewritingError::MemoryLimitExceeded(e));
+                }
 
                 self.has_buffered_data = true;
             } else {
@@ -124,7 +161,18 @@ where
 
         trace!(@chunk chunk);
 
-        self.parser.parse(chunk, true)?;
+        if let Err(e) = self.parser.parse(chunk, true) {
+            // Same reasoning as in `write()`: if we can bail out gracefully, make sure the sink
+            // has all the input bytes before propagating the error.
+            if matches!(e, RewritingError::MemoryLimitExceeded(_))
+                && self.graceful_bail_out_on_memory_limit_exceeded
+            {
+                self.parser.get_dispatcher().flush_for_bail_out(chunk);
+            }
+
+            return Err(e);
+        }
+
         self.parser.get_dispatcher().finish(chunk)
     }
 

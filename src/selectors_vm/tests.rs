@@ -89,6 +89,7 @@ mod vm_tests {
             next_encoding: SharedEncoding::default(),
             memory_limiter: SharedMemoryLimiter::new(2048),
             strict: true,
+            graceful_bail_out_on_memory_limit_exceeded: false,
         });
 
         transform_stream.write(&html).unwrap();

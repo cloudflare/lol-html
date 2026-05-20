@@ -199,6 +199,7 @@ fn run_c_api_rewriter_iter(data: &[u8], encoding: &str) {
             lol_html_memory_settings_t {
                 preallocated_parsing_buffer_size: 0,
                 max_allowed_memory_usage: usize::MAX,
+                graceful_bail_out_on_memory_limit_exceeded: false,
             },
             Some(empty_handler),
             output_data_ptr,

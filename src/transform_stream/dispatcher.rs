@@ -373,6 +373,27 @@ where
             .flush_remaining_input(input, consumed_byte_count);
     }
 
+    /// Flushes all input bytes the dispatcher has received but not yet emitted, *as-is*. Used
+    /// when `MemorySettings::graceful_bail_out_on_memory_limit_exceeded` is enabled and a memory
+    /// error is being propagated: the caller wants to preserve enough of the input in the sink
+    /// to be able to continue the response without breaking it.
+    ///
+    /// Unlike [`flush_remaining_input()`], this ignores `emission_enabled`. If a handler was
+    /// removing element content at the time of the bail-out, those bytes will still be flushed
+    /// raw. The alternative (skipping the flush) would lose bytes from the input chunk entirely,
+    /// which the caller cannot recover from since they don't buffer their input.
+    pub fn flush_for_bail_out(&mut self, input: &[u8]) {
+        let output = input
+            .get(self.delegate.remaining_content_start..)
+            .unwrap_or_default();
+
+        if !output.is_empty() {
+            self.delegate.output_sink.handle_chunk(output);
+        }
+
+        self.delegate.remaining_content_start = 0;
+    }
+
     pub fn finish(&mut self, input: &[u8]) -> Result<(), RewritingError> {
         self.delegate.finish(self.encoding.get(), input)
     }

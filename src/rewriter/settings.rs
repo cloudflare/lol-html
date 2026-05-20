@@ -831,6 +831,40 @@ pub struct MemorySettings {
     /// [`write`]: struct.HtmlRewriter.html#method.write
     /// [`end`]: struct.HtmlRewriter.html#method.end
     pub max_allowed_memory_usage: usize,
+
+    /// Controls how the rewriter recovers when [`max_allowed_memory_usage`] is exceeded.
+    ///
+    /// When `false` (the default), the rewriter aborts processing the response, returns
+    /// [`MemoryLimitExceededError`], and leaves the output sink in a potentially inconsistent state
+    /// (i.e. the sink will have received the transformed bytes the rewriter had already produced,
+    /// but the remaining input bytes are lost). This typically results in a truncated, broken
+    /// response.
+    ///
+    /// When `true`, before returning [`MemoryLimitExceededError`] the rewriter flushes every input
+    /// byte it has received but not yet emitted to the sink, *as-is* (i.e. without any
+    /// transformation). The caller can then continue the response by writing any subsequent input
+    /// bytes directly to its own downstream sink, bypassing the (now poisoned) rewriter. The
+    /// resulting response will have the rewriter's transformations applied up to some boundary,
+    /// followed by the original bytes after that boundary, but the response will not be broken.
+    ///
+    /// The rewriter is still poisoned after the error and must not be used again, regardless of
+    /// this setting.
+    ///
+    /// ### Caveat
+    ///
+    /// If a handler was actively removing element content (e.g. via [`Element::remove()`]) at the
+    /// time the memory limit was exceeded, the removed content's surrounding tags can end up
+    /// mismatched in the resulting response. In practice removing content is uncommon, and a
+    /// well-formed-but-imperfect response is still much better than a truncated one.
+    ///
+    /// ### Default
+    ///
+    /// `false` when constructed with `MemorySettings::new()`.
+    ///
+    /// [`MemoryLimitExceededError`]: struct.MemoryLimitExceededError.html
+    /// [`max_allowed_memory_usage`]: #structfield.max_allowed_memory_usage
+    /// [`Element::remove()`]: html_content/struct.Element.html#method.remove
+    pub graceful_bail_out_on_memory_limit_exceeded: bool,
 }
 
 impl Default for MemorySettings {
@@ -839,6 +873,7 @@ impl Default for MemorySettings {
         Self {
             preallocated_parsing_buffer_size: 1024,
             max_allowed_memory_usage: usize::MAX,
+            graceful_bail_out_on_memory_limit_exceeded: false,
         }
     }
 }
