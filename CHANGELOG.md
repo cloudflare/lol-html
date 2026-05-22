@@ -30,6 +30,10 @@
 - Renamed the internal-use feature `integration_test` to `_integration_test`. The leading
   underscore signals to `cargo-semver-checks` and similar tools that the feature is not
   part of the public API.
+- `Comment::set_text` now also rejects `--!>`, a leading `>`, and a leading `->`, which
+  WHATWG-conformant browsers treat as comment terminators. Previously only `-->` was
+  rejected, so a caller passing attacker-influenced data could let an attacker break out
+  of the comment and inject HTML (security fix).
 
 ## v2.9.0
 
