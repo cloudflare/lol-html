@@ -21,8 +21,8 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::redundant_pub_crate)]
 #![deny(rustdoc::broken_intra_doc_links)]
-#![cfg_attr(not(any(feature = "integration_test", test)), warn(missing_docs))]
-#![cfg_attr(any(feature = "integration_test", test), allow(unnameable_types))]
+#![cfg_attr(not(any(feature = "_integration_test", test)), warn(missing_docs))]
+#![cfg_attr(any(feature = "_integration_test", test), allow(unnameable_types))]
 
 #[macro_use]
 mod base;
@@ -103,7 +103,7 @@ pub mod html_content {
     pub use super::html::TextType;
 }
 
-#[cfg(any(test, feature = "integration_test"))]
+#[cfg(any(test, feature = "_integration_test"))]
 pub mod test_utils {
     use encoding_rs::*;
 
@@ -201,7 +201,7 @@ pub mod test_utils {
 }
 
 cfg_if! {
-    if #[cfg(feature = "integration_test")] {
+    if #[cfg(feature = "_integration_test")] {
         pub mod selectors_vm;
 
         pub use self::transform_stream::{

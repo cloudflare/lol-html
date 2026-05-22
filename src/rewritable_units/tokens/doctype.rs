@@ -93,7 +93,7 @@ impl<'i> Doctype<'i> {
     }
 
     #[inline]
-    #[cfg(feature = "integration_test")]
+    #[cfg(feature = "_integration_test")]
     #[must_use]
     pub const fn force_quirks(&self) -> bool {
         self.force_quirks

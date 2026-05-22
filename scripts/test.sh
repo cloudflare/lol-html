@@ -5,7 +5,7 @@ set -e
 export CARGO_TARGET_DIR=$PWD/target
 
 echo "===  Running library tests... ==="
-cargo test --features=integration_test "$@"
+cargo test --features=_integration_test "$@"
 
 echo "=== Running C API tests... ==="
 (cd ./c-api/ && cargo check --locked)

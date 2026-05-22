@@ -1,4 +1,4 @@
-#![cfg(feature = "integration_test")]
+#![cfg(feature = "_integration_test")]
 
 #[macro_use]
 mod harness;

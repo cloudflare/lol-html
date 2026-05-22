@@ -20,8 +20,9 @@ bench = false
 
 [features]
 debug_trace = []
-# Unstable: for internal use only
-integration_test = []
+# Unstable: for internal use only. The leading underscore signals "internal" to
+# `cargo-semver-checks` and similar tools so they exclude it from the public-API analysis.
+_integration_test = []
 
 [[bench]]
 harness = false
