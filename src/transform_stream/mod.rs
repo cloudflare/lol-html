@@ -196,7 +196,7 @@ where
         self.parser.get_dispatcher().finish(chunk)
     }
 
-    #[cfg(feature = "integration_test")]
+    #[cfg(feature = "_integration_test")]
     #[allow(private_interfaces)]
     pub fn parser(&mut self) -> &mut Parser<Dispatcher<C, O>> {
         &mut self.parser

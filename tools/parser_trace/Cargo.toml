@@ -6,5 +6,5 @@ publish = false
 
 [dependencies]
 encoding_rs = "0.8.35"
-lol_html = { path = "../../", features=["integration_test", "debug_trace"] }
+lol_html = { path = "../../", features=["_integration_test", "debug_trace"] }
 getopts = "0.2.23"

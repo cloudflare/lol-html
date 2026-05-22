@@ -123,7 +123,7 @@ impl<S: ParserOutputSink> Parser<S> {
 }
 
 cfg_if! {
-    if #[cfg(feature = "integration_test")] {
+    if #[cfg(feature = "_integration_test")] {
         use crate::html::{LocalNameHash, TextType};
 
         #[allow(private_bounds)]

@@ -42,7 +42,7 @@ jobs:
       - name: Run clippy
         run: cargo clippy --all --all-targets --target-dir=target
       - name: Run clippy on integration tests
-        run: cargo clippy --all --all-targets --features=integration_test --target-dir=target
+        run: cargo clippy --all --all-targets --features=_integration_test --target-dir=target
       - name: Run clippy on C API
         run: cargo clippy --all-targets --manifest-path=c-api/Cargo.toml --target-dir=target
       - name: Run clippy on JS API

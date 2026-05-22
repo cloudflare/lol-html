@@ -60,7 +60,7 @@ impl TextType {
 }
 
 cfg_if! {
-    if #[cfg(feature = "integration_test")] {
+    if #[cfg(feature = "_integration_test")] {
         impl TextType {
             #[must_use] pub fn should_replace_unsafe_null_in_text(self) -> bool {
                 self != Self::Data && self != Self::CDataSection
