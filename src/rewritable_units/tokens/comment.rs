@@ -12,8 +12,9 @@ use thiserror::Error;
 /// An error that occurs when invalid value is provided for the HTML comment text.
 #[derive(Error, Debug, Eq, PartialEq, Copy, Clone)]
 pub enum CommentTextError {
-    /// The provided value contains the `-->` character sequence that preemptively closes the comment.
-    #[error("Comment text shouldn't contain comment closing sequence (`-->`).")]
+    /// The provided value contains a byte sequence that a WHATWG-conformant browser
+    /// treats as a comment terminator (`-->`, `--!>`, a leading `>`, or a leading `->`).
+    #[error("Comment text shouldn't contain a comment-closing sequence.")]
     CommentClosingSequence,
 
     /// The provided value contains a character that can't be represented in the document's [`encoding`].
@@ -34,6 +35,20 @@ pub struct Comment<'i> {
     encoding: &'static Encoding,
     mutations: Mutations,
     user_data: Box<dyn Any>,
+}
+
+/// Returns `true` if `text`, when emitted between `<!--` and `-->`, would let a
+/// WHATWG-conformant browser close the comment earlier than the trailing `-->`
+/// marker, leaking whatever follows as live markup.
+///
+/// Four sequences trigger this:
+///
+/// 1. `-->` anywhere in the body (comment-end state).
+/// 2. `--!>` anywhere in the body (comment-end-bang state).
+/// 3. A leading `>` (abrupt-closing-of-empty-comment from comment-start).
+/// 4. A leading `->` (abrupt-closing-of-empty-comment from comment-start-dash).
+fn contains_comment_closing_sequence(text: &str) -> bool {
+    text.contains("-->") || text.contains("--!>") || text.starts_with('>') || text.starts_with("->")
 }
 
 impl<'i> Comment<'i> {
@@ -68,22 +83,22 @@ impl<'i> Comment<'i> {
     /// Sets the text of the comment.
     #[inline]
     pub fn set_text(&mut self, text: &str) -> Result<(), CommentTextError> {
-        if text.contains("-->") {
-            Err(CommentTextError::CommentClosingSequence)
-        } else {
-            // NOTE: if character can't be represented in the given
-            // encoding then encoding_rs replaces it with a numeric
-            // character reference. Character references are not
-            // supported in comments, so we need to bail.
-            match BytesCow::owned_from_str_without_replacements(text, self.encoding) {
-                Ok(text) => {
-                    self.text = text;
-                    self.raw.set_modified();
+        if contains_comment_closing_sequence(text) {
+            return Err(CommentTextError::CommentClosingSequence);
+        }
 
-                    Ok(())
-                }
-                Err(_) => Err(CommentTextError::UnencodableCharacter),
+        // NOTE: if character can't be represented in the given
+        // encoding then encoding_rs replaces it with a numeric
+        // character reference. Character references are not
+        // supported in comments, so we need to bail.
+        match BytesCow::owned_from_str_without_replacements(text, self.encoding) {
+            Ok(text) => {
+                self.text = text;
+                self.raw.set_modified();
+
+                Ok(())
             }
+            Err(_) => Err(CommentTextError::UnencodableCharacter),
         }
     }
 
@@ -314,11 +329,20 @@ mod tests {
 
     #[test]
     fn comment_closing_sequence_in_text() {
-        rewrite_comment(b"<!-- foo -->", UTF_8, |c| {
-            let err = c.set_text("foo -- bar --> baz").unwrap_err();
+        // Every byte sequence here is treated as a comment terminator by a
+        // WHATWG-conformant browser when emitted between `<!--` and `-->`.
+        // See `contains_comment_closing_sequence`.
+        for payload in ["foo -- bar --> baz", "foo --!> bar", ">foo", "->foo"] {
+            rewrite_comment(b"<!-- foo -->", UTF_8, |c| {
+                let err = c.set_text(payload).unwrap_err();
 
-            assert_eq!(err, CommentTextError::CommentClosingSequence);
-        });
+                assert_eq!(
+                    err,
+                    CommentTextError::CommentClosingSequence,
+                    "expected `{payload}` to be rejected",
+                );
+            });
+        }
     }
 
     #[test]
