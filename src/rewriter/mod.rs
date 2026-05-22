@@ -100,23 +100,18 @@ pub enum RewritingError {
 ///
 /// {
 ///     let mut rewriter = HtmlRewriter::new(
-///         Settings {
-///             element_content_handlers: vec![
-///                 // Rewrite insecure hyperlinks
-///                 element!("a[href]", |el| {
-///                     let href = el
-///                         .get_attribute("href")
-///                         .unwrap()
-///                         .replace("http:", "https:");
+///         // Rewrite insecure hyperlinks
+///         Settings::new().append_element_content_handler(element!("a[href]", |el| {
+///             let href = el
+///                 .get_attribute("href")
+///                 .unwrap()
+///                 .replace("http:", "https:");
 ///
-///                     el.set_attribute("href", &href).unwrap();
+///             el.set_attribute("href", &href).unwrap();
 ///
-///                     Ok(())
-///                 })
-///             ],
-///             ..Settings::new()
-///         },
-///         |c: &[u8]| output.extend_from_slice(c)
+///             Ok(())
+///         })),
+///         |c: &[u8]| output.extend_from_slice(c),
 ///     );
 ///
 ///     rewriter.write(b"<div><a href=").unwrap();
@@ -287,26 +282,21 @@ fn handler_adjust_charset_on_meta_tag<'h, H: HandlerTypes>(
 /// ```
 /// use lol_html::{rewrite_str, element, RewriteStrSettings};
 ///
-/// let element_content_handlers = vec![
-///     // Rewrite insecure hyperlinks
-///     element!("a[href]", |el| {
+/// let output = rewrite_str(
+///     r#"<div><a href="http://example.com"></a></div>"#,
+///     RewriteStrSettings::new().append_element_content_handler(element!("a[href]", |el| {
+///         // Rewrite insecure hyperlinks
 ///         let href = el
 ///             .get_attribute("href")
 ///             .unwrap()
 ///             .replace("http:", "https:");
 ///
-///          el.set_attribute("href", &href).unwrap();
+///         el.set_attribute("href", &href).unwrap();
 ///
-///          Ok(())
-///     })
-/// ];
-/// let output = rewrite_str(
-///     r#"<div><a href="http://example.com"></a></div>"#,
-///     RewriteStrSettings {
-///         element_content_handlers,
-///         ..RewriteStrSettings::new()
-///     }
-/// ).unwrap();
+///         Ok(())
+///     })),
+/// )
+/// .unwrap();
 ///
 /// assert_eq!(output, r#"<div><a href="https://example.com"></a></div>"#);
 /// ```
@@ -314,9 +304,10 @@ pub fn rewrite_str<'h, 's, H: HandlerTypes>(
     html: &str,
     settings: impl Into<Settings<'h, 's, H>>,
 ) -> Result<String, RewritingError> {
-    let mut settings = settings.into();
-    settings.adjust_charset_on_meta_tag = false;
-    settings.encoding = AsciiCompatibleEncoding::utf_8();
+    let settings = settings
+        .into()
+        .with_adjust_charset_on_meta_tag(false)
+        .with_encoding(AsciiCompatibleEncoding::utf_8());
 
     rewrite_str_utf8(html, settings)
 }
@@ -406,14 +397,14 @@ mod tests {
             Ok(())
         });
 
-        let settings = Settings {
-            document_content_handlers: vec![doc_handler_static, doc_handler_local],
-            element_content_handlers: vec![el_handler_static, el_handler_local],
-            encoding: AsciiCompatibleEncoding::utf_8(),
-            strict: false,
-            adjust_charset_on_meta_tag: false,
-            ..Settings::new()
-        };
+        let settings = Settings::new()
+            .with_encoding(AsciiCompatibleEncoding::utf_8())
+            .with_strict(false)
+            .with_adjust_charset_on_meta_tag(false)
+            .append_document_content_handler(doc_handler_static)
+            .append_document_content_handler(doc_handler_local)
+            .append_element_content_handler(el_handler_static)
+            .append_element_content_handler(el_handler_local);
         let rewriter = HtmlRewriter::new(settings, |_: &[u8]| ());
 
         drop(rewriter);
@@ -425,19 +416,15 @@ mod tests {
     fn rewrite_html_str() {
         let res = rewrite_str::<LocalHandlerTypes>(
             "<!-- 42 --><div><!--hi--></div>",
-            RewriteStrSettings {
-                element_content_handlers: vec![
-                    element!("div", |el| {
-                        el.set_tag_name("span").unwrap();
-                        Ok(())
-                    }),
-                    comments!("div", |c| {
-                        c.set_text("hello").unwrap();
-                        Ok(())
-                    }),
-                ],
-                ..RewriteStrSettings::new()
-            },
+            RewriteStrSettings::new()
+                .append_element_content_handler(element!("div", |el| {
+                    el.set_tag_name("span").unwrap();
+                    Ok(())
+                }))
+                .append_element_content_handler(comments!("div", |c| {
+                    c.set_text("hello").unwrap();
+                    Ok(())
+                })),
         )
         .unwrap();
 
@@ -449,15 +436,15 @@ mod tests {
         let res = rewrite_str::<LocalHandlerTypes>(
             "<title /></title><div/></div><style /></style><script /></script>
             <br/><br><embed/><embed> <svg><a/><path/><path></path></svg>",
-            RewriteStrSettings {
-                element_content_handlers: vec![element!("*:not(svg)", |el| {
+            RewriteStrSettings::new().append_element_content_handler(element!(
+                "*:not(svg)",
+                |el| {
                     el.set_attribute("s", if el.is_self_closing() { "y" } else { "n" })?;
                     el.set_attribute("c", if el.can_have_content() { "y" } else { "n" })?;
                     el.append("…", ContentType::Text);
                     Ok(())
-                })],
-                ..RewriteStrSettings::new()
-            },
+                }
+            )),
         )
         .unwrap();
 
@@ -479,11 +466,9 @@ mod tests {
         let text = "前<meta charset=latin1><span>中</span><!-- 後 -->";
         let rewritten = rewrite_str(
             text,
-            Settings {
-                encoding: encoding_rs::BIG5.try_into().unwrap(),
-                adjust_charset_on_meta_tag: true,
-                ..Settings::new()
-            },
+            Settings::new()
+                .with_encoding(encoding_rs::BIG5.try_into().unwrap())
+                .with_adjust_charset_on_meta_tag(true),
         )
         .unwrap();
         assert_eq!(rewritten, text);
@@ -503,15 +488,13 @@ mod tests {
 
             {
                 let rewriter = HtmlRewriter::new(
-                    Settings {
-                        document_content_handlers: vec![doctype!(|d| {
+                    Settings::new()
+                        // NOTE: unwrap() here is intentional; it also tests `Ascii::new`.
+                        .with_encoding(enc.try_into().unwrap())
+                        .append_document_content_handler(doctype!(|d| {
                             doctypes.push((d.name(), d.public_id(), d.system_id()));
                             Ok(())
-                        })],
-                        // NOTE: unwrap() here is intentional; it also tests `Ascii::new`.
-                        encoding: enc.try_into().unwrap(),
-                        ..Settings::new()
-                    },
+                        })),
                     |_: &[u8]| {},
                 );
 
@@ -550,15 +533,13 @@ mod tests {
                 let mut output = Output::new(enc);
 
                 let rewriter = HtmlRewriter::new(
-                    Settings {
-                        element_content_handlers: vec![element!("*", |el| {
+                    Settings::new()
+                        .with_encoding(enc.try_into().unwrap())
+                        .append_element_content_handler(element!("*", |el| {
                             el.set_attribute("foo", "bar").unwrap();
                             el.prepend("<test></test>", ContentType::Html);
                             Ok(())
-                        })],
-                        encoding: enc.try_into().unwrap(),
-                        ..Settings::new()
-                    },
+                        })),
                     |c: &[u8]| output.push(c),
                 );
 
@@ -601,24 +582,19 @@ mod tests {
                 let mut output = Output::new(enc);
 
                 let rewriter = HtmlRewriter::new(
-                    Settings {
-                        element_content_handlers: vec![],
-                        document_content_handlers: vec![
-                            doc_comments!(|c| {
-                                c.set_text(&(c.text() + "1337")).unwrap();
-                                Ok(())
-                            }),
-                            doc_text!(|c| {
-                                if c.last_in_text_node() {
-                                    c.after("BAZ", ContentType::Text);
-                                }
+                    Settings::new()
+                        .with_encoding(enc.try_into().unwrap())
+                        .append_document_content_handler(doc_comments!(|c| {
+                            c.set_text(&(c.text() + "1337")).unwrap();
+                            Ok(())
+                        }))
+                        .append_document_content_handler(doc_text!(|c| {
+                            if c.last_in_text_node() {
+                                c.after("BAZ", ContentType::Text);
+                            }
 
-                                Ok(())
-                            }),
-                        ],
-                        encoding: enc.try_into().unwrap(),
-                        ..Settings::new()
-                    },
+                            Ok(())
+                        })),
                     |c: &[u8]| output.push(c),
                 );
 
@@ -665,9 +641,9 @@ mod tests {
                 let mut output = Output::new(enc);
 
                 let rewriter = HtmlRewriter::new(
-                    Settings {
-                        element_content_handlers: vec![],
-                        document_content_handlers: vec![doc_text!(|c| {
+                    Settings::new()
+                        .with_encoding(enc.try_into().unwrap())
+                        .append_document_content_handler(doc_text!(|c| {
                             let replace = match c.text_type() {
                                 TextType::PlainText => 'P',
                                 TextType::RCData => 'r',
@@ -687,10 +663,7 @@ mod tests {
                             c.set_str(replaced);
 
                             Ok(())
-                        })],
-                        encoding: enc.try_into().unwrap(),
-                        ..Settings::new()
-                    },
+                        })),
                     |c: &[u8]| output.push(c),
                 );
 
@@ -749,16 +722,12 @@ mod tests {
 
         let _res = rewrite_str(
             "<div><span foo></span></div>",
-            RewriteStrSettings {
-                element_content_handlers: vec![
-                    create_handlers!("div span", 0),
-                    create_handlers!("div > span", 1),
-                    create_handlers!("span", 2),
-                    create_handlers!("[foo]", 3),
-                    create_handlers!("div span[foo]", 4),
-                ],
-                ..RewriteStrSettings::new()
-            },
+            RewriteStrSettings::new()
+                .append_element_content_handler(create_handlers!("div span", 0))
+                .append_element_content_handler(create_handlers!("div > span", 1))
+                .append_element_content_handler(create_handlers!("span", 2))
+                .append_element_content_handler(create_handlers!("[foo]", 3))
+                .append_element_content_handler(create_handlers!("div span[foo]", 4)),
         )
         .unwrap();
 
@@ -769,14 +738,12 @@ mod tests {
     fn write_esi_tags() {
         let res = rewrite_str(
             "<span><esi:include src=a></span>",
-            RewriteStrSettings {
-                element_content_handlers: vec![element!("esi\\:include", |el| {
+            RewriteStrSettings::new()
+                .with_enable_esi_tags(true)
+                .append_element_content_handler(element!("esi\\:include", |el| {
                     el.replace("?", ContentType::Text);
                     Ok(())
-                })],
-                enable_esi_tags: true,
-                ..RewriteStrSettings::new()
-            },
+                })),
         )
         .unwrap();
 
@@ -816,10 +783,7 @@ mod tests {
 
         let transformed_no_charset_adjustment: Vec<u8> = rewrite_html_bytes(
             &html,
-            Settings {
-                document_content_handlers: vec![enthusiastic_text_handler()],
-                ..Settings::new()
-            },
+            Settings::new().append_document_content_handler(enthusiastic_text_handler()),
         );
 
         // Without charset adjustment the response has to be corrupted:
@@ -827,11 +791,9 @@ mod tests {
 
         let transformed_charset_adjustment: Vec<u8> = rewrite_html_bytes(
             &html,
-            Settings {
-                document_content_handlers: vec![enthusiastic_text_handler()],
-                adjust_charset_on_meta_tag: true,
-                ..Settings::new()
-            },
+            Settings::new()
+                .with_adjust_charset_on_meta_tag(true)
+                .append_document_content_handler(enthusiastic_text_handler()),
         );
 
         // If it adapts the charset according to the meta tag everything will be correctly
@@ -864,19 +826,17 @@ mod tests {
         };
 
         let mut rewriter = HtmlRewriter::new(
-            Settings {
-                element_content_handlers: vec![element!("[attr]", |el| {
+            Settings::new()
+                .with_encoding(AsciiCompatibleEncoding::utf_8())
+                .with_adjust_charset_on_meta_tag(true)
+                .append_element_content_handler(element!("[attr]", |el| {
                     assert_eq!(el.get_attribute("attr").unwrap(), "ð");
                     Ok(())
-                })],
-                document_content_handlers: vec![doc_text!(|text| {
+                }))
+                .append_document_content_handler(doc_text!(|text| {
                     assert!(matches!(text.as_str(), "ð" | ""));
                     Ok(())
-                })],
-                encoding: AsciiCompatibleEncoding::utf_8(),
-                adjust_charset_on_meta_tag: true,
-                ..Default::default()
-            },
+                })),
             &mut sink,
         );
 
@@ -898,15 +858,13 @@ mod tests {
         let html = b"<head>\xC3<meta charset=latin1>\xB0</head>";
         let rewritten = rewrite_html_bytes(
             html,
-            Settings {
-                document_content_handlers: vec![doc_text!(|text| {
+            Settings::new()
+                .with_encoding(AsciiCompatibleEncoding::utf_8())
+                .with_adjust_charset_on_meta_tag(true)
+                .append_document_content_handler(doc_text!(|text| {
                     assert_ne!(text.as_str(), "ð");
                     Ok(())
-                })],
-                encoding: AsciiCompatibleEncoding::utf_8(),
-                adjust_charset_on_meta_tag: true,
-                ..Default::default()
-            },
+                })),
         );
         assert_eq!(
             "<head>ï¿½<meta charset=latin1>°</head>",
@@ -944,10 +902,7 @@ mod tests {
 
         let transformed_no_charset_adjustment: Vec<u8> = rewrite_html_bytes(
             &html,
-            Settings {
-                document_content_handlers: vec![enthusiastic_text_handler()],
-                ..Settings::new()
-            },
+            Settings::new().append_document_content_handler(enthusiastic_text_handler()),
         );
 
         // Without charset adjustment the response has to be corrupted:
@@ -955,11 +910,9 @@ mod tests {
 
         let transformed_charset_adjustment: Vec<u8> = rewrite_html_bytes(
             &html,
-            Settings {
-                document_content_handlers: vec![enthusiastic_text_handler()],
-                adjust_charset_on_meta_tag: true,
-                ..Settings::new()
-            },
+            Settings::new()
+                .with_adjust_charset_on_meta_tag(true)
+                .append_document_content_handler(enthusiastic_text_handler()),
         );
 
         // If it adapts the charset according to the meta tag everything will be correctly
@@ -978,15 +931,13 @@ mod tests {
             output_sink: O,
         ) -> HtmlRewriter<'static, O> {
             HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![element!("*", |_| Ok(()))],
-                    memory_settings: MemorySettings {
-                        max_allowed_memory_usage,
-                        preallocated_parsing_buffer_size: 0,
-                        ..MemorySettings::new()
-                    },
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(
+                        MemorySettings::new()
+                            .with_max_allowed_memory_usage(max_allowed_memory_usage)
+                            .with_preallocated_parsing_buffer_size(0),
+                    )
+                    .append_element_content_handler(element!("*", |_| Ok(()))),
                 output_sink,
             )
         }
@@ -1029,15 +980,14 @@ mod tests {
             output_sink: O,
         ) -> HtmlRewriter<'static, O> {
             HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![element!("*", |_| Ok(()))],
-                    memory_settings: MemorySettings {
-                        max_allowed_memory_usage,
-                        preallocated_parsing_buffer_size: 0,
-                        graceful_bail_out_on_memory_limit_exceeded: true,
-                    },
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(
+                        MemorySettings::new()
+                            .with_max_allowed_memory_usage(max_allowed_memory_usage)
+                            .with_preallocated_parsing_buffer_size(0)
+                            .with_graceful_bail_out_on_memory_limit_exceeded(true),
+                    )
+                    .append_element_content_handler(element!("*", |_| Ok(()))),
                 output_sink,
             )
         }
@@ -1085,14 +1035,12 @@ mod tests {
             // No element handlers, so we avoid allocating the selectors VM stack which would
             // fail first with such a tight limit.
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    memory_settings: MemorySettings {
-                        max_allowed_memory_usage: MAX,
-                        preallocated_parsing_buffer_size: 0,
-                        graceful_bail_out_on_memory_limit_exceeded: true,
-                    },
-                    ..Settings::new()
-                },
+                Settings::new().with_memory_settings(
+                    MemorySettings::new()
+                        .with_max_allowed_memory_usage(MAX)
+                        .with_preallocated_parsing_buffer_size(0)
+                        .with_graceful_bail_out_on_memory_limit_exceeded(true),
+                ),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1152,19 +1100,18 @@ mod tests {
 
             let mut output = Vec::<u8>::new();
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    document_content_handlers: vec![doc_comments!(|c| {
+                Settings::new()
+                    .with_memory_settings(
+                        MemorySettings::new()
+                            .with_max_allowed_memory_usage(MAX)
+                            .with_preallocated_parsing_buffer_size(0)
+                            .with_graceful_bail_out_on_memory_limit_exceeded(true),
+                    )
+                    .append_document_content_handler(doc_comments!(|c| {
                         let text = c.text();
                         c.set_text(&format!("REWRITTEN-{text}")).unwrap();
                         Ok(())
-                    })],
-                    memory_settings: MemorySettings {
-                        max_allowed_memory_usage: MAX,
-                        preallocated_parsing_buffer_size: 0,
-                        graceful_bail_out_on_memory_limit_exceeded: true,
-                    },
-                    ..Settings::new()
-                },
+                    })),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1256,11 +1203,10 @@ mod tests {
         // closing marker, not the whole section), so it doesn't cause Arena growth.
 
         fn bail_out_settings(max_memory: usize) -> MemorySettings {
-            MemorySettings {
-                max_allowed_memory_usage: max_memory,
-                preallocated_parsing_buffer_size: 0,
-                graceful_bail_out_on_memory_limit_exceeded: true,
-            }
+            MemorySettings::new()
+                .with_max_allowed_memory_usage(max_memory)
+                .with_preallocated_parsing_buffer_size(0)
+                .with_graceful_bail_out_on_memory_limit_exceeded(true)
         }
 
         /// Feeds `html` to a graceful-bail-out rewriter in `chunk_size`-byte pieces. When
@@ -1328,11 +1274,9 @@ mod tests {
             let reconstructed = reconstruct_response_on_oom(
                 html.as_bytes(),
                 512,
-                Settings {
-                    element_content_handlers: vec![element!("*", |_| Ok(()))],
-                    memory_settings: bail_out_settings(8192),
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(bail_out_settings(8192))
+                    .append_element_content_handler(element!("*", |_| Ok(()))),
             );
 
             assert_eq!(
@@ -1355,11 +1299,9 @@ mod tests {
             let reconstructed = reconstruct_response_on_oom(
                 html.as_bytes(),
                 512,
-                Settings {
-                    element_content_handlers: vec![element!("*", |_| Ok(()))],
-                    memory_settings: bail_out_settings(8192),
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(bail_out_settings(8192))
+                    .append_element_content_handler(element!("*", |_| Ok(()))),
             );
 
             assert_eq!(
@@ -1380,11 +1322,9 @@ mod tests {
             let reconstructed = reconstruct_response_on_oom(
                 html.as_bytes(),
                 512,
-                Settings {
-                    element_content_handlers: vec![comments!("div", |_| Ok(()))],
-                    memory_settings: bail_out_settings(8192),
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(bail_out_settings(8192))
+                    .append_element_content_handler(comments!("div", |_| Ok(()))),
             );
 
             assert_eq!(
@@ -1406,11 +1346,9 @@ mod tests {
             let reconstructed = reconstruct_response_on_oom(
                 html.as_bytes(),
                 512,
-                Settings {
-                    element_content_handlers: vec![element!("*", |_| Ok(()))],
-                    memory_settings: bail_out_settings(4096),
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(bail_out_settings(4096))
+                    .append_element_content_handler(element!("*", |_| Ok(()))),
             );
 
             assert_eq!(
@@ -1432,11 +1370,9 @@ mod tests {
             let reconstructed = reconstruct_response_on_oom(
                 html.as_bytes(),
                 512,
-                Settings {
-                    element_content_handlers: vec![element!("*", |_| Ok(()))],
-                    memory_settings: bail_out_settings(4096),
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(bail_out_settings(4096))
+                    .append_element_content_handler(element!("*", |_| Ok(()))),
             );
 
             assert_eq!(
@@ -1462,17 +1398,15 @@ mod tests {
 
             let mut output = Vec::<u8>::new();
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![
-                        element!("a", |el| {
-                            el.set_attribute("rewritten", "yes").unwrap();
-                            Ok(())
-                        }),
-                        element!("stop", |_| Err("handler refused".into())),
-                    ],
-                    graceful_bail_out_on_content_handler_error: true,
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_graceful_bail_out_on_content_handler_error(true)
+                    .append_element_content_handler(element!("a", |el| {
+                        el.set_attribute("rewritten", "yes").unwrap();
+                        Ok(())
+                    }))
+                    .append_element_content_handler(element!("stop", |_| Err(
+                        "handler refused".into()
+                    ))),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1505,12 +1439,9 @@ mod tests {
 
             let mut output = Vec::<u8>::new();
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![element!("stop", |_| Err(
-                        "handler refused".into()
-                    ))],
-                    ..Settings::new()
-                },
+                Settings::new().append_element_content_handler(element!("stop", |_| Err(
+                    "handler refused".into()
+                ))),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1531,13 +1462,11 @@ mod tests {
 
             let mut output = Vec::<u8>::new();
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![comments!("div", |_| {
+                Settings::new()
+                    .with_graceful_bail_out_on_content_handler_error(true)
+                    .append_element_content_handler(comments!("div", |_| {
                         Err("comment refused".into())
-                    })],
-                    graceful_bail_out_on_content_handler_error: true,
-                    ..Settings::new()
-                },
+                    })),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1557,11 +1486,9 @@ mod tests {
 
             let mut output = Vec::<u8>::new();
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    document_content_handlers: vec![end!(|_| Err("end refused".into()))],
-                    graceful_bail_out_on_content_handler_error: true,
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_graceful_bail_out_on_content_handler_error(true)
+                    .append_document_content_handler(end!(|_| Err("end refused".into()))),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1582,13 +1509,11 @@ mod tests {
 
             let mut output = Vec::<u8>::new();
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![element!("div", |_| {
+                Settings::new()
+                    .with_graceful_bail_out_on_content_handler_error(true)
+                    .append_element_content_handler(element!("div", |_| {
                         Err("div refused".into())
-                    })],
-                    graceful_bail_out_on_content_handler_error: true,
-                    ..Settings::new()
-                },
+                    })),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1609,16 +1534,15 @@ mod tests {
             const MAX: usize = 100;
             let mut output = Vec::<u8>::new();
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![element!("*", |_| Ok(()))],
-                    memory_settings: MemorySettings {
-                        max_allowed_memory_usage: MAX,
-                        preallocated_parsing_buffer_size: 0,
-                        graceful_bail_out_on_memory_limit_exceeded: false,
-                    },
-                    graceful_bail_out_on_content_handler_error: true,
-                    ..Settings::new()
-                },
+                Settings::new()
+                    .with_memory_settings(
+                        MemorySettings::new()
+                            .with_max_allowed_memory_usage(MAX)
+                            .with_preallocated_parsing_buffer_size(0)
+                            .with_graceful_bail_out_on_memory_limit_exceeded(false),
+                    )
+                    .with_graceful_bail_out_on_content_handler_error(true)
+                    .append_element_content_handler(element!("*", |_| Ok(()))),
                 |c: &[u8]| output.extend_from_slice(c),
             );
 
@@ -1644,14 +1568,12 @@ mod tests {
                 use std::borrow::Cow;
 
                 let mut rewriter = HtmlRewriter::new(
-                    Settings {
-                        element_content_handlers: vec![(
+                    Settings::new()
+                        .append_element_content_handler((
                             Cow::Owned("*".parse().unwrap()),
                             element_handlers,
-                        )],
-                        document_content_handlers: vec![document_handlers],
-                        ..Settings::new()
-                    },
+                        ))
+                        .append_document_content_handler(document_handlers),
                     |_: &[u8]| {},
                 );
 
@@ -1732,8 +1654,9 @@ mod tests {
 
             rewrite_str::<LocalHandlerTypes>(
                 html,
-                RewriteStrSettings {
-                    element_content_handlers: vec![element!("div", move |el| {
+                RewriteStrSettings::new().append_element_content_handler(element!(
+                    "div",
+                    move |el| {
                         for attr in el.attributes() {
                             let name_loc = attr.name_source_location();
                             let value_loc = attr.value_source_location();
@@ -1745,9 +1668,8 @@ mod tests {
                             ));
                         }
                         Ok(())
-                    })],
-                    ..RewriteStrSettings::new()
-                },
+                    }
+                )),
             )
             .unwrap();
 
@@ -1775,25 +1697,22 @@ mod tests {
         fn attribute_source_locations_none_for_programmatic_attributes() {
             rewrite_str::<LocalHandlerTypes>(
                 "<div></div>",
-                RewriteStrSettings {
-                    element_content_handlers: vec![element!("div", |el| {
-                        el.set_attribute("added", "val").unwrap();
-                        for attr in el.attributes() {
-                            if attr.name() == "added" {
-                                assert!(
-                                    attr.name_source_location().is_none(),
-                                    "programmatic attribute should have no name source location",
-                                );
-                                assert!(
-                                    attr.value_source_location().is_none(),
-                                    "programmatic attribute should have no value source location",
-                                );
-                            }
+                RewriteStrSettings::new().append_element_content_handler(element!("div", |el| {
+                    el.set_attribute("added", "val").unwrap();
+                    for attr in el.attributes() {
+                        if attr.name() == "added" {
+                            assert!(
+                                attr.name_source_location().is_none(),
+                                "programmatic attribute should have no name source location",
+                            );
+                            assert!(
+                                attr.value_source_location().is_none(),
+                                "programmatic attribute should have no value source location",
+                            );
                         }
-                        Ok(())
-                    })],
-                    ..RewriteStrSettings::new()
-                },
+                    }
+                    Ok(())
+                })),
             )
             .unwrap();
         }

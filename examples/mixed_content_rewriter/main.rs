@@ -23,22 +23,18 @@ fn main() {
 
     // Create the rewriter
     let mut rewriter = HtmlRewriter::new(
-        Settings {
-            element_content_handlers: vec![
-                element!("a[href], link[rel=stylesheet][href]", |el| {
-                    rewrite_url_in_attr(el, "href");
+        Settings::new()
+            .append_element_content_handler(element!("a[href], link[rel=stylesheet][href]", |el| {
+                rewrite_url_in_attr(el, "href");
+                Ok(())
+            }))
+            .append_element_content_handler(element!(
+                "script[src], iframe[src], img[src], audio[src], video[src]",
+                |el| {
+                    rewrite_url_in_attr(el, "src");
                     Ok(())
-                }),
-                element!(
-                    "script[src], iframe[src], img[src], audio[src], video[src]",
-                    |el| {
-                        rewrite_url_in_attr(el, "src");
-                        Ok(())
-                    }
-                ),
-            ],
-            ..Settings::new()
-        },
+                }
+            )),
         output_sink,
     );
 

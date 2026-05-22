@@ -418,16 +418,11 @@ macro_rules! __element_content_handler {
 ///
 /// let html = rewrite_str(
 ///     r#"<span id="foo"></span>"#,
-///     RewriteStrSettings {
-///         element_content_handlers: vec![
-///             element!("#foo", |el| {
-///                 el.set_inner_content("Hello!", ContentType::Text);
+///     RewriteStrSettings::new().append_element_content_handler(element!("#foo", |el| {
+///         el.set_inner_content("Hello!", ContentType::Text);
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///         Ok(())
+///     }))
 /// ).unwrap();
 ///
 /// assert_eq!(html, r#"<span id="foo">Hello!</span>"#);
@@ -483,18 +478,13 @@ macro_rules! end_tag {
 ///
 /// let html = rewrite_str(
 ///     r#"<span>Hello</span>"#,
-///     RewriteStrSettings {
-///         element_content_handlers: vec![
-///             text!("span", |t| {
-///                 if t.last_in_text_node() {
-///                     t.after(" world", ContentType::Text);
-///                 }
+///     RewriteStrSettings::new().append_element_content_handler(text!("span", |t| {
+///         if t.last_in_text_node() {
+///             t.after(" world", ContentType::Text);
+///         }
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///         Ok(())
+///     }))
 /// ).unwrap();
 ///
 /// assert_eq!(html, r#"<span>Hello world</span>"#);
@@ -528,16 +518,11 @@ macro_rules! text {
 ///
 /// let html = rewrite_str(
 ///     r#"<span><!-- 42 --></span>"#,
-///     RewriteStrSettings {
-///         element_content_handlers: vec![
-///             comments!("span", |c| {
-///                 c.set_text("Hello!").unwrap();
+///     RewriteStrSettings::new().append_element_content_handler(comments!("span", |c| {
+///         c.set_text("Hello!").unwrap();
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///         Ok(())
+///     }))
 /// ).unwrap();
 ///
 /// assert_eq!(html, r#"<span><!--Hello!--></span>"#);
@@ -571,19 +556,14 @@ macro_rules! comments {
 /// use lol_html::{element, streaming, RewriteStrSettings};
 /// use lol_html::html_content::ContentType;
 ///
-/// RewriteStrSettings {
-///     element_content_handlers: vec![
-///         element!("div", |element| {
-///             element.streaming_replace(streaming!(|sink| {
-///                 sink.write_str("…", ContentType::Html);
-///                 sink.write_str("…", ContentType::Html);
-///                 Ok(())
-///             }));
-///             Ok(())
-///         })
-///     ],
-///     ..RewriteStrSettings::default()
-/// };
+/// RewriteStrSettings::new().append_element_content_handler(element!("div", |element| {
+///     element.streaming_replace(streaming!(|sink| {
+///         sink.write_str("…", ContentType::Html);
+///         sink.write_str("…", ContentType::Html);
+///         Ok(())
+///     }));
+///     Ok(())
+/// }));
 /// ```
 ///
 /// Note: if you get "implementation of `FnOnce` is not general enough" error, add explicit argument
@@ -627,16 +607,11 @@ macro_rules! __document_content_handler {
 ///
 /// rewrite_str(
 ///     r#"<!doctype html>"#,
-///     RewriteStrSettings {
-///         document_content_handlers: vec![
-///             doctype!(|d| {
-///                 assert_eq!(d.name().unwrap(), "html");
+///     RewriteStrSettings::new().append_document_content_handler(doctype!(|d| {
+///         assert_eq!(d.name().unwrap(), "html");
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///         Ok(())
+///     }))
 /// ).unwrap();
 /// ```
 ///
@@ -668,18 +643,13 @@ macro_rules! doctype {
 ///
 /// let html = rewrite_str(
 ///     r#"Hello<span>Hello</span>Hello"#,
-///     RewriteStrSettings {
-///         document_content_handlers: vec![
-///             doc_text!(|t| {
-///                 if t.last_in_text_node() {
-///                     t.after(" world", ContentType::Text);
-///                 }
+///     RewriteStrSettings::new().append_document_content_handler(doc_text!(|t| {
+///         if t.last_in_text_node() {
+///             t.after(" world", ContentType::Text);
+///         }
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///         Ok(())
+///     }))
 /// ).unwrap();
 ///
 /// assert_eq!(html, r#"Hello world<span>Hello world</span>Hello world"#);
@@ -709,16 +679,11 @@ macro_rules! doc_text {
 ///
 /// let html = rewrite_str(
 ///     r#"<!-- 42 --><span><!-- 42 --></span><!-- 42 -->"#,
-///     RewriteStrSettings {
-///         document_content_handlers: vec![
-///             doc_comments!(|c| {
-///                 c.set_text("Hello!").unwrap();
+///     RewriteStrSettings::new().append_document_content_handler(doc_comments!(|c| {
+///         c.set_text("Hello!").unwrap();
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///         Ok(())
+///     }))
 /// ).unwrap();
 ///
 /// assert_eq!(html, r#"<!--Hello!--><span><!--Hello!--></span><!--Hello!-->"#);
@@ -750,23 +715,17 @@ macro_rules! doc_comments {
 ///
 /// let html = rewrite_str(
 ///     r#"<span>foo</span>"#,
-///     RewriteStrSettings {
-///         element_content_handlers: vec![
-///             element!("span", |el| {
-///                 el.append("bar", ContentType::Text);
+///     RewriteStrSettings::new()
+///         .append_element_content_handler(element!("span", |el| {
+///             el.append("bar", ContentType::Text);
 ///
-///                 Ok(())
-///             })
-///         ],
-///         document_content_handlers: vec![
-///             end!(|end| {
-///                 end.append("<div>baz</div>", ContentType::Html);
+///             Ok(())
+///         }))
+///         .append_document_content_handler(end!(|end| {
+///             end.append("<div>baz</div>", ContentType::Html);
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///             Ok(())
+///         }))
 /// ).unwrap();
 ///
 /// assert_eq!(html, r#"<span>foobar</span><div>baz</div>"#);
@@ -789,11 +748,38 @@ macro_rules! end {
 
 /// Specifies the memory settings for [`HtmlRewriter`].
 ///
+/// Construct with [`MemorySettings::new()`] (or [`MemorySettings::default()`]) and configure the
+/// individual values via the `with_*` builder methods.
+///
 /// [`HtmlRewriter`]: struct.HtmlRewriter.html
 // NOTE: exposed in C API as well, thus repr(C).
 #[repr(C)]
 pub struct MemorySettings {
-    /// Specifies the number of bytes that should be preallocated on [`HtmlRewriter`] instantiation
+    pub(crate) preallocated_parsing_buffer_size: usize,
+    pub(crate) max_allowed_memory_usage: usize,
+    pub(crate) graceful_bail_out_on_memory_limit_exceeded: bool,
+}
+
+impl Default for MemorySettings {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MemorySettings {
+    /// Create a new [`MemorySettings`] with default values.
+    #[inline]
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            preallocated_parsing_buffer_size: 1024,
+            max_allowed_memory_usage: usize::MAX,
+            graceful_bail_out_on_memory_limit_exceeded: false,
+        }
+    }
+
+    /// Sets the number of bytes that should be preallocated on [`HtmlRewriter`] instantiation
     /// for the internal parsing buffer.
     ///
     /// In some cases (e.g. when rewriter encounters a start tag represented by two or more input
@@ -808,10 +794,15 @@ pub struct MemorySettings {
     ///
     /// ### Default
     ///
-    /// `1024` bytes when constructed with `MemorySettings::new()`.
+    /// `1024` bytes.
     ///
     /// [`HtmlRewriter`]: struct.HtmlRewriter.html
-    pub preallocated_parsing_buffer_size: usize,
+    #[inline]
+    #[must_use]
+    pub const fn with_preallocated_parsing_buffer_size(mut self, size: usize) -> Self {
+        self.preallocated_parsing_buffer_size = size;
+        self
+    }
 
     /// Sets a hard limit in bytes on memory consumption of a [`HtmlRewriter`] instance.
     ///
@@ -824,15 +815,20 @@ pub struct MemorySettings {
     ///
     /// ### Default
     ///
-    /// [`std::usize::MAX`] when constructed with `MemorySettings::new()`.
+    /// [`usize::MAX`].
     ///
     /// [`HtmlRewriter`]: struct.HtmlRewriter.html
-    /// [`std::usize::MAX`]: https://doc.rust-lang.org/std/usize/constant.MAX.html
+    /// [`usize::MAX`]: https://doc.rust-lang.org/std/usize/constant.MAX.html
     /// [`write`]: struct.HtmlRewriter.html#method.write
     /// [`end`]: struct.HtmlRewriter.html#method.end
-    pub max_allowed_memory_usage: usize,
+    #[inline]
+    #[must_use]
+    pub const fn with_max_allowed_memory_usage(mut self, bytes: usize) -> Self {
+        self.max_allowed_memory_usage = bytes;
+        self
+    }
 
-    /// Controls how the rewriter recovers when [`max_allowed_memory_usage`] is exceeded.
+    /// Controls how the rewriter recovers when [the memory limit] is exceeded.
     ///
     /// When `false` (the default), the rewriter aborts processing the response, returns
     /// [`MemoryLimitExceededError`], and leaves the output sink in a potentially inconsistent state
@@ -859,229 +855,58 @@ pub struct MemorySettings {
     ///
     /// ### Default
     ///
-    /// `false` when constructed with `MemorySettings::new()`.
+    /// `false`.
     ///
+    /// [the memory limit]: #method.with_max_allowed_memory_usage
     /// [`MemoryLimitExceededError`]: struct.MemoryLimitExceededError.html
-    /// [`max_allowed_memory_usage`]: #structfield.max_allowed_memory_usage
     /// [`Element::remove()`]: html_content/struct.Element.html#method.remove
-    pub graceful_bail_out_on_memory_limit_exceeded: bool,
-}
-
-impl Default for MemorySettings {
     #[inline]
-    fn default() -> Self {
-        Self {
-            preallocated_parsing_buffer_size: 1024,
-            max_allowed_memory_usage: usize::MAX,
-            graceful_bail_out_on_memory_limit_exceeded: false,
-        }
-    }
-}
-
-impl MemorySettings {
-    /// Create a new [`MemorySettings`] with default values.
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn with_graceful_bail_out_on_memory_limit_exceeded(mut self, value: bool) -> Self {
+        self.graceful_bail_out_on_memory_limit_exceeded = value;
+        self
     }
 }
 
 /// Specifies settings for [`HtmlRewriter`].
 ///
+/// Construct with [`Settings::new()`] / [`Settings::new_send()`] (or [`Settings::default()`]) and
+/// configure the values via the `with_*` builder methods, plus
+/// [`append_element_content_handler()`] and [`append_document_content_handler()`] for adding
+/// handlers.
+///
+/// ### Example
+///
+/// ```
+/// use lol_html::{Settings, element, comments};
+/// use lol_html::html_content::{Comment, Element};
+///
+/// let settings = Settings::new()
+///     .append_element_content_handler(element!("div[foo]", |el: &mut Element| {
+///         // ...
+///         Ok(())
+///     }))
+///     .append_element_content_handler(comments!("body", |c: &mut Comment| {
+///         // ...
+///         Ok(())
+///     }));
+/// ```
+///
 /// [`HtmlRewriter`]: struct.HtmlRewriter.html
+/// [`append_element_content_handler()`]: #method.append_element_content_handler
+/// [`append_document_content_handler()`]: #method.append_document_content_handler
 pub struct Settings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> {
-    /// Specifies CSS selectors and rewriting handlers for elements and their inner content.
-    ///
-    /// ### Hint
-    ///
-    /// [`element`], [`comments`] and [`text`] convenience macros can be used to construct a
-    /// `(Selector, ElementContentHandlers)` tuple.
-    ///
-    /// ### Example
-    /// ```
-    /// use std::borrow::Cow;
-    /// use lol_html::{ElementContentHandlers, Settings};
-    /// use lol_html::html_content::{Comment, Element};
-    ///
-    /// let settings = Settings {
-    ///     element_content_handlers: vec! [
-    ///         (
-    ///             Cow::Owned("div[foo]".parse().unwrap()),
-    ///             ElementContentHandlers::default().element(|el: &mut Element| {
-    ///                 // ...
-    ///
-    ///                 Ok(())
-    ///             })
-    ///         ),
-    ///         (
-    ///             Cow::Owned("body".parse().unwrap()),
-    ///             ElementContentHandlers::default().comments(|c: &mut Comment| {
-    ///                 // ...
-    ///
-    ///                 Ok(())
-    ///             })
-    ///         )
-    ///     ],
-    ///     ..Settings::new()
-    /// };
-    /// ```
-    ///
-    /// [`element`]: macro.element.html
-    /// [`comments`]: macro.comments.html
-    /// [`text`]: macro.text.html
-    pub element_content_handlers: Vec<(
+    pub(crate) element_content_handlers: Vec<(
         Cow<'selectors, Selector>,
         ElementContentHandlers<'handlers, H>,
     )>,
-
-    /// Specifies rewriting handlers for the content without associating it to a particular
-    /// CSS selector.
-    ///
-    /// Refer to [`DocumentContentHandlers`] documentation for more information.
-    ///
-    /// ### Hint
-    /// [`doctype`], [`doc_comments`] and [`doc_text`] convenience macros can be used to construct
-    /// items of this vector.
-    ///
-    /// [`DocumentContentHandlers`]: struct.DocumentContentHandlers.html
-    /// [`doctype`]: macro.doctype.html
-    /// [`doc_comments`]: macro.doc_comments.html
-    /// [`doc_text`]: macro.doc_text.html
-    pub document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
-
-    /// Specifies the [character encoding] for the input and the output of the rewriter.
-    ///
-    /// Can be a [label] for any of the web-compatible encodings with an exception for `UTF-16LE`,
-    /// `UTF-16BE`, `ISO-2022-JP` and `replacement` (these non-ASCII-compatible encodings
-    /// are not supported).
-    ///
-    /// [character encoding]: https://developer.mozilla.org/en-US/docs/Glossary/character_encoding
-    /// [label]: https://encoding.spec.whatwg.org/#names-and-labels
-    ///
-    /// ### Default
-    ///
-    /// `"utf-8"` when constructed with `Settings::new()`.
-    pub encoding: AsciiCompatibleEncoding,
-
-    /// Specifies the memory settings.
-    pub memory_settings: MemorySettings,
-
-    /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
-    /// into ambiguous state.
-    ///
-    /// Since the rewriter operates on a token stream and doesn't have access to a full
-    /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
-    /// guaranteed to be parsed correctly without an ability to backtrace the tree.
-    ///
-    /// Therefore, due to security considerations, sometimes it's preferable to abort the
-    /// rewriting process in case of such uncertainty.
-    ///
-    /// One of the simplest examples of such markup is the following:
-    ///
-    /// ```html
-    /// ...
-    /// <select><xmp><script>"use strict";</script></select>
-    /// ...
-    /// ```
-    ///
-    /// The `<xmp>` element is not allowed inside the `<select>` element, so in a browser the start
-    /// tag for `<xmp>` will be ignored and following `<script>` element will be parsed and executed.
-    ///
-    /// On the other hand, the `<select>` element itself can be also ignored depending on the
-    /// context in which it was parsed. In this case, the `<xmp>` element will not be ignored
-    /// and the `<script>` element along with its content will be parsed as a simple text inside
-    /// it.
-    ///
-    /// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
-    /// correct parsing context.
-    ///
-    /// ### Default
-    ///
-    /// `true` when constructed with `Settings::new()`.
-    pub strict: bool,
-
-    /// If enabled the rewriter enables support for [Edge Side Includes] tags, treating them as
-    /// [void elements] and allowing them to be replaced with desired content.
-    ///
-    /// `false` when constructed with `Settings::new()`.
-    ///
-    /// [Edge Side Includes]: https://www.w3.org/TR/esi-lang/
-    /// [void elements]: https://developer.mozilla.org/en-US/docs/Glossary/Void_element
-    pub enable_esi_tags: bool,
-
-    /// If enabled the rewriter will dynamically change the charset when it encounters a `meta` tag
-    /// that specifies the charset.
-    ///
-    /// The charset can be modified by the `meta` tag with
-    ///
-    /// ```html
-    /// <meta charset="windows-1251">
-    /// ```
-    ///
-    /// or
-    ///
-    /// ```html
-    /// <meta http-equiv="content-type" content="text/html; charset=windows-1251">
-    /// ```
-    ///
-    /// Note that an explicit `charset` in the `Content-type` header should take precedence over
-    /// the `meta` tag, so only enable this if the content type does not explicitly specify a
-    /// charset.  For details check [this][html5encoding].
-    ///
-    /// [html5encoding]: https://blog.whatwg.org/the-road-to-html-5-character-encoding
-    ///
-    /// ### Default
-    ///
-    /// `false` when constructed with `Settings::new()`.
-    pub adjust_charset_on_meta_tag: bool,
-
-    /// Controls how the rewriter recovers when a content handler returns an `Err`.
-    ///
-    /// When `false` (the default), the rewriter aborts processing the response, returns the
-    /// handler's [`RewritingError::ContentHandlerError`], and leaves the output sink in a
-    /// potentially inconsistent state. Downstream this typically manifests as a truncated,
-    /// broken response.
-    ///
-    /// When `true`, before propagating [`RewritingError::ContentHandlerError`] the rewriter
-    /// flushes every input byte it has received but not yet emitted to the sink, *as-is*. The
-    /// caller can then continue the response by writing any subsequent input bytes directly
-    /// to its own downstream sink, bypassing the (now poisoned) rewriter. The resulting
-    /// response will have the rewriter's transformations applied up to some boundary,
-    /// followed by the original bytes after that boundary, but the response will not be
-    /// broken.
-    ///
-    /// The rewriter is still poisoned after the error and must not be used again, regardless
-    /// of this setting.
-    ///
-    /// This is symmetric with
-    /// [`MemorySettings::graceful_bail_out_on_memory_limit_exceeded`], but kept as a separate
-    /// flag because the underlying error has different semantics: a memory limit is an
-    /// environmental constraint, whereas a content handler returning `Err` is an explicit
-    /// signal from the application that something is wrong with the input. Some callers will
-    /// want graceful recovery for one but not the other.
-    ///
-    /// ### Caveats
-    ///
-    /// 1. If a handler was actively removing element content (e.g. via [`Element::remove()`])
-    ///    at the time of the bail-out, the surrounding tags can end up mismatched in the
-    ///    resulting response. In practice removing content is uncommon, and a
-    ///    well-formed-but-imperfect response is still much better than a truncated one.
-    /// 2. If a text content handler returns an error after some chunks of the same text node
-    ///    have already been emitted (rare; typically only happens with multi-chunk
-    ///    encoding-converted text), the bail-out flush will re-emit the input bytes raw,
-    ///    duplicating the already-emitted chunks. The response is byte-bigger but not
-    ///    truncated.
-    ///
-    /// ### Default
-    ///
-    /// `false` when constructed with `Settings::new()`.
-    ///
-    /// [`MemorySettings::graceful_bail_out_on_memory_limit_exceeded`]:
-    ///     struct.MemorySettings.html#structfield.graceful_bail_out_on_memory_limit_exceeded
-    /// [`RewritingError::ContentHandlerError`]:
-    ///     errors/enum.RewritingError.html#variant.ContentHandlerError
-    /// [`Element::remove()`]: html_content/struct.Element.html#method.remove
-    pub graceful_bail_out_on_content_handler_error: bool,
+    pub(crate) document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
+    pub(crate) encoding: AsciiCompatibleEncoding,
+    pub(crate) memory_settings: MemorySettings,
+    pub(crate) strict: bool,
+    pub(crate) enable_esi_tags: bool,
+    pub(crate) adjust_charset_on_meta_tag: bool,
+    pub(crate) graceful_bail_out_on_content_handler_error: bool,
 }
 
 impl Default for Settings<'_, '_, LocalHandlerTypes> {
@@ -1109,7 +934,7 @@ impl Settings<'_, '_, SendHandlerTypes> {
     }
 }
 
-impl<H: HandlerTypes> Settings<'_, '_, H> {
+impl<'handlers, 'selectors, H: HandlerTypes> Settings<'handlers, 'selectors, H> {
     /// Creates [`Settings`].
     #[inline]
     #[must_use]
@@ -1118,90 +943,103 @@ impl<H: HandlerTypes> Settings<'_, '_, H> {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
             encoding: AsciiCompatibleEncoding(encoding_rs::UTF_8),
-            memory_settings: MemorySettings::default(),
+            memory_settings: MemorySettings::new(),
             strict: true,
             enable_esi_tags: false,
             adjust_charset_on_meta_tag: false,
             graceful_bail_out_on_content_handler_error: false,
         }
     }
-}
 
-impl<'h, 's, H: HandlerTypes> From<RewriteStrSettings<'h, 's, H>> for Settings<'h, 's, H> {
-    #[inline]
-    fn from(settings: RewriteStrSettings<'h, 's, H>) -> Self {
-        Settings {
-            element_content_handlers: settings.element_content_handlers,
-            document_content_handlers: settings.document_content_handlers,
-            strict: settings.strict,
-            enable_esi_tags: settings.enable_esi_tags,
-            ..Settings::new_for_handler_types()
-        }
-    }
-}
-
-/// Specifies settings for the [`rewrite_str`] function.
-///
-/// [`rewrite_str`]: fn.rewrite_str.html
-pub struct RewriteStrSettings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> {
-    /// Specifies CSS selectors and rewriting handlers for elements and their inner content.
+    /// Appends a `(selector, handlers)` tuple to the list of element content handlers.
+    ///
+    /// The handlers specify CSS selectors and rewriting handlers for elements and their inner
+    /// content.
     ///
     /// ### Hint
     ///
-    /// [`element`], [`comments`] and [`text`] convenience macros can be used to construct a
-    /// `(Selector, ElementContentHandlers)` tuple.
+    /// The [`element`], [`comments`] and [`text`] convenience macros expand to the expected
+    /// `(Selector, ElementContentHandlers)` tuple, so they can be passed directly:
     ///
-    /// ### Example
     /// ```
-    /// use std::borrow::Cow;
-    /// use lol_html::{ElementContentHandlers, RewriteStrSettings};
-    /// use lol_html::html_content::{Comment, Element};
+    /// use lol_html::{Settings, element};
+    /// use lol_html::html_content::Element;
     ///
-    /// let settings = RewriteStrSettings {
-    ///     element_content_handlers: vec! [
-    ///         (
-    ///             Cow::Owned("div[foo]".parse().unwrap()),
-    ///             ElementContentHandlers::default().element(|el: &mut Element| {
-    ///                 // ...
-    ///
-    ///                 Ok(())
-    ///             })
-    ///         ),
-    ///         (
-    ///             Cow::Owned("div[foo]".parse().unwrap()),
-    ///             ElementContentHandlers::default().comments(|c: &mut Comment| {
-    ///                 // ...
-    ///
-    ///                 Ok(())
-    ///             })
-    ///         )
-    ///     ],
-    ///     ..RewriteStrSettings::new()
-    /// };
+    /// let settings = Settings::new()
+    ///     .append_element_content_handler(element!("div[foo]", |el: &mut Element| {
+    ///         // ...
+    ///         Ok(())
+    ///     }));
     /// ```
     ///
     /// [`element`]: macro.element.html
     /// [`comments`]: macro.comments.html
     /// [`text`]: macro.text.html
-    pub element_content_handlers: Vec<(
-        Cow<'selectors, Selector>,
-        ElementContentHandlers<'handlers, H>,
-    )>,
+    #[inline]
+    #[must_use]
+    pub fn append_element_content_handler(
+        mut self,
+        handler: (
+            Cow<'selectors, Selector>,
+            ElementContentHandlers<'handlers, H>,
+        ),
+    ) -> Self {
+        self.element_content_handlers.push(handler);
+        self
+    }
 
-    /// Specifies rewriting handlers for the content without associating it to a particular
-    /// CSS selector.
+    /// Appends a [`DocumentContentHandlers`] to the list of document content handlers.
+    ///
+    /// Document content handlers specify rewriting handlers for the content without associating
+    /// it to a particular CSS selector.
     ///
     /// Refer to [`DocumentContentHandlers`] documentation for more information.
     ///
     /// ### Hint
-    /// [`doctype`], [`doc_comments`] and [`doc_text`] convenience macros can be used to construct
-    /// items of this vector.
+    ///
+    /// The [`doctype`], [`doc_comments`] and [`doc_text`] convenience macros return values of the
+    /// expected type, so they can be passed directly.
     ///
     /// [`DocumentContentHandlers`]: struct.DocumentContentHandlers.html
     /// [`doctype`]: macro.doctype.html
     /// [`doc_comments`]: macro.doc_comments.html
     /// [`doc_text`]: macro.doc_text.html
-    pub document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
+    #[inline]
+    #[must_use]
+    pub fn append_document_content_handler(
+        mut self,
+        handler: DocumentContentHandlers<'handlers, H>,
+    ) -> Self {
+        self.document_content_handlers.push(handler);
+        self
+    }
+
+    /// Sets the [character encoding] for the input and the output of the rewriter.
+    ///
+    /// Can be a [label] for any of the web-compatible encodings with an exception for `UTF-16LE`,
+    /// `UTF-16BE`, `ISO-2022-JP` and `replacement` (these non-ASCII-compatible encodings
+    /// are not supported).
+    ///
+    /// [character encoding]: https://developer.mozilla.org/en-US/docs/Glossary/character_encoding
+    /// [label]: https://encoding.spec.whatwg.org/#names-and-labels
+    ///
+    /// ### Default
+    ///
+    /// `"utf-8"`.
+    #[inline]
+    #[must_use]
+    pub const fn with_encoding(mut self, encoding: AsciiCompatibleEncoding) -> Self {
+        self.encoding = encoding;
+        self
+    }
+
+    /// Sets the memory settings.
+    #[inline]
+    #[must_use]
+    pub const fn with_memory_settings(mut self, memory_settings: MemorySettings) -> Self {
+        self.memory_settings = memory_settings;
+        self
+    }
 
     /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
     /// into ambiguous state.
@@ -1234,17 +1072,159 @@ pub struct RewriteStrSettings<'handlers, 'selectors, H: HandlerTypes = LocalHand
     ///
     /// ### Default
     ///
-    /// `true` when constructed with `Settings::new()`.
-    pub strict: bool,
+    /// `true`.
+    #[inline]
+    #[must_use]
+    pub const fn with_strict(mut self, strict: bool) -> Self {
+        self.strict = strict;
+        self
+    }
 
     /// If enabled the rewriter enables support for [Edge Side Includes] tags, treating them as
     /// [void elements] and allowing them to be replaced with desired content.
     ///
-    /// `true` when constructed with `RewriteStrSettings::new()`.
+    /// ### Default
+    ///
+    /// `false`.
     ///
     /// [Edge Side Includes]: https://www.w3.org/TR/esi-lang/
     /// [void elements]: https://developer.mozilla.org/en-US/docs/Glossary/Void_element
-    pub enable_esi_tags: bool,
+    #[inline]
+    #[must_use]
+    pub const fn with_enable_esi_tags(mut self, enable: bool) -> Self {
+        self.enable_esi_tags = enable;
+        self
+    }
+
+    /// If enabled the rewriter will dynamically change the charset when it encounters a `meta` tag
+    /// that specifies the charset.
+    ///
+    /// The charset can be modified by the `meta` tag with
+    ///
+    /// ```html
+    /// <meta charset="windows-1251">
+    /// ```
+    ///
+    /// or
+    ///
+    /// ```html
+    /// <meta http-equiv="content-type" content="text/html; charset=windows-1251">
+    /// ```
+    ///
+    /// Note that an explicit `charset` in the `Content-type` header should take precedence over
+    /// the `meta` tag, so only enable this if the content type does not explicitly specify a
+    /// charset.  For details check [this][html5encoding].
+    ///
+    /// [html5encoding]: https://blog.whatwg.org/the-road-to-html-5-character-encoding
+    ///
+    /// ### Default
+    ///
+    /// `false`.
+    #[inline]
+    #[must_use]
+    pub const fn with_adjust_charset_on_meta_tag(mut self, adjust: bool) -> Self {
+        self.adjust_charset_on_meta_tag = adjust;
+        self
+    }
+
+    /// Controls how the rewriter recovers when a content handler returns an `Err`.
+    ///
+    /// When `false` (the default), the rewriter aborts processing the response, returns the
+    /// handler's [`RewritingError::ContentHandlerError`], and leaves the output sink in a
+    /// potentially inconsistent state. Downstream this typically manifests as a truncated,
+    /// broken response.
+    ///
+    /// When `true`, before propagating [`RewritingError::ContentHandlerError`] the rewriter
+    /// flushes every input byte it has received but not yet emitted to the sink, *as-is*. The
+    /// caller can then continue the response by writing any subsequent input bytes directly
+    /// to its own downstream sink, bypassing the (now poisoned) rewriter. The resulting
+    /// response will have the rewriter's transformations applied up to some boundary,
+    /// followed by the original bytes after that boundary, but the response will not be
+    /// broken.
+    ///
+    /// The rewriter is still poisoned after the error and must not be used again, regardless
+    /// of this setting.
+    ///
+    /// This is symmetric with
+    /// [`MemorySettings::with_graceful_bail_out_on_memory_limit_exceeded`], but kept as a
+    /// separate flag because the underlying error has different semantics: a memory limit is
+    /// an environmental constraint, whereas a content handler returning `Err` is an explicit
+    /// signal from the application that something is wrong with the input. Some callers will
+    /// want graceful recovery for one but not the other.
+    ///
+    /// ### Caveats
+    ///
+    /// 1. If a handler was actively removing element content (e.g. via [`Element::remove()`])
+    ///    at the time of the bail-out, the surrounding tags can end up mismatched in the
+    ///    resulting response. In practice removing content is uncommon, and a
+    ///    well-formed-but-imperfect response is still much better than a truncated one.
+    /// 2. If a text content handler returns an error after some chunks of the same text node
+    ///    have already been emitted (rare; typically only happens with multi-chunk
+    ///    encoding-converted text), the bail-out flush will re-emit the input bytes raw,
+    ///    duplicating the already-emitted chunks. The response is byte-bigger but not
+    ///    truncated.
+    ///
+    /// ### Default
+    ///
+    /// `false`.
+    ///
+    /// [`MemorySettings::with_graceful_bail_out_on_memory_limit_exceeded`]:
+    ///     struct.MemorySettings.html#method.with_graceful_bail_out_on_memory_limit_exceeded
+    /// [`RewritingError::ContentHandlerError`]:
+    ///     errors/enum.RewritingError.html#variant.ContentHandlerError
+    /// [`Element::remove()`]: html_content/struct.Element.html#method.remove
+    #[inline]
+    #[must_use]
+    pub const fn with_graceful_bail_out_on_content_handler_error(mut self, value: bool) -> Self {
+        self.graceful_bail_out_on_content_handler_error = value;
+        self
+    }
+}
+
+impl<'h, 's, H: HandlerTypes> From<RewriteStrSettings<'h, 's, H>> for Settings<'h, 's, H> {
+    #[inline]
+    fn from(settings: RewriteStrSettings<'h, 's, H>) -> Self {
+        Settings {
+            element_content_handlers: settings.element_content_handlers,
+            document_content_handlers: settings.document_content_handlers,
+            strict: settings.strict,
+            enable_esi_tags: settings.enable_esi_tags,
+            ..Settings::new_for_handler_types()
+        }
+    }
+}
+
+/// Specifies settings for the [`rewrite_str`] function.
+///
+/// Construct with [`RewriteStrSettings::new()`] / [`RewriteStrSettings::new_send()`] (or
+/// [`RewriteStrSettings::default()`]) and configure the values via the `with_*` builder methods,
+/// plus [`append_element_content_handler()`] and [`append_document_content_handler()`] for adding
+/// handlers.
+///
+/// ### Example
+///
+/// ```
+/// use lol_html::{RewriteStrSettings, element};
+/// use lol_html::html_content::Element;
+///
+/// let settings = RewriteStrSettings::new()
+///     .append_element_content_handler(element!("div[foo]", |el: &mut Element| {
+///         // ...
+///         Ok(())
+///     }));
+/// ```
+///
+/// [`rewrite_str`]: fn.rewrite_str.html
+/// [`append_element_content_handler()`]: #method.append_element_content_handler
+/// [`append_document_content_handler()`]: #method.append_document_content_handler
+pub struct RewriteStrSettings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> {
+    pub(crate) element_content_handlers: Vec<(
+        Cow<'selectors, Selector>,
+        ElementContentHandlers<'handlers, H>,
+    )>,
+    pub(crate) document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
+    pub(crate) strict: bool,
+    pub(crate) enable_esi_tags: bool,
 }
 
 impl Default for RewriteStrSettings<'_, '_, LocalHandlerTypes> {
@@ -1255,7 +1235,7 @@ impl Default for RewriteStrSettings<'_, '_, LocalHandlerTypes> {
 }
 
 impl RewriteStrSettings<'_, '_, LocalHandlerTypes> {
-    /// Creates [`Settings`] for non-[`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    /// Creates [`RewriteStrSettings`] for non-[`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     #[inline]
     #[must_use]
     pub const fn new() -> Self {
@@ -1264,7 +1244,7 @@ impl RewriteStrSettings<'_, '_, LocalHandlerTypes> {
 }
 
 impl RewriteStrSettings<'_, '_, SendHandlerTypes> {
-    /// Creates [`Settings`] for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
+    /// Creates [`RewriteStrSettings`] for [`Send`]able [`HtmlRewriter`](crate::HtmlRewriter)s.
     #[inline]
     #[must_use]
     pub const fn new_send() -> Self {
@@ -1272,7 +1252,7 @@ impl RewriteStrSettings<'_, '_, SendHandlerTypes> {
     }
 }
 
-impl<H: HandlerTypes> RewriteStrSettings<'_, '_, H> {
+impl<'handlers, 'selectors, H: HandlerTypes> RewriteStrSettings<'handlers, 'selectors, H> {
     /// Creates [`RewriteStrSettings`].
     #[inline]
     #[must_use]
@@ -1283,5 +1263,121 @@ impl<H: HandlerTypes> RewriteStrSettings<'_, '_, H> {
             strict: true,
             enable_esi_tags: true,
         }
+    }
+
+    /// Appends a `(selector, handlers)` tuple to the list of element content handlers.
+    ///
+    /// The handlers specify CSS selectors and rewriting handlers for elements and their inner
+    /// content.
+    ///
+    /// ### Hint
+    ///
+    /// The [`element`], [`comments`] and [`text`] convenience macros expand to the expected
+    /// `(Selector, ElementContentHandlers)` tuple, so they can be passed directly:
+    ///
+    /// ```
+    /// use lol_html::{RewriteStrSettings, element};
+    /// use lol_html::html_content::Element;
+    ///
+    /// let settings = RewriteStrSettings::new()
+    ///     .append_element_content_handler(element!("div[foo]", |el: &mut Element| {
+    ///         // ...
+    ///         Ok(())
+    ///     }));
+    /// ```
+    ///
+    /// [`element`]: macro.element.html
+    /// [`comments`]: macro.comments.html
+    /// [`text`]: macro.text.html
+    #[inline]
+    #[must_use]
+    pub fn append_element_content_handler(
+        mut self,
+        handler: (
+            Cow<'selectors, Selector>,
+            ElementContentHandlers<'handlers, H>,
+        ),
+    ) -> Self {
+        self.element_content_handlers.push(handler);
+        self
+    }
+
+    /// Appends a [`DocumentContentHandlers`] to the list of document content handlers.
+    ///
+    /// Document content handlers specify rewriting handlers for the content without associating
+    /// it to a particular CSS selector.
+    ///
+    /// ### Hint
+    ///
+    /// The [`doctype`], [`doc_comments`] and [`doc_text`] convenience macros return values of the
+    /// expected type, so they can be passed directly.
+    ///
+    /// [`DocumentContentHandlers`]: struct.DocumentContentHandlers.html
+    /// [`doctype`]: macro.doctype.html
+    /// [`doc_comments`]: macro.doc_comments.html
+    /// [`doc_text`]: macro.doc_text.html
+    #[inline]
+    #[must_use]
+    pub fn append_document_content_handler(
+        mut self,
+        handler: DocumentContentHandlers<'handlers, H>,
+    ) -> Self {
+        self.document_content_handlers.push(handler);
+        self
+    }
+
+    /// If set to `true` the rewriter bails out if it encounters markup that drives the HTML parser
+    /// into ambiguous state.
+    ///
+    /// Since the rewriter operates on a token stream and doesn't have access to a full
+    /// DOM-tree, there are certain rare cases of non-conforming HTML markup which can't be
+    /// guaranteed to be parsed correctly without an ability to backtrace the tree.
+    ///
+    /// Therefore, due to security considerations, sometimes it's preferable to abort the
+    /// rewriting process in case of such uncertainty.
+    ///
+    /// One of the simplest examples of such markup is the following:
+    ///
+    /// ```html
+    /// ...
+    /// <select><xmp><script>"use strict";</script></select>
+    /// ...
+    /// ```
+    ///
+    /// The `<xmp>` element is not allowed inside the `<select>` element, so in a browser the start
+    /// tag for `<xmp>` will be ignored and following `<script>` element will be parsed and executed.
+    ///
+    /// On the other hand, the `<select>` element itself can be also ignored depending on the
+    /// context in which it was parsed. In this case, the `<xmp>` element will not be ignored
+    /// and the `<script>` element along with its content will be parsed as a simple text inside
+    /// it.
+    ///
+    /// So, in this case the parser needs an ability to backtrace the DOM-tree to figure out the
+    /// correct parsing context.
+    ///
+    /// ### Default
+    ///
+    /// `true`.
+    #[inline]
+    #[must_use]
+    pub const fn with_strict(mut self, strict: bool) -> Self {
+        self.strict = strict;
+        self
+    }
+
+    /// If enabled the rewriter enables support for [Edge Side Includes] tags, treating them as
+    /// [void elements] and allowing them to be replaced with desired content.
+    ///
+    /// ### Default
+    ///
+    /// `true`.
+    ///
+    /// [Edge Side Includes]: https://www.w3.org/TR/esi-lang/
+    /// [void elements]: https://developer.mozilla.org/en-US/docs/Glossary/Void_element
+    #[inline]
+    #[must_use]
+    pub const fn with_enable_esi_tags(mut self, enable: bool) -> Self {
+        self.enable_esi_tags = enable;
+        self
     }
 }

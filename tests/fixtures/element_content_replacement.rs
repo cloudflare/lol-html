@@ -20,18 +20,16 @@ impl TestFixture<TestCase> for ElementContentReplacementTests {
 
         {
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![element!(test.selector, |el| {
+                Settings::new()
+                    .with_encoding(encoding)
+                    .append_element_content_handler(element!(test.selector, |el| {
                         el.set_inner_content(
                             &format!("<!--Replaced ({}) -->", test.selector),
                             ContentType::Html,
                         );
 
                         Ok(())
-                    })],
-                    encoding,
-                    ..Settings::new()
-                },
+                    })),
                 |c: &[u8]| output.push(c),
             );
 

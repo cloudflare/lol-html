@@ -26,32 +26,28 @@ pub use self::tokens::*;
 ///
 /// rewrite_str(
 ///     r#"<div id="foo"></div>"#,
-///     RewriteStrSettings {
-///         element_content_handlers: vec![
-///             element!("*", |el| {
-///                 el.set_user_data("Captured by `*`");
+///     RewriteStrSettings::new()
+///         .append_element_content_handler(element!("*", |el| {
+///             el.set_user_data("Captured by `*`");
 ///
-///                 Ok(())
-///             }),
-///             element!("#foo", |el| {
-///                 let user_data = el.user_data_mut().downcast_mut::<&'static str>().unwrap();
+///             Ok(())
+///         }))
+///         .append_element_content_handler(element!("#foo", |el| {
+///             let user_data = el.user_data_mut().downcast_mut::<&'static str>().unwrap();
 ///
-///                 assert_eq!(*user_data, "Captured by `*`");
+///             assert_eq!(*user_data, "Captured by `*`");
 ///
-///                 *user_data = "Captured by `#foo`";
+///             *user_data = "Captured by `#foo`";
 ///
-///                 Ok(())
-///             }),
-///             element!("div", |el| {
-///                 let user_data = el.user_data().downcast_ref::<&'static str>().unwrap();
+///             Ok(())
+///         }))
+///         .append_element_content_handler(element!("div", |el| {
+///             let user_data = el.user_data().downcast_ref::<&'static str>().unwrap();
 ///
-///                 assert_eq!(*user_data, "Captured by `#foo`");
+///             assert_eq!(*user_data, "Captured by `#foo`");
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///             Ok(())
+///         }))
 /// ).unwrap();
 /// ```
 pub trait UserData {
@@ -133,15 +129,18 @@ mod test_utils {
         let mut output = Output::new(encoding);
 
         {
-            let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers,
-                    document_content_handlers,
-                    encoding: AsciiCompatibleEncoding::new(encoding).unwrap(),
-                    ..Settings::new()
-                },
-                |c: &[u8]| output.push(c),
-            );
+            let mut settings =
+                Settings::new().with_encoding(AsciiCompatibleEncoding::new(encoding).unwrap());
+
+            for handler in element_content_handlers {
+                settings = settings.append_element_content_handler(handler);
+            }
+
+            for handler in document_content_handlers {
+                settings = settings.append_document_content_handler(handler);
+            }
+
+            let mut rewriter = HtmlRewriter::new(settings, |c: &[u8]| output.push(c));
 
             for ch in html.chunks(15) {
                 rewriter.write(ch).unwrap();

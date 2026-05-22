@@ -5,46 +5,30 @@ define_group!(
     [
         (
             "Match-all selector",
-            Settings {
-                element_content_handlers: vec![element!("*", noop_handler!())],
-                ..Settings::new()
-            }
+            Settings::new().append_element_content_handler(element!("*", noop_handler!()))
         ),
         (
             "Tag name selector",
-            Settings {
-                element_content_handlers: vec![element!("div", noop_handler!())],
-                ..Settings::new()
-            }
+            Settings::new().append_element_content_handler(element!("div", noop_handler!()))
         ),
         (
             "Class selector",
-            Settings {
-                element_content_handlers: vec![element!(".note", noop_handler!())],
-                ..Settings::new()
-            }
+            Settings::new().append_element_content_handler(element!(".note", noop_handler!()))
         ),
         (
             "Attribute selector",
-            Settings {
-                element_content_handlers: vec![element!("[href]", noop_handler!())],
-                ..Settings::new()
-            }
+            Settings::new().append_element_content_handler(element!("[href]", noop_handler!()))
         ),
         (
             "Multiple selectors",
-            Settings {
-                element_content_handlers: vec![
-                    element!("ul", noop_handler!()),
-                    element!("ul > li", noop_handler!()),
-                    element!("table > tbody td dfn", noop_handler!()),
-                    element!("body table > tbody tr", noop_handler!()),
-                    element!("body [href]", noop_handler!()),
-                    element!("div img", noop_handler!()),
-                    element!("div.note span", noop_handler!())
-                ],
-                ..Settings::new()
-            }
+            Settings::new()
+                .append_element_content_handler(element!("ul", noop_handler!()))
+                .append_element_content_handler(element!("ul > li", noop_handler!()))
+                .append_element_content_handler(element!("table > tbody td dfn", noop_handler!()))
+                .append_element_content_handler(element!("body table > tbody tr", noop_handler!()))
+                .append_element_content_handler(element!("body [href]", noop_handler!()))
+                .append_element_content_handler(element!("div img", noop_handler!()))
+                .append_element_content_handler(element!("div.note span", noop_handler!()))
         )
     ]
 );

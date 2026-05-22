@@ -18,18 +18,13 @@ use std::fmt::{self, Debug};
 ///
 /// rewrite_str(
 ///     r#"<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd""#,
-///     RewriteStrSettings {
-///         document_content_handlers: vec![
-///             doctype!(|d| {
-///                 assert_eq!(d.name(), Some("html".into()));
-///                 assert_eq!(d.public_id(), Some("-//W3C//DTD XHTML 1.0 Transitional//EN".into()));
-///                 assert_eq!(d.system_id(), Some("DTD/xhtml1-transitional.dtd".into()));
+///     RewriteStrSettings::new().append_document_content_handler(doctype!(|d| {
+///         assert_eq!(d.name(), Some("html".into()));
+///         assert_eq!(d.public_id(), Some("-//W3C//DTD XHTML 1.0 Transitional//EN".into()));
+///         assert_eq!(d.system_id(), Some("DTD/xhtml1-transitional.dtd".into()));
 ///
-///                 Ok(())
-///             })
-///         ],
-///         ..RewriteStrSettings::new()
-///     }
+///         Ok(())
+///     }))
 /// ).unwrap();
 /// ```
 ///

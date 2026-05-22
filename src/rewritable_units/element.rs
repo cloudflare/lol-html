@@ -238,18 +238,13 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"></div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("#foo", |el| {
-    ///                 el.before("<bar>", ContentType::Html);
-    ///                 el.before("<qux>", ContentType::Html);
-    ///                 el.before("<quz>", ContentType::Text);
+    ///     RewriteStrSettings::new().append_element_content_handler(element!("#foo", |el| {
+    ///         el.before("<bar>", ContentType::Html);
+    ///         el.before("<qux>", ContentType::Html);
+    ///         el.before("<quz>", ContentType::Text);
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<bar><qux>&lt;quz&gt;<div id="foo"></div>"#);
@@ -288,18 +283,13 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"></div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("#foo", |el| {
-    ///                 el.after("<bar>", ContentType::Html);
-    ///                 el.after("<qux>", ContentType::Html);
-    ///                 el.after("<quz>", ContentType::Text);
+    ///     RewriteStrSettings::new().append_element_content_handler(element!("#foo", |el| {
+    ///         el.after("<bar>", ContentType::Html);
+    ///         el.after("<qux>", ContentType::Html);
+    ///         el.after("<quz>", ContentType::Text);
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div id="foo"></div>&lt;quz&gt;<qux><bar>"#);
@@ -352,13 +342,9 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"><!-- content --></div><img>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("#foo", handler),
-    ///             element!("img", handler),
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///     RewriteStrSettings::new()
+    ///         .append_element_content_handler(element!("#foo", handler))
+    ///         .append_element_content_handler(element!("img", handler))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div id="foo">&lt;quz&gt;<qux><bar><!-- content --></div><img>"#);
@@ -417,13 +403,9 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"><!-- content --></div><img>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("#foo", handler),
-    ///             element!("img", handler),
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///     RewriteStrSettings::new()
+    ///         .append_element_content_handler(element!("#foo", handler))
+    ///         .append_element_content_handler(element!("img", handler))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div id="foo"><!-- content --><bar><qux>&lt;quz&gt;</div><img>"#);
@@ -476,13 +458,9 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"><!-- content --></div><img>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("#foo", handler),
-    ///             element!("img", handler),
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///     RewriteStrSettings::new()
+    ///         .append_element_content_handler(element!("#foo", handler))
+    ///         .append_element_content_handler(element!("img", handler))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div id="foo"><!-- survive --></div><img>"#);
@@ -532,17 +510,12 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"></div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("#foo", |el| {
-    ///                 el.replace("<span></span>", ContentType::Html);
-    ///                 el.replace("Hello", ContentType::Text);
+    ///     RewriteStrSettings::new().append_element_content_handler(element!("#foo", |el| {
+    ///         el.replace("<span></span>", ContentType::Html);
+    ///         el.replace("Hello", ContentType::Text);
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"Hello"#);
@@ -591,16 +564,11 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     ///
     /// let html = rewrite_str(
     ///     r#"<div><span><!-- 42 --></span></div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("div", |el| {
-    ///                 el.remove_and_keep_content();
+    ///     RewriteStrSettings::new().append_element_content_handler(element!("div", |el| {
+    ///         el.remove_and_keep_content();
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<span><!-- 42 --></span>"#);
@@ -648,37 +616,33 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     /// let buffer = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     /// let html = rewrite_str(
     ///     "<span>Short</span><span><b>13</b> characters</span>",
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("span", |el: &mut Element| {
-    ///                 // Truncate string for each new span.
-    ///                 buffer.borrow_mut().clear();
-    ///                 let buffer = buffer.clone();
-    ///                 if let Some(handlers) = el.end_tag_handlers() {
-    ///                     handlers.push(Box::new(move |end| {
-    ///                         let s = buffer.borrow();
-    ///                         if s.len() == 13 {
-    ///                             // add text before the end tag
-    ///                             end.before("!", ContentType::Text);
-    ///                         } else {
-    ///                             // replace the end tag with an uppercase version
-    ///                             end.remove();
-    ///                             let name = end.name().to_uppercase();
-    ///                             end.after(&format!("</{}>", name), ContentType::Html);
-    ///                         }
-    ///                         Ok(())
-    ///                     }));
-    ///                 }
-    ///                 Ok(())
-    ///             }),
-    ///             text!("span", |t| {
-    ///                 // Save the text contents for the end tag handler.
-    ///                 buffer.borrow_mut().push_str(t.as_str());
-    ///                 Ok(())
-    ///             }),
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     },
+    ///     RewriteStrSettings::new()
+    ///         .append_element_content_handler(element!("span", |el: &mut Element| {
+    ///             // Truncate string for each new span.
+    ///             buffer.borrow_mut().clear();
+    ///             let buffer = buffer.clone();
+    ///             if let Some(handlers) = el.end_tag_handlers() {
+    ///                 handlers.push(Box::new(move |end| {
+    ///                     let s = buffer.borrow();
+    ///                     if s.len() == 13 {
+    ///                         // add text before the end tag
+    ///                         end.before("!", ContentType::Text);
+    ///                     } else {
+    ///                         // replace the end tag with an uppercase version
+    ///                         end.remove();
+    ///                         let name = end.name().to_uppercase();
+    ///                         end.after(&format!("</{}>", name), ContentType::Html);
+    ///                     }
+    ///                     Ok(())
+    ///                 }));
+    ///             }
+    ///             Ok(())
+    ///         }))
+    ///         .append_element_content_handler(text!("span", |t| {
+    ///             // Save the text contents for the end tag handler.
+    ///             buffer.borrow_mut().push_str(t.as_str());
+    ///             Ok(())
+    ///         })),
     /// )
     /// .unwrap();
     ///
@@ -705,18 +669,16 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
     /// use lol_html::{element, end_tag, rewrite_str, text, RewriteStrSettings};
     /// let html = rewrite_str(
     ///     "<span>hi</span>",
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             element!("span", |el: &mut Element| {
-    ///                 el.on_end_tag(end_tag!(move |end| {
-    ///                     end.before("?", ContentType::Text);
-    ///                     end.after("!", ContentType::Text);
-    ///                     Ok(())
-    ///                 }))
-    ///             }),
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     },
+    ///     RewriteStrSettings::new().append_element_content_handler(element!(
+    ///         "span",
+    ///         |el: &mut Element| {
+    ///             el.on_end_tag(end_tag!(move |end| {
+    ///                 end.before("?", ContentType::Text);
+    ///                 end.after("!", ContentType::Text);
+    ///                 Ok(())
+    ///             }))
+    ///         }
+    ///     )),
     /// )
     /// .unwrap();
     ///

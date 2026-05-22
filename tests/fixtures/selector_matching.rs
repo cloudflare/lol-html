@@ -18,58 +18,54 @@ impl TestFixture<TestCase> for SelectorMatchingTests {
 
         {
             let mut rewriter = HtmlRewriter::new(
-                Settings {
-                    element_content_handlers: vec![
-                        element!(test.selector, |el| {
-                            el.before(
-                                &format!("<!--[ELEMENT('{}')]-->", test.selector),
+                Settings::new()
+                    .with_encoding(encoding)
+                    .append_element_content_handler(element!(test.selector, |el| {
+                        el.before(
+                            &format!("<!--[ELEMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+
+                        el.after(
+                            &format!("<!--[/ELEMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+
+                        Ok(())
+                    }))
+                    .append_element_content_handler(comments!(test.selector, |c| {
+                        c.before(
+                            &format!("<!--[COMMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+                        c.after(
+                            &format!("<!--[/COMMENT('{}')]-->", test.selector),
+                            ContentType::Html,
+                        );
+
+                        Ok(())
+                    }))
+                    .append_element_content_handler(text!(test.selector, |t| {
+                        if first_text_chunk_expected {
+                            t.before(
+                                &format!("<!--[TEXT('{}')]-->", test.selector),
                                 ContentType::Html,
                             );
 
-                            el.after(
-                                &format!("<!--[/ELEMENT('{}')]-->", test.selector),
+                            first_text_chunk_expected = false;
+                        }
+
+                        if t.last_in_text_node() {
+                            t.after(
+                                &format!("<!--[/TEXT('{}')]-->", test.selector),
                                 ContentType::Html,
                             );
 
-                            Ok(())
-                        }),
-                        comments!(test.selector, |c| {
-                            c.before(
-                                &format!("<!--[COMMENT('{}')]-->", test.selector),
-                                ContentType::Html,
-                            );
-                            c.after(
-                                &format!("<!--[/COMMENT('{}')]-->", test.selector),
-                                ContentType::Html,
-                            );
+                            first_text_chunk_expected = true;
+                        }
 
-                            Ok(())
-                        }),
-                        text!(test.selector, |t| {
-                            if first_text_chunk_expected {
-                                t.before(
-                                    &format!("<!--[TEXT('{}')]-->", test.selector),
-                                    ContentType::Html,
-                                );
-
-                                first_text_chunk_expected = false;
-                            }
-
-                            if t.last_in_text_node() {
-                                t.after(
-                                    &format!("<!--[/TEXT('{}')]-->", test.selector),
-                                    ContentType::Html,
-                                );
-
-                                first_text_chunk_expected = true;
-                            }
-
-                            Ok(())
-                        }),
-                    ],
-                    encoding,
-                    ..Settings::new()
-                },
+                        Ok(())
+                    })),
                 |c: &[u8]| output.push(c),
             );
 
