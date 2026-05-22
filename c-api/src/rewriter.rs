@@ -51,21 +51,26 @@ fn lol_html_rewriter_build_inner(
     let maybe_encoding =
         encoding_rs::Encoding::for_label_no_replacement(to_bytes!(encoding, encoding_len));
     let encoding = maybe_encoding.ok_or(EncodingError::UnknownEncoding)?;
-    let settings = Settings {
-        element_content_handlers: handlers.element,
-        document_content_handlers: handlers.document,
-        encoding: encoding
-            .try_into()
-            .or(Err(EncodingError::NonAsciiCompatibleEncoding))?,
-        memory_settings,
-        strict,
-        enable_esi_tags,
-        adjust_charset_on_meta_tag: false,
-        // TODO: expose `graceful_bail_out_on_content_handler_error` through the C API. Adding
-        // a new parameter to `lol_html_rewriter_build()` is a breaking ABI change, so it
-        // belongs behind a new function variant or a settings struct.
-        graceful_bail_out_on_content_handler_error: false,
-    };
+    // NOTE: `graceful_bail_out_on_content_handler_error` is not yet exposed in the C API
+    // (default `false`). Adding a parameter to `lol_html_rewriter_build()` is a breaking ABI
+    // change, so it belongs behind a new function variant or a settings struct.
+    let mut settings = Settings::new()
+        .with_encoding(
+            encoding
+                .try_into()
+                .or(Err(EncodingError::NonAsciiCompatibleEncoding))?,
+        )
+        .with_memory_settings(memory_settings)
+        .with_strict(strict)
+        .with_enable_esi_tags(enable_esi_tags);
+
+    for handler in handlers.element {
+        settings = settings.append_element_content_handler(handler);
+    }
+
+    for handler in handlers.document {
+        settings = settings.append_document_content_handler(handler);
+    }
 
     let output_sink = ExternOutputSink::new(output_sink, output_sink_user_data);
     let rewriter = lol_html::HtmlRewriter::new(settings, output_sink);

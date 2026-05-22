@@ -45,21 +45,16 @@ use std::fmt::{self, Debug};
 ///
 /// {
 ///     let mut rewriter = HtmlRewriter::new(
-///         Settings {
-///            element_content_handlers: vec![
-///                text!("div", |t| {
-///                  greeting += t.as_str();
+///         Settings::new().append_element_content_handler(text!("div", |t| {
+///             greeting += t.as_str();
 ///
-///                  if t.last_in_text_node() {
-///                         greeting += "!";
-///                     }
+///             if t.last_in_text_node() {
+///                 greeting += "!";
+///             }
 ///
-///                     Ok(())
-///                 })
-///             ],
-///             ..Settings::new()
-///         },
-///         |_:&[u8]| {}
+///             Ok(())
+///         })),
+///         |_: &[u8]| {},
 ///     );
 ///
 ///     rewriter.write(b"<div>He").unwrap();
@@ -158,21 +153,17 @@ impl<'i> TextChunk<'i> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div>Hello</div><script>"use strict";</script>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             text!("div", |t| {
-    ///                 assert_eq!(t.text_type(), TextType::Data);
+    ///     RewriteStrSettings::new()
+    ///         .append_element_content_handler(text!("div", |t| {
+    ///             assert_eq!(t.text_type(), TextType::Data);
     ///
-    ///                 Ok(())
-    ///             }),
-    ///             text!("script", |t| {
-    ///                 assert_eq!(t.text_type(), TextType::ScriptData);
+    ///             Ok(())
+    ///         }))
+    ///         .append_element_content_handler(text!("script", |t| {
+    ///             assert_eq!(t.text_type(), TextType::ScriptData);
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///             Ok(())
+    ///         }))
     /// ).unwrap();
     /// ```
     #[inline]
@@ -206,19 +197,14 @@ impl<'i> TextChunk<'i> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div>world</div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             text!("div", |t| {
-    ///                 if !t.last_in_text_node(){
-    ///                     t.before("<!-- 42 -->", ContentType::Html);
-    ///                     t.before("Hello ", ContentType::Text);
-    ///                 }
+    ///     RewriteStrSettings::new().append_element_content_handler(text!("div", |t| {
+    ///         if !t.last_in_text_node() {
+    ///             t.before("<!-- 42 -->", ContentType::Html);
+    ///             t.before("Hello ", ContentType::Text);
+    ///         }
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div><!-- 42 -->Hello world</div>"#);
@@ -243,19 +229,14 @@ impl<'i> TextChunk<'i> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div>Foo</div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             text!("div", |t| {
-    ///                 if t.last_in_text_node(){
-    ///                     t.after("Bar", ContentType::Text);
-    ///                     t.after("Qux", ContentType::Text);
-    ///                 }
+    ///     RewriteStrSettings::new().append_element_content_handler(text!("div", |t| {
+    ///         if t.last_in_text_node() {
+    ///             t.after("Bar", ContentType::Text);
+    ///             t.after("Qux", ContentType::Text);
+    ///         }
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div>FooQuxBar</div>"#);
@@ -280,19 +261,14 @@ impl<'i> TextChunk<'i> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div>Foo</div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             text!("div", |t| {
-    ///                 if !t.last_in_text_node(){
-    ///                     t.replace("Bar", ContentType::Text);
-    ///                     t.replace("Qux", ContentType::Text);
-    ///                 }
+    ///     RewriteStrSettings::new().append_element_content_handler(text!("div", |t| {
+    ///         if !t.last_in_text_node() {
+    ///             t.replace("Bar", ContentType::Text);
+    ///             t.replace("Qux", ContentType::Text);
+    ///         }
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div>Qux</div>"#);

@@ -2,16 +2,34 @@
 
 ## v3.0.0
 
-- Added `MemorySettings::graceful_bail_out_on_memory_limit_exceeded`: when set, the rewriter
-  flushes every input byte it has received but not yet emitted to the sink (as-is) before
-  returning `MemoryLimitExceededError`, so callers can continue the response by writing
-  subsequent bytes directly to their downstream sink instead of breaking it.
-- Added `Settings::graceful_bail_out_on_content_handler_error`: symmetric to the memory flag
-  above, but for `RewritingError::ContentHandlerError`. When set, the rewriter flushes
-  remaining input bytes before propagating a handler error, preserving the response.
-  Currently exposed via the Rust API only; the C API still uses the original behavior.
-- Adding new fields to `MemorySettings` and `Settings` is a SemVer-breaking change for
-  existing struct-literal construction, hence the major version bump.
+- Added `MemorySettings::with_graceful_bail_out_on_memory_limit_exceeded()`: when set, the
+  rewriter flushes every input byte it has received but not yet emitted to the sink (as-is)
+  before returning `MemoryLimitExceededError`, so callers can continue the response by
+  writing subsequent bytes directly to their downstream sink instead of breaking it.
+- Added `Settings::with_graceful_bail_out_on_content_handler_error()`: symmetric to the
+  memory setting above, but for `RewritingError::ContentHandlerError`. When set, the
+  rewriter flushes remaining input bytes before propagating a handler error, preserving
+  the response. Currently exposed via the Rust API only; the C API still uses the original
+  behavior.
+- Reworked `Settings`, `MemorySettings` and `RewriteStrSettings` to use a consuming-builder
+  API. Fields are now private; construction is via `::new()` plus chained `with_*` setters
+  and `append_*` methods for the content-handler vectors. This makes future field additions
+  non-breaking. Migration:
+  ```rust
+  // before
+  Settings {
+      element_content_handlers: vec![element!("div", |el| { /* ... */ Ok(()) })],
+      strict: false,
+      ..Settings::new()
+  }
+  // after
+  Settings::new()
+      .with_strict(false)
+      .append_element_content_handler(element!("div", |el| { /* ... */ Ok(()) }))
+  ```
+- Renamed the internal-use feature `integration_test` to `_integration_test`. The leading
+  underscore signals to `cargo-semver-checks` and similar tools that the feature is not
+  part of the public API.
 
 ## v2.9.0
 

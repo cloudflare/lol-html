@@ -13,16 +13,13 @@ fn main() {
 
     // Create the rewriter
     let mut rewriter = HtmlRewriter::new(
-        Settings {
-            element_content_handlers: vec![element!(
-                "script[src]:not([async]):not([defer])",
-                |el| {
-                    el.set_attribute("defer", "").unwrap();
-                    Ok(())
-                }
-            )],
-            ..Settings::new()
-        },
+        Settings::new().append_element_content_handler(element!(
+            "script[src]:not([async]):not([defer])",
+            |el| {
+                el.set_attribute("defer", "").unwrap();
+                Ok(())
+            }
+        )),
         output_sink,
     );
 

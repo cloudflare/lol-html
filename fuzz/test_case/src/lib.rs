@@ -11,7 +11,7 @@ use std::ffi::{CStr, CString};
 
 use encoding_rs::*;
 use lol_html::html_content::ContentType;
-use lol_html::{HtmlRewriter, MemorySettings, Settings};
+use lol_html::{HtmlRewriter, Settings};
 use lol_html::{comments, doc_comments, doc_text, element, streaming, text};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -99,87 +99,78 @@ fn get_random_selector() -> &'static str {
 }
 
 fn run_rewriter_iter(data: &[u8], selector: &str, encoding: &'static Encoding) {
-    let mut rewriter: HtmlRewriter<_> = HtmlRewriter::new(
-        Settings {
-            enable_esi_tags: true,
-            element_content_handlers: vec![
-                element!(selector, |el| {
-                    el.before(
-                        &format!("<!--[ELEMENT('{selector}')]-->"),
-                        ContentType::Html,
-                    );
-                    el.after(
-                        &format!("<!--[/ELEMENT('{selector}')]-->"),
-                        ContentType::Html,
-                    );
+    let settings = Settings::new()
+        .with_enable_esi_tags(true)
+        .with_encoding(encoding.try_into().unwrap())
+        .with_strict(false)
+        .append_element_content_handler(element!(selector, |el| {
+            el.before(
+                &format!("<!--[ELEMENT('{selector}')]-->"),
+                ContentType::Html,
+            );
+            el.after(
+                &format!("<!--[/ELEMENT('{selector}')]-->"),
+                ContentType::Html,
+            );
 
-                    let replaced = format!("<!--Replaced ({selector}) -->");
-                    el.streaming_set_inner_content(streaming!(move |sink| {
-                        sink.write_str(&replaced, ContentType::Html);
-                        Ok(())
-                    }));
+            let replaced = format!("<!--Replaced ({selector}) -->");
+            el.streaming_set_inner_content(streaming!(move |sink| {
+                sink.write_str(&replaced, ContentType::Html);
+                Ok(())
+            }));
 
-                    Ok(())
-                }),
-                comments!(selector, |c| {
-                    c.before(
-                        &format!("<!--[COMMENT('{selector}')]-->"),
-                        ContentType::Html,
-                    );
-                    c.after(
-                        &format!("<!--[/COMMENT('{selector}')]-->"),
-                        ContentType::Html,
-                    );
+            Ok(())
+        }))
+        .append_element_content_handler(comments!(selector, |c| {
+            c.before(
+                &format!("<!--[COMMENT('{selector}')]-->"),
+                ContentType::Html,
+            );
+            c.after(
+                &format!("<!--[/COMMENT('{selector}')]-->"),
+                ContentType::Html,
+            );
 
-                    Ok(())
-                }),
-                text!(selector, |t| {
-                    t.before(&format!("<!--[TEXT('{selector}')]-->"), ContentType::Html);
+            Ok(())
+        }))
+        .append_element_content_handler(text!(selector, |t| {
+            t.before(&format!("<!--[TEXT('{selector}')]-->"), ContentType::Html);
 
-                    if t.last_in_text_node() {
-                        t.after(&format!("<!--[/TEXT('{selector}')]-->"), ContentType::Html);
-                    }
+            if t.last_in_text_node() {
+                t.after(&format!("<!--[/TEXT('{selector}')]-->"), ContentType::Html);
+            }
 
-                    Ok(())
-                }),
-                element!(selector, |el| {
-                    el.replace("hey & ya", ContentType::Html);
+            Ok(())
+        }))
+        .append_element_content_handler(element!(selector, |el| {
+            el.replace("hey & ya", ContentType::Html);
 
-                    Ok(())
-                }),
-                element!(selector, |el| {
-                    el.remove();
+            Ok(())
+        }))
+        .append_element_content_handler(element!(selector, |el| {
+            el.remove();
 
-                    Ok(())
-                }),
-                element!(selector, |el| {
-                    el.remove_and_keep_content();
+            Ok(())
+        }))
+        .append_element_content_handler(element!(selector, |el| {
+            el.remove_and_keep_content();
 
-                    Ok(())
-                }),
-            ],
-            document_content_handlers: vec![
-                doc_comments!(|c| {
-                    c.set_text("123456").unwrap();
+            Ok(())
+        }))
+        .append_document_content_handler(doc_comments!(|c| {
+            c.set_text("123456").unwrap();
 
-                    Ok(())
-                }),
-                doc_text!(|t| {
-                    if t.last_in_text_node() {
-                        t.after("BAZ", ContentType::Text);
-                    }
+            Ok(())
+        }))
+        .append_document_content_handler(doc_text!(|t| {
+            if t.last_in_text_node() {
+                t.after("BAZ", ContentType::Text);
+            }
 
-                    Ok(())
-                }),
-            ],
-            encoding: encoding.try_into().unwrap(),
-            memory_settings: MemorySettings::new(),
-            strict: false,
-            adjust_charset_on_meta_tag: false,
-            graceful_bail_out_on_content_handler_error: false,
-        },
-        |_: &[u8]| {},
-    );
+            Ok(())
+        }));
+
+    let mut rewriter: HtmlRewriter<_> = HtmlRewriter::new(settings, |_: &[u8]| {});
 
     rewriter.write(data).unwrap();
     rewriter.end().unwrap();

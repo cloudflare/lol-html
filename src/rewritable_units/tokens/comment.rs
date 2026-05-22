@@ -99,17 +99,12 @@ impl<'i> Comment<'i> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div><!-- foo --></div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             comments!("div", |c| {
-    ///                 c.before("<!-- 42 -->", ContentType::Html);
-    ///                 c.before("bar", ContentType::Text);
+    ///     RewriteStrSettings::new().append_element_content_handler(comments!("div", |c| {
+    ///         c.before("<!-- 42 -->", ContentType::Html);
+    ///         c.before("bar", ContentType::Text);
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div><!-- 42 -->bar<!-- foo --></div>"#);
@@ -147,17 +142,12 @@ impl<'i> Comment<'i> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div><!-- foo --></div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             comments!("div", |c| {
-    ///                 c.after("Bar", ContentType::Text);
-    ///                 c.after("Qux", ContentType::Text);
+    ///     RewriteStrSettings::new().append_element_content_handler(comments!("div", |c| {
+    ///         c.after("Bar", ContentType::Text);
+    ///         c.after("Qux", ContentType::Text);
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div><!-- foo -->QuxBar</div>"#);
@@ -195,17 +185,12 @@ impl<'i> Comment<'i> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div><!-- foo --></div>"#,
-    ///     RewriteStrSettings {
-    ///         element_content_handlers: vec![
-    ///             comments!("div", |c| {
-    ///                 c.replace("Bar", ContentType::Text);
-    ///                 c.replace("Qux", ContentType::Text);
+    ///     RewriteStrSettings::new().append_element_content_handler(comments!("div", |c| {
+    ///         c.replace("Bar", ContentType::Text);
+    ///         c.replace("Qux", ContentType::Text);
     ///
-    ///                 Ok(())
-    ///             })
-    ///         ],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div>Qux</div>"#);

@@ -37,22 +37,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = vec![];
 
     let mut rewriter = HtmlRewriter::new(
-        Settings {
-            element_content_handlers: vec![
-                element!("a[href]", |el| {
-                    let href = el
-                        .get_attribute("href")
-                        .expect("href was required")
-                        .replace("http:", "https:");
+        Settings::new().append_element_content_handler(element!("a[href]", |el| {
+            let href = el
+                .get_attribute("href")
+                .expect("href was required")
+                .replace("http:", "https:");
 
-                    el.set_attribute("href", &href)?;
+            el.set_attribute("href", &href)?;
 
-                    Ok(())
-                })
-            ],
-            ..Settings::new()
-        },
-        |c: &[u8]| output.extend_from_slice(c)
+            Ok(())
+        })),
+        |c: &[u8]| output.extend_from_slice(c),
     );
 
     rewriter.write(b"<div><a href=")?;

@@ -9,10 +9,7 @@ define_group!(
             // NOTE: this switches parser to the lexer mode and doesn't
             // trigger token production for anything, except doctype. So,
             // we can get relatively fair comparison.
-            Settings {
-                document_content_handlers: vec![doctype!(noop_handler!())],
-                ..Settings::new()
-            }
+            Settings::new().append_document_content_handler(doctype!(noop_handler!()))
         ),
         (
             "Text rewritable unit parsing and decoding",
@@ -21,10 +18,7 @@ define_group!(
             // sequence of bytes for the given character encoding. So, if there is a text
             // handler in the selector matching scope, we need to slice and decode all
             // incoming chunks to produce correct text chunk rewritable units.
-            Settings {
-                document_content_handlers: vec![doc_text!(noop_handler!())],
-                ..Settings::new()
-            }
+            Settings::new().append_document_content_handler(doc_text!(noop_handler!()))
         )
     ]
 );

@@ -35,14 +35,11 @@ impl<'a> DocumentEnd<'a> {
     ///
     /// let html = rewrite_str(
     ///     r#"<div id="foo"><!-- content --></div><img>"#,
-    ///     RewriteStrSettings {
-    ///         document_content_handlers: vec![end!(|end| {
-    ///             end.append("<bar>", ContentType::Html);
-    ///             end.append("<baz>", ContentType::Text);
-    ///             Ok(())
-    ///         })],
-    ///         ..RewriteStrSettings::new()
-    ///     }
+    ///     RewriteStrSettings::new().append_document_content_handler(end!(|end| {
+    ///         end.append("<bar>", ContentType::Html);
+    ///         end.append("<baz>", ContentType::Text);
+    ///         Ok(())
+    ///     }))
     /// ).unwrap();
     ///
     /// assert_eq!(html, r#"<div id="foo"><!-- content --></div><img><bar>&lt;baz&gt;"#);

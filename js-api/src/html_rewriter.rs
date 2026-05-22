@@ -61,11 +61,8 @@ impl HTMLRewriter {
 
         Ok(Self(RewriterState::Before {
             output_sink: JsOutputSink::new(output_sink),
-            settings: Settings {
-                encoding,
-                // TODO: accept options bag and parse out here
-                ..Settings::default()
-            },
+            // TODO: accept options bag and parse out here
+            settings: Settings::new().with_encoding(encoding),
         }))
     }
 
@@ -101,10 +98,11 @@ impl HTMLRewriter {
                 ref mut settings, ..
             } => {
                 let selector = selector.parse::<Selector>().into_js_result()?;
-
-                settings
-                    .element_content_handlers
-                    .push((Cow::Owned(selector), handlers.into_native()));
+                let taken = std::mem::take(settings);
+                *settings = taken.append_element_content_handler((
+                    Cow::Owned(selector),
+                    handlers.into_native(),
+                ));
 
                 Ok(())
             }
@@ -118,9 +116,8 @@ impl HTMLRewriter {
             RewriterState::Before {
                 ref mut settings, ..
             } => {
-                settings
-                    .document_content_handlers
-                    .push(handlers.into_native());
+                let taken = std::mem::take(settings);
+                *settings = taken.append_document_content_handler(handlers.into_native());
                 Ok(())
             }
             _ => Err(JsError::new("Handlers cannot be added after write").into()),
