@@ -9,7 +9,7 @@ use crate::parser::{
 };
 use crate::rewritable_units::TextDecoder;
 use crate::rewritable_units::ToTokenResult;
-use crate::rewritable_units::{DocumentEnd, Serialize, ToToken, Token, TokenCaptureFlags};
+use crate::rewritable_units::{BailOut, DocumentEnd, Serialize, ToToken, Token, TokenCaptureFlags};
 use crate::rewriter::RewritingError;
 use encoding_rs::Encoding;
 
@@ -44,6 +44,11 @@ pub trait TransformController: Sized {
     fn handle_token(&mut self, token: &mut Token<'_>) -> Result<(), RewritingError>;
     fn handle_end(&mut self, document_end: &mut DocumentEnd<'_>) -> Result<(), RewritingError>;
     fn should_emit_content(&self) -> bool;
+
+    /// Invoked when the rewriter triggers a graceful bail-out. Default impl does nothing;
+    /// the production `HtmlRewriteController` overrides this to run the user-registered
+    /// bail-out handlers.
+    fn handle_bail_out(&mut self, _error: &RewritingError, _bail_out: &mut BailOut<'_>) {}
 }
 
 /// Defines an interface for the [`HtmlRewriter`]'s output.
@@ -414,6 +419,19 @@ where
         }
 
         self.delegate.remaining_content_start = 0;
+    }
+
+    /// Invokes the transform controller's bail-out handlers (in registration order),
+    /// constructing a [`BailOut`] wrapper around the output sink and the current encoding.
+    /// Must be called *before* [`flush_for_bail_out()`] so that handler emissions land in
+    /// the sink ahead of the raw flush of remaining unparsed input.
+    ///
+    /// [`flush_for_bail_out()`]: Self::flush_for_bail_out
+    pub fn run_bail_out_handlers(&mut self, error: &RewritingError) {
+        let mut bail_out = BailOut::new(&mut self.delegate.output_sink, self.encoding.get());
+        self.delegate
+            .transform_controller
+            .handle_bail_out(error, &mut bail_out);
     }
 
     pub fn finish(&mut self, input: &[u8]) -> Result<(), RewritingError> {

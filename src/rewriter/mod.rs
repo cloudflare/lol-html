@@ -69,8 +69,12 @@ impl TryFrom<&'static Encoding> for AsciiCompatibleEncoding {
 /// This error is unrecoverable. The rewriter instance will panic on attempt to use it after such an
 /// error.
 ///
+/// This enum is marked `#[non_exhaustive]` so that future variants can be added in minor
+/// releases. External `match` expressions on `RewritingError` must include a wildcard arm.
+///
 /// [`write`]: ../struct.HtmlRewriter.html#method.write
 /// [`end`]: ../struct.HtmlRewriter.html#method.end
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum RewritingError {
     /// See [`MemoryLimitExceededError`].
@@ -922,9 +926,11 @@ mod tests {
 
     mod fatal_errors {
         use super::*;
-        use crate::html_content::Comment;
+        use crate::html_content::{Comment, ContentType};
         use crate::memory::MemoryLimitExceededError;
         use crate::rewritable_units::{Element, TextChunk};
+        use std::cell::Cell;
+        use std::rc::Rc;
 
         fn create_rewriter<O: OutputSink>(
             max_allowed_memory_usage: usize,
@@ -1555,6 +1561,233 @@ mod tests {
             assert!(
                 output.is_empty(),
                 "content-handler flag must not enable memory bail-out, got {output:?}",
+            );
+        }
+
+        // --- Bail-out handler tests ---
+        //
+        // The bail-out handler is invoked immediately before the raw flush of remaining
+        // unparsed input. Handlers can append final bytes to the sink via
+        // [`BailOut::append`] (`text_buffer`-style flushes in ROFL).
+        //
+        // The end()-path bail-out site is symmetric with the write() sites but is not
+        // reachable through normal input: memory errors fire during write()'s parse, and
+        // EOF-in-tag/attribute emits as text per HTML5 (so handlers don't fire from
+        // `parse(_, true)`). Tested implicitly by sharing the same code path with the
+        // write() sites.
+
+        /// Verifies the hook runs and its output lands in the sink ahead of the raw flush,
+        /// so callers see `[transformed prefix] + [hook output] + [raw remainder]`.
+        #[test]
+        fn test_bail_out_handler_emits_before_raw_flush() {
+            const MAX: usize = 100;
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings::new()
+                    .with_memory_settings(
+                        MemorySettings::new()
+                            .with_max_allowed_memory_usage(MAX)
+                            .with_preallocated_parsing_buffer_size(0)
+                            .with_graceful_bail_out_on_memory_limit_exceeded(true),
+                    )
+                    .append_document_content_handler(doc_comments!(|c| {
+                        c.set_text("TRANSFORMED").unwrap();
+                        Ok(())
+                    }))
+                    .append_bail_out_handler(bail_out!(|_err, bail_out| {
+                        bail_out.append("HOOK", ContentType::Text);
+                    })),
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            // chunk_1: a comment the handler transforms, plus an unfinished tag that gets
+            // buffered. chunk_2: trying to append this to the buffer exceeds the limit, so
+            // the Arena::append bail-out site fires.
+            let chunk_1 = format!("<!--hello--><img alt=\"{}", "l".repeat(50));
+            let chunk_2 = format!("{}\" />", "r".repeat(50));
+
+            rewriter.write(chunk_1.as_bytes()).unwrap();
+            let err = rewriter.write(chunk_2.as_bytes()).unwrap_err();
+
+            assert!(matches!(err, RewritingError::MemoryLimitExceeded(_)));
+
+            let output_str = std::str::from_utf8(&output).unwrap();
+            let transformed_idx = output_str
+                .find("<!--TRANSFORMED-->")
+                .expect("transformed comment must be present");
+            let hook_idx = output_str
+                .find("HOOK")
+                .expect("hook output must be present");
+            let raw_idx = output_str
+                .find("<img alt=\"")
+                .expect("raw unfinished tag must be present");
+
+            assert!(
+                transformed_idx < hook_idx,
+                "transformed prefix must precede hook output, got {output_str:?}",
+            );
+            assert!(
+                hook_idx < raw_idx,
+                "hook output must precede raw flush, got {output_str:?}",
+            );
+        }
+
+        /// The hook is invoked when graceful bail-out fires for a content-handler error.
+        /// The error reference passed to the hook reflects the actual failure.
+        #[test]
+        fn test_bail_out_handler_on_content_handler_error() {
+            let html = b"<a>first</a><stop>middle</stop>";
+            let mut output = Vec::<u8>::new();
+            let hook_called = Rc::new(Cell::new(false));
+            let hook_called_clone = Rc::clone(&hook_called);
+
+            let mut rewriter = HtmlRewriter::new(
+                Settings::new()
+                    .with_graceful_bail_out_on_content_handler_error(true)
+                    .append_element_content_handler(element!("stop", |_| Err(
+                        "handler refused".into()
+                    )))
+                    .append_bail_out_handler(bail_out!(move |err, bail_out| {
+                        assert!(
+                            matches!(err, RewritingError::ContentHandlerError(_)),
+                            "expected ContentHandlerError in hook, got {err}",
+                        );
+                        hook_called_clone.set(true);
+                        bail_out.append("HOOK", ContentType::Text);
+                    })),
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let err = rewriter.write(html).unwrap_err();
+            assert!(matches!(err, RewritingError::ContentHandlerError(_)));
+            assert!(hook_called.get(), "bail-out hook must have been called");
+
+            let output_str = std::str::from_utf8(&output).unwrap();
+            assert!(
+                output_str.contains("HOOK"),
+                "hook output must appear in sink, got {output_str:?}",
+            );
+        }
+
+        /// Multiple bail-out handlers fire in registration order. The sink receives their
+        /// appended bytes in the same order.
+        #[test]
+        fn test_multiple_bail_out_handlers_fire_in_order() {
+            const MAX: usize = 100;
+
+            let mut output = Vec::<u8>::new();
+            let call_order = Rc::new(Cell::new(String::new()));
+            let order_a = Rc::clone(&call_order);
+            let order_b = Rc::clone(&call_order);
+            let order_c = Rc::clone(&call_order);
+
+            let mut rewriter = HtmlRewriter::new(
+                Settings::new()
+                    .with_memory_settings(
+                        MemorySettings::new()
+                            .with_max_allowed_memory_usage(MAX)
+                            .with_preallocated_parsing_buffer_size(0)
+                            .with_graceful_bail_out_on_memory_limit_exceeded(true),
+                    )
+                    // Element handler forces lex mode (default tag-scanner mode would
+                    // consume unterminated attributes as text without buffering).
+                    .append_element_content_handler(element!("*", |_| Ok(())))
+                    .append_bail_out_handler(bail_out!(move |_err, b| {
+                        let mut s = order_a.take();
+                        s.push('A');
+                        order_a.set(s);
+                        b.append("A", ContentType::Text);
+                    }))
+                    .append_bail_out_handler(bail_out!(move |_err, b| {
+                        let mut s = order_b.take();
+                        s.push('B');
+                        order_b.set(s);
+                        b.append("B", ContentType::Text);
+                    }))
+                    .append_bail_out_handler(bail_out!(move |_err, b| {
+                        let mut s = order_c.take();
+                        s.push('C');
+                        order_c.set(s);
+                        b.append("C", ContentType::Text);
+                    })),
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let chunk_1 = format!("<img alt=\"{}", "l".repeat(MAX / 2));
+            let chunk_2 = format!("{}\" />", "r".repeat(MAX / 2));
+            rewriter.write(chunk_1.as_bytes()).unwrap();
+            let _ = rewriter.write(chunk_2.as_bytes()).unwrap_err();
+
+            assert_eq!(
+                call_order.take(),
+                "ABC",
+                "handlers must fire in registration order"
+            );
+
+            let output_str = std::str::from_utf8(&output).unwrap();
+            let a_idx = output_str.find('A').expect("A in sink");
+            let b_idx = output_str.find('B').expect("B in sink");
+            let c_idx = output_str.find('C').expect("C in sink");
+
+            assert!(
+                a_idx < b_idx && b_idx < c_idx,
+                "appended bytes must appear in registration order, got {output_str:?}",
+            );
+        }
+
+        /// On normal completion (no error), the bail-out hook is never invoked.
+        #[test]
+        fn test_bail_out_handler_not_invoked_on_normal_completion() {
+            let hook_called = Rc::new(Cell::new(false));
+            let hook_called_clone = Rc::clone(&hook_called);
+
+            let mut output = Vec::<u8>::new();
+            let mut rewriter = HtmlRewriter::new(
+                Settings::new().append_bail_out_handler(bail_out!(move |_err, _b| {
+                    hook_called_clone.set(true);
+                })),
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            rewriter.write(b"<p>hello</p>").unwrap();
+            rewriter.end().unwrap();
+
+            assert!(
+                !hook_called.get(),
+                "bail-out hook must not fire on normal completion",
+            );
+        }
+
+        /// When the graceful flag is off, an error still propagates but the bail-out hook
+        /// is not invoked. The hook is gated by `should_bail_out_for`, just like the raw
+        /// flush is.
+        #[test]
+        fn test_bail_out_handler_not_invoked_when_graceful_flag_disabled() {
+            let hook_called = Rc::new(Cell::new(false));
+            let hook_called_clone = Rc::clone(&hook_called);
+
+            let mut output = Vec::<u8>::new();
+            // No `with_graceful_bail_out_on_content_handler_error(true)` — flag stays off.
+            let mut rewriter = HtmlRewriter::new(
+                Settings::new()
+                    .append_element_content_handler(element!("stop", |_| Err(
+                        "handler refused".into()
+                    )))
+                    .append_bail_out_handler(bail_out!(move |_err, _b| {
+                        hook_called_clone.set(true);
+                    })),
+                |c: &[u8]| output.extend_from_slice(c),
+            );
+
+            let err = rewriter
+                .write(b"<a>first</a><stop>middle</stop>")
+                .unwrap_err();
+
+            assert!(matches!(err, RewritingError::ContentHandlerError(_)));
+            assert!(
+                !hook_called.get(),
+                "bail-out hook must not fire when graceful flag is off",
             );
         }
 
