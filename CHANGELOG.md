@@ -11,6 +11,17 @@
   rewriter flushes remaining input bytes before propagating a handler error, preserving
   the response. Currently exposed via the Rust API only; the C API still uses the original
   behavior.
+- Added `Settings::append_bail_out_handler()` and the matching `bail_out!` macro,
+  `BailOut` rewritable unit, and `BailOutHandler` / `BailOutHandlerSend` type aliases.
+  Bail-out handlers fire immediately before the raw flush of remaining unparsed input on a
+  graceful bail-out (memory or content-handler error). Handlers receive the
+  `RewritingError` and a `BailOut` through which they can append final bytes to the sink
+  via `BailOut::append(content, content_type)`. Intended for handlers that buffer state
+  across the document (e.g. text-buffering handlers that defer emission) and need to
+  flush that state on bail-out.
+- Marked `RewritingError` `#[non_exhaustive]` so future error variants can be added without
+  a major version bump. External callers can still `match` on it, but must include a
+  catch-all `_ =>` arm.
 - Reworked `Settings`, `MemorySettings` and `RewriteStrSettings` to use a consuming-builder
   API. Fields are now private; construction is via `::new()` plus chained `with_*` setters
   and `append_*` methods for the content-handler vectors. This makes future field additions

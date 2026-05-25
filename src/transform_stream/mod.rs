@@ -107,13 +107,16 @@ where
                     // previous calls. Neither chunk has been emitted to the sink yet, so on a
                     // graceful bail-out we flush both as-is and let the caller continue the
                     // response from where they were.
-                    if self.graceful_bail_out_on_memory_limit_exceeded {
+                    let err = RewritingError::MemoryLimitExceeded(e);
+
+                    if self.should_bail_out_for(&err) {
                         let dispatcher = self.parser.get_dispatcher();
+                        dispatcher.run_bail_out_handlers(&err);
                         dispatcher.flush_for_bail_out(self.buffer.bytes());
                         dispatcher.flush_for_bail_out(data);
                     }
 
-                    return Err(RewritingError::MemoryLimitExceeded(e));
+                    return Err(err);
                 }
             }
         } else {
@@ -131,7 +134,9 @@ where
                 // between `emit_chunk_before_lexeme()` and `consume_lexeme()`). Flushing from
                 // there preserves all bytes the caller fed us.
                 if self.should_bail_out_for(&e) {
-                    self.parser.get_dispatcher().flush_for_bail_out(chunk);
+                    let dispatcher = self.parser.get_dispatcher();
+                    dispatcher.run_bail_out_handlers(&e);
+                    dispatcher.flush_for_bail_out(chunk);
                 }
 
                 return Err(e);
@@ -150,11 +155,15 @@ where
                     // Parsing succeeded but we can't buffer the leftover bytes for the next
                     // call. On a graceful bail-out we flush the leftover raw so the response
                     // stays whole.
-                    if self.graceful_bail_out_on_memory_limit_exceeded {
-                        self.parser.get_dispatcher().flush_for_bail_out(unconsumed);
+                    let err = RewritingError::MemoryLimitExceeded(e);
+
+                    if self.should_bail_out_for(&err) {
+                        let dispatcher = self.parser.get_dispatcher();
+                        dispatcher.run_bail_out_handlers(&err);
+                        dispatcher.flush_for_bail_out(unconsumed);
                     }
 
-                    return Err(RewritingError::MemoryLimitExceeded(e));
+                    return Err(err);
                 }
 
                 self.has_buffered_data = true;
@@ -183,7 +192,9 @@ where
             // Same reasoning as in `write()`: if we can bail out gracefully, make sure the sink
             // has all the input bytes before propagating the error.
             if self.should_bail_out_for(&e) {
-                self.parser.get_dispatcher().flush_for_bail_out(chunk);
+                let dispatcher = self.parser.get_dispatcher();
+                dispatcher.run_bail_out_handlers(&e);
+                dispatcher.flush_for_bail_out(chunk);
             }
 
             return Err(e);

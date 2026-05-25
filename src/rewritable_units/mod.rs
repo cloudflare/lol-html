@@ -4,6 +4,7 @@ pub(crate) use self::mutations::{Mutations, StringChunk};
 pub(crate) use self::text_decoder::TextDecoder;
 pub(crate) use self::text_encoder::{IncompleteUtf8Resync, TextEncoder};
 
+pub use self::bail_out::*;
 pub use self::document_end::*;
 pub use self::element::*;
 pub use self::mutations::{ContentType, StreamingHandler};
@@ -83,6 +84,7 @@ macro_rules! impl_user_data {
 #[macro_use]
 mod mutations;
 
+mod bail_out;
 mod document_end;
 mod element;
 mod streaming_sink;

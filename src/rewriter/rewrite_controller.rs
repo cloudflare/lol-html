@@ -4,7 +4,7 @@ use crate::base::SharedEncoding;
 use crate::html::{LocalName, Namespace};
 use crate::memory::SharedMemoryLimiter;
 use crate::parser::ActionError;
-use crate::rewritable_units::{DocumentEnd, Token, TokenCaptureFlags};
+use crate::rewritable_units::{BailOut, DocumentEnd, Token, TokenCaptureFlags};
 use crate::selectors_vm::{
     Ast, AuxStartTagInfoRequest, DenseHashSet, ElementData, SelectorMatchingVm, VmError,
 };
@@ -35,6 +35,7 @@ impl ElementData for ElementDescriptor {
 pub(crate) struct HtmlRewriteController<'h, H: HandlerTypes> {
     handlers_dispatcher: ContentHandlersDispatcher<'h, H>,
     selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
+    bail_out_handlers: Vec<H::BailOutHandler<'h>>,
 }
 
 impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
@@ -83,17 +84,19 @@ impl<'h, H: HandlerTypes> HtmlRewriteController<'h, H> {
             None
         };
 
-        Self::new(dispatcher, selector_matching_vm)
+        Self::new(dispatcher, selector_matching_vm, settings.bail_out_handlers)
     }
 
     #[inline]
     pub(crate) const fn new(
         handlers_dispatcher: ContentHandlersDispatcher<'h, H>,
         selector_matching_vm: Option<SelectorMatchingVm<ElementDescriptor>>,
+        bail_out_handlers: Vec<H::BailOutHandler<'h>>,
     ) -> Self {
         HtmlRewriteController {
             handlers_dispatcher,
             selector_matching_vm,
+            bail_out_handlers,
         }
     }
 }
@@ -187,5 +190,11 @@ impl<H: HandlerTypes> TransformController for HtmlRewriteController<'_, H> {
         !self
             .handlers_dispatcher
             .has_matched_elements_with_removed_content()
+    }
+
+    fn handle_bail_out(&mut self, error: &RewritingError, bail_out: &mut BailOut<'_>) {
+        for handler in &mut self.bail_out_handlers {
+            handler(error, bail_out);
+        }
     }
 }

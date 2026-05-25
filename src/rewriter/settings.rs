@@ -1,7 +1,7 @@
-use crate::rewritable_units::{Comment, Doctype, DocumentEnd, Element, EndTag, TextChunk};
+use crate::rewritable_units::{BailOut, Comment, Doctype, DocumentEnd, Element, EndTag, TextChunk};
 use crate::selectors_vm::Selector;
 // N.B. `use crate::` will break this because the constructor is not public, only the struct itself
-use super::AsciiCompatibleEncoding;
+use super::{AsciiCompatibleEncoding, RewritingError};
 use std::borrow::Cow;
 use std::error::Error;
 
@@ -35,6 +35,10 @@ pub trait HandlerTypes: Sized {
     type EndTagHandler<'handler>: FnOnce(&mut EndTag<'_>) -> HandlerResult + 'handler;
     /// Handler type for [`DocumentEnd`].
     type EndHandler<'handler>: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'handler;
+    /// Handler type for [`BailOut`]: invoked when the rewriter triggers a graceful bail-out.
+    ///
+    /// See [`Settings::append_bail_out_handler()`] for details.
+    type BailOutHandler<'handler>: FnMut(&RewritingError, &mut BailOut<'_>) + 'handler;
 
     // Inside the HTML rewriter we need to create handlers, and they need to be the most constrained
     // possible version of a handler (i.e. if we have `Send` and non-`Send` handlers we need to
@@ -71,6 +75,7 @@ impl HandlerTypes for LocalHandlerTypes {
     type ElementHandler<'h> = ElementHandler<'h>;
     type EndTagHandler<'h> = EndTagHandler<'h>;
     type EndHandler<'h> = EndHandler<'h>;
+    type BailOutHandler<'h> = BailOutHandler<'h>;
 
     fn new_end_tag_handler<'h>(
         handler: impl IntoHandler<EndTagHandlerSend<'h>>,
@@ -106,6 +111,7 @@ impl HandlerTypes for SendHandlerTypes {
     type ElementHandler<'h> = ElementHandlerSend<'h, Self>;
     type EndTagHandler<'h> = EndTagHandlerSend<'h>;
     type EndHandler<'h> = EndHandlerSend<'h>;
+    type BailOutHandler<'h> = BailOutHandlerSend<'h>;
 
     fn new_end_tag_handler<'h>(
         handler: impl IntoHandler<Self::EndTagHandler<'h>>,
@@ -148,6 +154,11 @@ pub type ElementHandler<'h, H = LocalHandlerTypes> =
 pub type EndTagHandler<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResult + 'h>;
 /// Boxed closure for handling the document end. This is called after the last chunk is processed.
 pub type EndHandler<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + 'h>;
+/// Boxed closure for handling a graceful bail-out. Called once if the rewriter triggers a
+/// bail-out before propagating the [`RewritingError`].
+///
+/// See [`Settings::append_bail_out_handler()`].
+pub type BailOutHandler<'h> = Box<dyn FnMut(&RewritingError, &mut BailOut<'_>) + 'h>;
 
 /// [Sendable](crate::send) boxed closure for handling the [document type declaration].
 ///
@@ -174,6 +185,10 @@ pub type EndTagHandlerSend<'h> = Box<dyn FnOnce(&mut EndTag<'_>) -> HandlerResul
 ///
 /// See also non-sendable [`EndHandler`](crate::EndHandler).
 pub type EndHandlerSend<'h> = Box<dyn FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>;
+/// [Sendable](crate::send) boxed closure for handling a graceful bail-out.
+///
+/// See also non-sendable [`BailOutHandler`](crate::BailOutHandler).
+pub type BailOutHandlerSend<'h> = Box<dyn FnMut(&RewritingError, &mut BailOut<'_>) + Send + 'h>;
 
 /// Trait that allows closures to be used as handlers
 #[diagnostic::on_unimplemented(
@@ -267,6 +282,20 @@ impl<'h, F: FnOnce(&mut DocumentEnd<'_>) -> HandlerResult + Send + 'h>
     IntoHandler<EndHandlerSend<'h>> for F
 {
     fn into_handler(self) -> EndHandlerSend<'h> {
+        Box::new(self)
+    }
+}
+
+impl<'h, F: FnMut(&RewritingError, &mut BailOut<'_>) + 'h> IntoHandler<BailOutHandler<'h>> for F {
+    fn into_handler(self) -> BailOutHandler<'h> {
+        Box::new(self)
+    }
+}
+
+impl<'h, F: FnMut(&RewritingError, &mut BailOut<'_>) + Send + 'h>
+    IntoHandler<BailOutHandlerSend<'h>> for F
+{
+    fn into_handler(self) -> BailOutHandlerSend<'h> {
         Box::new(self)
     }
 }
@@ -746,6 +775,49 @@ macro_rules! end {
     }};
 }
 
+/// A convenience macro to construct a [bail-out handler](Settings::append_bail_out_handler) for
+/// the graceful bail-out path.
+///
+/// The handler receives a [`&RewritingError`](crate::errors::RewritingError) and a
+/// `&mut `[`BailOut`](crate::html_content::BailOut) through which it can append final bytes
+/// to the sink before the rewriter's own raw flush.
+///
+/// # Example
+/// ```
+/// use lol_html::{bail_out, rewrite_str, RewriteStrSettings};
+/// use lol_html::errors::RewritingError;
+/// use lol_html::html_content::ContentType;
+///
+/// let result = rewrite_str(
+///     r#"<span>foo</span>"#,
+///     RewriteStrSettings::new()
+///         .append_bail_out_handler(bail_out!(|err, bail_out| {
+///             if matches!(err, RewritingError::ContentHandlerError(_)) {
+///                 bail_out.append("<!-- bailed -->", ContentType::Html);
+///             }
+///         })),
+/// )
+/// .unwrap();
+///
+/// // No bail-out happened, so the handler never fired.
+/// assert_eq!(result, "<span>foo</span>");
+/// ```
+#[macro_export(local_inner_macros)]
+macro_rules! bail_out {
+    ($handler:expr) => {{
+        // Without this rust won't be able to always infer the type of the handler.
+        #[inline(always)]
+        const fn type_hint<T>(h: T) -> T
+        where
+            T: FnMut(&$crate::errors::RewritingError, &mut $crate::html_content::BailOut<'_>),
+        {
+            h
+        }
+
+        type_hint($handler)
+    }};
+}
+
 /// Specifies the memory settings for [`HtmlRewriter`].
 ///
 /// Construct with [`MemorySettings::new()`] (or [`MemorySettings::default()`]) and configure the
@@ -901,6 +973,7 @@ pub struct Settings<'handlers, 'selectors, H: HandlerTypes = LocalHandlerTypes> 
         ElementContentHandlers<'handlers, H>,
     )>,
     pub(crate) document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
+    pub(crate) bail_out_handlers: Vec<H::BailOutHandler<'handlers>>,
     pub(crate) encoding: AsciiCompatibleEncoding,
     pub(crate) memory_settings: MemorySettings,
     pub(crate) strict: bool,
@@ -942,6 +1015,7 @@ impl<'handlers, 'selectors, H: HandlerTypes> Settings<'handlers, 'selectors, H> 
         Settings {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
+            bail_out_handlers: vec![],
             encoding: AsciiCompatibleEncoding(encoding_rs::UTF_8),
             memory_settings: MemorySettings::new(),
             strict: true,
@@ -1011,6 +1085,55 @@ impl<'handlers, 'selectors, H: HandlerTypes> Settings<'handlers, 'selectors, H> 
         handler: DocumentContentHandlers<'handlers, H>,
     ) -> Self {
         self.document_content_handlers.push(handler);
+        self
+    }
+
+    /// Appends a handler to be invoked when the rewriter triggers a graceful bail-out.
+    ///
+    /// Bail-out handlers fire when the rewriter is about to abort processing and propagate a
+    /// [`RewritingError`] through a graceful bail-out (i.e. when one of the
+    /// `graceful_bail_out_on_*` settings is enabled and the corresponding error fires). Each
+    /// handler receives the error and a [`BailOut`] through which it can append final bytes to
+    /// the sink via [`BailOut::append()`].
+    ///
+    /// Handlers fire in registration order, *before* the rewriter's own raw flush of remaining
+    /// unparsed input. The resulting sink order is:
+    ///
+    /// 1. Transformed bytes the rewriter already emitted normally.
+    /// 2. Bytes appended by bail-out handlers, in registration order.
+    /// 3. The rewriter's raw flush of the chunk's unparsed suffix.
+    ///
+    /// Handlers do not return errors. Any cleanup they cannot complete must be silently
+    /// abandoned.
+    ///
+    /// ### Hint
+    ///
+    /// The [`bail_out!`] convenience macro returns a value of the expected type, so it can be
+    /// passed directly:
+    ///
+    /// ```
+    /// use lol_html::{bail_out, Settings};
+    /// use lol_html::errors::RewritingError;
+    /// use lol_html::html_content::ContentType;
+    ///
+    /// let settings = Settings::new()
+    ///     .with_graceful_bail_out_on_content_handler_error(true)
+    ///     .append_bail_out_handler(bail_out!(|err, bail_out| {
+    ///         if matches!(err, RewritingError::ContentHandlerError(_)) {
+    ///             bail_out.append("<!-- bailed out -->", ContentType::Html);
+    ///         }
+    ///     }));
+    /// # let _ = settings;
+    /// ```
+    ///
+    /// [`bail_out!`]: macro.bail_out.html
+    #[inline]
+    #[must_use]
+    pub fn append_bail_out_handler(
+        mut self,
+        handler: impl IntoHandler<H::BailOutHandler<'handlers>>,
+    ) -> Self {
+        self.bail_out_handlers.push(handler.into_handler());
         self
     }
 
@@ -1187,6 +1310,7 @@ impl<'h, 's, H: HandlerTypes> From<RewriteStrSettings<'h, 's, H>> for Settings<'
         Settings {
             element_content_handlers: settings.element_content_handlers,
             document_content_handlers: settings.document_content_handlers,
+            bail_out_handlers: settings.bail_out_handlers,
             strict: settings.strict,
             enable_esi_tags: settings.enable_esi_tags,
             ..Settings::new_for_handler_types()
@@ -1223,6 +1347,7 @@ pub struct RewriteStrSettings<'handlers, 'selectors, H: HandlerTypes = LocalHand
         ElementContentHandlers<'handlers, H>,
     )>,
     pub(crate) document_content_handlers: Vec<DocumentContentHandlers<'handlers, H>>,
+    pub(crate) bail_out_handlers: Vec<H::BailOutHandler<'handlers>>,
     pub(crate) strict: bool,
     pub(crate) enable_esi_tags: bool,
 }
@@ -1260,6 +1385,7 @@ impl<'handlers, 'selectors, H: HandlerTypes> RewriteStrSettings<'handlers, 'sele
         RewriteStrSettings {
             element_content_handlers: vec![],
             document_content_handlers: vec![],
+            bail_out_handlers: vec![],
             strict: true,
             enable_esi_tags: true,
         }
@@ -1323,6 +1449,19 @@ impl<'handlers, 'selectors, H: HandlerTypes> RewriteStrSettings<'handlers, 'sele
         handler: DocumentContentHandlers<'handlers, H>,
     ) -> Self {
         self.document_content_handlers.push(handler);
+        self
+    }
+
+    /// Appends a handler to be invoked when the rewriter triggers a graceful bail-out.
+    ///
+    /// See [`Settings::append_bail_out_handler()`] for full semantics. Same shape.
+    #[inline]
+    #[must_use]
+    pub fn append_bail_out_handler(
+        mut self,
+        handler: impl IntoHandler<H::BailOutHandler<'handlers>>,
+    ) -> Self {
+        self.bail_out_handlers.push(handler.into_handler());
         self
     }
 

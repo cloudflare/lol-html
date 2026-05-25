@@ -41,10 +41,10 @@ mod transform_stream;
 use cfg_if::cfg_if;
 
 pub use self::rewriter::{
-    AsciiCompatibleEncoding, CommentHandler, DoctypeHandler, DocumentContentHandlers,
-    ElementContentHandlers, ElementHandler, EndHandler, EndTagHandler, HandlerResult, HandlerTypes,
-    HtmlRewriter, LocalHandlerTypes, MemorySettings, RewriteStrSettings, Settings, TextHandler,
-    rewrite_str,
+    AsciiCompatibleEncoding, BailOutHandler, CommentHandler, DoctypeHandler,
+    DocumentContentHandlers, ElementContentHandlers, ElementHandler, EndHandler, EndTagHandler,
+    HandlerResult, HandlerTypes, HtmlRewriter, LocalHandlerTypes, MemorySettings,
+    RewriteStrSettings, Settings, TextHandler, rewrite_str,
 };
 pub use self::selectors_vm::Selector;
 pub use self::transform_stream::OutputSink;
@@ -56,9 +56,10 @@ pub use self::transform_stream::OutputSink;
 /// Rewriting is sequential, so there's no benefit from using the `Send`-compatible rewriter.
 pub mod send {
     pub use crate::rewriter::{
-        CommentHandlerSend as CommentHandler, DoctypeHandlerSend as DoctypeHandler,
-        ElementHandlerSend as ElementHandler, EndHandlerSend as EndHandler,
-        EndTagHandlerSend as EndTagHandler, TextHandlerSend as TextHandler,
+        BailOutHandlerSend as BailOutHandler, CommentHandlerSend as CommentHandler,
+        DoctypeHandlerSend as DoctypeHandler, ElementHandlerSend as ElementHandler,
+        EndHandlerSend as EndHandler, EndTagHandlerSend as EndTagHandler,
+        TextHandlerSend as TextHandler,
     };
     pub use crate::rewriter::{IntoHandler, SendHandlerTypes};
 
@@ -95,7 +96,7 @@ pub mod errors {
 /// HTML content descriptors that can be produced and modified by a rewriter.
 pub mod html_content {
     pub use super::rewritable_units::{
-        Attribute, Comment, ContentType, Doctype, DocumentEnd, Element, EndTag, StartTag,
+        Attribute, BailOut, Comment, ContentType, Doctype, DocumentEnd, Element, EndTag, StartTag,
         StreamingHandler, StreamingHandlerSink, TextChunk, UserData,
     };
 
