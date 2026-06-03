@@ -1594,6 +1594,26 @@ mod tests {
         }
 
         #[test]
+        fn add_valueless_attr() {
+            test!(
+                |el| {
+                    el.set_attribute("a5", "").unwrap();
+                },
+                r#"<a a1='foo " baré " baz' a2="foo ' bar ' baz" a3=foo/bar a4 a5></a>"#
+            );
+        }
+
+        #[test]
+        fn clear_value_to_valueless_attr() {
+            test!(
+                |el| {
+                    el.set_attribute("a2", "").unwrap();
+                },
+                r#"<a a1='foo " baré " baz' a2 a3=foo/bar a4></a>"#
+            );
+        }
+
+        #[test]
         fn self_closing_flag() {
             // NOTE: we should add space between valueless attr and self-closing slash
             // during serialization. Otherwise, it will be interpreted as a part of the
