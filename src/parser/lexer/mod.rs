@@ -84,17 +84,21 @@ impl<S: LexemeSink> Lexer<S> {
         context: &mut ParserContext<S>,
         feedback: TreeBuilderFeedback,
         lexeme: &TagLexeme<'_>,
-    ) {
+    ) -> Result<(), ParsingAmbiguityError> {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => self.set_last_text_type(text_type),
             TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => self.cdata_allowed = cdata_allowed,
             TreeBuilderFeedback::RequestLexeme(mut callback) => {
                 let feedback = callback(&mut context.tree_builder_simulator, lexeme);
 
-                self.handle_tree_builder_feedback(context, feedback, lexeme);
+                self.handle_tree_builder_feedback(context, feedback, lexeme)?;
+            }
+            TreeBuilderFeedback::DepthExceeded => {
+                return Err(ParsingAmbiguityError::depth_exceeded());
             }
             TreeBuilderFeedback::None => (),
         }
+        Ok(())
     }
 
     #[inline]
