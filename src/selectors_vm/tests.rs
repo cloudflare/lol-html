@@ -1681,6 +1681,23 @@ mod compiler {
             );
 
             assert_attr_expr_matches_and_negation_reverses_match(
+                "[FOO]",
+                encoding,
+                &[("<div foo>", true), ("<div FOO=1>", true), ("<div>", false)],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
+                r#"[FOO="bar"]"#,
+                encoding,
+                &[
+                    ("<div foo='bar'>", true),
+                    ("<div FOO='bar'>", true),
+                    ("<div foo='BAR'>", false),
+                    ("<div>", false),
+                ],
+            );
+
+            assert_attr_expr_matches_and_negation_reverses_match(
                 r#"[foo="barα"]"#,
                 encoding,
                 &[
