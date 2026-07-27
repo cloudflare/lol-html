@@ -1,6 +1,6 @@
 use super::parser::{Selector, SelectorImplDescriptor};
 use crate::selectors_vm::{DenseHashSet, MatchId};
-use selectors::attr::{AttrSelectorOperator, ParsedCaseSensitivity};
+use selectors::attr::{AttrSelectorOperator, ParsedAttrSelectorOperation, ParsedCaseSensitivity};
 use selectors::parser::{Combinator, Component, NthType};
 use std::fmt::{self, Debug, Formatter};
 
@@ -123,9 +123,11 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
             Component::ExplicitNoNamespace => Self::OnTagName(OnTagNameExpr::Unmatchable),
             Component::ID(id) => Self::OnAttributes(OnAttributesExpr::Id(id.to_boxed_slice())),
             Component::Class(c) => Self::OnAttributes(OnAttributesExpr::Class(c.to_boxed_slice())),
-            Component::AttributeInNoNamespaceExists { local_name, .. } => Self::OnAttributes(
-                OnAttributesExpr::AttributeExists(local_name.to_boxed_slice()),
-            ),
+            Component::AttributeInNoNamespaceExists {
+                local_name_lower, ..
+            } => Self::OnAttributes(OnAttributesExpr::AttributeExists(
+                local_name_lower.to_boxed_slice(),
+            )),
             &Component::AttributeInNoNamespace {
                 ref local_name,
                 ref value,
@@ -139,6 +141,23 @@ impl From<&Component<SelectorImplDescriptor>> for Condition {
                     operator,
                 ),
             )),
+            Component::AttributeOther(attr) if attr.namespace.is_none() => {
+                Self::OnAttributes(match &attr.operation {
+                    ParsedAttrSelectorOperation::Exists => {
+                        OnAttributesExpr::AttributeExists(attr.local_name_lower.to_boxed_slice())
+                    }
+                    ParsedAttrSelectorOperation::WithValue {
+                        operator,
+                        case_sensitivity,
+                        value,
+                    } => OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr::new(
+                        attr.local_name_lower.to_boxed_slice(),
+                        value.to_boxed_slice(),
+                        *case_sensitivity,
+                        *operator,
+                    )),
+                })
+            }
             Component::Nth(data) if data.ty == NthType::Child => Self::OnTagName(
                 OnTagNameExpr::NthChild(NthChild::new(data.an_plus_b.0, data.an_plus_b.1)),
             ),
@@ -407,7 +426,28 @@ mod tests {
                 },
             ),
             (
+                "[FOO]",
+                Expr {
+                    simple_expr: OnAttributesExpr::AttributeExists("foo".into()),
+                    negation: false,
+                },
+            ),
+            (
                 r#"[foo="bar"]"#,
+                Expr {
+                    simple_expr: OnAttributesExpr::AttributeComparisonExpr(
+                        AttributeComparisonExpr {
+                            name: "foo".into(),
+                            value: "bar".into(),
+                            case_sensitivity: ParsedCaseSensitivity::CaseSensitive,
+                            operator: AttrSelectorOperator::Equal,
+                        },
+                    ),
+                    negation: false,
+                },
+            ),
+            (
+                r#"[FOO="bar"]"#,
                 Expr {
                     simple_expr: OnAttributesExpr::AttributeComparisonExpr(
                         AttributeComparisonExpr {
@@ -821,6 +861,8 @@ mod tests {
             SelectorError::UnexpectedTokenInAttribute,
         );
         assert_err("svg|img", SelectorError::NamespacedSelector);
+        assert_err("[*|Foo]", SelectorError::NamespacedSelector);
+        assert_err("[*|Foo=bar]", SelectorError::NamespacedSelector);
         assert_err(".foo()", SelectorError::InvalidClassName);
         assert_err(":not()", SelectorError::EmptySelector);
         assert_err("div + span", SelectorError::UnsupportedCombinator('+'));
