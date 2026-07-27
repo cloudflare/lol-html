@@ -50,7 +50,6 @@ struct JumpPtr {
 
 #[derive(Default)]
 struct HereditaryJumpPtr {
-    stack_offset: usize,
     instr_set_idx: usize,
     offset: usize,
 }
@@ -425,22 +424,15 @@ where
         &self,
         ctx: &mut ExecutionCtx<'_, E>,
     ) -> Result<(), Bailout<HereditaryJumpPtr>> {
-        for (i, ancestor) in self.stack.items().iter().rev().enumerate() {
-            for (j, jumps) in ancestor.hereditary_jumps.iter().enumerate() {
-                self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
-                    .map_err(move |b| Bailout {
-                        at_addr: b.at_addr,
-                        recovery_point: HereditaryJumpPtr {
-                            stack_offset: i,
-                            instr_set_idx: j,
-                            offset: b.recovery_point,
-                        },
-                    })?;
-            }
-
-            if !ancestor.has_ancestor_with_hereditary_jumps {
-                break;
-            }
+        for (i, (jumps, _)) in self.stack.active_hereditary_jumps().iter().enumerate() {
+            self.try_exec_instr_set_without_attrs(jumps.clone(), ctx)
+                .map_err(move |b| Bailout {
+                    at_addr: b.at_addr,
+                    recovery_point: HereditaryJumpPtr {
+                        instr_set_idx: i,
+                        offset: b.recovery_point,
+                    },
+                })?;
         }
 
         Ok(())
@@ -452,41 +444,13 @@ where
         ctx: &mut ExecutionCtx<'_, E>,
         ptr: HereditaryJumpPtr,
     ) {
-        let items = self.stack.items();
+        let active = self.stack.active_hereditary_jumps();
 
-        if items.is_empty() {
-            return;
-        }
+        if let Some((ptr_jumps, _)) = active.get(ptr.instr_set_idx) {
+            self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
 
-        let ptr_ancestor_idx = items.len() - 1 - ptr.stack_offset;
-
-        // NOTE: first find pointed ancestor, then jump instruction
-        // set and execute it with the offset.
-        if let Some(ptr_ancestor) = items.get(ptr_ancestor_idx) {
-            if let Some(ptr_jumps) = ptr_ancestor.hereditary_jumps.get(ptr.instr_set_idx) {
-                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
-
-                // NOTE: execute the rest of jump instruction sets in the pointed ancestor as usual.
-                for jumps in ptr_ancestor
-                    .hereditary_jumps
-                    .iter()
-                    .skip(ptr.instr_set_idx + 1)
-                {
-                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
-                }
-            }
-
-            // NOTE: execute hereditary jumps in remaining ancestors as usual.
-            if ptr_ancestor.has_ancestor_with_hereditary_jumps {
-                for ancestor in items.iter().rev().skip(ptr.stack_offset + 1) {
-                    for jumps in &ancestor.hereditary_jumps {
-                        self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
-                    }
-
-                    if !ancestor.has_ancestor_with_hereditary_jumps {
-                        break;
-                    }
-                }
+            for (jumps, _) in active.iter().skip(ptr.instr_set_idx + 1) {
+                self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
             }
         }
     }
