@@ -283,6 +283,13 @@ impl<E: ElementData> Stack<E> {
         local_name: LocalName<'_>,
         popped_element_data_handler: impl FnMut(E),
     ) {
+        // Fix: Use HashMap for O(1) name lookup instead of O(depth) reverse scan
+        if let Some(counters) = &self.typed_child_counters {
+            if !counters.contains(&local_name) {
+                return; // Name not on stack, skip scan entirely
+            }
+        }
+        
         let pop_to_index = self
             .items
             .iter()
