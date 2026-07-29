@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.0.1
+
+- Improved performance of selector matching on deeply nested elements and on stray end tags.
+- Fixed element handlers never running for SVG and MathML integration-point elements when
+  the preceding tag matched no selector.
+- Fixed attribute selectors with an uppercase attribute name: `[HREF]` silently matched
+  nothing and `[HREF=x]` was rejected as a namespaced selector.
+- Fixed `:nth-of-type()` counting custom elements spelled with different ASCII case as
+  distinct types.
+
 ## v3.0.0
 
 - Added `MemorySettings::with_graceful_bail_out_on_memory_limit_exceeded()`: when set, the
