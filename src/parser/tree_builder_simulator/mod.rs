@@ -21,7 +21,8 @@ use TagTokenOutline::{EndTag, StartTag};
 
 pub use self::ambiguity_guard::ParsingAmbiguityError;
 
-const DEFAULT_NS_STACK_CAPACITY: usize = 256;
+/// <svg><html><svg><html>... nesting depth
+const MAX_NS_STACK_DEPTH: usize = 256;
 
 #[must_use]
 pub(crate) enum TreeBuilderFeedback {
@@ -29,6 +30,7 @@ pub(crate) enum TreeBuilderFeedback {
     SetAllowCdata(bool),
     #[allow(clippy::type_complexity)]
     RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> Self + Send>),
+    DepthExceeded,
     None,
 }
 
@@ -112,7 +114,7 @@ impl TreeBuilderSimulator {
     #[must_use]
     pub fn new(strict: bool) -> Self {
         let mut simulator = Self {
-            ns_stack: Vec::with_capacity(DEFAULT_NS_STACK_CAPACITY),
+            ns_stack: Vec::with_capacity(MAX_NS_STACK_DEPTH),
             current_ns: Namespace::Html,
             ambiguity_guard: AmbiguityGuard::default(),
             strict,
@@ -179,6 +181,10 @@ impl TreeBuilderSimulator {
 
     #[inline]
     fn enter_ns(&mut self, ns: Namespace) -> TreeBuilderFeedback {
+        if self.ns_stack.len() >= self.ns_stack.capacity() {
+            return TreeBuilderFeedback::DepthExceeded;
+        }
+
         self.ns_stack.push(ns);
         self.current_ns = ns;
         TreeBuilderFeedback::SetAllowCdata(ns != Namespace::Html)
