@@ -5,7 +5,8 @@ use crate::parser::AttributeBuffer;
 #[derive(Debug, Default, Copy, Clone)]
 pub(crate) struct AttributeOutline {
     pub name: Range,
-    pub value: Range,
+    /// `None` for attributes written without a value (e.g. `<div hidden>`).
+    pub value: Option<Range>,
     pub raw_range: Range,
 }
 

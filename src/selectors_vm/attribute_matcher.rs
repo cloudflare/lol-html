@@ -78,8 +78,12 @@ impl<'i> AttributeMatcher<'i> {
 
     #[inline]
     fn get_value(&self, lowercased_name: &[u8]) -> Option<&'i [u8]> {
-        self.find(lowercased_name)
-            .map(|a| self.input.slice(a.value).as_slice())
+        // NOTE: an attribute written without a value has an empty value
+        // as far as selector matching is concerned.
+        self.find(lowercased_name).map(|a| {
+            a.value
+                .map_or(&[][..], |value| self.input.slice(value).as_slice())
+        })
     }
 
     #[inline]
