@@ -322,12 +322,14 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             ..
         }) = self.current_attr
         {
-            *value = get_token_part_range!(self);
+            let value_range = get_token_part_range!(self);
+
+            *value = Some(value_range);
 
             // NOTE: include closing quote into the raw value if it's present
             raw_range.end = match input.get(self.next_pos - 1).copied() {
-                Some(ch) if ch == self.closing_quote => value.end + 1,
-                _ => value.end,
+                Some(ch) if ch == self.closing_quote => value_range.end + 1,
+                _ => value_range.end,
             };
         }
     }

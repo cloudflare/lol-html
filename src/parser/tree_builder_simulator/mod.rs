@@ -291,7 +291,9 @@ impl TreeBuilderSimulator {
                     if !self_closing && eq_case_insensitive(&name, b"annotation-xml") {
                         for attr in attributes.iter() {
                             let name = lexeme.part(attr.name);
-                            let value = lexeme.part(attr.value);
+                            let Some(value) = lexeme.opt_part(attr.value) else {
+                                continue;
+                            };
 
                             if eq_case_insensitive(&name, b"encoding")
                                 && (eq_case_insensitive(&value, b"text/html")

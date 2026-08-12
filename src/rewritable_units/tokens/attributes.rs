@@ -6,7 +6,6 @@ use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
 use std::cell::OnceCell;
 use std::fmt::{self, Debug};
-use std::num::NonZero;
 use thiserror::Error;
 
 /// An error that occurs when invalid value is provided for the attribute name.
@@ -42,8 +41,9 @@ pub struct Attribute<'i> {
     value: BytesCow<'i>,
     raw: Option<Bytes<'i>>,
     encoding: &'static Encoding,
-    /// absolute document position of attribute name and attribute value
-    name_value_start: Option<(usize, NonZero<usize>)>,
+    /// Absolute document position of the attribute name and, if the attribute
+    /// was written with a value, of the attribute value.
+    name_value_start: Option<(usize, Option<usize>)>,
 }
 
 impl<'i> Attribute<'i> {
@@ -54,7 +54,7 @@ impl<'i> Attribute<'i> {
         value: BytesCow<'i>,
         raw: Bytes<'i>,
         encoding: &'static Encoding,
-        name_value_start: Option<(usize, NonZero<usize>)>,
+        name_value_start: Option<(usize, Option<usize>)>,
     ) -> Self {
         Attribute {
             name,
@@ -123,12 +123,14 @@ impl<'i> Attribute<'i> {
     ///
     /// The range covers only the value itself, excluding any quotes or the `=` sign.
     ///
-    /// Returns `None` for attributes that were added or modified.
+    /// Returns `None` for attributes that were added or modified, and for attributes
+    /// written without a value (e.g. `<div hidden>`).
     #[inline]
     #[must_use]
     pub fn value_source_location(&self) -> Option<SourceLocation> {
         self.name_value_start
-            .map(|(_, value)| SourceLocation::from_start_len(value.get(), self.value.len()))
+            .and_then(|(_, value)| value)
+            .map(|value| SourceLocation::from_start_len(value, self.value.len()))
     }
 
     #[inline]
@@ -279,15 +281,15 @@ impl<'i> Attributes<'i> {
                     .opt_slice(Some(a.name))
                     .unwrap_or_else(cant_fail)
                     .into(),
-                self.input
-                    .opt_slice(Some(a.value))
-                    .unwrap_or_else(cant_fail)
+                a.value
+                    .map(|value| self.input.opt_slice(Some(value)).unwrap_or_else(cant_fail))
+                    .unwrap_or_default()
                     .into(),
                 self.input
                     .opt_slice(Some(a.raw_range))
                     .unwrap_or_else(cant_fail),
                 self.encoding,
-                NonZero::new(base + a.value.start).map(|val| (base + a.name.start, val)),
+                Some((base + a.name.start, a.value.map(|value| base + value.start))),
             )
         })
     }
