@@ -1926,6 +1926,90 @@ mod tests {
             assert_eq!(&html[locs[2].3.clone().unwrap()], "baz");
         }
 
+        /// Collects `(name span, value span)` for every attribute of every `<div>`,
+        /// feeding the input to the rewriter in `chunk_size`-byte writes.
+        #[allow(clippy::type_complexity)]
+        fn div_attribute_locations(
+            html: &str,
+            chunk_size: usize,
+        ) -> Vec<(
+            Option<std::ops::Range<usize>>,
+            Option<std::ops::Range<usize>>,
+        )> {
+            let locations = Arc::new(Mutex::new(Vec::new()));
+            let locations_clone = Arc::clone(&locations);
+
+            let mut rewriter = HtmlRewriter::new(
+                Settings::new().append_element_content_handler(element!("div", move |el| {
+                    locations_clone
+                        .lock()
+                        .unwrap()
+                        .extend(el.attributes().iter().map(|attr| {
+                            (
+                                attr.name_source_location().map(|l| l.bytes()),
+                                attr.value_source_location().map(|l| l.bytes()),
+                            )
+                        }));
+                    Ok(())
+                })),
+                |_: &[u8]| {},
+            );
+
+            for chunk in html.as_bytes().chunks(chunk_size) {
+                rewriter.write(chunk).unwrap();
+            }
+
+            rewriter.end().unwrap();
+
+            let locations = locations.lock().unwrap();
+
+            locations.clone()
+        }
+
+        // See https://github.com/cloudflare/lol-html/issues/333.
+        #[test]
+        fn attribute_source_locations_for_valueless_attributes() {
+            // NOTE: the comment pushes the tag off byte 0 of the parser's buffer,
+            // which used to turn the bogus value span for `hidden` non-zero.
+            for html in ["<div hidden></div>", "<!--pad--><div hidden></div>"] {
+                for chunk_size in [1, 4, 8, 16, html.len()] {
+                    let locations = div_attribute_locations(html, chunk_size);
+
+                    assert_eq!(locations.len(), 1, "{html:?} at chunk size {chunk_size}");
+
+                    let (name, value) = locations[0].clone();
+
+                    assert_eq!(
+                        &html[name.expect("name should have a source location")],
+                        "hidden",
+                        "{html:?} at chunk size {chunk_size}"
+                    );
+                    assert_eq!(
+                        value, None,
+                        "valueless attribute should have no value source location \
+                         ({html:?} at chunk size {chunk_size})"
+                    );
+                }
+            }
+        }
+
+        // See https://github.com/cloudflare/lol-html/issues/333.
+        #[test]
+        fn attribute_source_locations_do_not_depend_on_chunk_size() {
+            let html = r#"<!--pad--><div class="foo" hidden id='bar' data-x=baz></div>"#;
+            let whole_input = div_attribute_locations(html, html.len());
+
+            assert_eq!(whole_input.len(), 4);
+
+            for chunk_size in [1, 2, 3, 5, 8, 16] {
+                assert_eq!(
+                    div_attribute_locations(html, chunk_size),
+                    whole_input,
+                    "spans changed at chunk size {chunk_size}"
+                );
+            }
+        }
+
         #[test]
         fn attribute_source_locations_none_for_programmatic_attributes() {
             rewrite_str::<LocalHandlerTypes>(
