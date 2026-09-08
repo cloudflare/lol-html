@@ -5,6 +5,7 @@ use super::{
 };
 use crate::HandlerResult;
 use crate::base::{BytesCow, SourceLocation};
+use crate::html::{LocalNameHash, Namespace, Tag};
 use crate::rewriter::{HandlerTypes, LocalHandlerTypes};
 use encoding_rs::Encoding;
 use std::any::Any;
@@ -128,18 +129,31 @@ impl<'rewriter, 'input_token, H: HandlerTypes> Element<'rewriter, 'input_token, 
 
     /// Sets the tag name of the element.
     ///
-    /// The new tag name must be in the same namespace, have the same content model, and be valid in its location.
+    /// The new tag name must be in the same namespace and be valid in its location.
     /// Otherwise change of the tag name may cause the resulting document to be parsed in an unexpected way,
     /// out of sync with this library.
+    ///
+    /// If the element is a [void element] (`<img>`, `<br>`, ...) and the new name is not, an end tag
+    /// `</name>` is written right after the start tag, so that the renamed element stays empty instead of
+    /// swallowing the siblings that follow it. The element still [can't have content][Self::can_have_content]:
+    /// [`prepend`][Self::prepend], [`append`][Self::append] and [`set_inner_content`][Self::set_inner_content]
+    /// remain no-ops, and the written end tag doesn't run [end tag handlers][Self::end_tag_handlers].
+    ///
+    /// [void element]: https://html.spec.whatwg.org/multipage/syntax.html#void-elements
     #[inline]
     pub fn set_tag_name(&mut self, name: &str) -> Result<(), TagNameError> {
-        let name = self.tag_name_bytes_from_str(name)?;
+        let name_bytes = self.tag_name_bytes_from_str(name)?;
 
         if self.can_have_content {
-            self.modified_end_tag_name = Some((*name).into());
+            self.modified_end_tag_name = Some((*name_bytes).into());
+        } else if self.start_tag.namespace() == Namespace::Html {
+            // A self-closing tag in foreign content is closed by its `/>` whatever its name is,
+            // but an HTML void element is closed by its name alone.
+            let emit_end_tag = !Tag::is_void_html_element(&LocalNameHash::from(name));
+            self.start_tag.set_emit_end_tag(emit_end_tag);
         }
 
-        self.start_tag.set_name_raw(name);
+        self.start_tag.set_name_raw(name_bytes);
 
         Ok(())
     }
@@ -877,8 +891,8 @@ mod tests {
         );
         assert_eq!(
             out,
-            "<math><style><TROUBLE></style></math>
-             <textarea><!--</textarea><TROUBLE>--></textarea>
+            "<math><style><TROUBLE></TROUBLE></style></math>
+             <textarea><!--</textarea><TROUBLE></TROUBLE>--></textarea>
              <div><style><img></style></div>"
         );
     }
@@ -894,8 +908,8 @@ mod tests {
         );
         assert_eq!(
             out,
-            "<svg><p><style><!--</style><BINGO>--></style>
-            <math><p></p><style><!--</style><BINGO src onerror>--></style></math>"
+            "<svg><p><style><!--</style><BINGO></BINGO>--></style>
+            <math><p></p><style><!--</style><BINGO src onerror></BINGO>--></style></math>"
         );
     }
 
@@ -907,7 +921,10 @@ mod tests {
             "img",
             |el| el.set_tag_name("we-have-scripts").unwrap(),
         );
-        assert_eq!(out, r#"<noscript><p alt="</noscript><we-have-scripts>">"#);
+        assert_eq!(
+            out,
+            r#"<noscript><p alt="</noscript><we-have-scripts></we-have-scripts>">"#
+        );
     }
 
     #[test]
@@ -918,7 +935,7 @@ mod tests {
             "img,a",
             |el| el.set_tag_name("HIT").unwrap(),
         );
-        assert_eq!(out, r#"<svg></p><style><a id="</style><HIT>">"#);
+        assert_eq!(out, r#"<svg></p><style><a id="</style><HIT></HIT>">"#);
     }
 
     #[test]
@@ -933,7 +950,7 @@ mod tests {
         );
         assert_eq!(
             out,
-            r#"<math><br><style><a id="</style><HIT>">
+            r#"<math><br><style><a id="</style><HIT></HIT>">
             <math><font kolor/><style><HIT/></style><body><style><a/></style></math>
             <math><font COLOR/><style><a/></style>"#
         );
@@ -958,7 +975,7 @@ mod tests {
         let out = rewrite_element(br"<svG><sCript/><img></script></svg>", UTF_8, "img", |el| {
             el.set_tag_name("HIT").unwrap();
         });
-        assert_eq!(out, r"<svG><sCript/><HIT></script></svg>");
+        assert_eq!(out, r"<svG><sCript/><HIT></HIT></script></svg>");
     }
 
     #[test]
@@ -972,7 +989,7 @@ mod tests {
         );
         assert_eq!(
             out,
-            r#"<math><annotation-xml encoding="nope/html"><style><XML></style></annotation-xml></math>
+            r#"<math><annotation-xml encoding="nope/html"><style><XML></XML></style></annotation-xml></math>
             <math><annotation-xml encoding="text/HTML"><style><img></style></annotation-xml></math>"#
         );
     }
@@ -1047,7 +1064,7 @@ mod tests {
         );
         assert_eq!(
             out,
-            r#"<math><p></p><style><!--</style><A src onerror>--></style></math>"#
+            r#"<math><p></p><style><!--</style><A src onerror></A>--></style></math>"#
         );
     }
 
@@ -1477,7 +1494,147 @@ mod tests {
             el.set_tag_name("img-foo").unwrap();
         });
 
-        assert_eq!(output, "<img-foo><!--after--><span>Hi</span></img>");
+        assert_eq!(
+            output,
+            "<img-foo></img-foo><!--after--><span>Hi</span></img>"
+        );
+    }
+
+    #[test]
+    fn void_element_renamed() {
+        macro_rules! test {
+            ($html:expr, $handler:expr, $expected:expr) => {
+                for enc in [UTF_8, EUC_JP] {
+                    assert_eq!(
+                        rewrite_element(&$html.as_bytes(), enc, "#v", $handler),
+                        $expected
+                    );
+                }
+            };
+        }
+
+        // To a name that isn't void: closed on the spot, siblings stay siblings.
+        test!(
+            "<img id=v src=a.png><p>next</p>",
+            |el| {
+                assert!(!el.can_have_content());
+                el.set_tag_name("picture").unwrap();
+                assert!(!el.can_have_content());
+            },
+            "<picture id=v src=a.png></picture><p>next</p>"
+        );
+        test!(
+            "<br id=v><p>next</p></body>",
+            |el| el.set_tag_name("textarea").unwrap(),
+            "<textarea id=v></textarea><p>next</p></body>"
+        );
+        test!(
+            "<input id=v value=x><b>sib</b>",
+            |el| el.set_tag_name("My-Input").unwrap(),
+            "<My-Input id=v value=x></My-Input><b>sib</b>"
+        );
+
+        // The `/>` syntax means nothing on an HTML element, so it is dropped rather than
+        // serializing the misleading `<div/>`.
+        test!(
+            "<br id=v />x",
+            |el| {
+                assert!(el.is_self_closing());
+                el.set_tag_name("div").unwrap();
+                assert!(!el.is_self_closing());
+            },
+            "<div id=v></div>x"
+        );
+
+        // To another void name: still no end tag (`</br>` would even parse as `<br>`).
+        test!(
+            "<hr id=v>x",
+            |el| el.set_tag_name("br").unwrap(),
+            "<br id=v>x"
+        );
+        test!(
+            "<hr id=v>x",
+            |el| el.set_tag_name("IMG").unwrap(),
+            "<IMG id=v>x"
+        );
+
+        // The last name set wins.
+        test!(
+            "<hr id=v>x",
+            |el| {
+                el.set_tag_name("div").unwrap();
+                el.set_tag_name("wbr").unwrap();
+            },
+            "<wbr id=v>x"
+        );
+
+        // `before`/`after` content surrounds the whole (now two-tag) element whatever the
+        // call order; content insertion is still a no-op.
+        test!(
+            "<img id=v>x",
+            |el| {
+                el.before("[b1]", ContentType::Html);
+                el.after("[a1]", ContentType::Html);
+                el.set_tag_name("span").unwrap();
+                el.before("[b2]", ContentType::Html);
+                el.after("[a2]", ContentType::Html);
+                el.prepend("[p]", ContentType::Html);
+                el.append("[a]", ContentType::Html);
+                el.set_inner_content("[i]", ContentType::Html);
+                assert!(el.end_tag_handlers().is_none());
+            },
+            "[b1][b2]<span id=v></span>[a2][a1]x"
+        );
+
+        // Removed or replaced: nothing of the element is left, end tag included.
+        test!(
+            "<img id=v>x",
+            |el| {
+                el.set_tag_name("span").unwrap();
+                el.remove();
+            },
+            "x"
+        );
+        test!(
+            "<img id=v>x",
+            |el| {
+                el.set_tag_name("span").unwrap();
+                el.remove_and_keep_content();
+            },
+            "x"
+        );
+        test!(
+            "<img id=v>x",
+            |el| {
+                el.set_tag_name("span").unwrap();
+                el.replace("[r]", ContentType::Text);
+                el.after("[a]", ContentType::Html);
+            },
+            "[r][a]x"
+        );
+    }
+
+    #[test]
+    fn self_closing_foreign_element_renamed() {
+        // In foreign content `/>` closes the element whatever it is called, so a rename
+        // needs no end tag...
+        let output = rewrite_element(b"<svg><circle id=v /><g></g></svg>", UTF_8, "#v", |el| {
+            assert!(!el.can_have_content());
+            el.set_tag_name("path").unwrap();
+        });
+        assert_eq!(output, r#"<svg><path id=v /><g></g></svg>"#);
+
+        // ...and without `/>` it has an end tag of its own to rename.
+        let output = rewrite_element(
+            b"<svg><circle id=v></circle><g></g></svg>",
+            UTF_8,
+            "#v",
+            |el| {
+                assert!(el.can_have_content());
+                el.set_tag_name("path").unwrap();
+            },
+        );
+        assert_eq!(output, r#"<svg><path id=v></path><g></g></svg>"#);
     }
 
     #[test]
