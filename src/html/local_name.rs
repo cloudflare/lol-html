@@ -135,10 +135,22 @@ impl PartialEq<Tag> for LocalNameHash {
 /// `LocalName` is used for the comparison of tag names.
 /// In the majority of cases it will be represented as a hash, however for long
 /// non-standard tag names it fallsback to the Name representation.
-#[derive(Clone, Debug, Eq, Hash)]
+#[derive(Clone, Debug, Eq)]
 pub enum LocalName<'i> {
     Hash(LocalNameHash),
     Bytes(BytesCow<'i>),
+}
+
+// `PartialEq` compares `Bytes` case-insensitively, so `Hash` must case-fold too.
+impl std::hash::Hash for LocalName<'_> {
+    #[inline]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        match self {
+            LocalName::Hash(h) => h.hash(state),
+            LocalName::Bytes(b) => b.iter().for_each(|c| c.to_ascii_lowercase().hash(state)),
+        }
+    }
 }
 
 impl<'i> LocalName<'i> {
@@ -220,5 +232,16 @@ mod tests {
     #[test]
     fn hash_invalidation_for_long_values() {
         assert!(LocalNameHash::from("aaaaaaaaaaaaaa").is_empty());
+    }
+
+    #[test]
+    fn bytes_variant_hash_matches_case_insensitive_eq() {
+        use std::hash::{BuildHasher, RandomState};
+        let s = RandomState::new();
+        let a = LocalName::from_str_without_replacements("My-Widget", encoding_rs::UTF_8).unwrap();
+        let b = LocalName::from_str_without_replacements("my-widget", encoding_rs::UTF_8).unwrap();
+        assert!(matches!(a, LocalName::Bytes(_)));
+        assert_eq!(a, b);
+        assert_eq!(s.hash_one(&a), s.hash_one(&b));
     }
 }

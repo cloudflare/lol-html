@@ -177,7 +177,6 @@ pub(crate) struct StackItem<'i, E: ElementData> {
     pub jumps: Vec<AddressRange>,
     pub hereditary_jumps: Vec<AddressRange>,
     pub child_counter: ChildCounter,
-    pub has_ancestor_with_hereditary_jumps: bool,
     pub stack_directive: StackDirective,
 }
 
@@ -191,7 +190,6 @@ impl<'i, E: ElementData> StackItem<'i, E> {
             jumps: Vec::default(),
             hereditary_jumps: Vec::default(),
             child_counter: Default::default(),
-            has_ancestor_with_hereditary_jumps: false,
             stack_directive: StackDirective::Push,
         }
     }
@@ -204,7 +202,6 @@ impl<'i, E: ElementData> StackItem<'i, E> {
             jumps: self.jumps,
             hereditary_jumps: self.hereditary_jumps,
             child_counter: self.child_counter,
-            has_ancestor_with_hereditary_jumps: self.has_ancestor_with_hereditary_jumps,
             stack_directive: self.stack_directive,
         }
     }
@@ -216,6 +213,10 @@ pub(crate) struct Stack<E: ElementData> {
     /// A typed counter for all elements on all frames. This is optional to indicate if types are actually being counted.
     typed_child_counters: Option<TypedChildCounterMap>,
     items: LimitedVec<StackItem<'static, E>>,
+    /// Per-name open-item counts so `pop_up_to` can reject a stray end tag in O(1).
+    open_name_counts: HashMap<LocalName<'static>, usize>,
+    /// Distinct hereditary-jump ranges from open items, with the shallowest depth that introduced each.
+    active_hereditary_jumps: Vec<(AddressRange, usize)>,
 }
 
 impl<E: ElementData> Stack<E> {
@@ -226,6 +227,8 @@ impl<E: ElementData> Stack<E> {
             root_child_counter: Default::default(),
             typed_child_counters: enable_nth_of_type.then(TypedChildCounterMap::new),
             items: LimitedVec::new(memory_limiter),
+            open_name_counts: HashMap::new(),
+            active_hereditary_jumps: Vec::new(),
         }
     }
 
@@ -281,8 +284,11 @@ impl<E: ElementData> Stack<E> {
     pub fn pop_up_to(
         &mut self,
         local_name: LocalName<'_>,
-        popped_element_data_handler: impl FnMut(E),
+        mut popped_element_data_handler: impl FnMut(E),
     ) {
+        if !self.open_name_counts.contains_key(&local_name) {
+            return;
+        }
         let pop_to_index = self
             .items
             .iter()
@@ -291,11 +297,27 @@ impl<E: ElementData> Stack<E> {
             if let Some(c) = self.typed_child_counters.as_mut() {
                 c.pop_to(index);
             }
-            self.items
-                .drain(index..)
-                .map(|i| i.element_data)
-                .for_each(popped_element_data_handler);
+            self.active_hereditary_jumps.retain(|(_, d)| *d < index);
+            for item in self.items.drain(index..) {
+                if let RawEntryMut::Occupied(mut e) = self
+                    .open_name_counts
+                    .raw_entry_mut()
+                    .from_key(&item.local_name)
+                {
+                    *e.get_mut() -= 1;
+                    if *e.get() == 0 {
+                        e.remove();
+                    }
+                }
+                popped_element_data_handler(item.element_data);
+            }
         }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn active_hereditary_jumps(&self) -> &[(AddressRange, usize)] {
+        &self.active_hereditary_jumps
     }
 
     #[inline]
@@ -312,15 +334,20 @@ impl<E: ElementData> Stack<E> {
     #[inline]
     pub fn push_item(
         &mut self,
-        mut item: StackItem<'static, E>,
+        item: StackItem<'static, E>,
     ) -> Result<(), MemoryLimitExceededError> {
-        if let Some(last) = self.items.last() {
-            if last.has_ancestor_with_hereditary_jumps || !last.hereditary_jumps.is_empty() {
-                item.has_ancestor_with_hereditary_jumps = true;
+        let depth = self.items.len();
+        self.items.push(item)?;
+        let item = self.items.last().expect("just pushed");
+        *self
+            .open_name_counts
+            .entry(item.local_name.clone())
+            .or_default() += 1;
+        for r in &item.hereditary_jumps {
+            if !self.active_hereditary_jumps.iter().any(|(a, _)| a == r) {
+                self.active_hereditary_jumps.push((r.clone(), depth));
             }
         }
-
-        self.items.push(item)?;
         Ok(())
     }
 }
@@ -356,31 +383,62 @@ mod tests {
         item
     }
 
+    fn active_hj(stack: &Stack<TestElementData>) -> Vec<AddressRange> {
+        stack
+            .active_hereditary_jumps()
+            .iter()
+            .map(|(r, _)| r.clone())
+            .collect()
+    }
+
     #[test]
-    #[allow(clippy::reversed_empty_ranges)]
-    fn hereditary_jumps_flag() {
+    fn active_hereditary_jumps_dedup_and_prune() {
         let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
 
-        stack.push_item(item("item1", 0)).unwrap();
+        stack.push_item(item("a", 0)).unwrap();
 
-        let mut item2 = item("item2", 1);
-        item2.hereditary_jumps.push(0..0);
-        stack.push_item(item2).unwrap();
+        let mut b = item("b", 1);
+        b.hereditary_jumps.push(0..1);
+        stack.push_item(b).unwrap();
+        assert_eq!(active_hj(&stack), vec![0..1]);
 
-        let mut item3 = item("item3", 2);
-        item3.hereditary_jumps.push(0..0);
-        stack.push_item(item3).unwrap();
+        let mut c = item("c", 2);
+        c.hereditary_jumps.push(0..1);
+        c.hereditary_jumps.push(2..4);
+        stack.push_item(c).unwrap();
+        assert_eq!(active_hj(&stack), vec![0..1, 2..4]);
 
-        stack.push_item(item("item4", 3)).unwrap();
+        stack.push_item(item("d", 3)).unwrap();
+        assert_eq!(active_hj(&stack), vec![0..1, 2..4]);
 
-        assert_eq!(
-            stack
-                .items()
-                .iter()
-                .map(|i| i.has_ancestor_with_hereditary_jumps)
-                .collect::<Vec<_>>(),
-            [false, false, true, true]
-        );
+        stack.pop_up_to(local_name("c"), |_| {});
+        assert_eq!(active_hj(&stack), vec![0..1]);
+
+        stack.pop_up_to(local_name("a"), |_| {});
+        assert!(active_hj(&stack).is_empty());
+    }
+
+    #[test]
+    fn open_name_counts_track_push_and_drain() {
+        let mut stack = Stack::new(SharedMemoryLimiter::new(2048), false);
+
+        stack.push_item(item("a", 0)).unwrap();
+        stack.push_item(item("b", 1)).unwrap();
+        stack.push_item(item("a", 2)).unwrap();
+
+        stack.pop_up_to(local_name("c"), |_| unreachable!("should not pop"));
+        assert_eq!(stack.items().len(), 3);
+
+        let mut popped = Vec::new();
+        stack.pop_up_to(local_name("a"), |d| popped.push(d.0));
+        assert_eq!(popped, vec![2]);
+        assert_eq!(stack.items().len(), 2);
+
+        stack.pop_up_to(local_name("a"), |d| popped.push(d.0));
+        assert_eq!(popped, vec![2, 0, 1]);
+        assert!(stack.items().is_empty());
+
+        stack.pop_up_to(local_name("a"), |_| unreachable!("stack is empty"));
     }
 
     #[test]

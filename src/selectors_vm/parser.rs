@@ -150,6 +150,7 @@ impl SelectorsParser {
             | Component::Class(_)
             | Component::AttributeInNoNamespaceExists { .. }
             | Component::AttributeInNoNamespace { .. } => Ok(()),
+            Component::AttributeOther(attr) if attr.namespace.is_none() => Ok(()),
 
             Component::Nth(data) => Self::validate_nth(data),
 

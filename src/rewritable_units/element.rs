@@ -978,6 +978,38 @@ mod tests {
     }
 
     #[test]
+    fn consecutive_svg_integration_points() {
+        // A tag hint that keeps the parser in scan mode must not leave
+        // `got_flags_from_hint` set: the next integration-point tag enters the
+        // lexer via tree-builder feedback without a hint of its own, and the
+        // stale flag would make `handle_tag` skip selector matching for it.
+        let out = rewrite_element(
+            b"<svg><desc>d</desc><title>t</title><foreignObject></foreignObject></svg>",
+            UTF_8,
+            "desc,title,foreignobject",
+            |el| el.set_attribute("hit", "").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<svg><desc hit="">d</desc><title hit="">t</title><foreignObject hit=""></foreignObject></svg>"#
+        );
+    }
+
+    #[test]
+    fn consecutive_math_ml_integration_points() {
+        let out = rewrite_element(
+            b"<math><mi>x</mi><mo>+</mo><mn>1</mn><annotation-xml></annotation-xml></math>",
+            UTF_8,
+            "mi,mo,mn,annotation-xml",
+            |el| el.set_attribute("hit", "").unwrap(),
+        );
+        assert_eq!(
+            out,
+            r#"<math><mi hit="">x</mi><mo hit="">+</mo><mn hit="">1</mn><annotation-xml hit=""></annotation-xml></math>"#
+        );
+    }
+
+    #[test]
     fn foreignobject() {
         let out = rewrite_element(
             br#"<svg><annotation-xml><foreignobject><style><!--</style><p id="--><img>">"#,
