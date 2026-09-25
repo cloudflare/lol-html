@@ -1,5 +1,18 @@
 use super::*;
-use std::slice::Iter;
+
+/// C-side iterator over an element's attributes.
+///
+/// Rather than capturing a slice iterator that borrows the element's live
+/// attribute storage, this keeps a handle to the element plus a cursor and
+/// re-reads the attributes on each `next` call. Mutating the element
+/// (`lol_html_element_set_attribute` / `lol_html_element_remove_attribute`)
+/// reallocates the element's attribute `Vec`, which would otherwise leave a
+/// cached slice iterator (and any previously returned `Attribute` pointer)
+/// dangling.
+pub struct AttributesIterator<'r, 't> {
+    element: *const Element<'r, 't>,
+    index: usize,
+}
 
 /// Returns the tag name of the element.
 #[unsafe(no_mangle)]
@@ -62,10 +75,8 @@ pub unsafe extern "C" fn lol_html_element_namespace_uri_get(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
     element: *const Element<'r, 't>,
-) -> *mut Iter<'r, Attribute<'t>> {
-    let attributes = to_ref!(element).attributes();
-
-    to_ptr_mut(attributes.iter())
+) -> *mut AttributesIterator<'r, 't> {
+    to_ptr_mut(AttributesIterator { element, index: 0 })
 }
 
 // Advances the iterator and returns next attribute.
@@ -76,19 +87,24 @@ pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
 // execution and should never be leaked outside of it.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attributes_iterator_next<'t>(
-    iterator: *mut Iter<'_, Attribute<'t>>,
+    iterator: *mut AttributesIterator<'_, 't>,
 ) -> *const Attribute<'t> {
     let iterator = to_ref_mut!(iterator);
+    let element = iterator.element;
+    let attributes = to_ref!(element).attributes();
 
-    match iterator.next() {
-        Some(attr) => attr,
+    match attributes.get(iterator.index) {
+        Some(attr) => {
+            iterator.index += 1;
+            attr
+        }
         None => ptr::null(),
     }
 }
 
 // Frees the memory held by the attribute iterator.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lol_html_attributes_iterator_free(iterator: *mut Iter<Attribute>) {
+pub unsafe extern "C" fn lol_html_attributes_iterator_free(iterator: *mut AttributesIterator) {
     drop(to_box!(iterator));
 }
 
