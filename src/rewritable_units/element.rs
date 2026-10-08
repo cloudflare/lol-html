@@ -857,6 +857,34 @@ mod tests {
     }
 
     #[test]
+    fn many_open_elements() {
+        // Each </b> fires only its own handler while all the <div>s stay open around it.
+        const N: usize = 1000;
+        let html = "<div><b></b>".repeat(N) + &"</div>".repeat(N);
+        let mut next_id = 0;
+        let output = rewrite_html(
+            html.as_bytes(),
+            UTF_8,
+            vec![element!("div, b", move |el| {
+                let id = next_id;
+                next_id += 1;
+                el.on_end_tag(end_tag!(move |end| {
+                    end.before(&format!("/{id}"), ContentType::Text);
+                    Ok(())
+                }))
+            })],
+            vec![],
+        );
+
+        // Elements are numbered in document order: <div> 2i, <b> 2i+1.
+        let opens: String = (0..N)
+            .map(|i| format!("<div><b>/{}</b>", 2 * i + 1))
+            .collect();
+        let closes: String = (0..N).rev().map(|i| format!("/{}</div>", 2 * i)).collect();
+        assert_eq!(output, opens + &closes);
+    }
+
+    #[test]
     fn empty_tag_name() {
         rewrite_element(b"<div>", UTF_8, "div", |el| {
             let err = el.set_tag_name("").unwrap_err();

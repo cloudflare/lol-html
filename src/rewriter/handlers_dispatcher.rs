@@ -25,6 +25,7 @@ struct HandlerVecItem<H> {
 
 struct HandlerVec<H> {
     items: Vec<HandlerVecItem<H>>,
+    /// Sum of the items' `user_count`s.
     user_count: u32,
 }
 
@@ -114,13 +115,25 @@ impl<H> HandlerVec<H> {
         &mut self,
         mut cb: impl FnMut(H) -> HandlerResult,
     ) -> HandlerResult {
-        // already-handled end tag handlers may be first, and they must not be removed
-        if let Some(first) = self.items.iter().position(|item| item.user_count > 0) {
+        if !self.has_active() {
+            return Ok(());
+        }
+
+        // Keep the inactive prefix (open elements). Counting user_count down from the back stops
+        // at the first active item, so the prefix isn't rescanned on every end tag.
+        let mut remaining = self.user_count;
+        let first = self.items.iter().rposition(|item| {
+            remaining -= item.user_count;
+            remaining == 0
+        });
+
+        if let Some(first) = first {
+            // Every user is in the tail, which is drained even if cb errs or panics.
+            self.user_count = 0;
             // Must drop everything after, as remove() would change indexes anyway, breaking locators.
             // rev() is for backwards-compat with previous implementation.
             for item in self.items.drain(first..).rev() {
                 if item.user_count > 0 {
-                    self.user_count -= item.user_count;
                     cb(item.handler)?;
                 }
             }
@@ -337,4 +350,124 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
 #[test]
 fn locator_size() {
     assert!(size_of::<SelectorHandlersLocator>() <= 12);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn locator(idx: usize) -> Locator {
+        Locator::new(u32::try_from(idx + 1).unwrap()).unwrap()
+    }
+
+    /// Removes the active tail, asserting it matches the previous full scan; returns the calls.
+    fn remove_tail(v: &mut HandlerVec<usize>) -> Vec<usize> {
+        let first = v.items.iter().position(|item| item.user_count > 0);
+        let first = first.unwrap_or(v.items.len());
+        let expected: Vec<_> = v.items[first..]
+            .iter()
+            .rev()
+            .filter(|item| item.user_count > 0)
+            .map(|item| item.handler)
+            .collect();
+
+        let mut called = Vec::new();
+        v.do_for_each_active_and_remove_tail(|h| {
+            called.push(h);
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(called, expected);
+        assert_eq!(v.items.len(), first);
+        assert_eq!(v.user_count, 0);
+        called
+    }
+
+    /// Handler `idx` gets `counts[idx]` users.
+    fn handler_vec(counts: &[u32]) -> HandlerVec<usize> {
+        let mut v = HandlerVec::default();
+        for (idx, &count) in counts.iter().enumerate() {
+            v.push(idx, false);
+            for _ in 0..count {
+                v.inc_user_count(locator(idx));
+            }
+        }
+        v
+    }
+
+    #[test]
+    fn remove_tail_edge_cases() {
+        // (user count per item, handlers called, items kept)
+        let cases: [(&[u32], &[usize], usize); 5] = [
+            (&[], &[], 0),
+            (&[0, 0, 0], &[], 3),
+            (&[1, 1, 1], &[2, 1, 0], 0),
+            (&[0, 0, 3], &[2], 2),
+            // inactive items between active ones are dropped uncalled, as before
+            (&[0, 1, 0, 2, 0], &[3, 1], 1),
+        ];
+        for (counts, called, kept) in cases {
+            let mut v = handler_vec(counts);
+            assert_eq!(remove_tail(&mut v), called);
+            assert_eq!(v.items.len(), kept);
+        }
+    }
+
+    #[test]
+    fn remove_tail_early_exit_keeps_count_exact() {
+        for panics in [false, true] {
+            let mut v = handler_vec(&[0, 1, 0, 2, 0]);
+            let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                v.do_for_each_active_and_remove_tail(|_| {
+                    if panics {
+                        panic!("handler panic");
+                    }
+                    Err("handler error".into())
+                })
+            }));
+            assert!(!matches!(res, Ok(Ok(()))));
+            assert_eq!(v.items.len(), 1);
+            assert_eq!(v.user_count, 0);
+
+            // The kept item still dispatches once its element closes.
+            v.inc_user_count(locator(0));
+            assert_eq!(remove_tail(&mut v), [0]);
+        }
+    }
+
+    #[test]
+    fn remove_tail_random_ops() {
+        // xorshift64, so a failure reproduces
+        let mut state = 1u64;
+        let mut rand = |n: usize| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            (state % n as u64) as usize
+        };
+        let mut next_id = 0;
+        for _ in 0..1000 {
+            let mut v = HandlerVec::default();
+            for _ in 0..300 {
+                let len = v.items.len();
+                match rand(10) {
+                    0..=3 => {
+                        v.push(next_id, rand(8) == 0);
+                        next_id += 1;
+                    }
+                    4..=5 if len > 0 => v.inc_user_count(locator(rand(len))),
+                    6 if len > 0 => {
+                        let idx = rand(len);
+                        if v.items[idx].user_count > 0 {
+                            v.dec_user_count(locator(idx));
+                        }
+                    }
+                    7 => v.do_for_each_active_and_deactivate(|_| Ok(())).unwrap(),
+                    _ => {
+                        remove_tail(&mut v);
+                    }
+                }
+            }
+        }
+    }
 }
