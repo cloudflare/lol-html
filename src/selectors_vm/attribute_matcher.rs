@@ -126,9 +126,10 @@ impl<'i> AttributeMatcher<'i> {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
-            actual_value
-                .split(|&b| is_attr_whitespace(b))
-                .any(|part| case_sensitivity.eq(part, &operand.value))
+            !operand.value.is_empty()
+                && actual_value
+                    .split(|&b| is_attr_whitespace(b))
+                    .any(|part| case_sensitivity.eq(part, &operand.value))
         })
     }
 
@@ -139,7 +140,7 @@ impl<'i> AttributeMatcher<'i> {
 
             let prefix_len = operand.value.len();
 
-            !actual_value.is_empty()
+            !operand.value.is_empty()
                 && actual_value.len() >= prefix_len
                 && actual_value
                     .get(..prefix_len)
@@ -173,7 +174,7 @@ impl<'i> AttributeMatcher<'i> {
             let suffix_len = operand.value.len();
             let value_len = actual_value.len();
 
-            !actual_value.is_empty()
+            !operand.value.is_empty()
                 && value_len >= suffix_len
                 && actual_value
                     .get(value_len - suffix_len..)
