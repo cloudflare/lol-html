@@ -1731,6 +1731,33 @@ mod compiler {
                 ],
             );
 
+            // NOTE: per the Selectors spec, `^=`, `$=`, `*=` and `~=` with an empty
+            // value represent nothing, whatever the attribute's value is.
+            for selector in [
+                r#"[foo^=""]"#,
+                r#"[foo^="" i]"#,
+                r#"[foo$=""]"#,
+                r#"[foo$="" i]"#,
+                r#"[foo*=""]"#,
+                r#"[foo*="" i]"#,
+                r#"[foo~=""]"#,
+                r#"[foo~="" i]"#,
+            ] {
+                assert_attr_expr_matches_and_negation_reverses_match(
+                    selector,
+                    encoding,
+                    &[
+                        ("<div foo='bar'>", false),
+                        ("<div foo=''>", false),
+                        ("<div foo>", false),
+                        ("<div foo=' bar'>", false),
+                        ("<div foo='bar '>", false),
+                        ("<div foo='bar  baz'>", false),
+                        ("<div bar=baz qux>", false),
+                    ],
+                );
+            }
+
             assert_attr_expr_matches_and_negation_reverses_match(
                 r#"[foo~="μbar3"]"#,
                 encoding,
