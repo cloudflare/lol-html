@@ -135,7 +135,7 @@ pub(crate) trait StateMachineActions {
     fn start_attr(&mut self, context: &mut Self::Context, input: &[u8]);
     fn finish_attr_name(&mut self, context: &mut Self::Context, input: &[u8]);
     fn finish_attr_value(&mut self, context: &mut Self::Context, input: &[u8]);
-    fn finish_attr(&mut self, context: &mut Self::Context, input: &[u8]);
+    fn finish_attr(&mut self, context: &mut Self::Context, input: &[u8]) -> ActionResult;
 
     fn set_closing_quote_to_double(&mut self, context: &mut Self::Context, input: &[u8]);
     fn set_closing_quote_to_single(&mut self, context: &mut Self::Context, input: &[u8]);

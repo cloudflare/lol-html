@@ -63,6 +63,10 @@ impl<T> LimitedVec<T> {
         self.vec.last_mut()
     }
 
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        self.vec.as_mut_slice()
+    }
+
     /// Creates a draining iterator that removes the specified range in the
     /// vector and yields the removed items.
     pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>

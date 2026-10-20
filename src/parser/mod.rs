@@ -16,6 +16,7 @@ pub(crate) use self::tag_scanner::TagHintSink;
 use self::tag_scanner::TagScanner;
 pub use self::tree_builder_simulator::ParsingAmbiguityError;
 use self::tree_builder_simulator::{TreeBuilderFeedback, TreeBuilderSimulator};
+use crate::memory::SharedMemoryLimiter;
 use crate::rewriter::RewritingError;
 use cfg_if::cfg_if;
 
@@ -31,6 +32,7 @@ pub(crate) enum ParserDirective {
 
 pub(crate) struct ParserContext<S> {
     output_sink: S,
+    memory_limiter: SharedMemoryLimiter,
     tree_builder_simulator: TreeBuilderSimulator,
     /// Amount of bytes consumed by previous calls to `parse()`,
     /// i.e. number of bytes from the start of the document until the start of the current input slice
@@ -52,9 +54,15 @@ pub struct Parser<S> {
 impl<S: ParserOutputSink> Parser<S> {
     #[must_use]
     #[inline(never)]
-    pub fn new(output_sink: S, initial_directive: ParserDirective, strict: bool) -> Self {
+    pub fn new(
+        output_sink: S,
+        initial_directive: ParserDirective,
+        strict: bool,
+        memory_limiter: SharedMemoryLimiter,
+    ) -> Self {
         let context = ParserContext {
             output_sink,
+            memory_limiter,
             previously_consumed_byte_count: 0,
             tree_builder_simulator: TreeBuilderSimulator::new(strict),
         };
@@ -146,5 +154,56 @@ cfg_if! {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::html::{LocalName, Namespace};
+
+    struct Sink;
+
+    impl LexemeSink for Sink {
+        fn handle_tag(&mut self, _: &TagLexeme<'_>) -> ActionResult<ParserDirective> {
+            Ok(ParserDirective::Lex)
+        }
+
+        fn handle_non_tag_content(&mut self, _: &NonTagContentLexeme<'_>) -> ActionResult {
+            Ok(())
+        }
+    }
+
+    impl TagHintSink for Sink {
+        fn handle_start_tag_hint(
+            &mut self,
+            _: LocalName<'_>,
+            _: Namespace,
+        ) -> Result<ParserDirective, RewritingError> {
+            Ok(ParserDirective::Lex)
+        }
+
+        fn handle_end_tag_hint(
+            &mut self,
+            _: LocalName<'_>,
+        ) -> Result<ParserDirective, RewritingError> {
+            Ok(ParserDirective::Lex)
+        }
+    }
+
+    impl ParserOutputSink for Sink {}
+
+    #[test]
+    fn attribute_charge_is_released_on_emission_and_drop() {
+        let limiter = SharedMemoryLimiter::new(4096);
+        let mut parser = Parser::new(Sink, ParserDirective::Lex, false, limiter.clone());
+        parser.parse(b"<div a b", false).unwrap();
+        assert!(limiter.current_usage() > 0);
+        parser.parse(b"<div a b>", false).unwrap();
+        assert_eq!(limiter.current_usage(), 0);
+        parser.parse(b"<div a b", false).unwrap();
+        assert!(limiter.current_usage() > 0);
+        drop(parser);
+        assert_eq!(limiter.current_usage(), 0);
     }
 }
