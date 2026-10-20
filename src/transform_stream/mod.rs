@@ -64,11 +64,16 @@ where
         );
 
         let buffer = Arena::new(
-            settings.memory_limiter,
+            settings.memory_limiter.clone(),
             settings.preallocated_parsing_buffer_size,
         );
 
-        let parser = Parser::new(dispatcher, initial_parser_directive, settings.strict);
+        let parser = Parser::new(
+            dispatcher,
+            initial_parser_directive,
+            settings.strict,
+            settings.memory_limiter,
+        );
 
         Self {
             parser,

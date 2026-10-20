@@ -88,7 +88,8 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
         emit_current_token,
         emit_current_token_and_eof,
         emit_raw_without_token,
-        emit_raw_without_token_and_eof
+        emit_raw_without_token_and_eof,
+        finish_attr
     );
 
     noop_action!(
@@ -103,8 +104,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
         mark_as_self_closing,
         start_attr,
         finish_attr_name,
-        finish_attr_value,
-        finish_attr
+        finish_attr_value
     );
 
     #[inline]
