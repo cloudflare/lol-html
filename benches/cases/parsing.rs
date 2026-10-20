@@ -22,3 +22,29 @@ define_group!(
         )
     ]
 );
+
+pub fn many_attributes(c: &mut Criterion) {
+    let input = format!("<div{}>body</div>", " a".repeat(65536));
+    let mut group = c.benchmark_group("Many attributes");
+    group.throughput(Throughput::Bytes(input.len() as u64));
+    for chunk_size in [512, 4096, 65536] {
+        group.bench_with_input(
+            BenchmarkId::from_parameter(chunk_size),
+            &chunk_size,
+            |b, &chunk_size| {
+                b.iter(|| {
+                    let settings =
+                        Settings::new().append_element_content_handler(element!("div", |_| Ok(())));
+                    let mut rewriter = HtmlRewriter::new(settings, |bytes: &[u8]| {
+                        std::hint::black_box(bytes);
+                    });
+                    for chunk in input.as_bytes().chunks(chunk_size) {
+                        rewriter.write(chunk).unwrap();
+                    }
+                    rewriter.end().unwrap();
+                });
+            },
+        );
+    }
+    group.finish();
+}
