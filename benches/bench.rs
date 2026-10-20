@@ -98,6 +98,7 @@ mod cases;
 criterion_group!(
     benches,
     cases::parsing::group,
+    cases::parsing::many_attributes,
     cases::rewriting::group,
     cases::selector_matching::group
 );

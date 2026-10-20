@@ -191,6 +191,10 @@ impl<S: LexemeSink> StateMachine for Lexer<S> {
     }
 
     fn adjust_for_next_input(&mut self) {
+        if self.lexeme_start == 0 {
+            return;
+        }
+
         self.token_part_start.align(self.lexeme_start);
         self.current_tag_token.align(self.lexeme_start);
         self.current_non_tag_content_token.align(self.lexeme_start);
