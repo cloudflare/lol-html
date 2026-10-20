@@ -7,6 +7,7 @@ mod lexeme;
 pub(crate) use self::lexeme::*;
 use crate::base::{Align, Bytes, Range};
 use crate::html::{LocalNameHash, Namespace, TextType};
+use crate::memory::LimitedVec;
 use crate::parser::state_machine::{ActionResult, FeedbackDirective, StateMachine, StateResult};
 use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback};
 
@@ -17,7 +18,7 @@ pub(crate) trait LexemeSink {
 
 pub(crate) type State<S> = fn(&mut Lexer<S>, context: &mut ParserContext<S>, &[u8]) -> StateResult;
 
-pub(crate) type AttributeBuffer = Vec<AttributeOutline>;
+pub(crate) type AttributeBuffer = LimitedVec<AttributeOutline>;
 
 pub(crate) struct Lexer<S> {
     next_pos: usize,

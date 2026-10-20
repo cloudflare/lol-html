@@ -1,6 +1,7 @@
 use super::*;
 use crate::parser::ActionError;
 use crate::parser::state_machine::StateMachineActions;
+use crate::rewriter::RewritingError;
 
 use NonTagContentTokenOutline::*;
 use TagTokenOutline::{EndTag, StartTag};
@@ -165,12 +166,12 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn create_start_tag(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
+    fn create_start_tag(&mut self, context: &mut ParserContext<S>, _input: &[u8]) {
         self.current_tag_token = Some(StartTag {
             name: Range::default(),
             name_hash: LocalNameHash::new(),
             ns: Namespace::default(),
-            attributes: Vec::new(),
+            attributes: AttributeBuffer::new(context.memory_limiter.clone()),
             self_closing: false,
         });
     }
@@ -332,12 +333,15 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
     }
 
     #[inline]
-    fn finish_attr(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) {
+    fn finish_attr(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) -> ActionResult {
         if let Some(attr) = self.current_attr.take() {
             if let Some(StartTag { attributes, .. }) = self.current_tag_token.as_mut() {
-                attributes.push(attr);
+                attributes
+                    .push(attr)
+                    .map_err(RewritingError::MemoryLimitExceeded)?;
             }
         }
+        Ok(())
     }
 
     noop_action!(mark_tag_start, unmark_tag_start);
