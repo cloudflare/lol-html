@@ -144,6 +144,8 @@ impl Serialize for &Attribute<'_> {
     fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
         if let Some(raw) = self.raw.as_ref() {
             output_handler(raw);
+        } else if self.value.is_empty() {
+            output_handler(&self.name);
         } else {
             output_handler(&self.name);
             output_handler(b"=\"");
