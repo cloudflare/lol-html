@@ -96,7 +96,8 @@ pub fn parse(
 
     let mut output = Output::new(encoding.into());
     let transform_controller = TestTransformController::new(token_handler, capture_flags);
-    let memory_limiter = SharedMemoryLimiter::new(2048);
+    // Token conformance needs room for both raw input and attribute outlines.
+    let memory_limiter = SharedMemoryLimiter::new(64 * 1024);
 
     let mut transform_stream = TransformStream::new(TransformStreamSettings {
         transform_controller,

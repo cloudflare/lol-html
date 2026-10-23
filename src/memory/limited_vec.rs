@@ -32,13 +32,16 @@ impl<T> LimitedVec<T> {
             let additional_bytes = additional
                 .checked_mul(size_of::<T>())
                 .ok_or(MemoryLimitExceededError)?;
-            self.limiter.increase_usage(additional_bytes)?;
+            if let Err(err) = self.limiter.increase_usage(additional_bytes) {
+                self.limiter.decrease_usage(additional_bytes);
+                return Err(err);
+            }
 
             // exact to reserve what has been accounted for.
-            // not bothering with decrease_usage on real OOM, since the library won't recover anyway
-            self.vec
-                .try_reserve_exact(additional)
-                .map_err(|_| MemoryLimitExceededError)?;
+            if self.vec.try_reserve_exact(additional).is_err() {
+                self.limiter.decrease_usage(additional_bytes);
+                return Err(MemoryLimitExceededError);
+            }
             debug_assert_eq!(new_capacity, self.vec.capacity());
             self.vec.push(element);
         }
@@ -61,6 +64,10 @@ impl<T> LimitedVec<T> {
     #[inline]
     pub fn last_mut(&mut self) -> Option<&mut T> {
         self.vec.last_mut()
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        self.vec.as_mut_slice()
     }
 
     /// Creates a draining iterator that removes the specified range in the
@@ -99,8 +106,10 @@ impl<T> Index<usize> for LimitedVec<T> {
 
 impl<T> Drop for LimitedVec<T> {
     fn drop(&mut self) {
-        self.limiter
-            .decrease_usage(size_of::<T>() * self.vec.capacity());
+        if self.vec.capacity() != 0 {
+            self.limiter
+                .decrease_usage(size_of::<T>() * self.vec.capacity());
+        }
     }
 }
 
@@ -206,5 +215,22 @@ mod tests {
 
         let (_, limiter) = test_ty::<[u128; 32]>();
         assert_eq!(limiter.current_usage(), 0);
+    }
+
+    #[test]
+    fn failed_growth_releases_its_charge() {
+        let limiter = SharedMemoryLimiter::new(128);
+        let mut vec = LimitedVec::<u8>::new(limiter.clone());
+        for _ in 0..128 {
+            vec.push(0).unwrap();
+        }
+        assert!(vec.push(0).is_err());
+        assert_eq!(limiter.current_usage(), 128);
+        drop(vec);
+        assert_eq!(limiter.current_usage(), 0);
+
+        let mut vec = LimitedVec::<u8>::new(limiter.clone());
+        vec.push(0).unwrap();
+        assert_eq!(limiter.current_usage(), 128);
     }
 }
