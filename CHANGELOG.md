@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.0.2
+
+- Improved performance of parsing tags with many attributes split across many input chunks.
+
 ## v3.0.1
 
 - Improved performance of selector matching on deeply nested elements and on stray end tags.
