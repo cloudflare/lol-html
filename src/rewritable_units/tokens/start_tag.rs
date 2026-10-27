@@ -1,5 +1,5 @@
 use super::{Attribute, AttributeNameError, Attributes};
-use super::{Mutations, Serialize, Token};
+use super::{Mutations, Token};
 use crate::base::SourceLocation;
 use crate::base::SpannedRawBytes;
 use crate::base::{Bytes, BytesCow};
@@ -244,7 +244,7 @@ impl<'input_token> StartTag<'input_token> {
         output_handler(&self.name);
 
         if !self.attributes.is_empty() {
-            self.attributes.into_bytes(output_handler)?;
+            self.attributes.into_bytes(output_handler, self.ns == Namespace::Html)?;
 
             // NOTE: attributes can be modified the way that
             // last attribute has an unquoted value. We always

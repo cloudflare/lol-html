@@ -2,7 +2,6 @@ use crate::base::{Bytes, BytesCow, SourceLocation, eq_case_insensitive};
 use crate::errors::RewritingError;
 use crate::html::escape_double_quotes_only;
 use crate::parser::AttributeBuffer;
-use crate::rewritable_units::Serialize;
 use encoding_rs::Encoding;
 use std::cell::OnceCell;
 use std::fmt::{self, Debug};
@@ -137,18 +136,18 @@ impl<'i> Attribute<'i> {
         self.raw = None;
         self.name_value_start = None;
     }
-}
 
-impl Serialize for &Attribute<'_> {
     #[inline]
-    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    fn into_bytes(&self, output_handler: &mut dyn FnMut(&[u8]), allow_empty_attr_shorthand: bool) -> Result<(), RewritingError> {
         if let Some(raw) = self.raw.as_ref() {
             output_handler(raw);
         } else {
             output_handler(&self.name);
-            output_handler(b"=\"");
-            escape_double_quotes_only(self.value.as_ref(), output_handler);
-            output_handler(b"\"");
+            if !allow_empty_attr_shorthand || !self.value.is_empty() {
+                output_handler(b"=\"");
+                escape_double_quotes_only(self.value.as_ref(), output_handler);
+                output_handler(b"\"");
+            }
         }
         Ok(())
     }
@@ -316,14 +315,12 @@ impl<'i> Attributes<'i> {
     pub(crate) const fn raw_attributes(&self) -> (&'i Bytes<'i>, &'i AttributeBuffer) {
         (self.input, self.attribute_buffer)
     }
-}
 
-impl Serialize for &mut Attributes<'_> {
     #[inline]
-    fn into_bytes(self, output_handler: &mut dyn FnMut(&[u8])) -> Result<(), RewritingError> {
+    pub(crate) fn into_bytes(&mut self, output_handler: &mut dyn FnMut(&[u8]), allow_empty_attr_shorthand: bool) -> Result<(), RewritingError> {
         for attr in self.as_mut_vec() {
             output_handler(b" ");
-            attr.into_bytes(output_handler)?;
+            attr.into_bytes(output_handler, allow_empty_attr_shorthand)?;
         }
         Ok(())
     }
