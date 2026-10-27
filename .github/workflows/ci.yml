@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 env:
   RUSTFLAGS: -Dwarnings
   RUST_BACKTRACE: 1
