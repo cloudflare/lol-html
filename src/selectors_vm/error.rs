@@ -59,34 +59,35 @@ pub enum SelectorError {
     UnsupportedSyntax,
 }
 
-impl From<SelectorParseError<'_>> for SelectorError {
+impl From<SelectorParseError> for SelectorError {
     #[cold]
-    fn from(err: SelectorParseError<'_>) -> Self {
+    fn from(err: SelectorParseError) -> Self {
         // NOTE: always use explicit variants in this match, so we
         // get compile-time error if new error types were added to
         // the parser.
         #[deny(clippy::wildcard_enum_match_arm)]
         match err.kind {
             ParseErrorKind::Basic(err) => match err {
-                BasicParseErrorKind::UnexpectedToken(_) => Self::UnexpectedToken,
+                BasicParseErrorKind::UnexpectedToken => Self::UnexpectedToken,
                 BasicParseErrorKind::EndOfInput => Self::UnexpectedEnd,
                 BasicParseErrorKind::AtRuleBodyInvalid
-                | BasicParseErrorKind::AtRuleInvalid(_)
-                | BasicParseErrorKind::QualifiedRuleInvalid => Self::UnsupportedSyntax,
+                | BasicParseErrorKind::AtRuleInvalid
+                | BasicParseErrorKind::QualifiedRuleInvalid
+                | BasicParseErrorKind::TooManyNestedBlocks => Self::UnsupportedSyntax,
             },
             ParseErrorKind::Custom(err) => match err {
-                SelectorParseErrorKind::NoQualifiedNameInAttributeSelector(_) => {
+                SelectorParseErrorKind::NoQualifiedNameInAttributeSelector => {
                     Self::MissingAttributeName
                 }
                 SelectorParseErrorKind::EmptySelector => Self::EmptySelector,
                 SelectorParseErrorKind::DanglingCombinator => Self::DanglingCombinator,
-                SelectorParseErrorKind::UnsupportedPseudoClassOrElement(_)
+                SelectorParseErrorKind::UnsupportedPseudoClassOrElement
                 | SelectorParseErrorKind::InvalidPseudoElementInsideWhere
                 | SelectorParseErrorKind::NonPseudoElementAfterSlotted
                 | SelectorParseErrorKind::InvalidPseudoElementAfterSlotted
-                | SelectorParseErrorKind::PseudoElementExpectedColon(_)
-                | SelectorParseErrorKind::PseudoElementExpectedIdent(_)
-                | SelectorParseErrorKind::NoIdentForPseudo(_)
+                | SelectorParseErrorKind::PseudoElementExpectedColon
+                | SelectorParseErrorKind::PseudoElementExpectedIdent
+                | SelectorParseErrorKind::NoIdentForPseudo
                 // NOTE: according to the parser code this error occurs only during
                 // the parsing of vendor-specific pseudo-classes.
                 | SelectorParseErrorKind::NonCompoundSelector => {
@@ -94,21 +95,19 @@ impl From<SelectorParseError<'_>> for SelectorError {
                 }
                 // NOTE: there are currently no cases in the parser code
                 // that trigger this error.
-                SelectorParseErrorKind::UnexpectedIdent(_) => {
+                SelectorParseErrorKind::UnexpectedIdent => {
                     debug_assert!(false);
                     Self::UnsupportedSyntax
-                },
-                SelectorParseErrorKind::ExpectedNamespace(_) => Self::NamespacedSelector,
-                SelectorParseErrorKind::ExplicitNamespaceUnexpectedToken(_) => {
-                    Self::UnexpectedToken
                 }
-                SelectorParseErrorKind::UnexpectedTokenInAttributeSelector(_)
-                | SelectorParseErrorKind::ExpectedBarInAttr(_)
-                | SelectorParseErrorKind::BadValueInAttr(_)
-                | SelectorParseErrorKind::InvalidQualNameInAttr(_) => {
+                SelectorParseErrorKind::ExpectedNamespace => Self::NamespacedSelector,
+                SelectorParseErrorKind::ExplicitNamespaceUnexpectedToken => Self::UnexpectedToken,
+                SelectorParseErrorKind::UnexpectedTokenInAttributeSelector
+                | SelectorParseErrorKind::ExpectedBarInAttr
+                | SelectorParseErrorKind::BadValueInAttr
+                | SelectorParseErrorKind::InvalidQualNameInAttr => {
                     Self::UnexpectedTokenInAttribute
                 }
-                SelectorParseErrorKind::ClassNeedsIdent(_) => Self::InvalidClassName,
+                SelectorParseErrorKind::ClassNeedsIdent => Self::InvalidClassName,
                 SelectorParseErrorKind::InvalidState => {
                     debug_assert!(false, "invalid state");
                     Self::UnsupportedSyntax
