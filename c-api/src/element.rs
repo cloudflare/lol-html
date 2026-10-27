@@ -56,6 +56,7 @@ pub unsafe extern "C" fn lol_html_element_namespace_uri_get(
 ///
 /// WARNING: The iterator is valid only during the handler execution and
 /// should never be leaked outside of it.
+/// The `Element` must not be mutated during `Iter`'s lifetime.
 ///
 /// Use `lol_html_attributes_iterator_free` function to deallocate
 /// returned iterator.
@@ -74,6 +75,7 @@ pub unsafe extern "C" fn lol_html_attributes_iterator_get<'r, 't>(
 //
 // WARNING: Returned attribute is valid only during the handler
 // execution and should never be leaked outside of it.
+// The `Element` must not be mutated during `Iter`'s lifetime.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lol_html_attributes_iterator_next<'t>(
     iterator: *mut Iter<'_, Attribute<'t>>,
