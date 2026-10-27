@@ -1,6 +1,6 @@
 use super::SelectorError;
 use crate::html::Namespace;
-use cssparser::{Parser as CssParser, ParserInput, ToCss};
+use cssparser::{Parser as CssParser, ToCss};
 use selectors::parser::{
     Combinator, Component, NonTSPseudoClass, Parser, PseudoElement, SelectorImpl, SelectorList,
     SelectorParseErrorKind,
@@ -83,16 +83,12 @@ impl ToCss for PseudoElementStub {
     }
 }
 
-impl PseudoElement for PseudoElementStub {
-    type Impl = SelectorImplDescriptor;
-}
+impl PseudoElement for PseudoElementStub {}
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub(crate) enum NonTSPseudoClassStub {}
 
 impl NonTSPseudoClass for NonTSPseudoClassStub {
-    type Impl = SelectorImplDescriptor;
-
     fn is_active_or_hover(&self) -> bool {
         #[allow(clippy::uninhabited_references)]
         match *self {}
@@ -217,8 +213,7 @@ impl SelectorsParser {
 
     #[inline]
     pub fn parse(selector: &str) -> Result<SelectorList<SelectorImplDescriptor>, SelectorError> {
-        let mut input = ParserInput::new(selector);
-        let mut css_parser = CssParser::new(&mut input);
+        let mut css_parser = CssParser::new(selector);
 
         SelectorList::parse(&Self, &mut css_parser, ParseRelative::No)
             .map_err(SelectorError::from)
@@ -228,7 +223,7 @@ impl SelectorsParser {
 
 impl<'i> Parser<'i> for SelectorsParser {
     type Impl = SelectorImplDescriptor;
-    type Error = SelectorParseErrorKind<'i>;
+    type Error = SelectorParseErrorKind;
 
     fn parse_nth_child_of(&self) -> bool {
         false
