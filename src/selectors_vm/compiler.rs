@@ -150,6 +150,16 @@ impl Compilable for Expr<OnAttributesExpr> {
             OnAttributesExpr::AttributeExists(name) => compile_literal(encoding, name)
                 .map(|name| Self::compile_expr(neg, move |_, m| m.has_attribute(&name))),
 
+            // per the Selectors spec, `^=`, `$=`, `*=` and `~=` with an empty value represent nothing, whatever the attribute's value is.
+            OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
+                value,
+                operator:
+                    AttrSelectorOperator::Includes
+                    | AttrSelectorOperator::Prefix
+                    | AttrSelectorOperator::Suffix
+                    | AttrSelectorOperator::Substring,
+                ..
+            }) if value.is_empty() => Ok(Self::compile_expr(neg, |_, _| false)),
             OnAttributesExpr::AttributeComparisonExpr(AttributeComparisonExpr {
                 name,
                 value,

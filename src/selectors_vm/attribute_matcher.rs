@@ -121,18 +121,19 @@ impl<'i> AttributeMatcher<'i> {
         })
     }
 
+    // empty operand.value is already filtered out by the compiler
     #[inline]
     pub fn matches_splitted_by_whitespace(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
             let case_sensitivity = to_unconditional(operand.case_sensitivity, self.is_html_element);
 
-            !operand.value.is_empty()
-                && actual_value
-                    .split(|&b| is_attr_whitespace(b))
-                    .any(|part| case_sensitivity.eq(part, &operand.value))
+            actual_value
+                .split(|&b| is_attr_whitespace(b))
+                .any(|part| case_sensitivity.eq(part, &operand.value))
         })
     }
 
+    // empty operand.value is already filtered out by the compiler
     #[inline]
     pub fn has_attr_with_prefix(&self, operand: &AttrExprOperands) -> bool {
         self.value_matches(&operand.name, |actual_value| {
@@ -140,8 +141,7 @@ impl<'i> AttributeMatcher<'i> {
 
             let prefix_len = operand.value.len();
 
-            !operand.value.is_empty()
-                && actual_value.len() >= prefix_len
+            actual_value.len() >= prefix_len
                 && actual_value
                     .get(..prefix_len)
                     .is_some_and(|prefix| case_sensitivity.eq(prefix, &operand.value))
@@ -174,11 +174,10 @@ impl<'i> AttributeMatcher<'i> {
             let suffix_len = operand.value.len();
             let value_len = actual_value.len();
 
-            !operand.value.is_empty()
-                && value_len >= suffix_len
+            value_len >= suffix_len
                 && actual_value
                     .get(value_len - suffix_len..)
-                    .is_some_and(|prefix| case_sensitivity.eq(prefix, &operand.value))
+                    .is_some_and(|suffix| case_sensitivity.eq(suffix, &operand.value))
         })
     }
 
