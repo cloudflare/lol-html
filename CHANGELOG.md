@@ -1,13 +1,17 @@
 # Changelog
 
-## Unreleased
+## v3.0.3
 
+- Fixed value_source_location() for attributes without a value.
+- Fixed handling of never-matching empty attr selectors: `[att^=""]`, `[att$=""]`, `[att*=""]`
 - Fixed `Attribute::value_source_location()` returning a bogus span for attributes written
   without a value (e.g. `<div hidden>`): it now returns `None` for them. Previously it
   returned a zero-length span pointing at the start of the parser's current buffer — or
   `None`, depending on where the tag fell relative to a `write()` boundary — and in the
   `None` case `name_source_location()` was also absent. Attribute source locations no
   longer depend on how the input was chunked.
+- Made memory limit stricter for attributes.
+- Improved performance of deeply nested end tag handlers.
 
 ## v3.0.2
 
