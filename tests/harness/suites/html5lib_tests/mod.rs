@@ -25,6 +25,11 @@ pub struct Bailout {
 }
 
 #[derive(Deserialize, Clone, Debug)]
+pub struct TestError {
+    pub code: String,
+}
+
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TestCase {
     pub description: String,
@@ -32,6 +37,9 @@ pub struct TestCase {
 
     #[serde(rename = "output")]
     pub expected_tokens: Vec<TestToken>,
+
+    #[serde(default)]
+    pub errors: Vec<TestError>,
 
     #[serde(default = "default_initial_states")]
     pub initial_states: Vec<String>,
@@ -65,6 +73,7 @@ pub fn get_test_cases() -> Vec<TestCase> {
     let mut tests = Vec::default();
     let mut non_unescapable_count = 0;
     let mut with_unmappable_chars_count = 0;
+    let mut unsupported_processing_instruction_count = 0;
 
     #[derive(Deserialize)]
     struct Suite {
@@ -81,7 +90,22 @@ pub fn get_test_cases() -> Vec<TestCase> {
     let tests = tests
         .iter_mut()
         .filter_map(|t| {
-            if t.unescape().is_err() {
+            // lol-html's tokenizer follows the WHATWG HTML tokenizer and emits
+            // bogus comments for `<?...>` instead of processing instructions.
+            if t.expected_tokens
+                .iter()
+                .any(|token| matches!(token, TestToken::ProcessingInstruction { .. }))
+                || t.errors
+                    .iter()
+                    .any(|e| e.code.contains("processing-instruction"))
+            {
+                ignore!(@info "Ignoring test due to unsupported processing instruction tokens: `{}`",
+                    t.description);
+
+                unsupported_processing_instruction_count += 1;
+
+                None
+            } else if t.unescape().is_err() {
                 ignore!(@info "Ignoring test due to non-unescapable input: `{}`",
                     t.description);
 
@@ -135,7 +159,12 @@ pub fn get_test_cases() -> Vec<TestCase> {
             cases
         });
 
-    ignore!(@total "html5lib tests", non_unescapable_count + with_unmappable_chars_count);
+    ignore!(
+        @total "html5lib tests",
+        non_unescapable_count
+            + with_unmappable_chars_count
+            + unsupported_processing_instruction_count
+    );
 
     tests
 }
