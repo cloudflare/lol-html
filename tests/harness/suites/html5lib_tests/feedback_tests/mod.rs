@@ -54,6 +54,7 @@ pub fn get_test_cases() -> Vec<TestCase> {
                     .collect::<String>()
                     + " (with feedback)",
                 expected_tokens: expected_tokens::get(&input),
+                errors: Vec::new(),
                 input: input.into(),
                 initial_states: default_initial_states(),
                 double_escaped: false,

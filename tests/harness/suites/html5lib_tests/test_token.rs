@@ -14,6 +14,7 @@ enum TokenKind {
     Comment,
     StartTag,
     EndTag,
+    ProcessingInstruction,
     #[serde(rename = "DOCTYPE")]
     Doctype,
 }
@@ -33,6 +34,13 @@ pub enum TestToken {
 
     EndTag {
         name: String,
+    },
+
+    // NOTE: lol-html's tokenizer doesn't produce processing instructions, so
+    // test cases containing this variant are skipped by the test harness.
+    ProcessingInstruction {
+        target: String,
+        data: String,
     },
 
     Doctype {
@@ -109,6 +117,10 @@ impl<'de> Deserialize<'de> for TestToken {
                             value
                         },
                     },
+                    TokenKind::ProcessingInstruction => TestToken::ProcessingInstruction {
+                        target: next!("2 or 3"),
+                        data: seq.next_element()?.unwrap_or_default(),
+                    },
                     TokenKind::Doctype => TestToken::Doctype {
                         name: {
                             let mut value: Option<String> = next!("5");
@@ -138,6 +150,14 @@ impl Unescape for TestToken {
 
             Self::EndTag { ref mut name, .. } => {
                 name.unescape()?;
+            }
+
+            Self::ProcessingInstruction {
+                ref mut target,
+                ref mut data,
+            } => {
+                target.unescape()?;
+                data.unescape()?;
             }
 
             Self::StartTag {
