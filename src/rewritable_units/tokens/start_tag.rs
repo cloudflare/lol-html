@@ -18,6 +18,10 @@ pub struct StartTag<'input_token> {
     attributes: Attributes<'input_token>,
     ns: Namespace,
     self_closing: bool,
+    /// Serialize `</name>` right after this tag. Set when an HTML void
+    /// element is renamed to a name that is not void, so that nothing in the
+    /// input would otherwise close it.
+    emit_end_tag: bool,
     raw: SpannedRawBytes<'input_token>,
     pub(crate) mutations: Mutations,
 }
@@ -38,9 +42,15 @@ impl<'input_token> StartTag<'input_token> {
             attributes,
             ns,
             self_closing,
+            emit_end_tag: false,
             raw,
             mutations: Mutations::new(),
         })
+    }
+
+    #[inline]
+    pub(crate) const fn namespace(&self) -> Namespace {
+        self.ns
     }
 
     #[inline(always)]
@@ -156,6 +166,16 @@ impl<'input_token> StartTag<'input_token> {
         self.self_closing = has_slash;
     }
 
+    /// If true, `</name>` is serialized right after the tag (and before any
+    /// [`Self::after`] content), and the `/>` syntax is dropped.
+    pub(crate) fn set_emit_end_tag(&mut self, emit_end_tag: bool) {
+        self.emit_end_tag = emit_end_tag;
+        if emit_end_tag {
+            self.self_closing = false;
+        }
+        self.raw.set_modified();
+    }
+
     /// Inserts `content` before the start tag.
     ///
     /// Consequent calls to the method append `content` to the previously inserted content.
@@ -259,6 +279,12 @@ impl<'input_token> StartTag<'input_token> {
         if self.self_closing {
             output_handler(b"/>");
         } else {
+            output_handler(b">");
+        }
+
+        if self.emit_end_tag {
+            output_handler(b"</");
+            output_handler(&self.name);
             output_handler(b">");
         }
         Ok(())
