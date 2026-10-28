@@ -124,6 +124,9 @@ impl<S: TagHintSink> TagScanner<S> {
             }
             TreeBuilderFeedback::RequestLexeme(_) => Some(feedback),
             TreeBuilderFeedback::None => None,
+            TreeBuilderFeedback::DepthExceeded => {
+                return Err(ParsingAmbiguityError::depth_exceeded());
+            }
         })
     }
 
