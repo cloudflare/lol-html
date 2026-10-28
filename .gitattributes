@@ -3,3 +3,6 @@
 tests/data/** linguist-vendored
 benches/data/** linguist-vendored
 fuzz/corpus/** linguist-vendored
+
+# Keep the tree construction tests byte-for-byte: some of them contain CR characters.
+tests/data/tree-construction/*.dat -text diff
