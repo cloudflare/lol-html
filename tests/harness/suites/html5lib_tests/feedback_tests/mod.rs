@@ -64,7 +64,7 @@ pub fn get_test_cases() -> Vec<TestCase> {
         }));
     };
 
-    for_each_test_file("html5lib-tests/tree-construction/*.dat", &mut add_tests);
+    for_each_test_file("tree-construction/*.dat", &mut add_tests);
     for_each_test_file("regression/*.dat", &mut add_tests);
 
     tests
