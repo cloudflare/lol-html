@@ -1,6 +1,6 @@
 [package]
 name = "lol_html"
-version = "3.0.3"
+version = "3.0.4"
 authors = ["Ivan Nikulin <inikulin@cloudflare.com, ifaaan@gmail.com>"]
 license = "BSD-3-Clause"
 description = "Streaming HTML rewriter/parser with CSS selector-based API"
@@ -11,7 +11,7 @@ keywords = ["html", "css-selectors", "parser", "rewriter", "streaming"]
 readme = "README.md"
 include = ["/Cargo.toml", "/LICENSE", "/README.md", "/media", "/src"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.95"
 
 [lib]
 # Disable libtest to make sure criterion can parse the command line flags.
