@@ -466,11 +466,11 @@ where
             self.adjust_capture_flags_for_tag_lexeme(lexeme)?;
         }
 
-        if let TagTokenOutline::EndTag { .. } = lexeme.token_outline() {
-            if self.delegate.should_stop_removing_element_content() {
-                self.delegate.emission_enabled = true;
-                self.delegate.remaining_content_start = lexeme.raw_range().start;
-            }
+        if let TagTokenOutline::EndTag { .. } = lexeme.token_outline()
+            && self.delegate.should_stop_removing_element_content()
+        {
+            self.delegate.emission_enabled = true;
+            self.delegate.remaining_content_start = lexeme.raw_range().start;
         }
 
         self.try_produce_token_from_lexeme(lexeme)?;

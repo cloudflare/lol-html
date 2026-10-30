@@ -336,12 +336,12 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
 
     #[inline]
     fn finish_attr(&mut self, _context: &mut ParserContext<S>, _input: &[u8]) -> ActionResult {
-        if let Some(attr) = self.current_attr.take() {
-            if let Some(StartTag { attributes, .. }) = self.current_tag_token.as_mut() {
-                attributes
-                    .push(attr)
-                    .map_err(RewritingError::MemoryLimitExceeded)?;
-            }
+        if let Some(attr) = self.current_attr.take()
+            && let Some(StartTag { attributes, .. }) = self.current_tag_token.as_mut()
+        {
+            attributes
+                .push(attr)
+                .map_err(RewritingError::MemoryLimitExceeded)?;
         }
         Ok(())
     }

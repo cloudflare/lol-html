@@ -281,17 +281,17 @@ impl<'h, H: HandlerTypes> ContentHandlersDispatcher<'h, H> {
         self.element_handlers
             .do_for_each_active_and_deactivate(|h| h(&mut element))?;
 
-        if self.next_element_can_have_content {
-            if let Some(elem_desc) = current_element_data {
-                if element.should_remove_content() {
-                    elem_desc.remove_content = true;
-                    self.matched_elements_with_removed_content += 1;
-                }
+        if self.next_element_can_have_content
+            && let Some(elem_desc) = current_element_data
+        {
+            if element.should_remove_content() {
+                elem_desc.remove_content = true;
+                self.matched_elements_with_removed_content += 1;
+            }
 
-                debug_assert!(element.can_have_content());
-                if let Some(handler) = element.into_end_tag_handler() {
-                    elem_desc.end_tag_handler_idx = self.end_tag_handlers.push(handler, false);
-                }
+            debug_assert!(element.can_have_content());
+            if let Some(handler) = element.into_end_tag_handler() {
+                elem_desc.end_tag_handler_idx = self.end_tag_handlers.push(handler, false);
             }
         }
 
