@@ -408,14 +408,14 @@ where
         ptr: JumpPtr,
     ) {
         // NOTE: find pointed jumps instruction set and execute it with the offset.
-        if let Some(parent) = self.stack.items().last() {
-            if let Some(ptr_jumps) = parent.jumps.get(ptr.instr_set_idx) {
-                self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
+        if let Some(parent) = self.stack.items().last()
+            && let Some(ptr_jumps) = parent.jumps.get(ptr.instr_set_idx)
+        {
+            self.exec_instr_set_with_attrs(ptr_jumps, attr_matcher, ctx, ptr.offset);
 
-                // NOTE: execute remaining jumps instruction sets as usual.
-                for jumps in parent.jumps.iter().skip(ptr.instr_set_idx + 1) {
-                    self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
-                }
+            // NOTE: execute remaining jumps instruction sets as usual.
+            for jumps in parent.jumps.iter().skip(ptr.instr_set_idx + 1) {
+                self.exec_instr_set_with_attrs(jumps, attr_matcher, ctx, 0);
             }
         }
     }

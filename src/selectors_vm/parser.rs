@@ -221,7 +221,7 @@ impl SelectorsParser {
     }
 }
 
-impl<'i> Parser<'i> for SelectorsParser {
+impl Parser<'_> for SelectorsParser {
     type Impl = SelectorImplDescriptor;
     type Error = SelectorParseErrorKind;
 

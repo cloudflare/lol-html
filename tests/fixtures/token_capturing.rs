@@ -150,12 +150,12 @@ fn filter_tokens(tokens: &[TestToken], capture_flags: TokenCaptureFlags) -> Vec<
 
 fn fold_text_tokens(tokens: Vec<TestToken>) -> Vec<TestToken> {
     tokens.into_iter().fold(Vec::default(), |mut res, t| {
-        if let TestToken::Text(ref text) = t {
-            if let Some(TestToken::Text(last)) = res.last_mut() {
-                *last += text;
+        if let TestToken::Text(ref text) = t
+            && let Some(TestToken::Text(last)) = res.last_mut()
+        {
+            *last += text;
 
-                return res;
-            }
+            return res;
         }
 
         res.push(t);

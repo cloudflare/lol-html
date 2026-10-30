@@ -146,15 +146,15 @@ impl IncompleteUtf8Resync {
         if self.char_len > 0 {
             let mut must_emit_now = false;
             while let Some((&next_byte, rest)) = content.split_first() {
-                if is_continuation_byte(next_byte) {
-                    if let Some(buf) = self.char_bytes.get_mut(self.char_len as usize) {
-                        *buf = next_byte;
-                        self.char_len += 1;
-                        content = rest;
-                        continue;
-                    }
-                    // overlong sequences fall here, and will be checked when the char_bytes is flushed
+                if is_continuation_byte(next_byte)
+                    && let Some(buf) = self.char_bytes.get_mut(self.char_len as usize)
+                {
+                    *buf = next_byte;
+                    self.char_len += 1;
+                    content = rest;
+                    continue;
                 }
+                // overlong sequences fall here, and will be checked when the char_bytes is flushed
                 must_emit_now = true;
                 break;
             }

@@ -26,12 +26,10 @@ fn is_void_element(local_name: &LocalName<'_>, enable_esi_tags: bool) -> bool {
         return true;
     }
 
-    if enable_esi_tags {
-        if let LocalName::Bytes(bytes) = local_name {
-            // https://www.w3.org/TR/esi-lang/
-            if &**bytes == b"esi:include" || &**bytes == b"esi:comment" {
-                return true;
-            }
+    if enable_esi_tags && let LocalName::Bytes(bytes) = local_name {
+        // https://www.w3.org/TR/esi-lang/
+        if &**bytes == b"esi:include" || &**bytes == b"esi:comment" {
+            return true;
         }
     }
 
