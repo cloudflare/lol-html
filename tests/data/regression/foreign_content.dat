@@ -48,3 +48,27 @@
 #data
 <math><![CDATA[><foo>]]><annotation-xml encoding="appliCation/xhtml+xml"><a><![CDATA[><bar>]]></a></annotation-xml><![CDATA[><baz>]]></math>
 #
+
+#data
+<svg/><![CDATA[><foo>]]>
+#
+
+#data
+<math/><![CDATA[><foo>]]>
+#
+
+#data
+<svg><math><div><![CDATA[><foo>]]>
+#
+
+#data
+<svg><math><font color><![CDATA[><foo>]]>
+#
+
+#data
+<svg><math></p><![CDATA[><foo>]]>
+#
+
+#data
+<svg><desc><svg><div><![CDATA[><foo>]]></div></desc><![CDATA[><bar>]]></svg>
+#

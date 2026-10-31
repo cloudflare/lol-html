@@ -982,6 +982,41 @@ mod tests {
     }
 
     #[test]
+    fn cdata_after_leaving_foreign_content() {
+        for (input, expected) in [
+            (
+                "<div><script></script></div>",
+                r#"<div><script hit=""></script></div>"#,
+            ),
+            (
+                "<svg/><![CDATA[]><script></script>",
+                r#"<svg/><![CDATA[]><script hit=""></script>"#,
+            ),
+            (
+                "<math/><![CDATA[]><script></script>",
+                r#"<math/><![CDATA[]><script hit=""></script>"#,
+            ),
+            (
+                "<svg><math><div><![CDATA[]><script></script>",
+                r#"<svg><math><div><![CDATA[]><script hit=""></script>"#,
+            ),
+            (
+                "<svg><math><font color><![CDATA[]><script></script>",
+                r#"<svg><math><font color><![CDATA[]><script hit=""></script>"#,
+            ),
+            (
+                "<svg><math></p><![CDATA[]><script></script>",
+                r#"<svg><math></p><![CDATA[]><script hit=""></script>"#,
+            ),
+        ] {
+            let out = rewrite_element(input.as_bytes(), UTF_8, "script", |el| {
+                el.set_attribute("hit", "").unwrap();
+            });
+            assert_eq!(out, expected);
+        }
+    }
+
+    #[test]
     fn self_closing_script() {
         let out = rewrite_element(br"<svG><sCript/><img></script></svg>", UTF_8, "img", |el| {
             el.set_tag_name("HIT").unwrap();
