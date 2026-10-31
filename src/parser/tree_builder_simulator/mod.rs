@@ -61,6 +61,19 @@ macro_rules! expect_tag {
 }
 
 #[inline]
+fn enter_ns_unless_self_closing(ns: Namespace) -> TreeBuilderFeedback {
+    request_lexeme(move |this, lexeme| {
+        expect_tag!(lexeme, StartTag { self_closing, .. } => {
+            if self_closing {
+                TreeBuilderFeedback::None
+            } else {
+                this.enter_ns(ns)
+            }
+        })
+    })
+}
+
+#[inline]
 fn get_text_type_adjustment(tag_name: LocalNameHash) -> TreeBuilderFeedback {
     use TextType::*;
 
@@ -132,9 +145,9 @@ impl TreeBuilderSimulator {
         }
 
         Ok(if tag_name == Tag::Svg {
-            self.enter_ns(Namespace::Svg)
+            enter_ns_unless_self_closing(Namespace::Svg)
         } else if tag_name == Tag::Math {
-            self.enter_ns(Namespace::MathML)
+            enter_ns_unless_self_closing(Namespace::MathML)
         } else if self.current_ns != Namespace::Html {
             self.get_feedback_for_start_tag_in_foreign_content(tag_name)
         } else {
@@ -149,6 +162,9 @@ impl TreeBuilderSimulator {
 
         if self.current_ns == Namespace::Html {
             self.check_integration_point_exit(tag_name)
+        } else if tag_is_one_of!(tag_name, [P, Br]) {
+            // 13.2.6.5
+            self.leave_foreign_content()
         } else if self.should_leave_ns(tag_name) {
             self.leave_ns()
         } else {
@@ -157,19 +173,8 @@ impl TreeBuilderSimulator {
     }
 
     fn should_leave_ns(&self, tag_name: LocalNameHash) -> bool {
-        if self.current_ns == Namespace::Svg && tag_name == Tag::Svg
+        self.current_ns == Namespace::Svg && tag_name == Tag::Svg
             || self.current_ns == Namespace::MathML && tag_name == Tag::Math
-        {
-            return true;
-        }
-
-        if (self.current_ns == Namespace::Svg || self.current_ns == Namespace::MathML)
-            && tag_is_one_of!(tag_name, [P, Br])
-        {
-            // 13.2.6.5
-            return true;
-        }
-        false
     }
 
     #[inline]
@@ -198,6 +203,16 @@ impl TreeBuilderSimulator {
         self.current_ns = *item;
 
         TreeBuilderFeedback::SetAllowCdata(self.current_ns != Namespace::Html)
+    }
+
+    #[inline]
+    fn leave_foreign_content(&mut self) -> TreeBuilderFeedback {
+        while self.current_ns != Namespace::Html {
+            self.ns_stack.pop();
+            self.current_ns = self.ns_stack.last().copied().unwrap_or(Namespace::Html);
+        }
+
+        TreeBuilderFeedback::SetAllowCdata(false)
     }
 
     fn is_integration_point_enter(&self, tag_name: LocalNameHash) -> bool {
@@ -240,19 +255,11 @@ impl TreeBuilderSimulator {
         tag_name: LocalNameHash,
     ) -> TreeBuilderFeedback {
         if causes_foreign_content_exit(tag_name) {
-            return self.leave_ns();
+            return self.leave_foreign_content();
         }
 
         if self.is_integration_point_enter(tag_name) {
-            return request_lexeme(|this, lexeme| {
-                expect_tag!(lexeme, StartTag { self_closing, .. } => {
-                    if self_closing {
-                        TreeBuilderFeedback::None
-                    } else {
-                        this.enter_ns(Namespace::Html)
-                    }
-                })
-            });
+            return enter_ns_unless_self_closing(Namespace::Html);
         }
 
         if tag_name == Tag::Font {
@@ -267,7 +274,7 @@ impl TreeBuilderSimulator {
                             || eq_case_insensitive(&name, b"size")
                             || eq_case_insensitive(&name, b"face")
                         {
-                            return this.leave_ns();
+                            return this.leave_foreign_content();
                         }
                     }
                 });
