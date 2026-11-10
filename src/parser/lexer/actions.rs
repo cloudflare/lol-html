@@ -102,7 +102,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         } = lexeme.token_outline
         {
             self.last_start_tag_name_hash = name_hash;
-            *ns = context.tree_builder_simulator.current_ns();
+            *ns = context.tree_builder_simulator.take_element_namespace();
         }
 
         match self.emit_tag_lexeme(context, &lexeme)? {
