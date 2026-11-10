@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Fixed self-closing `<svg/>` and `<math/>` leaving subsequent HTML content in a foreign
+  parsing context, exposing markup inside HTML script/style text to handlers and hiding real
+  elements from filters.
+  See [GHSA-4mwc-7445-8xvx](https://github.com/cloudflare/lol-html/security/advisories/GHSA-4mwc-7445-8xvx).
+
 ## v3.0.3
 
 - Fixed value_source_location() for attributes without a value.

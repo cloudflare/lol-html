@@ -103,6 +103,7 @@ fn is_html_integration_point_in_svg(tag_name: LocalNameHash) -> bool {
 pub(crate) struct TreeBuilderSimulator {
     ns_stack: Vec<Namespace>,
     current_ns: Namespace,
+    element_namespace_override: Option<Namespace>,
     ambiguity_guard: AmbiguityGuard,
     strict: bool,
 }
@@ -114,6 +115,7 @@ impl TreeBuilderSimulator {
         let mut simulator = Self {
             ns_stack: Vec::with_capacity(DEFAULT_NS_STACK_CAPACITY),
             current_ns: Namespace::Html,
+            element_namespace_override: None,
             ambiguity_guard: AmbiguityGuard::default(),
             strict,
         };
@@ -132,9 +134,9 @@ impl TreeBuilderSimulator {
         }
 
         Ok(if tag_name == Tag::Svg {
-            self.enter_ns(Namespace::Svg)
+            self.enter_foreign_root(Namespace::Svg)
         } else if tag_name == Tag::Math {
-            self.enter_ns(Namespace::MathML)
+            self.enter_foreign_root(Namespace::MathML)
         } else if self.current_ns != Namespace::Html {
             self.get_feedback_for_start_tag_in_foreign_content(tag_name)
         } else {
@@ -175,6 +177,26 @@ impl TreeBuilderSimulator {
     #[inline]
     pub const fn current_ns(&self) -> Namespace {
         self.current_ns
+    }
+
+    #[inline]
+    pub fn take_element_namespace(&mut self) -> Namespace {
+        self.element_namespace_override
+            .take()
+            .unwrap_or(self.current_ns)
+    }
+
+    fn enter_foreign_root(&mut self, namespace: Namespace) -> TreeBuilderFeedback {
+        request_lexeme(move |this, lexeme| {
+            expect_tag!(lexeme, StartTag { self_closing, .. } => match self_closing {
+                true => {
+                    // The element is foreign even though it does not change the following context.
+                    this.element_namespace_override = Some(namespace);
+                    TreeBuilderFeedback::None
+                }
+                false => this.enter_ns(namespace),
+            })
+        })
     }
 
     #[inline]
