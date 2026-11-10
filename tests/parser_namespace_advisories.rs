@@ -431,3 +431,141 @@ fn test_parser_namespace_advisories_self_closing_without_element_handlers() {
         }
     }
 }
+
+/// HTML breakouts must clear every foreign frame left by the original nested-root examples.
+#[test]
+fn test_parser_namespace_advisories_foreign_breakouts() {
+    assert_report_cases(&[
+        AdvisoryCase::unchanged(
+            "B1",
+            r#"<svg><svg><div><script>var s = "<a href='x'>";</script>"#,
+            &[
+                ("svg", SVG_NAMESPACE),
+                ("svg", SVG_NAMESPACE),
+                ("div", HTML_NAMESPACE),
+                ("script", HTML_NAMESPACE),
+            ],
+        ),
+        AdvisoryCase::unchanged(
+            "B2",
+            r#"<svg><svg></p><script>var s = "<a href='x'>";</script>"#,
+            &[
+                ("svg", SVG_NAMESPACE),
+                ("svg", SVG_NAMESPACE),
+                ("script", HTML_NAMESPACE),
+            ],
+        ),
+        AdvisoryCase::unchanged(
+            "ctrl-B",
+            r#"<svg><div><script>var s = "<a href='x'>";</script>"#,
+            &[
+                ("svg", SVG_NAMESPACE),
+                ("div", HTML_NAMESPACE),
+                ("script", HTML_NAMESPACE),
+            ],
+        ),
+    ]);
+}
+
+/// Breakouts stop at integration points, while ordinary foreign ends and unqualified fonts do not.
+#[test]
+fn test_parser_namespace_advisories_foreign_breakout_controls() {
+    let mut cases = vec![
+        (
+            "<svg><svg></svg><g id=foreign></g></svg><p id=after></p>".to_owned(),
+            vec![("foreign", SVG_NAMESPACE), ("after", HTML_NAMESPACE)],
+        ),
+        (
+            concat!(
+                "<svg><svg><font id=foreign></font>",
+                "<g id=still-foreign></g></svg></svg><p id=after></p>"
+            )
+            .to_owned(),
+            vec![
+                ("foreign", SVG_NAMESPACE),
+                ("still-foreign", SVG_NAMESPACE),
+                ("after", HTML_NAMESPACE),
+            ],
+        ),
+        (
+            concat!(
+                "<svg><desc><svg><svg><div id=html></div>",
+                r#"<script id=script>var s = "<img id=phantom>";</script>"#,
+                "</desc><g id=foreign></g></svg><p id=after></p>"
+            )
+            .to_owned(),
+            vec![
+                ("html", HTML_NAMESPACE),
+                ("script", HTML_NAMESPACE),
+                ("foreign", SVG_NAMESPACE),
+                ("after", HTML_NAMESPACE),
+            ],
+        ),
+        (
+            concat!(
+                "<math><mtext><svg><svg><div id=html></div>",
+                r#"<script id=script>var s = "<img id=phantom>";</script>"#,
+                "</mtext><mrow id=foreign></mrow></math><p id=after></p>"
+            )
+            .to_owned(),
+            vec![
+                ("html", HTML_NAMESPACE),
+                ("script", HTML_NAMESPACE),
+                ("foreign", MATHML_NAMESPACE),
+                ("after", HTML_NAMESPACE),
+            ],
+        ),
+        (
+            "<svg><svg><div><![CDATA[><img id=real>]]>".to_owned(),
+            vec![("real", HTML_NAMESPACE)],
+        ),
+    ];
+
+    cases.extend(
+        ["div", "span", "font color", "font face='x'", "font size=3"]
+            .into_iter()
+            .map(|start| {
+                (
+                    format!(
+                        concat!(
+                            "<svg><svg><{} id=html>",
+                            r#"<script id=script>var s = "<img id=phantom>";</script>"#,
+                        ),
+                        start
+                    ),
+                    vec![("html", HTML_NAMESPACE), ("script", HTML_NAMESPACE)],
+                )
+            }),
+    );
+    cases.extend(["</p>", "</br>"].into_iter().map(|end| {
+        (
+            format!(r#"<math><math>{end}<script id=script>var s = "<img id=phantom>";</script>"#),
+            vec![("script", HTML_NAMESPACE)],
+        )
+    }));
+
+    for (input, expected) in cases {
+        let expected = expected
+            .into_iter()
+            .map(|(name, namespace)| (name.to_owned(), namespace.to_owned()))
+            .collect::<Vec<_>>();
+
+        for strict in [false, true] {
+            for capture_text in [false, true] {
+                for chunk_size in [1, 3, 7, input.len()] {
+                    assert_eq!(
+                        observe_ids(&input, strict, capture_text, chunk_size),
+                        expected,
+                        "foreign breakout boundaries must preserve the correct context: {input}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// The nested-foreign sanitizer example must expose the image after the HTML style element.
+#[test]
+fn test_parser_namespace_advisories_foreign_breakout_sanitizer() {
+    assert_sanitized_input("<svg><svg><div><style><!--</style><img src=x onerror=alert(1)>");
+}

@@ -152,7 +152,10 @@ impl TreeBuilderSimulator {
         if self.current_ns == Namespace::Html {
             self.check_integration_point_exit(tag_name)
         } else if self.should_leave_ns(tag_name) {
-            self.leave_ns()
+            match tag_is_one_of!(tag_name, [P, Br]) {
+                true => self.leave_foreign_content(),
+                false => self.leave_ns(),
+            }
         } else {
             TreeBuilderFeedback::None
         }
@@ -222,6 +225,15 @@ impl TreeBuilderSimulator {
         TreeBuilderFeedback::SetAllowCdata(self.current_ns != Namespace::Html)
     }
 
+    #[inline]
+    fn leave_foreign_content(&mut self) -> TreeBuilderFeedback {
+        while self.current_ns != Namespace::Html {
+            let _ = self.leave_ns();
+        }
+
+        TreeBuilderFeedback::SetAllowCdata(false)
+    }
+
     fn is_integration_point_enter(&self, tag_name: LocalNameHash) -> bool {
         self.current_ns == Namespace::Svg && is_html_integration_point_in_svg(tag_name)
             || self.current_ns == Namespace::MathML
@@ -262,7 +274,7 @@ impl TreeBuilderSimulator {
         tag_name: LocalNameHash,
     ) -> TreeBuilderFeedback {
         if causes_foreign_content_exit(tag_name) {
-            return self.leave_ns();
+            return self.leave_foreign_content();
         }
 
         if self.is_integration_point_enter(tag_name) {
@@ -289,7 +301,7 @@ impl TreeBuilderSimulator {
                             || eq_case_insensitive(&name, b"size")
                             || eq_case_insensitive(&name, b"face")
                         {
-                            return this.leave_ns();
+                            return this.leave_foreign_content();
                         }
                     }
                 });
