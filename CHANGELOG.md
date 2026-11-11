@@ -9,6 +9,13 @@
 - Fixed HTML breakouts from nested SVG/MathML content leaving stale foreign namespace frames,
   causing following HTML text elements to be interpreted as markup. Breakouts now stop at the
   nearest HTML or integration-point frame, without changing ordinary foreign end-tag closure.
+- Fixed unrelated or same-named HTML descendant end tags prematurely closing SVG/MathML
+  integration points and exposing subsequent HTML text contents to element handlers. Integration
+  openers retain their foreign element namespace; the new lifetime metadata shares the existing
+  memory limit and reports the existing memory-limit error on exhaustion.
+  See [GHSA-6hc8-66v8-xhf6](https://github.com/cloudflare/lol-html/security/advisories/GHSA-6hc8-66v8-xhf6).
+  Explicit HTML ancestor closures also discard descendant lifetime records, so a subsequent
+  integration-point close restores the foreign parsing context instead of leaving stale HTML state.
 
 ## v3.0.3
 

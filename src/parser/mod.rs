@@ -62,9 +62,9 @@ impl<S: ParserOutputSink> Parser<S> {
     ) -> Self {
         let context = ParserContext {
             output_sink,
-            memory_limiter,
+            memory_limiter: memory_limiter.clone(),
             previously_consumed_byte_count: 0,
-            tree_builder_simulator: TreeBuilderSimulator::new(strict),
+            tree_builder_simulator: TreeBuilderSimulator::new(strict, memory_limiter),
         };
 
         Self {

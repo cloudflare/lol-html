@@ -44,7 +44,7 @@ impl<S: TagHintSink> StateMachineActions for TagScanner<S> {
             .take()
             .ok_or_else(|| ActionError::internal("Tag start should be set at this point"))?;
 
-        let unhandled_feedback = self.try_apply_tree_builder_feedback(context)?;
+        let unhandled_feedback = self.try_apply_tree_builder_feedback(context, input)?;
 
         let is_in_end_tag = self.is_in_end_tag;
 
