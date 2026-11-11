@@ -10,6 +10,7 @@ use crate::html::{LocalNameHash, Namespace, TextType};
 use crate::memory::LimitedVec;
 use crate::parser::state_machine::{ActionResult, FeedbackDirective, StateMachine, StateResult};
 use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback};
+use crate::rewriter::RewritingError;
 
 pub(crate) trait LexemeSink {
     fn handle_tag(&mut self, lexeme: &TagLexeme<'_>) -> ActionResult<ParserDirective>;
@@ -61,22 +62,23 @@ impl<S: LexemeSink> Lexer<S> {
         &mut self,
         context: &mut ParserContext<S>,
         token: &TagTokenOutline,
+        input: &[u8],
     ) -> Result<Option<TreeBuilderFeedback>, ParsingAmbiguityError> {
         Ok(match self.feedback_directive.take() {
             FeedbackDirective::ApplyUnhandledFeedback(feedback) => Some(feedback),
             FeedbackDirective::Skip => None,
-            FeedbackDirective::None => {
-                Some({
-                    match *token {
-                        TagTokenOutline::StartTag { name_hash, .. } => context
-                            .tree_builder_simulator
-                            .get_feedback_for_start_tag(name_hash)?,
-                        TagTokenOutline::EndTag { name_hash, .. } => context
-                            .tree_builder_simulator
-                            .get_feedback_for_end_tag(name_hash),
-                    }
-                })
-            }
+            FeedbackDirective::None => Some({
+                match *token {
+                    TagTokenOutline::StartTag {
+                        name_hash, name, ..
+                    } => context
+                        .tree_builder_simulator
+                        .get_feedback_for_start_tag(name_hash, &input[name.start..name.end])?,
+                    TagTokenOutline::EndTag { name_hash, name } => context
+                        .tree_builder_simulator
+                        .get_feedback_for_end_tag(name_hash, &input[name.start..name.end]),
+                }
+            }),
         })
     }
 
@@ -85,17 +87,22 @@ impl<S: LexemeSink> Lexer<S> {
         context: &mut ParserContext<S>,
         feedback: TreeBuilderFeedback,
         lexeme: &TagLexeme<'_>,
-    ) {
+    ) -> ActionResult {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => self.set_last_text_type(text_type),
             TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => self.cdata_allowed = cdata_allowed,
             TreeBuilderFeedback::RequestLexeme(mut callback) => {
                 let feedback = callback(&mut context.tree_builder_simulator, lexeme);
 
-                self.handle_tree_builder_feedback(context, feedback, lexeme);
+                self.handle_tree_builder_feedback(context, feedback, lexeme)?;
+            }
+            TreeBuilderFeedback::MemoryLimitExceeded(error) => {
+                return Err(RewritingError::MemoryLimitExceeded(error).into());
             }
             TreeBuilderFeedback::None => (),
         }
+
+        Ok(())
     }
 
     #[inline]

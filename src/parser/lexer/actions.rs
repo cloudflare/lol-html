@@ -79,7 +79,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             .take()
             .ok_or_else(|| ActionError::internal("Tag token should exist at this point"))?;
 
-        let feedback = self.try_get_tree_builder_feedback(context, &token)?;
+        let feedback = self.try_get_tree_builder_feedback(context, &token, input)?;
 
         let mut lexeme = self.create_lexeme_with_raw_inclusive(
             context.previously_consumed_byte_count,
@@ -92,7 +92,7 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
         self.set_last_text_type(TextType::Data);
 
         if let Some(feedback) = feedback {
-            self.handle_tree_builder_feedback(context, feedback, &lexeme);
+            self.handle_tree_builder_feedback(context, feedback, &lexeme)?;
         }
 
         if let StartTag {

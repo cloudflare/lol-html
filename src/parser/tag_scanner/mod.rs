@@ -4,8 +4,8 @@ mod conditions;
 
 use crate::base::{Align, Bytes, Range};
 use crate::html::{LocalName, LocalNameHash, Namespace, TextType};
-use crate::parser::state_machine::{FeedbackDirective, StateMachine, StateResult};
-use crate::parser::{ParserContext, ParserDirective, ParsingAmbiguityError, TreeBuilderFeedback};
+use crate::parser::state_machine::{ActionResult, FeedbackDirective, StateMachine, StateResult};
+use crate::parser::{ParserContext, ParserDirective, TreeBuilderFeedback};
 use crate::rewriter::RewritingError;
 use std::cmp::min;
 
@@ -100,15 +100,18 @@ impl<S: TagHintSink> TagScanner<S> {
     fn try_apply_tree_builder_feedback(
         &mut self,
         context: &mut ParserContext<S>,
-    ) -> Result<Option<TreeBuilderFeedback>, ParsingAmbiguityError> {
+        input: &[u8],
+    ) -> ActionResult<Option<TreeBuilderFeedback>> {
+        let name = &input[self.tag_name_start..self.pos()];
+
         let feedback = if self.is_in_end_tag {
             context
                 .tree_builder_simulator
-                .get_feedback_for_end_tag(self.tag_name_hash)
+                .get_feedback_for_end_tag(self.tag_name_hash, name)
         } else {
             context
                 .tree_builder_simulator
-                .get_feedback_for_start_tag(self.tag_name_hash)?
+                .get_feedback_for_start_tag(self.tag_name_hash, name)?
         };
 
         Ok(match feedback {
@@ -123,6 +126,9 @@ impl<S: TagHintSink> TagScanner<S> {
                 None
             }
             TreeBuilderFeedback::RequestLexeme(_) => Some(feedback),
+            TreeBuilderFeedback::MemoryLimitExceeded(error) => {
+                return Err(RewritingError::MemoryLimitExceeded(error).into());
+            }
             TreeBuilderFeedback::None => None,
         })
     }
