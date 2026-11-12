@@ -144,6 +144,22 @@ impl IntegrationPointStack {
         self.state.as_ref()?.elements.last()
     }
 
+    /// `true` when the innermost record at `namespace_depth` is the
+    /// integration-point opener itself, i.e. no HTML descendant is open.
+    pub(super) fn current_is_opener(&self, namespace_depth: usize) -> bool {
+        let Some(state) = &self.state else {
+            return false;
+        };
+        let elements = &state.elements;
+        let Some(last) = elements.last() else {
+            return false;
+        };
+
+        last.namespace_depth == namespace_depth
+            && (elements.len() == 1
+                || elements[elements.len() - 2].namespace_depth != namespace_depth)
+    }
+
     pub(super) fn push(
         &mut self,
         tag_name: LocalNameHash,

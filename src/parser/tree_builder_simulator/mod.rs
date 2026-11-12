@@ -29,7 +29,6 @@ const DEFAULT_NS_STACK_CAPACITY: usize = 256;
 #[must_use]
 pub(crate) enum TreeBuilderFeedback {
     SwitchTextType(TextType),
-    SetAllowCdata(bool),
     #[allow(clippy::type_complexity)]
     RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> Self + Send>),
     MemoryLimitExceeded(MemoryLimitExceededError),
@@ -216,6 +215,24 @@ impl TreeBuilderSimulator {
             .unwrap_or(self.current_ns)
     }
 
+    /// CDATA sections are only allowed when the adjusted current node is not an
+    /// HTML element (13.2.5.1 "markup declaration open state").
+    ///
+    /// The element that opened an integration point stays foreign, so a CDATA
+    /// section directly in it is text. An HTML element opened inside it becomes
+    /// the current node, and there `<![CDATA[` is a bogus comment.
+    #[inline]
+    pub fn allow_cdata(&self) -> bool {
+        if self.current_ns != Namespace::Html {
+            return true;
+        }
+
+        self.has_current_integration_point()
+            && self
+                .integration_points
+                .current_is_opener(self.ns_stack.len())
+    }
+
     fn enter_foreign_root(&mut self, namespace: Namespace) -> TreeBuilderFeedback {
         request_lexeme(move |this, lexeme| {
             expect_tag!(lexeme, StartTag { self_closing, .. } => match self_closing {
@@ -233,7 +250,7 @@ impl TreeBuilderSimulator {
     fn enter_ns(&mut self, ns: Namespace) -> TreeBuilderFeedback {
         self.ns_stack.push(ns);
         self.current_ns = ns;
-        TreeBuilderFeedback::SetAllowCdata(ns != Namespace::Html)
+        TreeBuilderFeedback::None
     }
 
     #[inline]
@@ -249,7 +266,7 @@ impl TreeBuilderSimulator {
         };
         self.current_ns = *item;
 
-        TreeBuilderFeedback::SetAllowCdata(self.current_ns != Namespace::Html)
+        TreeBuilderFeedback::None
     }
 
     #[inline]
@@ -258,7 +275,7 @@ impl TreeBuilderSimulator {
             let _ = self.leave_ns();
         }
 
-        TreeBuilderFeedback::SetAllowCdata(false)
+        TreeBuilderFeedback::None
     }
 
     fn leave_foreign_content_for_start_tag(
@@ -626,8 +643,12 @@ mod tests {
             let feedback = simulator.enter_integration_point("desc".into());
 
             assert!(
-                matches!(feedback, TreeBuilderFeedback::SetAllowCdata(false)),
+                matches!(feedback, TreeBuilderFeedback::None),
                 "sequential points must fit within one metadata allocation"
+            );
+            assert!(
+                simulator.allow_cdata(),
+                "a CDATA section directly in the opener is text"
             );
             let _ = simulator.take_element_namespace();
             let _ = simulator.get_feedback_for_end_tag("desc".into(), b"desc");
