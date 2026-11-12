@@ -191,27 +191,36 @@ impl TreeBuilderSimulator {
 
         if self.current_ns == Namespace::Html {
             self.check_integration_point_exit(tag_name, name)
-        } else if self.should_leave_ns(tag_name) {
-            match tag_is_one_of!(tag_name, [P, Br]) {
-                true => {
-                    let feedback = self.leave_foreign_content();
-                    let _ = self.check_integration_point_exit(tag_name, name);
+        } else if tag_is_one_of!(tag_name, [P, Br]) {
+            // 13.2.6.5: `</p>` and `</br>` pop every foreign element up to the
+            // nearest HTML element or integration point.
+            let feedback = self.leave_foreign_content();
+            let _ = self.check_integration_point_exit(tag_name, name);
 
-                    feedback
-                }
-                false => self.leave_ns(),
-            }
+            feedback
         } else {
+            self.leave_foreign_frame(tag_name);
+
             TreeBuilderFeedback::None
         }
     }
 
-    fn should_leave_ns(&self, tag_name: LocalNameHash) -> bool {
-        match self.frames.last().map(|frame| &frame.kind) {
-            Some(FrameKind::Foreign(open)) => {
-                *open == tag_name || tag_is_one_of!(tag_name, [P, Br])
+    /// 13.2.6.5 "Any other end tag": pops the matching foreign element and
+    /// every foreign element opened after it. The walk stops at the nearest
+    /// integration point or the document frame, so an end tag cannot leave the
+    /// current foreign context through an HTML boundary.
+    fn leave_foreign_frame(&mut self, tag_name: LocalNameHash) {
+        for pos in (1..self.frames.len()).rev() {
+            match &self.frames[pos].kind {
+                FrameKind::Foreign(open) if *open == tag_name => {
+                    self.frames.truncate(pos);
+                    self.current_ns = self.frames[pos - 1].namespace;
+
+                    return;
+                }
+                FrameKind::Foreign(_) => (),
+                _ => return,
             }
-            _ => false,
         }
     }
 

@@ -198,3 +198,17 @@ fn element_handler_sees_img_after_style_with_comment() {
     let (_, seen) = collect(input, "img");
     assert_eq!(seen, expected(&[("img", HTML)]), "input: {input}");
 }
+
+#[test]
+fn end_tag_of_enclosing_foreign_element_pops_nested_ones() {
+    // 13.2.6.5 "any other end tag": `</math>` pops the nested `<svg>` and then
+    // the `<math>` itself, so the following `<script>` is HTML.
+    let input = r#"<math><svg></math><script>var s = "<a href='x'>";</script>"#;
+
+    let (output, seen) = collect(input, "script");
+    assert_eq!(seen, expected(&[("script", HTML)]), "input: {input}");
+
+    let (_, seen) = collect(input, "a");
+    assert!(seen.is_empty(), "matched: {seen:?}");
+    assert_eq!(output, input);
+}
