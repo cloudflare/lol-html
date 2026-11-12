@@ -99,6 +99,42 @@ fn text_content_element_after_self_closing_foreign_root_is_not_markup() {
 }
 
 #[test]
+fn font_with_breakout_attributes_leaves_foreign_content() {
+    // 13.2.6.5: `<font>` breaks out only when it has a color/face/size
+    // attribute; otherwise it is an ordinary foreign element.
+    let breaking = r#"<svg><font color=red>x</font><script>var s = "<a href='x'>";</script>"#;
+
+    let (output, seen) = collect(breaking, "font");
+    assert_eq!(seen, expected(&[("font", HTML)]), "input: {breaking}");
+    let (_, seen) = collect(breaking, "script");
+    assert_eq!(seen, expected(&[("script", HTML)]), "input: {breaking}");
+    let (_, seen) = collect(breaking, "a");
+    assert!(seen.is_empty(), "matched: {seen:?}");
+    assert_eq!(output, breaking);
+
+    let plain = r#"<svg><font>x</font><script>var s = "<a href='x'>";</script>"#;
+
+    let (_, seen) = collect(plain, "font");
+    assert_eq!(seen, expected(&[("font", SVG)]), "input: {plain}");
+    let (_, seen) = collect(plain, "a");
+    assert_eq!(seen, expected(&[("a", SVG)]), "input: {plain}");
+}
+
+#[test]
+fn end_tag_of_enclosing_foreign_element_pops_nested_ones() {
+    // 13.2.6.5 "any other end tag": `</math>` pops the nested `<svg>` and then
+    // the `<math>` itself, so the following `<script>` is HTML.
+    let input = r#"<math><svg></math><script>var s = "<a href='x'>";</script>"#;
+
+    let (output, seen) = collect(input, "script");
+    assert_eq!(seen, expected(&[("script", HTML)]), "input: {input}");
+
+    let (_, seen) = collect(input, "a");
+    assert!(seen.is_empty(), "matched: {seen:?}");
+    assert_eq!(output, input);
+}
+
+#[test]
 fn foreign_content_breakout_pops_all_foreign_ancestors() {
     // 13.2.6.5: a breakout start tag (here `<div>`) and `</p>` pop every
     // foreign element up to the nearest HTML element or integration point.
@@ -156,6 +192,44 @@ fn self_closing_foreign_elements_stay_in_foreign_content() {
         );
         assert_eq!(output, input);
     }
+}
+
+#[test]
+fn end_tag_inside_integration_point_does_not_close_it() {
+    // 13.2.6.4.7 "any other end tag" walks the open elements and stops at the
+    // first one in the special category, so `</desc>` only closes the
+    // integration point when the integration point is the current node.
+    //
+    // (1) `<p>` is special: `</desc>` is ignored, `desc` stays open.
+    let input = r#"<svg><desc><p></desc><script>var s = "<a href='x'>";</script></desc></svg>"#;
+    let (output, seen) = collect(input, "a");
+    assert!(seen.is_empty(), "input: {input}, matched: {seen:?}");
+    assert_eq!(output, input);
+
+    let (_, seen) = collect(input, "script");
+    assert_eq!(seen, expected(&[("script", HTML)]), "input: {input}");
+
+    // (3) `<span>` is not special, but there is no matching element above the
+    // integration point either, and the walk stops at the special `desc`.
+    let input = r#"<svg><desc><span></desc><script>var s = "<a href='x'>";</script></desc></svg>"#;
+    let (output, seen) = collect(input, "a");
+    assert!(seen.is_empty(), "input: {input}, matched: {seen:?}");
+    assert_eq!(output, input);
+
+    let (_, seen) = collect(input, "script");
+    assert_eq!(seen, expected(&[("script", HTML)]), "input: {input}");
+
+    // (2) `</div>` has its own rule and pops through special elements
+    // (implied end tags), so `desc` becomes the current node and its end tag
+    // closes it: the following `<script>` is foreign content again.
+    let input =
+        r#"<svg><desc><div><p></div></desc><script>var s = "<a href='x'>";</script></desc></svg>"#;
+    let (output, seen) = collect(input, "a");
+    assert_eq!(seen, expected(&[("a", SVG)]), "input: {input}");
+    assert_eq!(output, input);
+
+    let (_, seen) = collect(input, "script");
+    assert_eq!(seen, expected(&[("script", SVG)]), "input: {input}");
 }
 
 #[test]

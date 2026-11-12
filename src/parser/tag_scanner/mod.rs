@@ -111,15 +111,13 @@ impl<S: TagHintSink> TagScanner<S> {
                 .get_feedback_for_start_tag(self.tag_name_hash)?
         };
 
+        self.cdata_allowed = context.tree_builder_simulator.allow_cdata();
+
         Ok(match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => {
                 // NOTE: we can't switch type immediately as we are in the middle of tag parsing.
                 // So, we need to switch later on the `emit_tag` action.
                 self.pending_text_type_change = Some(text_type);
-                None
-            }
-            TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => {
-                self.cdata_allowed = cdata_allowed;
                 None
             }
             TreeBuilderFeedback::RequestLexeme(_) => Some(feedback),

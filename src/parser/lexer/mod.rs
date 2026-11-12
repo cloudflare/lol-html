@@ -88,7 +88,6 @@ impl<S: LexemeSink> Lexer<S> {
     ) {
         match feedback {
             TreeBuilderFeedback::SwitchTextType(text_type) => self.set_last_text_type(text_type),
-            TreeBuilderFeedback::SetAllowCdata(cdata_allowed) => self.cdata_allowed = cdata_allowed,
             TreeBuilderFeedback::RequestLexeme(mut callback) => {
                 let feedback = callback(&mut context.tree_builder_simulator, lexeme);
 
