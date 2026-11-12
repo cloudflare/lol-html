@@ -302,6 +302,28 @@ impl TreeBuilderSimulator {
     }
 
     fn start_tag_in_html_content(&mut self, tag_name: LocalNameHash) -> TreeBuilderFeedback {
+        // 13.2.6.4 tree construction dispatcher: a MathML text integration
+        // point processes `<mglyph>` and `<malignmark>` with the foreign content
+        // rules, so they are MathML elements (and their content is markup).
+        if (tag_name == Tag::Mglyph || tag_name == Tag::Malignmark)
+            && self.is_current_mathml_text_integration_point()
+        {
+            self.current_element_ns = Namespace::MathML;
+
+            return request_lexeme(move |this, lexeme| {
+                expect_tag!(lexeme, StartTag { self_closing, .. } => {
+                    if !self_closing {
+                        this.push_frame(
+                            ParseMode::MathML,
+                            Namespace::MathML,
+                            FrameKind::Foreign(tag_name),
+                        );
+                    }
+                    TreeBuilderFeedback::None
+                })
+            });
+        }
+
         // 13.2.6.4.7 "in body": `<svg>`/`<math>` insert a foreign element in the
         // SVG/MathML namespace. The self-closing flag pops it immediately.
         let ns = if tag_name == Tag::Svg {
@@ -608,6 +630,16 @@ impl TreeBuilderSimulator {
         if is_current {
             self.frames.truncate(frame_idx);
         }
+    }
+
+    #[inline]
+    fn is_current_mathml_text_integration_point(&self) -> bool {
+        self.frames[self.frames.len() - 1]
+            .integration_point()
+            .is_some_and(|state| {
+                state.html_elements.is_empty()
+                    && matches!(state.kind, IntegrationPoint::MathMlText(_))
+            })
     }
 
     #[inline]

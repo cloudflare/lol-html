@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Fixed namespace tracking in foreign content. A self-closing `<svg/>` or `<math/>`, a
+  breakout (`<div>`, `</p>`, `<font color>`, ...), or the end tag of an element named like an
+  integration point no longer desyncs the parser: a following `<script>`/`<style>`/`<title>`
+  is an HTML element again and its content is tokenized as text, so element handlers no
+  longer fire for markup that only exists inside script/style text (this could corrupt the
+  script or hide a real element from an element-based filter).
+- `Element::namespace_uri()` now reports the element's own namespace instead of the parsing
+  mode: SVG `desc`/`title`/`foreignObject` and MathML `mi`/`mo`/`mn`/`ms`/`mtext`/
+  `annotation-xml` integration points report the SVG/MathML namespace, while their children
+  stay XHTML. `<svg>` inside MathML is reported as MathML.
+- CDATA sections are now tokenized according to the current node's namespace: allowed
+  directly inside an integration point, and a bogus comment inside an HTML element nested in
+  one.
 ## v3.0.3
 
 - Fixed value_source_location() for attributes without a value.

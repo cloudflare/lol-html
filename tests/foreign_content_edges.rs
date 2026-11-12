@@ -173,6 +173,40 @@ fn foreign_content_resumes_after_integration_point_closes() {
 }
 
 #[test]
+fn mathml_text_integration_point_mglyph_exception() {
+    // 13.2.6.4 dispatcher: at a MathML text integration point, `<mglyph>` and
+    // `<malignmark>` are processed with the foreign content rules, so they are
+    // MathML elements whose content is markup — unlike every other start tag
+    // there, which is an HTML element.
+    let input =
+        r#"<math><mi><mglyph><a href='x'></mglyph><script>var s = "<a href='y'>";</script></mi></math>"#;
+
+    let (output, seen) = collect(input, "*");
+    assert_eq!(
+        seen,
+        expected(&[
+            ("math", MATHML),
+            ("mi", MATHML),
+            ("mglyph", MATHML),
+            ("a", MATHML),
+            ("script", HTML),
+        ]),
+        "input: {input}"
+    );
+    assert_eq!(output, input);
+
+    let input = r#"<math><mi><malignmark/><script>var s = "<a href='x'>";</script></mi></math>"#;
+    let (_, seen) = collect(input, "script");
+    assert_eq!(seen, expected(&[("script", HTML)]), "input: {input}");
+
+    // The exception applies only while the integration point is the current
+    // node: inside an HTML element it is an ordinary HTML element.
+    let input = r#"<math><mi><span><mglyph></mglyph></span></mi></math>"#;
+    let (_, seen) = collect(input, "mglyph");
+    assert_eq!(seen, expected(&[("mglyph", HTML)]), "input: {input}");
+}
+
+#[test]
 fn annotation_xml_encoding_selects_the_text_type() {
     // Only `annotation-xml` with an HTML encoding is an integration point.
     let with_encoding = r#"<math><annotation-xml encoding="text/html"><script>var s = "<a href='x'>";</script></annotation-xml></math>"#;
