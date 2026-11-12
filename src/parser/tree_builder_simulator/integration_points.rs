@@ -139,11 +139,6 @@ impl IntegrationPointStack {
         self.state.as_ref().map_or(0, |state| state.elements.len())
     }
 
-    #[inline]
-    pub(super) fn last(&self) -> Option<&IntegrationPoint> {
-        self.state.as_ref()?.elements.last()
-    }
-
     /// `true` when the innermost record at `namespace_depth` is the
     /// integration-point opener itself, i.e. no HTML descendant is open.
     pub(super) fn current_is_opener(&self, namespace_depth: usize) -> bool {
