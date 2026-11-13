@@ -73,22 +73,13 @@ fn text_content_element_after_self_closing_foreign_root_is_not_markup() {
     // data for `<script>`, RAWTEXT for `<style>`, RCDATA for `<title>` and
     // `<textarea>`.
     let cases = [
-        (
-            r#"<svg/><script>var s = "<a href='x'>";</script>"#,
-            "a",
-        ),
+        (r#"<svg/><script>var s = "<a href='x'>";</script>"#, "a"),
         (
             r#"<svg/><script>var s = "<title>x</title>";</script>"#,
             "title",
         ),
-        (
-            r#"<svg/><style>a[title="<a href='x'>"]{}</style>"#,
-            "a",
-        ),
-        (
-            r#"<svg/><textarea><!--<a href='x'>--></textarea>"#,
-            "a",
-        ),
+        (r#"<svg/><style>a[title="<a href='x'>"]{}</style>"#, "a"),
+        (r#"<svg/><textarea><!--<a href='x'>--></textarea>"#, "a"),
     ];
 
     for (input, selector) in cases {
@@ -149,11 +140,7 @@ fn self_closing_foreign_elements_stay_in_foreign_content() {
 
     for (input, selector, ns) in cases {
         let (output, seen) = collect(input, selector);
-        assert_eq!(
-            seen,
-            expected(&[(selector, ns)]),
-            "input: {input}"
-        );
+        assert_eq!(seen, expected(&[(selector, ns)]), "input: {input}");
         assert_eq!(output, input);
     }
 }

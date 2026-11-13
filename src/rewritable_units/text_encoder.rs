@@ -50,7 +50,7 @@ pub(crate) struct TextEncoder {
 impl TextEncoder {
     #[inline]
     pub fn new(encoding: &'static Encoding) -> Self {
-        debug_assert!(encoding != UTF_8);
+        debug_assert_ne!(encoding, UTF_8);
         debug_assert!(encoding.is_ascii_compatible());
         Self {
             encoder: encoding.new_encoder(),

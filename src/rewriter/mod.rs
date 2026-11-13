@@ -1161,7 +1161,7 @@ mod tests {
             // transformed) are all present. The transformed comment grew by some bytes; the
             // rest is byte-for-byte.
             let original_input_minus_comment =
-                format!("<img alt=\"{}{}\" />", "l".repeat(50), "r".repeat(50),);
+                format!("<img alt=\"{}{}\" />", "l".repeat(50), "r".repeat(50));
 
             assert!(
                 output_str.contains(&original_input_minus_comment),
@@ -1323,7 +1323,7 @@ mod tests {
         /// `<div>`.
         #[test]
         fn test_bail_out_reconstruct_huge_comment() {
-            let html = format!("<div>Before<!-- {} -->After</div>", "X".repeat(16384),);
+            let html = format!("<div>Before<!-- {} -->After</div>", "X".repeat(16384));
 
             let reconstructed = reconstruct_response_on_oom(
                 html.as_bytes(),

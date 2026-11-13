@@ -240,9 +240,7 @@ impl TreeBuilderSimulator {
         }
 
         self.has_current_integration_point()
-            && self
-                .integration_points
-                .current_is_opener(self.frames.len())
+            && self.integration_points.current_is_opener(self.frames.len())
     }
 
     fn enter_foreign_root(
@@ -277,10 +275,7 @@ impl TreeBuilderSimulator {
         self.frames.pop();
 
         let Some(frame) = self.frames.last() else {
-            debug_assert!(
-                false,
-                "Frame stack should always have at least one item"
-            );
+            debug_assert!(false, "Frame stack should always have at least one item");
             return TreeBuilderFeedback::None;
         };
         self.current_ns = frame.namespace;

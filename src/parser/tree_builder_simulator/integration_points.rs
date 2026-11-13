@@ -212,10 +212,10 @@ impl IntegrationPointStack {
         }
 
         state.pop_from(index);
-        !state
+        state
             .elements
             .last()
-            .is_some_and(|entry| entry.namespace_depth == namespace_depth)
+            .is_none_or(|entry| entry.namespace_depth != namespace_depth)
     }
 }
 
@@ -255,10 +255,7 @@ impl IntegrationPointState {
         }
 
         let name_start = self.names.len();
-        let name_length = match tag_name.is_empty() {
-            true => name.len(),
-            false => 0,
-        };
+        let name_length = if tag_name.is_empty() { name.len() } else { 0 };
 
         name.iter()
             .take(name_length)

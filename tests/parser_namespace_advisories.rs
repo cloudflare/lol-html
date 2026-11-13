@@ -1408,7 +1408,7 @@ fn test_parser_namespace_advisories_integration_point_ancestor_memory_limit() {
                         }
 
                         let mut rewriter = HtmlRewriter::new(settings, |bytes: &[u8]| {
-                            output.extend_from_slice(bytes)
+                            output.extend_from_slice(bytes);
                         });
                         let result = input.as_bytes().chunks(chunk_size).try_for_each(|chunk| {
                             fed_bytes += chunk.len();
