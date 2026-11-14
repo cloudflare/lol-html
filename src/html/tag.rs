@@ -105,6 +105,29 @@ macro_rules! tag_is_one_of {
     };
 }
 
+impl Tag {
+    /// Whether `name` is one of the [void elements] of the HTML namespace
+    /// (plus the obsolete ones the tree builder still treats as void).
+    ///
+    /// [void elements]: https://html.spec.whatwg.org/multipage/syntax.html#void-elements
+    #[inline]
+    #[must_use]
+    pub(crate) fn is_void_html_element(name: &impl PartialEq<Self>) -> bool {
+        // NOTE: fast path for the most commonly used elements
+        if tag_is_one_of!(*name, [Div, A, Span, Li]) {
+            return false;
+        }
+
+        tag_is_one_of!(
+            *name,
+            [
+                Area, Base, Basefont, Bgsound, Br, Col, Embed, Hr, Img, Input, Keygen, Link, Meta,
+                Param, Source, Track, Wbr
+            ]
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

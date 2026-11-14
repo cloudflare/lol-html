@@ -11,18 +11,7 @@ use std::hash::BuildHasher;
 
 #[inline]
 fn is_void_element(local_name: &LocalName<'_>, enable_esi_tags: bool) -> bool {
-    // NOTE: fast path for the most commonly used elements
-    if tag_is_one_of!(*local_name, [Div, A, Span, Li]) {
-        return false;
-    }
-
-    if tag_is_one_of!(
-        *local_name,
-        [
-            Area, Base, Basefont, Bgsound, Br, Col, Embed, Hr, Img, Input, Keygen, Link, Meta,
-            Param, Source, Track, Wbr
-        ]
-    ) {
+    if Tag::is_void_html_element(local_name) {
         return true;
     }
 
