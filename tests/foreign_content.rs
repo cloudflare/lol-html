@@ -22,13 +22,11 @@ const MATHML: &str = "http://www.w3.org/1998/Math/MathML";
 fn collect(input: &str, selector: &str) -> (String, Vec<(String, &'static str)>) {
     let seen = Rc::new(RefCell::new(Vec::new()));
     let sink = Rc::clone(&seen);
-    let settings = RewriteStrSettings::new().append_element_content_handler(element!(
-        selector,
-        move |el| {
+    let settings =
+        RewriteStrSettings::new().append_element_content_handler(element!(selector, move |el| {
             sink.borrow_mut().push((el.tag_name(), el.namespace_uri()));
             Ok(())
-        }
-    ));
+        }));
     let output = rewrite_str(input, settings).unwrap();
     let seen = seen.borrow().clone();
     (output, seen)
@@ -109,7 +107,8 @@ fn end_tag_of_nested_element_named_like_integration_point_keeps_it_open() {
     // `<desc>` is an HTML integration point; the `<title>` inside it is an
     // HTML title. Its end tag closes that title only, so `desc` stays open and
     // the following `<script>` is HTML.
-    let input = r#"<svg><desc><title>t</title><script>var s = "<a href='x'>";</script></desc></svg>"#;
+    let input =
+        r#"<svg><desc><title>t</title><script>var s = "<a href='x'>";</script></desc></svg>"#;
 
     let (output, seen) = collect(input, "script");
     assert_eq!(seen, expected(&[("script", HTML)]), "input: {input}");
@@ -170,13 +169,11 @@ fn phantom_element_inside_script_cannot_break_out_of_script() {
     let input =
         r#"<svg><foreignObject><desc></desc><script>x<img id=t></script></foreignObject></svg>"#;
 
-    let settings = RewriteStrSettings::new().append_element_content_handler(element!(
-        "img#t",
-        |el| {
+    let settings =
+        RewriteStrSettings::new().append_element_content_handler(element!("img#t", |el| {
             el.before("</script><img src=x onerror=alert(1)>", ContentType::Html);
             Ok(())
-        }
-    ));
+        }));
 
     assert_eq!(rewrite_str(input, settings).unwrap(), input);
 }

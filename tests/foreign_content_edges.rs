@@ -30,13 +30,11 @@ const MATHML: &str = "http://www.w3.org/1998/Math/MathML";
 fn collect(input: &str, selector: &str) -> (String, Vec<(String, &'static str)>) {
     let seen = Rc::new(RefCell::new(Vec::new()));
     let sink = Rc::clone(&seen);
-    let settings = RewriteStrSettings::new().append_element_content_handler(element!(
-        selector,
-        move |el| {
+    let settings =
+        RewriteStrSettings::new().append_element_content_handler(element!(selector, move |el| {
             sink.borrow_mut().push((el.tag_name(), el.namespace_uri()));
             Ok(())
-        }
-    ));
+        }));
     let output = rewrite_str(input, settings).unwrap();
     let seen = seen.borrow().clone();
     (output, seen)
@@ -56,13 +54,11 @@ fn expected(elements: &[(&str, &'static str)]) -> Vec<(String, &'static str)> {
 fn text_in(input: &str) -> String {
     let seen = Rc::new(RefCell::new(String::new()));
     let sink = Rc::clone(&seen);
-    let settings = RewriteStrSettings::new().append_element_content_handler(text!(
-        "*",
-        move |chunk| {
+    let settings =
+        RewriteStrSettings::new().append_element_content_handler(text!("*", move |chunk| {
             sink.borrow_mut().push_str(chunk.as_str());
             Ok(())
-        }
-    ));
+        }));
     let output = rewrite_str(input, settings).unwrap();
     assert_eq!(output, input);
     seen.borrow().clone()
@@ -72,13 +68,11 @@ fn text_in(input: &str) -> String {
 fn comments_in(input: &str, selector: &str) -> usize {
     let count = Rc::new(RefCell::new(0));
     let sink = Rc::clone(&count);
-    let settings = RewriteStrSettings::new().append_element_content_handler(comments!(
-        selector,
-        move |_| {
+    let settings =
+        RewriteStrSettings::new().append_element_content_handler(comments!(selector, move |_| {
             *sink.borrow_mut() += 1;
             Ok(())
-        }
-    ));
+        }));
     let output = rewrite_str(input, settings).unwrap();
     assert_eq!(output, input);
     count.take()
@@ -119,10 +113,22 @@ fn text_type_follows_the_element_namespace() {
             &[("a", HTML)][..],
         ),
         // Children of an integration point follow the HTML rules again.
-        (r#"<svg><desc><script>var s = "<a href='x'>";</script></desc></svg>"#, &[][..]),
-        (r#"<svg><desc><title><a href='x'></title></desc></svg>"#, &[][..]),
-        (r#"<math><mi><script>var s = "<a href='x'>";</script></mi></math>"#, &[][..]),
-        (r#"<math><mtext><style>a[title="<a href='x'>"]{}</style></mtext></math>"#, &[][..]),
+        (
+            r#"<svg><desc><script>var s = "<a href='x'>";</script></desc></svg>"#,
+            &[][..],
+        ),
+        (
+            r#"<svg><desc><title><a href='x'></title></desc></svg>"#,
+            &[][..],
+        ),
+        (
+            r#"<math><mi><script>var s = "<a href='x'>";</script></mi></math>"#,
+            &[][..],
+        ),
+        (
+            r#"<math><mtext><style>a[title="<a href='x'>"]{}</style></mtext></math>"#,
+            &[][..],
+        ),
         // An HTML `<title>` is RCDATA, so a `<script>` inside it is text.
         (
             r#"<svg><foreignObject><title><script>var s = "<a href='x'>";</script></title></foreignObject></svg>"#,
@@ -180,9 +186,14 @@ fn annotation_xml_encoding_selects_the_text_type() {
     assert!(seen.is_empty(), "matched: {seen:?}");
     assert_eq!(output, with_encoding);
 
-    let without_encoding = r#"<math><annotation-xml><script>var s = "<a href='x'>";</script></annotation-xml></math>"#;
+    let without_encoding =
+        r#"<math><annotation-xml><script>var s = "<a href='x'>";</script></annotation-xml></math>"#;
     let (_, seen) = collect(without_encoding, "a");
-    assert_eq!(seen, expected(&[("a", MATHML)]), "input: {without_encoding}");
+    assert_eq!(
+        seen,
+        expected(&[("a", MATHML)]),
+        "input: {without_encoding}"
+    );
 }
 
 #[test]
