@@ -258,14 +258,11 @@ impl TreeBuilderSimulator {
         tag_name: LocalNameHash,
     ) -> TreeBuilderFeedback {
         request_lexeme(move |this, lexeme| {
-            expect_tag!(lexeme, StartTag { self_closing, .. } => match self_closing {
-                true => {
-                    // The element is foreign even though it does not change the following context.
-                    this.element_namespace_override = Some(namespace);
-                    TreeBuilderFeedback::None
-                }
-                false => this.enter_ns(namespace, FrameKind::Foreign(tag_name)),
-            })
+            expect_tag!(lexeme, StartTag { self_closing, .. } => if self_closing {
+                // The element is foreign even though it does not change the following context.
+                this.element_namespace_override = Some(namespace);
+                TreeBuilderFeedback::None
+            } else { this.enter_ns(namespace, FrameKind::Foreign(tag_name)) })
         })
     }
 
@@ -328,9 +325,10 @@ impl TreeBuilderSimulator {
     }
 
     fn enter_integration_point(&mut self, tag_name: LocalNameHash) -> TreeBuilderFeedback {
-        let name = match tag_name.is_empty() {
-            true => b"annotation-xml".as_slice(),
-            false => b"".as_slice(),
+        let name = if tag_name.is_empty() {
+            b"annotation-xml".as_slice()
+        } else {
+            b"".as_slice()
         };
 
         if let Err(error) = self

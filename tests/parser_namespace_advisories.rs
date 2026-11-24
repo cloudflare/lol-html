@@ -1088,11 +1088,13 @@ fn test_parser_namespace_advisories_integration_point_terminal_memory_error() {
             "metadata exhaustion must return the existing terminal memory error"
         );
 
-        let reuse =
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || match finalize {
-                true => rewriter.end(),
-                false => rewriter.write(b"more input"),
-            }));
+        let reuse = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            if finalize {
+                rewriter.end()
+            } else {
+                rewriter.write(b"more input")
+            }
+        }));
 
         assert!(
             reuse.is_err(),
