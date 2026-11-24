@@ -1088,11 +1088,13 @@ fn test_parser_namespace_advisories_integration_point_terminal_memory_error() {
             "metadata exhaustion must return the existing terminal memory error"
         );
 
-        let reuse =
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || match finalize {
-                true => rewriter.end(),
-                false => rewriter.write(b"more input"),
-            }));
+        let reuse = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            if finalize {
+                rewriter.end()
+            } else {
+                rewriter.write(b"more input")
+            }
+        }));
 
         assert!(
             reuse.is_err(),
@@ -1408,7 +1410,7 @@ fn test_parser_namespace_advisories_integration_point_ancestor_memory_limit() {
                         }
 
                         let mut rewriter = HtmlRewriter::new(settings, |bytes: &[u8]| {
-                            output.extend_from_slice(bytes)
+                            output.extend_from_slice(bytes);
                         });
                         let result = input.as_bytes().chunks(chunk_size).try_for_each(|chunk| {
                             fed_bytes += chunk.len();

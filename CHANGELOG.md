@@ -16,6 +16,9 @@
   See [GHSA-6hc8-66v8-xhf6](https://github.com/cloudflare/lol-html/security/advisories/GHSA-6hc8-66v8-xhf6).
   Explicit HTML ancestor closures also discard descendant lifetime records, so a subsequent
   integration-point close restores the foreign parsing context instead of leaving stale HTML state.
+- Fixed CDATA permission inside an HTML integration point: `<![CDATA[` is text directly in
+  `<svg><desc>` (the adjusted current node is the foreign opener) and a bogus comment inside an
+  HTML element opened in it.
 
 ## v3.0.3
 

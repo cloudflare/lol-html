@@ -139,9 +139,20 @@ impl IntegrationPointStack {
         self.state.as_ref().map_or(0, |state| state.elements.len())
     }
 
-    #[inline]
-    pub(super) fn last(&self) -> Option<&IntegrationPoint> {
-        self.state.as_ref()?.elements.last()
+    /// `true` when the innermost record at `namespace_depth` is the
+    /// integration-point opener itself, i.e. no HTML descendant is open.
+    pub(super) fn current_is_opener(&self, namespace_depth: usize) -> bool {
+        let Some(state) = &self.state else {
+            return false;
+        };
+        let elements = &state.elements;
+        let Some(last) = elements.last() else {
+            return false;
+        };
+
+        last.namespace_depth == namespace_depth
+            && (elements.len() == 1
+                || elements[elements.len() - 2].namespace_depth != namespace_depth)
     }
 
     pub(super) fn push(
@@ -201,10 +212,10 @@ impl IntegrationPointStack {
         }
 
         state.pop_from(index);
-        !state
+        state
             .elements
             .last()
-            .is_some_and(|entry| entry.namespace_depth == namespace_depth)
+            .is_none_or(|entry| entry.namespace_depth != namespace_depth)
     }
 }
 
@@ -244,10 +255,7 @@ impl IntegrationPointState {
         }
 
         let name_start = self.names.len();
-        let name_length = match tag_name.is_empty() {
-            true => name.len(),
-            false => 0,
-        };
+        let name_length = if tag_name.is_empty() { name.len() } else { 0 };
 
         name.iter()
             .take(name_length)

@@ -24,12 +24,11 @@ use TagTokenOutline::StartTag;
 
 pub use self::ambiguity_guard::ParsingAmbiguityError;
 
-const DEFAULT_NS_STACK_CAPACITY: usize = 256;
+const DEFAULT_FRAME_STACK_CAPACITY: usize = 256;
 
 #[must_use]
 pub(crate) enum TreeBuilderFeedback {
     SwitchTextType(TextType),
-    SetAllowCdata(bool),
     #[allow(clippy::type_complexity)]
     RequestLexeme(Box<dyn FnMut(&mut TreeBuilderSimulator, &TagLexeme<'_>) -> Self + Send>),
     MemoryLimitExceeded(MemoryLimitExceededError),
@@ -114,9 +113,9 @@ fn is_html_ancestor(tag_name: LocalNameHash) -> bool {
     ) && tag_name != LocalNameHash::from("html")
 }
 
-// TODO limit ns stack
+// TODO limit frame stack
 pub(crate) struct TreeBuilderSimulator {
-    ns_stack: Vec<Namespace>,
+    frames: Vec<Frame>,
     current_ns: Namespace,
     element_namespace_override: Option<Namespace>,
     integration_points: IntegrationPointStack,
@@ -124,12 +123,28 @@ pub(crate) struct TreeBuilderSimulator {
     strict: bool,
 }
 
+/// A parsing-context frame: the element that opened it.
+struct Frame {
+    /// Namespace the frame's content is parsed in.
+    namespace: Namespace,
+    kind: FrameKind,
+}
+
+enum FrameKind {
+    /// The document frame, never popped.
+    Root,
+    /// A foreign element whose end tag has to pop this frame (`svg`, `math`).
+    Foreign(LocalNameHash),
+    /// A foreign element whose children are parsed as HTML.
+    IntegrationPoint,
+}
+
 impl TreeBuilderSimulator {
     #[inline]
     #[must_use]
     pub fn new(strict: bool, memory_limiter: SharedMemoryLimiter) -> Self {
         let mut simulator = Self {
-            ns_stack: Vec::with_capacity(DEFAULT_NS_STACK_CAPACITY),
+            frames: Vec::with_capacity(DEFAULT_FRAME_STACK_CAPACITY),
             current_ns: Namespace::Html,
             element_namespace_override: None,
             integration_points: IntegrationPointStack::new(memory_limiter),
@@ -137,7 +152,10 @@ impl TreeBuilderSimulator {
             strict,
         };
 
-        simulator.ns_stack.push(Namespace::Html);
+        simulator.frames.push(Frame {
+            namespace: Namespace::Html,
+            kind: FrameKind::Root,
+        });
 
         simulator
     }
@@ -152,9 +170,9 @@ impl TreeBuilderSimulator {
         }
 
         Ok(if tag_name == Tag::Svg {
-            self.enter_foreign_root(Namespace::Svg)
+            self.enter_foreign_root(Namespace::Svg, tag_name)
         } else if tag_name == Tag::Math {
-            self.enter_foreign_root(Namespace::MathML)
+            self.enter_foreign_root(Namespace::MathML, tag_name)
         } else if self.current_ns != Namespace::Html {
             self.get_feedback_for_start_tag_in_foreign_content(tag_name)
         } else {
@@ -173,35 +191,37 @@ impl TreeBuilderSimulator {
 
         if self.current_ns == Namespace::Html {
             self.check_integration_point_exit(tag_name, name)
-        } else if self.should_leave_ns(tag_name) {
-            match tag_is_one_of!(tag_name, [P, Br]) {
-                true => {
-                    let feedback = self.leave_foreign_content();
-                    let _ = self.check_integration_point_exit(tag_name, name);
+        } else if tag_is_one_of!(tag_name, [P, Br]) {
+            // 13.2.6.5: `</p>` and `</br>` pop every foreign element up to the
+            // nearest HTML element or integration point.
+            let feedback = self.leave_foreign_content();
+            let _ = self.check_integration_point_exit(tag_name, name);
 
-                    feedback
-                }
-                false => self.leave_ns(),
-            }
+            feedback
         } else {
+            self.leave_foreign_frame(tag_name);
+
             TreeBuilderFeedback::None
         }
     }
 
-    fn should_leave_ns(&self, tag_name: LocalNameHash) -> bool {
-        if self.current_ns == Namespace::Svg && tag_name == Tag::Svg
-            || self.current_ns == Namespace::MathML && tag_name == Tag::Math
-        {
-            return true;
-        }
+    /// 13.2.6.5 "Any other end tag": pops the matching foreign element and
+    /// every foreign element opened after it. The walk stops at the nearest
+    /// integration point or the document frame, so an end tag cannot leave the
+    /// current foreign context through an HTML boundary.
+    fn leave_foreign_frame(&mut self, tag_name: LocalNameHash) {
+        for pos in (1..self.frames.len()).rev() {
+            match &self.frames[pos].kind {
+                FrameKind::Foreign(open) if *open == tag_name => {
+                    self.frames.truncate(pos);
+                    self.current_ns = self.frames[pos - 1].namespace;
 
-        if (self.current_ns == Namespace::Svg || self.current_ns == Namespace::MathML)
-            && tag_is_one_of!(tag_name, [P, Br])
-        {
-            // 13.2.6.5
-            return true;
+                    return;
+                }
+                FrameKind::Foreign(_) => (),
+                _ => return,
+            }
         }
-        false
     }
 
     #[inline]
@@ -216,40 +236,57 @@ impl TreeBuilderSimulator {
             .unwrap_or(self.current_ns)
     }
 
-    fn enter_foreign_root(&mut self, namespace: Namespace) -> TreeBuilderFeedback {
+    /// CDATA sections are only allowed when the adjusted current node is not an
+    /// HTML element (13.2.5.1 "markup declaration open state").
+    ///
+    /// The element that opened an integration point stays foreign, so a CDATA
+    /// section directly in it is text. An HTML element opened inside it becomes
+    /// the current node, and there `<![CDATA[` is a bogus comment.
+    #[inline]
+    pub fn allow_cdata(&self) -> bool {
+        if self.current_ns != Namespace::Html {
+            return true;
+        }
+
+        self.has_current_integration_point()
+            && self.integration_points.current_is_opener(self.frames.len())
+    }
+
+    fn enter_foreign_root(
+        &mut self,
+        namespace: Namespace,
+        tag_name: LocalNameHash,
+    ) -> TreeBuilderFeedback {
         request_lexeme(move |this, lexeme| {
-            expect_tag!(lexeme, StartTag { self_closing, .. } => match self_closing {
-                true => {
-                    // The element is foreign even though it does not change the following context.
-                    this.element_namespace_override = Some(namespace);
-                    TreeBuilderFeedback::None
-                }
-                false => this.enter_ns(namespace),
-            })
+            expect_tag!(lexeme, StartTag { self_closing, .. } => if self_closing {
+                // The element is foreign even though it does not change the following context.
+                this.element_namespace_override = Some(namespace);
+                TreeBuilderFeedback::None
+            } else { this.enter_ns(namespace, FrameKind::Foreign(tag_name)) })
         })
     }
 
     #[inline]
-    fn enter_ns(&mut self, ns: Namespace) -> TreeBuilderFeedback {
-        self.ns_stack.push(ns);
+    fn enter_ns(&mut self, ns: Namespace, kind: FrameKind) -> TreeBuilderFeedback {
+        self.frames.push(Frame {
+            namespace: ns,
+            kind,
+        });
         self.current_ns = ns;
-        TreeBuilderFeedback::SetAllowCdata(ns != Namespace::Html)
+        TreeBuilderFeedback::None
     }
 
     #[inline]
     fn leave_ns(&mut self) -> TreeBuilderFeedback {
-        self.ns_stack.pop();
+        self.frames.pop();
 
-        let Some(item) = self.ns_stack.last() else {
-            debug_assert!(
-                false,
-                "Namespace stack should always have at least one item"
-            );
+        let Some(frame) = self.frames.last() else {
+            debug_assert!(false, "Frame stack should always have at least one item");
             return TreeBuilderFeedback::None;
         };
-        self.current_ns = *item;
+        self.current_ns = frame.namespace;
 
-        TreeBuilderFeedback::SetAllowCdata(self.current_ns != Namespace::Html)
+        TreeBuilderFeedback::None
     }
 
     #[inline]
@@ -258,7 +295,7 @@ impl TreeBuilderSimulator {
             let _ = self.leave_ns();
         }
 
-        TreeBuilderFeedback::SetAllowCdata(false)
+        TreeBuilderFeedback::None
     }
 
     fn leave_foreign_content_for_start_tag(
@@ -288,27 +325,29 @@ impl TreeBuilderSimulator {
     }
 
     fn enter_integration_point(&mut self, tag_name: LocalNameHash) -> TreeBuilderFeedback {
-        let name = match tag_name.is_empty() {
-            true => b"annotation-xml".as_slice(),
-            false => b"".as_slice(),
+        let name = if tag_name.is_empty() {
+            b"annotation-xml".as_slice()
+        } else {
+            b"".as_slice()
         };
 
         if let Err(error) = self
             .integration_points
-            .push(tag_name, name, self.ns_stack.len() + 1)
+            .push(tag_name, name, self.frames.len() + 1)
         {
             return TreeBuilderFeedback::MemoryLimitExceeded(error);
         }
 
         self.element_namespace_override = Some(self.current_ns);
-        self.enter_ns(Namespace::Html)
+        self.enter_ns(Namespace::Html, FrameKind::IntegrationPoint)
     }
 
     #[inline]
     fn has_current_integration_point(&self) -> bool {
-        self.integration_points
-            .last()
-            .is_some_and(|entry| entry.namespace_depth == self.ns_stack.len())
+        matches!(
+            self.frames.last().map(|frame| &frame.kind),
+            Some(FrameKind::IntegrationPoint)
+        )
     }
 
     fn get_feedback_for_start_tag_in_html(
@@ -334,7 +373,7 @@ impl TreeBuilderSimulator {
     ) -> TreeBuilderFeedback {
         match self
             .integration_points
-            .push(tag_name, name, self.ns_stack.len())
+            .push(tag_name, name, self.frames.len())
         {
             Ok(()) => get_text_type_adjustment(tag_name),
             Err(error) => TreeBuilderFeedback::MemoryLimitExceeded(error),
@@ -352,7 +391,7 @@ impl TreeBuilderSimulator {
 
         if self
             .integration_points
-            .close(tag_name, name, self.ns_stack.len())
+            .close(tag_name, name, self.frames.len())
         {
             self.leave_ns()
         } else {
@@ -446,7 +485,7 @@ mod tests {
     fn integration_metadata_limit() -> usize {
         let limiter = SharedMemoryLimiter::new(usize::MAX);
         let mut simulator = TreeBuilderSimulator::new(true, limiter.clone());
-        let _ = simulator.enter_ns(Namespace::Svg);
+        let _ = simulator.enter_ns(Namespace::Svg, FrameKind::Foreign("svg".into()));
         let _ = simulator.enter_integration_point("desc".into());
 
         limiter.current_usage()
@@ -482,7 +521,7 @@ mod tests {
     fn test_tree_builder_simulator_namespace_advisories_integration_metadata_released() {
         let limiter = SharedMemoryLimiter::new(4096);
         let mut simulator = TreeBuilderSimulator::new(true, limiter.clone());
-        let _ = simulator.enter_ns(Namespace::Svg);
+        let _ = simulator.enter_ns(Namespace::Svg, FrameKind::Foreign("svg".into()));
         let _ = simulator.enter_integration_point("desc".into());
 
         assert_eq!(
@@ -541,7 +580,7 @@ mod tests {
     #[test]
     fn test_tree_builder_simulator_namespace_advisories_integration_opener_allocation_failure() {
         let mut simulator = TreeBuilderSimulator::new(true, SharedMemoryLimiter::new(0));
-        let _ = simulator.enter_ns(Namespace::Svg);
+        let _ = simulator.enter_ns(Namespace::Svg, FrameKind::Foreign("svg".into()));
         let feedback = simulator.enter_integration_point("desc".into());
 
         assert!(
@@ -549,7 +588,7 @@ mod tests {
             "an exhausted limit must reject the integration opener"
         );
         assert_eq!(
-            simulator.ns_stack.len(),
+            simulator.frames.len(),
             2,
             "reservation must precede the namespace push"
         );
@@ -575,7 +614,7 @@ mod tests {
     {
         let limit = integration_metadata_limit();
         let mut simulator = TreeBuilderSimulator::new(true, SharedMemoryLimiter::new(limit));
-        let _ = simulator.enter_ns(Namespace::Svg);
+        let _ = simulator.enter_ns(Namespace::Svg, FrameKind::Foreign("svg".into()));
         let _ = simulator.enter_integration_point("desc".into());
         let _ = simulator.take_element_namespace();
 
@@ -604,7 +643,7 @@ mod tests {
             "failed growth must preserve existing entries"
         );
         assert_eq!(
-            simulator.ns_stack.len(),
+            simulator.frames.len(),
             3,
             "descendant accounting must not change namespace depth"
         );
@@ -620,14 +659,18 @@ mod tests {
     fn test_tree_builder_simulator_namespace_advisories_integration_metadata_reused() {
         let limiter = SharedMemoryLimiter::new(integration_metadata_limit());
         let mut simulator = TreeBuilderSimulator::new(true, limiter.clone());
-        let _ = simulator.enter_ns(Namespace::Svg);
+        let _ = simulator.enter_ns(Namespace::Svg, FrameKind::Foreign("svg".into()));
 
         for _ in 0..1024 {
             let feedback = simulator.enter_integration_point("desc".into());
 
             assert!(
-                matches!(feedback, TreeBuilderFeedback::SetAllowCdata(false)),
+                matches!(feedback, TreeBuilderFeedback::None),
                 "sequential points must fit within one metadata allocation"
+            );
+            assert!(
+                simulator.allow_cdata(),
+                "a CDATA section directly in the opener is text"
             );
             let _ = simulator.take_element_namespace();
             let _ = simulator.get_feedback_for_end_tag("desc".into(), b"desc");

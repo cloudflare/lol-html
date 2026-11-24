@@ -95,6 +95,10 @@ impl<S: LexemeSink> StateMachineActions for Lexer<S> {
             self.handle_tree_builder_feedback(context, feedback, &lexeme)?;
         }
 
+        // NOTE: CDATA permission depends on the adjusted current node, which
+        // the feedback above may have changed.
+        self.cdata_allowed = context.tree_builder_simulator.allow_cdata();
+
         if let StartTag {
             ref mut ns,
             name_hash,
